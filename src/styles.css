@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "@doscientos/ui/styles.css";
 @source "../src";
 @import "tw-animate-css";
 

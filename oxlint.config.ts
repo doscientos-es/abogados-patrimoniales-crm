@@ -1,3 +1,6 @@
-import { reactViteConfig } from '@doscientos/configs/oxlint/react-vite'
+import { createFeatureLayersConfig } from "@doscientos/configs/architecture";
+import { reactViteConfig } from "@doscientos/configs/oxlint/react-vite";
 
-export default reactViteConfig
+export default {
+  extends: [reactViteConfig, createFeatureLayersConfig()],
+};

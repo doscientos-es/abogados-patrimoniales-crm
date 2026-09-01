@@ -11,6 +11,7 @@
     "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
     "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
+    "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "quality": "pnpm format:check && pnpm lint && pnpm typecheck"
   },
