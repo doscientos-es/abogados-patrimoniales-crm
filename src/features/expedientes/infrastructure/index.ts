@@ -1,0 +1,1 @@
+export { LocalStorageRepository as ExpedientesLocalStorageRepository } from '@/shared/infrastructure/local-storage-repository'

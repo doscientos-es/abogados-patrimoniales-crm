@@ -1,0 +1,1 @@
+export { LocalStorageRepository as ComunicacionesLocalStorageRepository } from '@/shared/infrastructure/local-storage-repository'

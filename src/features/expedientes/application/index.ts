@@ -1,0 +1,1 @@
+export type { Repository as ExpedientesRepository } from '@/shared/application/repository'

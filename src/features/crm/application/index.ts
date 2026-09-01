@@ -1,0 +1,1 @@
+export type { Repository as CrmRepository } from '@/shared/application/repository'

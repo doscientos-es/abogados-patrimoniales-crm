@@ -1,0 +1,1 @@
+export { LocalStorageRepository as CrmLocalStorageRepository } from '@/shared/infrastructure/local-storage-repository'

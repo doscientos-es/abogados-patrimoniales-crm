@@ -1,0 +1,1 @@
+export type { Repository as IaRepository } from '@/shared/application/repository'

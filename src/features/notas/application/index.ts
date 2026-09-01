@@ -1,0 +1,1 @@
+export type { Repository as NotasRepository } from '@/shared/application/repository'
