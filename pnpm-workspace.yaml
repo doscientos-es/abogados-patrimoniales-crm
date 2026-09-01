@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - '@doscientos/ui@0.1.29'

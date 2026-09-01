@@ -1,11 +1,9 @@
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { AlertTriangle, CalendarClock, Circle, Plus } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,71 +11,74 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { PendingBadge } from "@/components/common";
-import type { HistorialItem, Prioridad, Tono } from "@/data/crm";
+  Textarea,
+} from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
+import { AlertTriangle, CalendarClock, Circle, Plus } from 'lucide-react'
+import type { ReactNode } from 'react'
+
+import { PendingBadge } from '@/components/common'
+import type { HistorialItem, Prioridad, Tono } from '@/data/crm'
+import { cn } from '@/lib/utils'
 
 export const toneClass: Record<Tono, string> = {
-  neutro: "border-border bg-muted text-muted-foreground",
-  exito: "border-success/40 bg-success/10 text-success",
-  aviso: "border-warning/50 bg-warning/15 text-warning-foreground",
-  riesgo: "border-destructive/40 bg-destructive/10 text-destructive",
-  info: "border-primary/30 bg-primary/10 text-primary",
-};
+  neutro: 'border-border bg-muted text-muted-foreground',
+  exito: 'border-success/40 bg-success/10 text-success',
+  aviso: 'border-warning/50 bg-warning/15 text-warning-foreground',
+  riesgo: 'border-destructive/40 bg-destructive/10 text-destructive',
+  info: 'border-primary/30 bg-primary/10 text-primary',
+}
 
 export function ToneBadge({ tono, children }: { tono: Tono; children: ReactNode }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
         toneClass[tono],
       )}
     >
       {children}
     </span>
-  );
+  )
 }
 
-const prioridadTono: Record<Prioridad, Tono> = { Alta: "riesgo", Media: "aviso", Baja: "neutro" };
+const prioridadTono: Record<Prioridad, Tono> = { Alta: 'riesgo', Media: 'aviso', Baja: 'neutro' }
 
 export function PriorityBadge({ value }: { value: Prioridad }) {
-  return <ToneBadge tono={prioridadTono[value]}>{value}</ToneBadge>;
+  return <ToneBadge tono={prioridadTono[value]}>{value}</ToneBadge>
 }
 
 export function AlertPills({ items }: { items: string[] }) {
-  if (!items.length) return <span className="text-xs text-muted-foreground">Sin alertas</span>;
+  if (!items.length) return <span className="text-muted-foreground text-xs">Sin alertas</span>
   return (
     <span className="flex flex-wrap gap-1.5">
       {items.map((a) => (
         <span
           key={a}
-          className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+          className="border-destructive/30 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
         >
           <AlertTriangle className="h-3 w-3" />
           {a}
         </span>
       ))}
     </span>
-  );
+  )
 }
 
 export function MetaItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="mt-0.5 truncate text-sm font-medium text-foreground">{value}</div>
+      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">{label}</p>
+      <div className="text-foreground mt-0.5 truncate text-sm font-medium">{value}</div>
     </div>
-  );
+  )
 }
 
 export function EntityHeader({
@@ -89,28 +90,28 @@ export function EntityHeader({
   backTo,
   backLabel,
 }: {
-  eyebrow: string;
-  title: string;
-  meta: { label: string; value: ReactNode }[];
-  alerts?: string[];
-  actions?: ReactNode;
+  eyebrow: string
+  title: string
+  meta: { label: string; value: ReactNode }[]
+  alerts?: string[]
+  actions?: ReactNode
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  backTo?: any;
-  backLabel?: string;
+  backTo?: any
+  backLabel?: string
 }) {
   return (
-    <div className="mb-5 rounded-lg border border-border bg-card p-4 sm:p-5">
+    <div className="border-border bg-card mb-5 rounded-lg border p-4 sm:p-5">
       {backTo ? (
-        <Link to={backTo} className="text-xs text-muted-foreground hover:text-foreground">
-          ← {backLabel ?? "Volver"}
+        <Link to={backTo} className="text-muted-foreground hover:text-foreground text-xs">
+          ← {backLabel ?? 'Volver'}
         </Link>
       ) : null}
       <div className="mt-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             {eyebrow}
           </p>
-          <h1 className="mt-1 font-serif text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          <h1 className="text-foreground mt-1 font-serif text-xl font-semibold tracking-tight sm:text-2xl">
             {title}
           </h1>
         </div>
@@ -118,7 +119,7 @@ export function EntityHeader({
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">{actions}</div>
         ) : null}
       </div>
-      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="border-border mt-4 grid gap-4 border-t pt-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {meta.map((m) => (
           <MetaItem key={m.label} label={m.label} value={m.value} />
         ))}
@@ -129,31 +130,33 @@ export function EntityHeader({
         </div>
       ) : null}
     </div>
-  );
+  )
 }
 
-
 export type KanbanColumn<T> = {
-  id: string;
-  nombre: string;
-  tono: Tono;
-  items: T[];
-};
+  id: string
+  nombre: string
+  tono: Tono
+  items: T[]
+}
 
 export function KanbanBoard<T>({
   columns,
   renderCard,
 }: {
-  columns: KanbanColumn<T>[];
-  renderCard: (item: T) => ReactNode;
+  columns: KanbanColumn<T>[]
+  renderCard: (item: T) => ReactNode
 }) {
   return (
     <div className="-mx-1 overflow-x-auto pb-3">
       <div className="flex min-w-max gap-3 px-1">
         {columns.map((col) => (
-          <section key={col.id} className="w-72 shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2">
+          <section
+            key={col.id}
+            className="border-border/70 bg-muted/70 w-72 shrink-0 rounded-lg border p-2"
+          >
             <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-              <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-foreground">
+              <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
                 {col.nombre}
               </span>
               <ToneBadge tono={col.tono}>{col.items.length}</ToneBadge>
@@ -162,7 +165,7 @@ export function KanbanBoard<T>({
               {col.items.length ? (
                 col.items.map((item, i) => <div key={i}>{renderCard(item)}</div>)
               ) : (
-                <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+                <p className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
                   Sin registros
                 </p>
               )}
@@ -171,70 +174,72 @@ export function KanbanBoard<T>({
         ))}
       </div>
     </div>
-  );
+  )
 }
 
-
 export function FunnelChart({ items }: { items: { etapa: string; total: number }[] }) {
-  const max = Math.max(...items.map((i) => i.total), 1);
+  const max = Math.max(...items.map((i) => i.total), 1)
   return (
     <div className="space-y-2">
       {items.map((i, idx) => (
         <div key={i.etapa} className="flex items-center gap-3">
-          <span className="w-52 shrink-0 truncate text-sm text-muted-foreground">{i.etapa}</span>
-          <div className="h-7 flex-1 overflow-hidden rounded-md bg-muted">
+          <span className="text-muted-foreground w-52 shrink-0 truncate text-sm">{i.etapa}</span>
+          <div className="bg-muted h-7 flex-1 overflow-hidden rounded-md">
             <div
-              className="flex h-full items-center justify-end rounded-md bg-primary/85 px-2 text-xs font-semibold text-primary-foreground"
+              className="bg-primary/85 text-primary-foreground flex h-full items-center justify-end rounded-md px-2 text-xs font-semibold"
               style={{ width: `${Math.max((i.total / max) * 100, 8)}%` }}
             >
               {i.total}
             </div>
           </div>
-          <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
-            {idx === 0 ? "—" : `${Math.round((i.total / (items[0]?.total || 1)) * 100)} %`}
+          <span className="text-muted-foreground w-14 shrink-0 text-right text-xs">
+            {idx === 0 ? '—' : `${Math.round((i.total / (items[0]?.total || 1)) * 100)} %`}
           </span>
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 export function BarList({ items }: { items: { label: string; total: number }[] }) {
-  const max = Math.max(...items.map((i) => i.total), 1);
+  const max = Math.max(...items.map((i) => i.total), 1)
   return (
     <ul className="space-y-2">
       {items.map((i) => (
         <li key={i.label} className="flex items-center gap-3">
-          <span className="w-44 shrink-0 truncate text-sm text-foreground">{i.label}</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-chart-2" style={{ width: `${(i.total / max) * 100}%` }} />
+          <span className="text-foreground w-44 shrink-0 truncate text-sm">{i.label}</span>
+          <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+            <div
+              className="bg-chart-2 h-full rounded-full"
+              style={{ width: `${(i.total / max) * 100}%` }}
+            />
           </div>
-          <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">{i.total}</span>
+          <span className="text-muted-foreground w-8 shrink-0 text-right text-xs">{i.total}</span>
         </li>
       ))}
     </ul>
-  );
+  )
 }
 
 export function TimelineFeed({ items }: { items: HistorialItem[] }) {
   if (!items.length)
-    return <p className="text-sm text-muted-foreground">Sin movimientos registrados.</p>;
+    return <p className="text-muted-foreground text-sm">Sin movimientos registrados.</p>
   return (
-    <ol className="relative ml-2 border-l border-border pl-6">
+    <ol className="border-border relative ml-2 border-l pl-6">
       {items.map((it, i) => (
         <li key={i} className="relative pb-5 last:pb-0">
-          <span className="absolute -left-[1.9rem] top-1 flex h-3 w-3 items-center justify-center">
-            <Circle className="h-3 w-3 fill-primary text-primary" />
+          <span className="absolute top-1 -left-[1.9rem] flex h-3 w-3 items-center justify-center">
+            <Circle className="fill-primary text-primary h-3 w-3" />
           </span>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-foreground">{it.tipo}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-foreground text-sm font-medium">{it.tipo}</span>
+            <span className="text-muted-foreground text-xs">
               {it.fecha} · {it.usuario}
             </span>
           </div>
-          <p className="mt-0.5 text-sm text-muted-foreground">{it.descripcion}</p>
+          <p className="text-muted-foreground mt-0.5 text-sm">{it.descripcion}</p>
           {it.resultado || it.proxima || it.relacionado ? (
-            <p className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 flex flex-wrap gap-3 text-xs">
               {it.relacionado ? <span>Relacionado: {it.relacionado}</span> : null}
               {it.resultado ? <span>Resultado: {it.resultado}</span> : null}
               {it.proxima ? <span>Próxima actuación: {it.proxima}</span> : null}
@@ -243,62 +248,72 @@ export function TimelineFeed({ items }: { items: HistorialItem[] }) {
         </li>
       ))}
     </ol>
-  );
+  )
 }
 
 export function RelationList({
   title,
   items,
-  empty = "Sin elementos relacionados.",
+  empty = 'Sin elementos relacionados.',
 }: {
-  title: string;
-  items: { label: string; sub?: string | undefined; badge?: ReactNode; to?: unknown; params?: unknown }[];
-  empty?: string;
+  title: string
+  items: {
+    label: string
+    sub?: string | undefined
+    badge?: ReactNode
+    to?: unknown
+    params?: unknown
+  }[]
+  empty?: string
 }) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {items.length ? (
-          <ul className="divide-y divide-border">
+          <ul className="divide-border divide-y">
             {items.map((it, i) => {
               const body = (
                 <span className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-foreground">
+                    <span className="text-foreground block truncate text-sm font-medium">
                       {it.label}
                     </span>
                     {it.sub ? (
-                      <span className="block truncate text-xs text-muted-foreground">{it.sub}</span>
+                      <span className="text-muted-foreground block truncate text-xs">{it.sub}</span>
                     ) : null}
                   </span>
                   {it.badge}
                 </span>
-              );
+              )
               return (
                 <li key={i}>
                   {it.to ? (
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    <Link to={it.to as any} params={it.params as any} className="block hover:bg-accent/60">
+                    <Link
+                      to={it.to as any}
+                      params={it.params as any}
+                      className="hover:bg-accent/60 block"
+                    >
                       {body}
                     </Link>
                   ) : (
                     body
                   )}
                 </li>
-              );
+              )
             })}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{empty}</p>
+          <p className="text-muted-foreground text-sm">{empty}</p>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function ViewSwitch({
@@ -306,38 +321,38 @@ export function ViewSwitch({
   onChange,
   options,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { id: string; label: string }[];
+  value: string
+  onChange: (v: string) => void
+  options: { id: string; label: string }[]
 }) {
   return (
-    <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+    <div className="border-border bg-card inline-flex rounded-md border p-0.5">
       {options.map((o) => (
         <button
           key={o.id}
           type="button"
           onClick={() => onChange(o.id)}
           className={cn(
-            "rounded px-3 py-1.5 text-xs font-medium transition-colors",
+            'rounded px-3 py-1.5 text-xs font-medium transition-colors',
             value === o.id
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground',
           )}
         >
           {o.label}
         </button>
       ))}
     </div>
-  );
+  )
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
+      <Label className="text-muted-foreground text-xs tracking-wide uppercase">{label}</Label>
       {children}
     </div>
-  );
+  )
 }
 
 export function MockDialog({
@@ -345,13 +360,13 @@ export function MockDialog({
   title,
   description,
   children,
-  confirmLabel = "Guardar",
+  confirmLabel = 'Guardar',
 }: {
-  trigger: ReactNode;
-  title: string;
-  description?: string;
-  children: ReactNode;
-  confirmLabel?: string;
+  trigger: ReactNode
+  title: string
+  description?: string
+  children: ReactNode
+  confirmLabel?: string
 }) {
   return (
     <Dialog>
@@ -368,7 +383,7 @@ export function MockDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export function QuickTaskDialog({ trigger }: { trigger?: ReactNode }) {
@@ -398,14 +413,14 @@ export function QuickTaskDialog({ trigger }: { trigger?: ReactNode }) {
       <Field label="Responsable">
         <Select>
           <SelectTrigger>
-            <SelectValue placeholder="Seleccionar" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ib">Igor Belmonte</SelectItem>
-            <SelectItem value="at">Ana Torregrosa</SelectItem>
-            <SelectItem value="lf">Luis Ferrán</SelectItem>
-            <SelectItem value="ms">Marta Solé</SelectItem>
-            <SelectItem value="nc">Nuria Casals</SelectItem>
+            <SelectItem id="ib">Igor Belmonte</SelectItem>
+            <SelectItem id="at">Ana Torregrosa</SelectItem>
+            <SelectItem id="lf">Luis Ferrán</SelectItem>
+            <SelectItem id="ms">Marta Solé</SelectItem>
+            <SelectItem id="nc">Nuria Casals</SelectItem>
           </SelectContent>
         </Select>
       </Field>
@@ -419,44 +434,44 @@ export function QuickTaskDialog({ trigger }: { trigger?: ReactNode }) {
         <Input placeholder="dd/mm/aaaa" />
       </Field>
       <Field label="Prioridad">
-        <Select defaultValue="media">
+        <Select defaultSelectedKey="media">
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="alta">Alta</SelectItem>
-            <SelectItem value="media">Media</SelectItem>
-            <SelectItem value="baja">Baja</SelectItem>
+            <SelectItem id="alta">Alta</SelectItem>
+            <SelectItem id="media">Media</SelectItem>
+            <SelectItem id="baja">Baja</SelectItem>
           </SelectContent>
         </Select>
       </Field>
       <Field label="Estado">
-        <Select defaultValue="pendiente">
+        <Select defaultSelectedKey="pendiente">
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="pendiente">Pendiente</SelectItem>
-            <SelectItem value="curso">En curso</SelectItem>
-            <SelectItem value="revision">En revisión</SelectItem>
-            <SelectItem value="completada">Completada</SelectItem>
+            <SelectItem id="pendiente">Pendiente</SelectItem>
+            <SelectItem id="curso">En curso</SelectItem>
+            <SelectItem id="revision">En revisión</SelectItem>
+            <SelectItem id="completada">Completada</SelectItem>
           </SelectContent>
         </Select>
       </Field>
       <Field label="Elemento relacionado">
         <Select>
           <SelectTrigger>
-            <SelectValue placeholder="Contacto, oportunidad, expediente…" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="contacto">Contacto</SelectItem>
-            <SelectItem value="oportunidad">Oportunidad</SelectItem>
-            <SelectItem value="presupuesto">Presupuesto</SelectItem>
-            <SelectItem value="expediente">Expediente</SelectItem>
-            <SelectItem value="documento">Documento</SelectItem>
-            <SelectItem value="comunicacion">Comunicación</SelectItem>
-            <SelectItem value="factura">Factura</SelectItem>
-            <SelectItem value="actividad">Actividad</SelectItem>
+            <SelectItem id="contacto">Contacto</SelectItem>
+            <SelectItem id="oportunidad">Oportunidad</SelectItem>
+            <SelectItem id="presupuesto">Presupuesto</SelectItem>
+            <SelectItem id="expediente">Expediente</SelectItem>
+            <SelectItem id="documento">Documento</SelectItem>
+            <SelectItem id="comunicacion">Comunicación</SelectItem>
+            <SelectItem id="factura">Factura</SelectItem>
+            <SelectItem id="actividad">Actividad</SelectItem>
           </SelectContent>
         </Select>
       </Field>
@@ -469,15 +484,15 @@ export function QuickTaskDialog({ trigger }: { trigger?: ReactNode }) {
         </Field>
       </div>
     </MockDialog>
-  );
+  )
 }
 
 export function GoogleCalendarNote() {
   return (
-    <p className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+    <p className="border-border bg-muted/40 text-muted-foreground flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-xs">
       <CalendarClock className="h-4 w-4 shrink-0" />
-      Preparado para sincronizar con Google Calendar en una fase posterior. Los eventos mostrados son
-      ficticios.
+      Preparado para sincronizar con Google Calendar en una fase posterior. Los eventos mostrados
+      son ficticios.
     </p>
-  );
+  )
 }

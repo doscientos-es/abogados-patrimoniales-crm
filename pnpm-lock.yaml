@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@doscientos/ui':
-        specifier: ^0.1.28
-        version: 0.1.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: ^0.1.29
+        version: 0.1.29(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.9.1(react-hook-form@7.87.0(react@19.2.8))(zod@3.25.76)
@@ -344,8 +344,8 @@ packages:
       vitest:
         optional: true
 
-  '@doscientos/ui@0.1.28':
-    resolution: {integrity: sha512-lSkKTIMbG7X56iJF5BNVxZIAT2EIu6YvDM/pwJVkZ7V/OIcQutDoKq6FRx3A9qFXZvSv96TyjUQw1diuf6Uz+g==}
+  '@doscientos/ui@0.1.29':
+    resolution: {integrity: sha512-bxWH3REBTMoeBjhyIV+nsVcCMMIfHQofyBonS7M8Eb6E1TMfS/Oo0LoYKWWe3Npv11NLpTRJcypfyV7kxJIbQA==}
     peerDependencies:
       react: '>=18.3.0'
       react-dom: '>=18.3.0'
@@ -3583,7 +3583,7 @@ snapshots:
       oxlint: 1.80.0(oxlint-tsgolint@7.0.2001)
       oxlint-tsgolint: 7.0.2001
 
-  '@doscientos/ui@0.1.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@doscientos/ui@0.1.29(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1

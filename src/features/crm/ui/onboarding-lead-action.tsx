@@ -1,10 +1,5 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-
-import { Field } from "@/components/crm/ui";
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,35 +7,42 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { nombreContacto } from "@/data/crm";
-import { hoyTexto } from "@/data/pipeline";
-import type { OportunidadCRM } from "@/data/pipeline";
-import { onboarding, useOnboarding } from "@/lib/onboarding-store";
+  Input,
+  Textarea,
+  buttonVariants,
+} from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { nombreContacto } from '@/data/crm'
+import type { OportunidadCRM } from '@/data/pipeline'
+import { hoyTexto } from '@/data/pipeline'
+import { onboarding, useOnboarding } from '@/lib/onboarding-store'
+
+import { Field } from './ui'
 
 /** Acción de entrada al Onboarding desde un Lead aceptado. */
 export function IniciarOnboardingDesdeLead({ o }: { o: OportunidadCRM }) {
-  const existente = useOnboarding((s) => s.onboardings.find((x) => x.leadId === o.id));
-  const [abierto, setAbierto] = useState(false);
-  const [fecha, setFecha] = useState(hoyTexto());
-  const [obs, setObs] = useState("");
+  const existente = useOnboarding((s) => s.onboardings.find((x) => x.leadId === o.id))
+  const [abierto, setAbierto] = useState(false)
+  const [fecha, setFecha] = useState(hoyTexto())
+  const [obs, setObs] = useState('')
 
   if (existente) {
     return (
       <div className="mt-3 space-y-2">
-        <p className="text-sm text-foreground">
+        <p className="text-foreground text-sm">
           Onboarding <span className="font-medium">{existente.codigo}</span> en curso.
         </p>
-        <Button size="sm" variant="outline" asChild>
-          <Link to="/onboarding">Ver en Onboarding</Link>
-        </Button>
+        <Link to="/onboarding" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+          Ver en Onboarding
+        </Link>
       </div>
-    );
+    )
   }
 
-  const p = o.presupuestoEspejo;
+  const p = o.presupuestoEspejo
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -58,12 +60,16 @@ export function IniciarOnboardingDesdeLead({ o }: { o: OportunidadCRM }) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
-          <p className="rounded-md border border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            {o.codigo} · {nombreContacto(o.contactoId)} · Presupuesto {p.numero || "—"} v{p.version} ·{" "}
-            {o.aceptacion?.importe || p.importe || "—"}
+          <p className="border-border bg-muted/60 text-muted-foreground rounded-md border px-3 py-2 text-xs">
+            {o.codigo} · {nombreContacto(o.contactoId)} · Presupuesto {p.numero || '—'} v{p.version}{' '}
+            · {o.aceptacion?.importe || p.importe || '—'}
           </p>
           <Field label="Fecha de envío de la proforma">
-            <Input value={fecha} onChange={(e) => setFecha(e.target.value)} placeholder="dd/mm/aaaa" />
+            <Input
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              placeholder="dd/mm/aaaa"
+            />
           </Field>
           <Field label="Observación interna">
             <Textarea rows={2} value={obs} onChange={(e) => setObs(e.target.value)} />
@@ -76,8 +82,8 @@ export function IniciarOnboardingDesdeLead({ o }: { o: OportunidadCRM }) {
           <Button
             onClick={() => {
               if (!o.aceptacion) {
-                toast.error("El Lead no tiene aceptación registrada.");
-                return;
+                toast.error('El Lead no tiene aceptación registrada.')
+                return
               }
               const r = onboarding.registrarProformaEnviada({
                 leadId: o.id,
@@ -93,13 +99,13 @@ export function IniciarOnboardingDesdeLead({ o }: { o: OportunidadCRM }) {
                 importe: o.aceptacion.importe,
                 fecha,
                 observacion: obs,
-              });
+              })
               if (!r.ok) {
-                toast.error(r.motivo ?? "No puede crearse el Onboarding");
-                return;
+                toast.error(r.motivo ?? 'No puede crearse el Onboarding')
+                return
               }
-              toast.success("Onboarding creado", { description: "Fase: Proforma enviada" });
-              setAbierto(false);
+              toast.success('Onboarding creado', { description: 'Fase: Proforma enviada' })
+              setAbierto(false)
             }}
           >
             Registrar proforma enviada
@@ -107,5 +113,5 @@ export function IniciarOnboardingDesdeLead({ o }: { o: OportunidadCRM }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
