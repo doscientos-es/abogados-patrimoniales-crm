@@ -1,6 +1,5 @@
 {
-  "name": "tanstack_start_ts",
-  "private": true,
+  "name": "abogados-patrimoniales-crm",
   "sideEffects": false,
   "type": "module",
   "scripts": {
@@ -8,8 +7,12 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "lint": "eslint .",
-    "format": "prettier --write ."
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix --fix-suggestions",
+    "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
+    "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
+    "typecheck": "tsc --noEmit",
+    "quality": "pnpm format:check && pnpm lint && pnpm typecheck"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -66,6 +69,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@doscientos/configs": "^0.1.8",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.13.1",
     "@types/node": "^22.16.5",
@@ -79,6 +83,9 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
+    "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
