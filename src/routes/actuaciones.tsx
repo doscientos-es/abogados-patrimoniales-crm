@@ -1,29 +1,30 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from "@/components/common";
-import { ActuacionFormDialog, ActuacionesPanel } from "@/components/expedientes/actuaciones";
-import { Button } from "@/components/ui/button";
+import { SectionHeader } from '@/components/common'
+import { ActuacionFormDialog, ActuacionesPanel } from '@/components/expedientes/actuaciones'
+import { Button } from '@/components/ui/button'
 
-export const Route = createFileRoute("/actuaciones")({
+export const Route = createFileRoute('/actuaciones')({
   head: () => ({
     meta: [
-      { title: "Actuaciones — LEX" },
+      { title: 'Actuaciones — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Diario profesional del despacho: actuaciones registradas, actuaciones relevantes e hitos históricos de cada expediente.",
+          'Diario profesional del despacho: actuaciones registradas, actuaciones relevantes e hitos históricos de cada expediente.',
       },
-      { property: "og:title", content: "Actuaciones — LEX" },
+      { property: 'og:title', content: 'Actuaciones — LEX' },
       {
-        property: "og:description",
-        content: "Registro de la actuación realizada y de las actuaciones relevantes de los expedientes.",
+        property: 'og:description',
+        content:
+          'Registro de la actuación realizada y de las actuaciones relevantes de los expedientes.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: ActuacionesPage,
-});
+})
 
 function ActuacionesPage() {
   return (
@@ -47,5 +48,5 @@ function ActuacionesPage() {
       />
       <ActuacionesPanel />
     </div>
-  );
+  )
 }

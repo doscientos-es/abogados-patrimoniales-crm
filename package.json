@@ -1,7 +1,7 @@
 {
   "name": "abogados-patrimoniales-crm",
-  "sideEffects": false,
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

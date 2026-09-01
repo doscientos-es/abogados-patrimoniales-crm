@@ -26,5 +26,5 @@ export function renderErrorPage(): string {
       </div>
     </div>
   </body>
-</html>`;
+</html>`
 }

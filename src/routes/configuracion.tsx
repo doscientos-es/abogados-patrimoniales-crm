@@ -1,49 +1,49 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { PendingPanel, SectionHeader } from "@/components/common";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConfiguracionContactos } from "@/components/contactos/configuracion";
-import { GestionEtiquetas } from "@/components/tareas/etiquetas";
-import { GestionTitulosTarea } from "@/components/tareas/titulos";
+import { PendingPanel, SectionHeader } from '@/components/common'
+import { ConfiguracionContactos } from '@/components/contactos/configuracion'
+import { GestionEtiquetas } from '@/components/tareas/etiquetas'
+import { GestionTitulosTarea } from '@/components/tareas/titulos'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export const Route = createFileRoute("/configuracion")({
+export const Route = createFileRoute('/configuracion')({
   head: () => ({
     meta: [
-      { title: "Configuración — LEX" },
+      { title: 'Configuración — LEX' },
       {
-        name: "description",
-        content: "Ajustes del despacho: equipo, materias, plantillas, tarifas y numeración.",
+        name: 'description',
+        content: 'Ajustes del despacho: equipo, materias, plantillas, tarifas y numeración.',
       },
-      { property: "og:title", content: "Configuración — LEX" },
+      { property: 'og:title', content: 'Configuración — LEX' },
       {
-        property: "og:description",
-        content: "Parámetros generales previstos para el software del despacho.",
+        property: 'og:description',
+        content: 'Parámetros generales previstos para el software del despacho.',
       },
     ],
   }),
   component: ConfiguracionPage,
-});
+})
 
 const bloques: Record<string, [string, string][]> = {
   despacho: [
-    ["Datos del despacho", "Denominación, NIF, domicilio y colegiación."],
-    ["Series de numeración", "Referencias de leads, asuntos, documentos y facturas."],
+    ['Datos del despacho', 'Denominación, NIF, domicilio y colegiación.'],
+    ['Series de numeración', 'Referencias de leads, asuntos, documentos y facturas.'],
   ],
   equipo: [
-    ["Profesionales y roles", "Socios, asociados, paralegales y administración."],
-    ["Permisos por módulo", "Acceso a asuntos, documentos y facturación."],
+    ['Profesionales y roles', 'Socios, asociados, paralegales y administración.'],
+    ['Permisos por módulo', 'Acceso a asuntos, documentos y facturación.'],
   ],
   catalogos: [
-    ["Materias y submaterias", "Sucesiones, patrimonio societario, inmobiliario, ejecuciones."],
-    ["Estados y prioridades", "Catálogo de estados por fase."],
-    ["Tarifas y honorarios", "Tarifas horarias, precios cerrados y provisiones."],
+    ['Materias y submaterias', 'Sucesiones, patrimonio societario, inmobiliario, ejecuciones.'],
+    ['Estados y prioridades', 'Catálogo de estados por fase.'],
+    ['Tarifas y honorarios', 'Tarifas horarias, precios cerrados y provisiones.'],
   ],
   plantillas: [
-    ["Plantillas documentales", "Acta de encargo, welcome pack, acta de cierre y adendas."],
-    ["Checklists por fase", "Pasos obligatorios en cada una de las seis fases."],
+    ['Plantillas documentales', 'Acta de encargo, welcome pack, acta de cierre y adendas.'],
+    ['Checklists por fase', 'Pasos obligatorios en cada una de las seis fases.'],
   ],
-};
+}
 
 function ConfiguracionPage() {
   return (
@@ -65,18 +65,18 @@ function ConfiguracionPage() {
         </TabsContent>
         {Object.entries(bloques).map(([key, items]) => (
           <TabsContent key={key} value={key} className="space-y-3">
-            {key === "catalogos" ? <GestionEtiquetas /> : null}
-            {key === "catalogos" ? <GestionTitulosTarea /> : null}
+            {key === 'catalogos' ? <GestionEtiquetas /> : null}
+            {key === 'catalogos' ? <GestionTitulosTarea /> : null}
             {items.map(([titulo, desc]) => (
               <Card key={titulo}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">{titulo}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="mb-3 text-sm text-muted-foreground">{desc}</p>
+                  <p className="text-muted-foreground mb-3 text-sm">{desc}</p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="h-9 rounded-md border border-dashed border-border bg-muted/40" />
-                    <div className="h-9 rounded-md border border-dashed border-border bg-muted/40" />
+                    <div className="border-border bg-muted/40 h-9 rounded-md border border-dashed" />
+                    <div className="border-border bg-muted/40 h-9 rounded-md border border-dashed" />
                   </div>
                 </CardContent>
               </Card>
@@ -86,5 +86,5 @@ function ConfiguracionPage() {
         ))}
       </Tabs>
     </div>
-  );
+  )
 }

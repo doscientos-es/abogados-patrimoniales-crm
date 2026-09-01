@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { Link } from '@tanstack/react-router'
 import {
   AlarmClock,
   Archive,
@@ -18,9 +16,11 @@ import {
   RotateCcw,
   ShieldAlert,
   Wand2,
-} from "lucide-react";
+} from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,38 +36,38 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import { AMBITO_META, ESTADO_LABEL, type NotaInterna } from "@/data/notas";
-import { sumarDias } from "@/data/pipeline";
-import { diasHasta, estaVencida, necesitaRevision, notas, useNotas } from "@/lib/notas-store";
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { AMBITO_META, ESTADO_LABEL, type NotaInterna } from '@/data/notas'
+import { sumarDias } from '@/data/pipeline'
+import { diasHasta, estaVencida, necesitaRevision, notas, useNotas } from '@/lib/notas-store'
+import { cn } from '@/lib/utils'
 
-import { NotaDialog } from "./nota-form";
-import { ConvertirNotaDialog } from "./nota-convertir";
-import { enlaceOrigen, nombreContacto } from "./contexto";
+import { enlaceOrigen, nombreContacto } from './contexto'
+import { ConvertirNotaDialog } from './nota-convertir'
+import { NotaDialog } from './nota-form'
 
 function Marca({
   icon: Icon,
   children,
   className,
 }: {
-  icon: typeof Pin;
-  children: React.ReactNode;
-  className?: string;
+  icon: typeof Pin
+  children: React.ReactNode
+  className?: string
 }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-current/25 bg-background/40 px-2 py-0.5 text-[11px] font-medium",
+        'inline-flex items-center gap-1 rounded-full border border-current/25 bg-background/40 px-2 py-0.5 text-[11px] font-medium',
         className,
       )}
     >
       <Icon className="h-3 w-3" aria-hidden />
       {children}
     </span>
-  );
+  )
 }
 
 export function NotaHistorialDialog({
@@ -75,9 +75,9 @@ export function NotaHistorialDialog({
   open,
   onOpenChange,
 }: {
-  nota: NotaInterna;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+  nota: NotaInterna
+  open: boolean
+  onOpenChange: (v: boolean) => void
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,18 +90,18 @@ export function NotaHistorialDialog({
         </DialogHeader>
         <ol className="space-y-3">
           {nota.historial.map((h) => (
-            <li key={h.id} className="border-l-2 border-border pl-3">
-              <p className="text-sm font-medium text-foreground">{h.accion}</p>
-              <p className="text-xs text-muted-foreground">
+            <li key={h.id} className="border-border border-l-2 pl-3">
+              <p className="text-foreground text-sm font-medium">{h.accion}</p>
+              <p className="text-muted-foreground text-xs">
                 {h.fecha} · {h.usuario}
-                {h.detalle ? ` · ${h.detalle}` : ""}
+                {h.detalle ? ` · ${h.detalle}` : ''}
               </p>
             </li>
           ))}
         </ol>
         {nota.confirmaciones.length ? (
-          <div className="rounded-md border border-border bg-muted/40 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="border-border bg-muted/40 rounded-md border p-3">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               Confirmaciones de lectura
             </p>
             <ul className="mt-1 space-y-1 text-sm">
@@ -115,7 +115,7 @@ export function NotaHistorialDialog({
         ) : null}
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 function ProrrogarDialog({
@@ -123,11 +123,11 @@ function ProrrogarDialog({
   open,
   onOpenChange,
 }: {
-  nota: NotaInterna;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+  nota: NotaInterna
+  open: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [fecha, setFecha] = useState(n.vencimiento ?? sumarDias(30));
+  const [fecha, setFecha] = useState(n.vencimiento ?? sumarDias(30))
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -138,10 +138,14 @@ function ProrrogarDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-xs tracking-wide uppercase">
             Nueva fecha de vencimiento
           </Label>
-          <Input value={fecha} onChange={(e) => setFecha(e.target.value)} placeholder="dd/mm/aaaa" />
+          <Input
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            placeholder="dd/mm/aaaa"
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -149,9 +153,9 @@ function ProrrogarDialog({
           </Button>
           <Button
             onClick={() => {
-              notas.prorrogar(n.id, fecha);
-              onOpenChange(false);
-              toast.success("Vigencia prorrogada.");
+              notas.prorrogar(n.id, fecha)
+              onOpenChange(false)
+              toast.success('Vigencia prorrogada.')
             }}
           >
             Prorrogar
@@ -159,7 +163,7 @@ function ProrrogarDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Tarjeta post-it de una nota interna. Color estable según el ámbito. */
@@ -167,33 +171,33 @@ export function NotaCard({
   nota: n,
   mostrarOrigen = true,
 }: {
-  nota: NotaInterna;
-  mostrarOrigen?: boolean;
+  nota: NotaInterna
+  mostrarOrigen?: boolean
 }) {
-  const usuario = useNotas((s) => s.usuario);
-  const [editar, setEditar] = useState(false);
-  const [historial, setHistorial] = useState(false);
-  const [prorroga, setProrroga] = useState(false);
-  const [convertir, setConvertir] = useState(false);
+  const usuario = useNotas((s) => s.usuario)
+  const [editar, setEditar] = useState(false)
+  const [historial, setHistorial] = useState(false)
+  const [prorroga, setProrroga] = useState(false)
+  const [convertir, setConvertir] = useState(false)
 
-  const meta = AMBITO_META[n.ambito];
-  const Icono = meta.icon;
-  const inactiva = n.estado !== "activa";
-  const dias = diasHasta(n.vencimiento);
-  const confirmada = n.confirmaciones.some((c) => c.usuario === usuario);
+  const meta = AMBITO_META[n.ambito]
+  const Icono = meta.icon
+  const inactiva = n.estado !== 'activa'
+  const dias = diasHasta(n.vencimiento)
+  const confirmada = n.confirmaciones.some((c) => c.usuario === usuario)
 
   return (
     <article
       className={cn(
-        "flex w-full flex-col rounded-sm border p-4 shadow-md transition-transform",
-        inactiva ? "nota-tono-inactiva" : meta.clase,
-        n.critica && "ring-2 ring-destructive/70",
-        "hover:-translate-y-0.5",
+        'flex w-full flex-col rounded-sm border p-4 shadow-md transition-transform',
+        inactiva ? 'nota-tono-inactiva' : meta.clase,
+        n.critica && 'ring-2 ring-destructive/70',
+        'hover:-translate-y-0.5',
       )}
-      aria-label={`${meta.label}${n.titulo ? `: ${n.titulo}` : ""}`}
+      aria-label={`${meta.label}${n.titulo ? `: ${n.titulo}` : ''}`}
     >
       <header className="flex items-start justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide uppercase">
           <Icono className="h-3.5 w-3.5" aria-hidden />
           {meta.label}
         </span>
@@ -203,7 +207,7 @@ export function NotaCard({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="rounded p-1 hover:bg-background/40"
+                className="hover:bg-background/40 rounded p-1"
                 aria-label="Acciones de la nota"
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -215,15 +219,19 @@ export function NotaCard({
                 <Pencil className="h-4 w-4" /> Editar
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => notas.destacar(n.id, !n.destacada)}>
-                <Pin className="h-4 w-4" /> {n.destacada ? "Quitar destacada" : "Destacar"}
+                <Pin className="h-4 w-4" /> {n.destacada ? 'Quitar destacada' : 'Destacar'}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => notas.marcarCritica(n.id, !n.critica)}>
                 <ShieldAlert className="h-4 w-4" />
-                {n.critica ? "Quitar advertencia crítica" : "Marcar como crítica"}
+                {n.critica ? 'Quitar advertencia crítica' : 'Marcar como crítica'}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => notas.requerirConfirmacion(n.id, !n.requiereConfirmacion)}>
+              <DropdownMenuItem
+                onSelect={() => notas.requerirConfirmacion(n.id, !n.requiereConfirmacion)}
+              >
                 <CheckCheck className="h-4 w-4" />
-                {n.requiereConfirmacion ? "No requerir confirmación" : "Requerir confirmación de lectura"}
+                {n.requiereConfirmacion
+                  ? 'No requerir confirmación'
+                  : 'Requerir confirmación de lectura'}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setProrroga(true)}>
@@ -234,7 +242,7 @@ export function NotaCard({
                   <Check className="h-4 w-4" /> Marcar como revisada
                 </DropdownMenuItem>
               ) : null}
-              {n.estado === "activa" ? (
+              {n.estado === 'activa' ? (
                 <>
                   <DropdownMenuItem onSelect={() => notas.resolver(n.id)}>
                     <Check className="h-4 w-4" /> Resolver
@@ -266,9 +274,9 @@ export function NotaCard({
       </header>
 
       {n.titulo ? (
-        <h3 className="mt-2 font-serif text-base font-semibold leading-snug">{n.titulo}</h3>
+        <h3 className="mt-2 font-serif text-base leading-snug font-semibold">{n.titulo}</h3>
       ) : null}
-      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{n.contenido}</p>
+      <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap">{n.contenido}</p>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {n.critica ? (
@@ -276,13 +284,13 @@ export function NotaCard({
             Advertencia crítica
           </Marca>
         ) : null}
-        {n.visibilidad === "restringida" ? <Marca icon={Lock}>Restringida</Marca> : null}
+        {n.visibilidad === 'restringida' ? <Marca icon={Lock}>Restringida</Marca> : null}
         {inactiva ? <Marca icon={Archive}>{ESTADO_LABEL[n.estado]}</Marca> : null}
-        {n.vigencia === "temporal" && n.vencimiento ? (
+        {n.vigencia === 'temporal' && n.vencimiento ? (
           <Marca icon={Clock}>
             {estaVencida(n)
               ? `Vencida el ${n.vencimiento}`
-              : `Vigente hasta ${n.vencimiento}${dias !== null && dias <= 7 ? ` (${dias} d)` : ""}`}
+              : `Vigente hasta ${n.vencimiento}${dias !== null && dias <= 7 ? ` (${dias} d)` : ''}`}
           </Marca>
         ) : (
           <Marca icon={Clock}>Permanente</Marca>
@@ -311,10 +319,10 @@ export function NotaCard({
             <Button
               size="sm"
               variant="outline"
-              className="h-7 border-current/40 bg-background/50 text-xs"
+              className="bg-background/50 h-7 border-current/40 text-xs"
               onClick={() => {
-                notas.confirmarLectura(n.id);
-                toast.success("Lectura confirmada y registrada.");
+                notas.confirmarLectura(n.id)
+                toast.success('Lectura confirmada y registrada.')
               }}
             >
               Confirmar lectura
@@ -326,18 +334,18 @@ export function NotaCard({
       <footer className="mt-3 space-y-0.5 border-t border-current/20 pt-2 text-[11px] opacity-80">
         <p>
           {n.autor} · {n.creada}
-          {n.modificada ? " · Editada" : ""}
+          {n.modificada ? ' · Editada' : ''}
         </p>
         {mostrarOrigen ? (
           <p className="truncate">
-            Procedencia:{" "}
+            Procedencia:{' '}
             <Link to={enlaceOrigen(n.origen)} className="underline underline-offset-2">
               {n.origen.etiqueta}
             </Link>
           </p>
         ) : null}
         {n.contactos.length ? (
-          <p className="truncate">Personas: {n.contactos.map(nombreContacto).join(", ")}</p>
+          <p className="truncate">Personas: {n.contactos.map(nombreContacto).join(', ')}</p>
         ) : null}
       </footer>
 
@@ -350,5 +358,5 @@ export function NotaCard({
         <ConvertirNotaDialog nota={n} open={convertir} onOpenChange={setConvertir} />
       ) : null}
     </article>
-  );
+  )
 }

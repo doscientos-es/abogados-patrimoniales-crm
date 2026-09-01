@@ -1,5 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   Archive,
   Copy,
@@ -10,32 +9,11 @@ import {
   Save,
   Search,
   Trash2,
-} from "lucide-react";
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
-import { PendingBadge, SectionHeader } from "@/components/common";
-import {
-  EstadoBadge,
-  RelacionBadge,
-  SatisfactionMeter,
-} from "@/components/contactos/ui";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PendingBadge, SectionHeader } from '@/components/common'
+import { EstadoBadge, RelacionBadge, SatisfactionMeter } from '@/components/contactos/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +23,24 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -53,8 +48,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   CONTACTOS,
   NATURALEZAS,
@@ -64,71 +59,69 @@ import {
   estadoDocumental,
   nombreCompleto,
   type Contacto,
-} from "@/data/contactos";
+} from '@/data/contactos'
 
-
-export const Route = createFileRoute("/contactos/")({
+export const Route = createFileRoute('/contactos/')({
   head: () => ({
     meta: [
-      { title: "Contactos — LEX" },
+      { title: 'Contactos — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Listado general de contactos del despacho: clientes, colaboradores, notarías, peritos y organismos.",
+          'Listado general de contactos del despacho: clientes, colaboradores, notarías, peritos y organismos.',
       },
-      { property: "og:title", content: "Contactos — LEX" },
+      { property: 'og:title', content: 'Contactos — LEX' },
       {
-        property: "og:description",
-        content: "Busca, filtra y gestiona las fichas personales de personas físicas y jurídicas.",
+        property: 'og:description',
+        content: 'Busca, filtra y gestiona las fichas personales de personas físicas y jurídicas.',
       },
     ],
   }),
   component: ContactosPage,
-});
+})
 
-type Orden = "nombre" | "relacion" | "creacion" | "modificacion";
+type Orden = 'nombre' | 'relacion' | 'creacion' | 'modificacion'
 
 const parseFecha = (f: string) => {
-  const [d, m, y] = f.split("/");
-  return new Date(`${y}-${m}-${d}`).getTime() || 0;
-};
+  const [d, m, y] = f.split('/')
+  return new Date(`${y}-${m}-${d}`).getTime() || 0
+}
 
 function ContactosPage() {
-  const [vista, setVista] = useState<"activos" | "archivados">("activos");
-  const [q, setQ] = useState("");
-  const [relacion, setRelacion] = useState("todas");
-  const [naturaleza, setNaturaleza] = useState("todas");
-  const [estado, setEstado] = useState("todos");
-  const [origen, setOrigen] = useState("todos");
-  const [satisfaccion, setSatisfaccion] = useState("todas");
-  const [orden, setOrden] = useState<Orden>("nombre");
-  const [aEliminar, setAEliminar] = useState<Contacto | null>(null);
+  const [vista, setVista] = useState<'activos' | 'archivados'>('activos')
+  const [q, setQ] = useState('')
+  const [relacion, setRelacion] = useState('todas')
+  const [naturaleza, setNaturaleza] = useState('todas')
+  const [estado, setEstado] = useState('todos')
+  const [origen, setOrigen] = useState('todos')
+  const [satisfaccion, setSatisfaccion] = useState('todas')
+  const [orden, setOrden] = useState<Orden>('nombre')
+  const [aEliminar, setAEliminar] = useState<Contacto | null>(null)
 
   const filtrados = useMemo(() => {
-    const term = q.trim().toLowerCase();
+    const term = q.trim().toLowerCase()
     const lista = CONTACTOS.filter((c) =>
-      vista === "archivados" ? c.estado === "Archivado" : c.estado !== "Archivado",
+      vista === 'archivados' ? c.estado === 'Archivado' : c.estado !== 'Archivado',
     )
       .filter((c) => {
-        if (!term) return true;
+        if (!term) return true
         return [c.nombre, c.apellidos, c.razonSocial, c.nif, c.telefono, c.email]
           .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(term));
+          .some((v) => String(v).toLowerCase().includes(term))
       })
-      .filter((c) => relacion === "todas" || c.relacion === relacion)
-      .filter((c) => naturaleza === "todas" || c.tipoPersona === naturaleza)
-      .filter((c) => estado === "todos" || c.estado === estado)
-      .filter((c) => origen === "todos" || c.origen === origen)
-      .filter((c) => satisfaccion === "todas" || c.satisfaccion === satisfaccion);
+      .filter((c) => relacion === 'todas' || c.relacion === relacion)
+      .filter((c) => naturaleza === 'todas' || c.tipoPersona === naturaleza)
+      .filter((c) => estado === 'todos' || c.estado === estado)
+      .filter((c) => origen === 'todos' || c.origen === origen)
+      .filter((c) => satisfaccion === 'todas' || c.satisfaccion === satisfaccion)
 
     return [...lista].sort((a, b) => {
-      if (orden === "nombre") return nombreCompleto(a).localeCompare(nombreCompleto(b));
-      if (orden === "relacion") return a.relacion.localeCompare(b.relacion);
-      if (orden === "creacion") return parseFecha(b.creado) - parseFecha(a.creado);
-      return parseFecha(b.modificado) - parseFecha(a.modificado);
-    });
-  }, [vista, q, relacion, naturaleza, estado, origen, satisfaccion, orden]);
-
+      if (orden === 'nombre') return nombreCompleto(a).localeCompare(nombreCompleto(b))
+      if (orden === 'relacion') return a.relacion.localeCompare(b.relacion)
+      if (orden === 'creacion') return parseFecha(b.creado) - parseFecha(a.creado)
+      return parseFecha(b.modificado) - parseFecha(a.modificado)
+    })
+  }, [vista, q, relacion, naturaleza, estado, origen, satisfaccion, orden])
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -156,7 +149,7 @@ function ContactosPage() {
         <CardContent className="pt-6">
           <div className="grid gap-3 lg:grid-cols-12">
             <div className="relative lg:col-span-4">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -240,11 +233,11 @@ function ContactosPage() {
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              {filtrados.length} contacto{filtrados.length === 1 ? "" : "s"} en la vista actual.
+            <p className="text-muted-foreground text-xs">
+              {filtrados.length} contacto{filtrados.length === 1 ? '' : 's'} en la vista actual.
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Ordenar por</span>
+              <span className="text-muted-foreground text-xs">Ordenar por</span>
               <Select value={orden} onValueChange={(v) => setOrden(v as Orden)}>
                 <SelectTrigger className="w-[210px]" aria-label="Ordenar por">
                   <SelectValue />
@@ -277,7 +270,6 @@ function ContactosPage() {
                 <TableHead className="w-28">Estado</TableHead>
                 <TableHead className="w-32">Modificado</TableHead>
                 <TableHead className="w-12" />
-
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -287,7 +279,7 @@ function ContactosPage() {
                     <Link
                       to="/contactos/$id"
                       params={{ id: c.id }}
-                      className="font-medium text-primary hover:underline"
+                      className="text-primary font-medium hover:underline"
                     >
                       {c.id}
                     </Link>
@@ -296,43 +288,43 @@ function ContactosPage() {
                     <Link to="/contactos/$id" params={{ id: c.id }} className="hover:underline">
                       {nombreCompleto(c)}
                     </Link>
-                    <span className="block text-xs text-muted-foreground">{c.nif}</span>
+                    <span className="text-muted-foreground block text-xs">{c.nif}</span>
                   </TableCell>
                   <TableCell>
                     <RelacionBadge value={c.relacion} />
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.tipoPersona}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-xs">{c.tipoPersona}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
                     <span className="block">{c.telefono}</span>
                     <span className="block truncate">{c.email}</span>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.origen}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{c.origen}</TableCell>
                   <TableCell>
                     <SatisfactionMeter value={c.satisfaccion} showLabel={false} />
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const doc = estadoDocumental(c);
+                      const doc = estadoDocumental(c)
                       return doc.aplica ? (
                         <span
                           className={
                             doc.pendientes.length === 0
-                              ? "inline-flex rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-xs font-medium text-success"
-                              : "inline-flex rounded-full border border-warning/50 bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground"
+                              ? 'border-success/40 bg-success/10 text-success inline-flex rounded-full border px-2 py-0.5 text-xs font-medium'
+                              : 'border-warning/50 bg-warning/15 text-warning-foreground inline-flex rounded-full border px-2 py-0.5 text-xs font-medium'
                           }
                         >
                           {doc.etiqueta}
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">No aplicable</span>
-                      );
+                        <span className="text-muted-foreground text-xs">No aplicable</span>
+                      )
                     })()}
                   </TableCell>
 
                   <TableCell>
                     <EstadoBadge value={c.estado} />
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-xs">
                     <span className="block">{c.modificado}</span>
                     <span className="block">{c.modificadoPor}</span>
                   </TableCell>
@@ -373,8 +365,8 @@ function ContactosPage() {
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onSelect={(e) => {
-                            e.preventDefault();
-                            setAEliminar(c);
+                            e.preventDefault()
+                            setAEliminar(c)
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -390,7 +382,10 @@ function ContactosPage() {
               ))}
               {filtrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell
+                    colSpan={12}
+                    className="text-muted-foreground py-10 text-center text-sm"
+                  >
                     No hay contactos que coincidan con la búsqueda o los filtros aplicados.
                   </TableCell>
                 </TableRow>
@@ -405,7 +400,7 @@ function ContactosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar contacto</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminaría la ficha de {aEliminar ? nombreCompleto(aEliminar) : ""} y todos sus
+              Se eliminaría la ficha de {aEliminar ? nombreCompleto(aEliminar) : ''} y todos sus
               datos asociados. Esta confirmación es una maqueta: la eliminación real está pendiente
               de desarrollo.
             </AlertDialogDescription>
@@ -417,5 +412,5 @@ function ContactosPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

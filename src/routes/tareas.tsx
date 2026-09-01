@@ -1,28 +1,28 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from "@/components/common";
-import { TareasWorkspace } from "@/components/tareas/workspace";
+import { SectionHeader } from '@/components/common'
+import { TareasWorkspace } from '@/components/tareas/workspace'
 
-export const Route = createFileRoute("/tareas")({
+export const Route = createFileRoute('/tareas')({
   head: () => ({
     meta: [
-      { title: "Tareas — LEX" },
+      { title: 'Tareas — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Tablero único de tareas del despacho: pendientes, en curso, en espera, completadas y canceladas, con responsable, vencimiento y trazabilidad.",
+          'Tablero único de tareas del despacho: pendientes, en curso, en espera, completadas y canceladas, con responsable, vencimiento y trazabilidad.',
       },
-      { property: "og:title", content: "Tareas — LEX" },
+      { property: 'og:title', content: 'Tareas — LEX' },
       {
-        property: "og:description",
-        content: "Trabajo real del equipo: quién, qué, cuándo y con qué evidencia de cierre.",
+        property: 'og:description',
+        content: 'Trabajo real del equipo: quién, qué, cuándo y con qué evidencia de cierre.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: TareasPage,
-});
+})
 
 function TareasPage() {
   return (
@@ -33,5 +33,5 @@ function TareasPage() {
       />
       <TareasWorkspace />
     </div>
-  );
+  )
 }

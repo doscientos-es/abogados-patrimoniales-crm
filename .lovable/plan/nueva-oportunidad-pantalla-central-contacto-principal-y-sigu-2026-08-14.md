@@ -7,6 +7,7 @@ Hoy "Nueva oportunidad" es un formulario en ventana/panel con campos en dos colu
 Nueva ruta `/oportunidades/nueva` (el botón "Nueva oportunidad" deja de abrir el panel lateral y navega a ella). Contenido centrado, ancho cómodo (máx. ~900 px), bloques verticales apilados, responsive en escritorio, tablet y móvil. Sin navegación lateral ni pasos.
 
 Orden de bloques:
+
 1. Contacto principal
 2. Información inicial del asunto
 3. Documentos iniciales
@@ -28,6 +29,7 @@ Orden de bloques:
 ## 3. Información inicial del asunto
 
 Sustituye "Descripción del asunto". Texto auxiliar indicado. Todos los campos son texto libre y opcionales:
+
 - ¿Qué ha ocurrido? (área amplia, admite pegado y saltos de línea; si cambia sustancialmente se conserva histórico de versiones)
 - ¿Qué solicita al despacho? (área amplia, visualmente diferenciada)
 - Urgencia: exactamente las cuatro opciones indicadas; con "Sí, existe una fecha o plazo concreto" aparece un único campo de texto simple. Con cualquiera de las tres opciones de posible urgencia se muestra solo el aviso `POSIBLE URGENCIA — PENDIENTE DE REVISIÓN`.
@@ -56,6 +58,7 @@ Se puede guardar aunque falte contacto, rol, información, urgencia, documentos 
 ## 8. Ventana «¿Siguiente acción?»
 
 Tras guardar, diálogo con el texto indicado y las once opciones (Llamar al contacto … Crear otra tarea, Ahora no procede). Sin IA ni deducción.
+
 - Al elegir una plantilla: se abre el formulario ordinario de Nueva tarea, vinculado a la oportunidad, con descripción precumplimentada y editable, responsable, fecha, recordatorio e indicaciones. La tarea resultante es una tarea normal, sin etiqueta ni estado especial.
 - "Crear otra tarea": formulario en blanco, solo con la vinculación.
 - "Ahora no procede" o cerrar la ventana: no se crea nada y se abre la ficha de la oportunidad.

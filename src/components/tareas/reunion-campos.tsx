@@ -1,15 +1,15 @@
+import { Link } from '@tanstack/react-router'
+import { Building2, UserPlus, Users, X } from 'lucide-react'
 // Campos compartidos de la TAREA ESPECIAL «REUNIÓN».
 //
 // Se usan tanto en el alta (instrucciones) como en la fase de PREPARACIÓN de
 // la ficha, para que la orden de trabajo se lea y se edite igual en ambos
 // sitios. CON QUIÉN reutiliza INTERVINIENTES y CONTACTOS ya existentes en LEX:
 // añadir a alguien a una reunión NO lo convierte en interviniente.
-import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Building2, UserPlus, Users, X } from "lucide-react";
+import { useMemo, useState } from 'react'
 
-import { SelectorFecha } from "@/components/fechas/datetime";
-import { Button } from "@/components/ui/button";
+import { SelectorFecha } from '@/components/fechas/datetime'
+import { Button } from '@/components/ui/button'
 import {
   Command,
   CommandEmpty,
@@ -17,19 +17,19 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+} from '@/components/ui/command'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { CONTACTOS } from "@/data/contactos";
-import { USUARIOS } from "@/data/crm";
+} from '@/components/ui/select'
+import { CONTACTOS } from '@/data/contactos'
+import { USUARIOS } from '@/data/crm'
 import {
   DURACIONES_REUNION,
   FRANJAS_REUNION,
@@ -37,29 +37,29 @@ import {
   PREFERENCIAS_FECHA_REUNION,
   type ClaseAsistente,
   type FranjaReunion,
-} from "@/data/expedientes-model";
-import { useOps } from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/data/expedientes-model'
+import { useOps } from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
 export type Participante = {
-  nombre: string;
-  clase: ClaseAsistente;
-  rol?: string;
-  contactoId?: string;
-};
+  nombre: string
+  clase: ClaseAsistente
+  rol?: string
+  contactoId?: string
+}
 
 export const nombreDeContacto = (id: string) => {
-  const c = CONTACTOS.find((x) => x.id === id);
-  if (!c) return id;
-  return [c.nombre, c.apellidos].filter(Boolean).join(" ") || c.razonSocial || id;
-};
+  const c = CONTACTOS.find((x) => x.id === id)
+  if (!c) return id
+  return [c.nombre, c.apellidos].filter(Boolean).join(' ') || c.razonSocial || id
+}
 
 export function CampoLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <Label className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
       {children}
     </Label>
-  );
+  )
 }
 
 /* ------------------------------ CON QUIÉN ------------------------------ */
@@ -69,63 +69,65 @@ export function SelectorParticipantes({
   valor,
   onChange,
 }: {
-  expedienteId?: string;
-  valor: Participante[];
-  onChange: (v: Participante[]) => void;
+  expedienteId?: string
+  valor: Participante[]
+  onChange: (v: Participante[]) => void
 }) {
-  const intervinientes = useOps((s) => s.intervinientes);
-  const [abiertoContacto, setAbiertoContacto] = useState(false);
-  const [abiertoCompanero, setAbiertoCompanero] = useState(false);
+  const intervinientes = useOps((s) => s.intervinientes)
+  const [abiertoContacto, setAbiertoContacto] = useState(false)
+  const [abiertoCompanero, setAbiertoCompanero] = useState(false)
 
   const delExpediente = useMemo(
     () => (expedienteId ? intervinientes.filter((i) => i.expedienteId === expedienteId) : []),
     [intervinientes, expedienteId],
-  );
+  )
 
   const seleccionado = (p: Participante) =>
-    valor.some((v) => (p.contactoId && v.contactoId === p.contactoId) || v.nombre === p.nombre);
+    valor.some((v) => (p.contactoId && v.contactoId === p.contactoId) || v.nombre === p.nombre)
 
   const alternar = (p: Participante) => {
     if (seleccionado(p)) {
       onChange(
-        valor.filter((v) => !((p.contactoId && v.contactoId === p.contactoId) || v.nombre === p.nombre)),
-      );
-      return;
+        valor.filter(
+          (v) => !((p.contactoId && v.contactoId === p.contactoId) || v.nombre === p.nombre),
+        ),
+      )
+      return
     }
-    onChange([...valor, p]);
-  };
+    onChange([...valor, p])
+  }
 
   return (
     <div className="space-y-2">
       {delExpediente.length ? (
         <div className="space-y-1.5">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Intervinientes del expediente
           </p>
           <div className="flex flex-wrap gap-1.5">
             {delExpediente.map((i) => {
               const p: Participante = {
                 nombre: i.nombre,
-                clase: "Externo",
+                clase: 'Externo',
                 rol: i.rol,
                 ...(i.contactoId ? { contactoId: i.contactoId } : {}),
-              };
-              const activo = seleccionado(p);
+              }
+              const activo = seleccionado(p)
               return (
                 <button
                   key={i.id}
                   type="button"
                   onClick={() => alternar(p)}
                   className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    'rounded-full border px-2.5 py-1 text-xs transition-colors',
                     activo
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted",
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted',
                   )}
                 >
-                  {i.nombre} · <span className="uppercase tracking-wide">{i.rol}</span>
+                  {i.nombre} · <span className="tracking-wide uppercase">{i.rol}</span>
                 </button>
-              );
+              )
             })}
           </div>
         </div>
@@ -145,23 +147,23 @@ export function SelectorParticipantes({
                 <CommandEmpty>Sin coincidencias.</CommandEmpty>
                 <CommandGroup heading="Contactos de LEX">
                   {CONTACTOS.map((c) => {
-                    const nombre = nombreDeContacto(c.id);
+                    const nombre = nombreDeContacto(c.id)
                     return (
                       <CommandItem
                         key={c.id}
-                        value={`${nombre} ${c.relacion ?? ""}`}
+                        value={`${nombre} ${c.relacion ?? ''}`}
                         onSelect={() => {
-                          alternar({ nombre, clase: "Externo", rol: c.relacion, contactoId: c.id });
-                          setAbiertoContacto(false);
+                          alternar({ nombre, clase: 'Externo', rol: c.relacion, contactoId: c.id })
+                          setAbiertoContacto(false)
                         }}
                       >
-                        <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Building2 className="text-muted-foreground mr-2 h-3.5 w-3.5" />
                         <span className="truncate">{nombre}</span>
-                        <span className="ml-auto text-[10px] uppercase text-muted-foreground">
+                        <span className="text-muted-foreground ml-auto text-[10px] uppercase">
                           {c.relacion}
                         </span>
                       </CommandItem>
-                    );
+                    )
                   })}
                 </CommandGroup>
                 <CommandGroup>
@@ -193,12 +195,12 @@ export function SelectorParticipantes({
                       key={u.id}
                       value={`${u.nombre} ${u.rol}`}
                       onSelect={() => {
-                        alternar({ nombre: u.nombre, clase: "Interno", rol: u.rol });
-                        setAbiertoCompanero(false);
+                        alternar({ nombre: u.nombre, clase: 'Interno', rol: u.rol })
+                        setAbiertoCompanero(false)
                       }}
                     >
                       <span className="truncate">{u.nombre}</span>
-                      <span className="ml-auto text-[10px] uppercase text-muted-foreground">
+                      <span className="text-muted-foreground ml-auto text-[10px] uppercase">
                         {u.rol}
                       </span>
                     </CommandItem>
@@ -214,12 +216,12 @@ export function SelectorParticipantes({
         <div className="flex flex-wrap gap-1.5">
           {valor.map((p) => (
             <span
-              key={`${p.contactoId ?? ""}${p.nombre}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs"
+              key={`${p.contactoId ?? ''}${p.nombre}`}
+              className="border-border bg-muted/50 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
             >
               {p.nombre}
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {p.clase === "Interno" ? "Despacho" : (p.rol ?? "Externo")}
+              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                {p.clase === 'Interno' ? 'Despacho' : (p.rol ?? 'Externo')}
               </span>
               <button
                 type="button"
@@ -233,12 +235,12 @@ export function SelectorParticipantes({
           ))}
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground text-[11px]">
           Todavía no hay participantes seleccionados.
         </p>
       )}
     </div>
-  );
+  )
 }
 
 /* ------------------------- Condiciones de la reunión ------------------- */
@@ -247,22 +249,22 @@ export function SelectorDuracion({
   value,
   onChange,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  value: string
+  onChange: (v: string) => void
 }) {
-  const estandar = (DURACIONES_REUNION as readonly string[]).includes(value);
-  const [personalizada, setPersonalizada] = useState(!estandar && Boolean(value));
+  const estandar = (DURACIONES_REUNION as readonly string[]).includes(value)
+  const [personalizada, setPersonalizada] = useState(!estandar && Boolean(value))
   return (
     <div className="space-y-1.5">
       <Select
-        value={personalizada ? "Personalizada" : value}
+        value={personalizada ? 'Personalizada' : value}
         onValueChange={(v) => {
-          if (v === "Personalizada") {
-            setPersonalizada(true);
-            return;
+          if (v === 'Personalizada') {
+            setPersonalizada(true)
+            return
           }
-          setPersonalizada(false);
-          onChange(v);
+          setPersonalizada(false)
+          onChange(v)
         }}
       >
         <SelectTrigger className="h-9">
@@ -282,12 +284,14 @@ export function SelectorDuracion({
           className="h-9"
           inputMode="numeric"
           placeholder="Minutos"
-          defaultValue={estandar ? "" : value.replace(/\D/g, "")}
-          onChange={(e) => onChange(e.target.value ? `${e.target.value.replace(/\D/g, "")} min` : "")}
+          defaultValue={estandar ? '' : value.replace(/\D/g, '')}
+          onChange={(e) =>
+            onChange(e.target.value ? `${e.target.value.replace(/\D/g, '')} min` : '')
+          }
         />
       ) : null}
     </div>
-  );
+  )
 }
 
 export function SelectorPreferenciaFecha({
@@ -296,12 +300,12 @@ export function SelectorPreferenciaFecha({
   onChange,
   onFecha,
 }: {
-  value: string;
-  fecha: string;
-  onChange: (v: string) => void;
-  onFecha: (v: string) => void;
+  value: string
+  fecha: string
+  onChange: (v: string) => void
+  onFecha: (v: string) => void
 }) {
-  const pideFecha = value === "Antes de una fecha" || value === "Fecha concreta preferente";
+  const pideFecha = value === 'Antes de una fecha' || value === 'Fecha concreta preferente'
   return (
     <div className="space-y-1.5">
       <Select value={value} onValueChange={onChange}>
@@ -318,35 +322,35 @@ export function SelectorPreferenciaFecha({
       </Select>
       {pideFecha ? <SelectorFecha value={fecha} onChange={onFecha} /> : null}
     </div>
-  );
+  )
 }
 
 export function SelectorFranja({
   value,
   onChange,
 }: {
-  value: FranjaReunion;
-  onChange: (v: FranjaReunion) => void;
+  value: FranjaReunion
+  onChange: (v: FranjaReunion) => void
 }) {
   return (
-    <div className="inline-flex rounded-md border border-border p-0.5">
+    <div className="border-border inline-flex rounded-md border p-0.5">
       {FRANJAS_REUNION.map((f) => (
         <button
           key={f}
           type="button"
           onClick={() => onChange(f)}
           className={cn(
-            "rounded-[4px] px-3 py-1.5 text-xs transition-colors",
+            'rounded-[4px] px-3 py-1.5 text-xs transition-colors',
             value === f
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted",
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-muted',
           )}
         >
           {f}
         </button>
       ))}
     </div>
-  );
+  )
 }
 
 export function SelectorLugar({
@@ -355,10 +359,10 @@ export function SelectorLugar({
   onChange,
   onDireccion,
 }: {
-  value: string;
-  direccion: string;
-  onChange: (v: string) => void;
-  onDireccion: (v: string) => void;
+  value: string
+  direccion: string
+  onChange: (v: string) => void
+  onDireccion: (v: string) => void
 }) {
   return (
     <div className="space-y-1.5">
@@ -374,7 +378,7 @@ export function SelectorLugar({
           ))}
         </SelectContent>
       </Select>
-      {value === "Fuera del despacho" ? (
+      {value === 'Fuera del despacho' ? (
         <Input
           className="h-9"
           value={direccion}
@@ -383,5 +387,5 @@ export function SelectorLugar({
         />
       ) : null}
     </div>
-  );
+  )
 }

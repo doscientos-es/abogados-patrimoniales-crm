@@ -1,46 +1,46 @@
-import { useState } from "react";
-import { MessageSquare, Paperclip, Send } from "lucide-react";
+import { MessageSquare, Paperclip, Send } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { CANALES_MENSAJE, type CanalMensaje, type MensajeOportunidad } from "@/data/pipeline";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { CANALES_MENSAJE, type CanalMensaje, type MensajeOportunidad } from '@/data/pipeline'
+import { cn } from '@/lib/utils'
 
-const DIRECCIONES: { id: MensajeOportunidad["direccion"]; label: string }[] = [
-  { id: "contacto", label: "Mensaje del contacto" },
-  { id: "despacho", label: "Mensaje del despacho" },
-  { id: "interna", label: "Anotación interna" },
-];
+const DIRECCIONES: { id: MensajeOportunidad['direccion']; label: string }[] = [
+  { id: 'contacto', label: 'Mensaje del contacto' },
+  { id: 'despacho', label: 'Mensaje del despacho' },
+  { id: 'interna', label: 'Anotación interna' },
+]
 
-const estiloBurbuja: Record<MensajeOportunidad["direccion"], string> = {
-  contacto: "bg-muted text-foreground",
-  despacho: "bg-primary/10 text-foreground border border-primary/20",
-  interna: "bg-amber-50 text-amber-950 border border-amber-200",
-  sistema: "bg-secondary/60 text-muted-foreground",
-};
+const estiloBurbuja: Record<MensajeOportunidad['direccion'], string> = {
+  contacto: 'bg-muted text-foreground',
+  despacho: 'bg-primary/10 text-foreground border border-primary/20',
+  interna: 'bg-amber-50 text-amber-950 border border-amber-200',
+  sistema: 'bg-secondary/60 text-muted-foreground',
+}
 
 function Burbuja({ m }: { m: MensajeOportunidad }) {
-  const sistema = m.direccion === "sistema";
-  const derecha = m.direccion === "despacho";
-  const centrada = sistema || m.direccion === "interna";
+  const sistema = m.direccion === 'sistema'
+  const derecha = m.direccion === 'despacho'
+  const centrada = sistema || m.direccion === 'interna'
 
   return (
     <div
       className={cn(
-        "flex w-full",
-        centrada ? "justify-center" : derecha ? "justify-end" : "justify-start",
+        'flex w-full',
+        centrada ? 'justify-center' : derecha ? 'justify-end' : 'justify-start',
       )}
     >
-      <div className={cn("max-w-[85%] rounded-lg px-3 py-2 text-sm", estiloBurbuja[m.direccion])}>
-        <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide opacity-70">
+      <div className={cn('max-w-[85%] rounded-lg px-3 py-2 text-sm', estiloBurbuja[m.direccion])}>
+        <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] tracking-wide uppercase opacity-70">
           <span>{m.autor}</span>
           <span>·</span>
           <span>{m.canal}</span>
@@ -48,9 +48,9 @@ function Burbuja({ m }: { m: MensajeOportunidad }) {
           <span>
             {m.fecha} {m.hora}
           </span>
-          {m.direccion === "interna" ? <span>· Solo uso interno</span> : null}
+          {m.direccion === 'interna' ? <span>· Solo uso interno</span> : null}
         </div>
-        <p className="whitespace-pre-wrap leading-relaxed">{m.contenido}</p>
+        <p className="leading-relaxed whitespace-pre-wrap">{m.contenido}</p>
         {m.adjuntos.length > 0 ? (
           <ul className="mt-2 space-y-1 text-xs opacity-80">
             {m.adjuntos.map((a) => (
@@ -62,7 +62,7 @@ function Burbuja({ m }: { m: MensajeOportunidad }) {
         ) : null}
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -74,36 +74,36 @@ export function Conversacion({
   usuario,
   onAdd,
 }: {
-  mensajes: MensajeOportunidad[];
-  usuario: string;
-  onAdd: (m: Omit<MensajeOportunidad, "id">) => void;
+  mensajes: MensajeOportunidad[]
+  usuario: string
+  onAdd: (m: Omit<MensajeOportunidad, 'id'>) => void
 }) {
-  const [direccion, setDireccion] = useState<MensajeOportunidad["direccion"]>("contacto");
-  const [canal, setCanal] = useState<CanalMensaje>("Llamada");
-  const [texto, setTexto] = useState("");
-  const [adjunto, setAdjunto] = useState("");
+  const [direccion, setDireccion] = useState<MensajeOportunidad['direccion']>('contacto')
+  const [canal, setCanal] = useState<CanalMensaje>('Llamada')
+  const [texto, setTexto] = useState('')
+  const [adjunto, setAdjunto] = useState('')
 
   const enviar = () => {
-    if (!texto.trim()) return;
-    const ahora = new Date();
+    if (!texto.trim()) return
+    const ahora = new Date()
     onAdd({
       direccion,
       canal,
-      autor: direccion === "contacto" ? "Contacto" : usuario,
-      fecha: ahora.toLocaleDateString("es-ES"),
-      hora: ahora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+      autor: direccion === 'contacto' ? 'Contacto' : usuario,
+      fecha: ahora.toLocaleDateString('es-ES'),
+      hora: ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       contenido: texto.trim(),
       adjuntos: adjunto.trim() ? [adjunto.trim()] : [],
-    });
-    setTexto("");
-    setAdjunto("");
-  };
+    })
+    setTexto('')
+    setAdjunto('')
+  }
 
   return (
     <div className="space-y-4">
-      <div className="max-h-[420px] space-y-3 overflow-y-auto rounded-md border bg-background/60 p-3">
+      <div className="bg-background/60 max-h-[420px] space-y-3 overflow-y-auto rounded-md border p-3">
         {mensajes.length === 0 ? (
-          <p className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+          <p className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm">
             <MessageSquare className="h-4 w-4" /> Todavía no hay intervenciones registradas.
           </p>
         ) : (
@@ -157,5 +157,5 @@ export function Conversacion({
         </div>
       </div>
     </div>
-  );
+  )
 }

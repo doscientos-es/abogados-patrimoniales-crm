@@ -1,7 +1,7 @@
-@import "tailwindcss" source(none);
-@import "@doscientos/ui/styles.css";
+@import 'tailwindcss' source(none);
+@import '@doscientos/ui/styles.css';
 @source "../src";
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,8 +18,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "IBM Plex Serif", ui-serif, Georgia, serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'IBM Plex Serif', ui-serif, Georgia, serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -258,13 +258,27 @@
   --mf-especial: oklch(0.72 0.02 258);
 }
 
-.mf-f1 { --mf: var(--mf-f1); }
-.mf-f2 { --mf: var(--mf-f2); }
-.mf-f3 { --mf: var(--mf-f3); }
-.mf-f4 { --mf: var(--mf-f4); }
-.mf-f5 { --mf: var(--mf-f5); }
-.mf-f6 { --mf: var(--mf-f6); }
-.mf-especial { --mf: var(--mf-especial); }
+.mf-f1 {
+  --mf: var(--mf-f1);
+}
+.mf-f2 {
+  --mf: var(--mf-f2);
+}
+.mf-f3 {
+  --mf: var(--mf-f3);
+}
+.mf-f4 {
+  --mf: var(--mf-f4);
+}
+.mf-f5 {
+  --mf: var(--mf-f5);
+}
+.mf-f6 {
+  --mf: var(--mf-f6);
+}
+.mf-especial {
+  --mf: var(--mf-especial);
+}
 
 .mf-banda {
   background-color: color-mix(in oklab, var(--mf) 12%, transparent);
@@ -305,14 +319,30 @@
   --etq-gris: oklch(0.74 0.015 258);
 }
 
-.etq-azul { --etq: var(--etq-azul); }
-.etq-verde { --etq: var(--etq-verde); }
-.etq-ambar { --etq: var(--etq-ambar); }
-.etq-rojo { --etq: var(--etq-rojo); }
-.etq-morado { --etq: var(--etq-morado); }
-.etq-turquesa { --etq: var(--etq-turquesa); }
-.etq-rosa { --etq: var(--etq-rosa); }
-.etq-gris { --etq: var(--etq-gris); }
+.etq-azul {
+  --etq: var(--etq-azul);
+}
+.etq-verde {
+  --etq: var(--etq-verde);
+}
+.etq-ambar {
+  --etq: var(--etq-ambar);
+}
+.etq-rojo {
+  --etq: var(--etq-rojo);
+}
+.etq-morado {
+  --etq: var(--etq-morado);
+}
+.etq-turquesa {
+  --etq: var(--etq-turquesa);
+}
+.etq-rosa {
+  --etq: var(--etq-rosa);
+}
+.etq-gris {
+  --etq: var(--etq-gris);
+}
 
 .etq-chip {
   background-color: color-mix(in oklab, var(--etq) 10%, transparent);
@@ -330,18 +360,40 @@
 /* filtros, listas, fichas e historial.                             */
 /* --------------------------------------------------------------- */
 
-.fase-azul { --fase: var(--etq-azul); }
-.fase-cian { --fase: var(--etq-turquesa); }
-.fase-indigo { --fase: oklch(0.5 0.11 275); }
-.fase-ambar { --fase: var(--etq-ambar); }
-.fase-violeta { --fase: var(--etq-morado); }
-.fase-turquesa { --fase: oklch(0.5 0.09 190); }
-.fase-verde { --fase: var(--etq-verde); }
-.fase-rojo { --fase: var(--etq-rojo); }
-.fase-gris { --fase: var(--etq-gris); }
+.fase-azul {
+  --fase: var(--etq-azul);
+}
+.fase-cian {
+  --fase: var(--etq-turquesa);
+}
+.fase-indigo {
+  --fase: oklch(0.5 0.11 275);
+}
+.fase-ambar {
+  --fase: var(--etq-ambar);
+}
+.fase-violeta {
+  --fase: var(--etq-morado);
+}
+.fase-turquesa {
+  --fase: oklch(0.5 0.09 190);
+}
+.fase-verde {
+  --fase: var(--etq-verde);
+}
+.fase-rojo {
+  --fase: var(--etq-rojo);
+}
+.fase-gris {
+  --fase: var(--etq-gris);
+}
 
-.dark .fase-indigo { --fase: oklch(0.76 0.09 275); }
-.dark .fase-turquesa { --fase: oklch(0.76 0.08 190); }
+.dark .fase-indigo {
+  --fase: oklch(0.76 0.09 275);
+}
+.dark .fase-turquesa {
+  --fase: oklch(0.76 0.08 190);
+}
 
 .fase-chip {
   background-color: color-mix(in oklab, var(--fase) 12%, transparent);
@@ -358,5 +410,9 @@
   border-left: 3px solid var(--fase);
 }
 
-.fase-punto { background-color: var(--fase); }
-.fase-texto { color: var(--fase); }
+.fase-punto {
+  background-color: var(--fase);
+}
+.fase-texto {
+  color: var(--fase);
+}

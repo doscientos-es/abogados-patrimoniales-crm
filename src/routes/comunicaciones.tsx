@@ -1,28 +1,28 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from "@/components/common";
-import { ComunicacionesWorkspace } from "@/components/comunicaciones/workspace";
+import { SectionHeader } from '@/components/common'
+import { ComunicacionesWorkspace } from '@/components/comunicaciones/workspace'
 
-export const Route = createFileRoute("/comunicaciones")({
+export const Route = createFileRoute('/comunicaciones')({
   head: () => ({
     meta: [
-      { title: "Comunicaciones — LEX" },
+      { title: 'Comunicaciones — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Cronología única de emails, WhatsApp y llamadas del despacho, con triaje, vinculación a contactos, leads, onboarding y expedientes.",
+          'Cronología única de emails, WhatsApp y llamadas del despacho, con triaje, vinculación a contactos, leads, onboarding y expedientes.',
       },
-      { property: "og:title", content: "Comunicaciones — LEX" },
+      { property: 'og:title', content: 'Comunicaciones — LEX' },
       {
-        property: "og:description",
-        content: "Ordenar, contextualizar y responder las comunicaciones del despacho.",
+        property: 'og:description',
+        content: 'Ordenar, contextualizar y responder las comunicaciones del despacho.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: ComunicacionesPage,
-});
+})
 
 function ComunicacionesPage() {
   return (
@@ -33,5 +33,5 @@ function ComunicacionesPage() {
       />
       <ComunicacionesWorkspace />
     </div>
-  );
+  )
 }

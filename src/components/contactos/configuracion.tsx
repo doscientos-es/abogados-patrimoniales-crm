@@ -1,10 +1,10 @@
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus } from 'lucide-react'
 
-import { PendingBadge } from "@/components/common";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { PendingBadge } from '@/components/common'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
   ESTADOS_DOCUMENTALES,
   IDIOMAS,
@@ -15,24 +15,24 @@ import {
   RELACIONES,
   SATISFACCIONES,
   TIPOS_RECLAMACION,
-} from "@/data/contactos";
-import { ROLES_INTERVINIENTE } from "@/data/expedientes-model";
+} from '@/data/contactos'
+import { ROLES_INTERVINIENTE } from '@/data/expedientes-model'
 
 function ListaEditable({
   titulo,
   descripcion,
   items,
 }: {
-  titulo: string;
-  descripcion: string;
-  items: string[];
+  titulo: string
+  descripcion: string
+  items: string[]
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
         <div>
           <CardTitle className="text-base">{titulo}</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">{descripcion}</p>
+          <p className="text-muted-foreground mt-1 text-sm">{descripcion}</p>
         </div>
         <Button variant="outline" size="sm" disabled>
           <Plus className="h-4 w-4" />
@@ -43,12 +43,12 @@ function ListaEditable({
         {items.map((item) => (
           <div
             key={item}
-            className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+            className="border-border flex items-center gap-3 rounded-md border px-3 py-2"
           >
-            <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <GripVertical className="text-muted-foreground h-4 w-4 shrink-0" />
             <Input defaultValue={item} className="h-8 max-w-sm" aria-label={item} disabled />
             <div className="ml-auto flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">Activo</span>
+              <span className="text-muted-foreground text-xs">Activo</span>
               <Switch defaultChecked disabled />
               <Button variant="ghost" size="sm" disabled>
                 Archivar
@@ -61,7 +61,7 @@ function ListaEditable({
         ))}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function ConfiguracionContactos() {
@@ -70,34 +70,34 @@ export function ConfiguracionContactos() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Naturaleza y relación (catálogos fijos)</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             No son editables: la naturaleza describe qué es el contacto y la relación qué es para el
             despacho. Solo la relación «Cliente» activa obligaciones documentales y bancarias.
           </p>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
               Naturaleza
             </p>
             <ul className="mt-2 space-y-1.5">
               {NATURALEZAS.map((n) => (
-                <li key={n.id} className="rounded-md border border-border px-3 py-2 text-sm">
-                  <span className="font-medium text-foreground">{n.id}</span>
-                  <span className="block text-xs text-muted-foreground">{n.descripcion}</span>
+                <li key={n.id} className="border-border rounded-md border px-3 py-2 text-sm">
+                  <span className="text-foreground font-medium">{n.id}</span>
+                  <span className="text-muted-foreground block text-xs">{n.descripcion}</span>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
               Relación con el despacho
             </p>
             <ul className="mt-2 space-y-1.5">
               {RELACIONES.map((r) => (
-                <li key={r.id} className="rounded-md border border-border px-3 py-2 text-sm">
-                  <span className="font-medium text-foreground">{r.id}</span>
-                  <span className="block text-xs text-muted-foreground">{r.descripcion}</span>
+                <li key={r.id} className="border-border rounded-md border px-3 py-2 text-sm">
+                  <span className="text-foreground font-medium">{r.id}</span>
+                  <span className="text-muted-foreground block text-xs">{r.descripcion}</span>
                 </li>
               ))}
             </ul>
@@ -130,16 +130,16 @@ export function ConfiguracionContactos() {
         titulo="Tipos de documentos"
         descripcion="Documentos disponibles en identificación, protección de datos y poderes."
         items={[
-          "DNI",
-          "Escritura de constitución",
-          "Tarjeta CIF",
-          "Cláusula informativa",
-          "Consentimiento firmado",
-          "Revocación del consentimiento",
-          "Poder general",
-          "Poder especial",
-          "Poder para pleitos",
-          "Apud acta",
+          'DNI',
+          'Escritura de constitución',
+          'Tarjeta CIF',
+          'Cláusula informativa',
+          'Consentimiento firmado',
+          'Revocación del consentimiento',
+          'Poder general',
+          'Poder especial',
+          'Poder para pleitos',
+          'Apud acta',
         ]}
       />
       <ListaEditable
@@ -167,7 +167,7 @@ export function ConfiguracionContactos() {
         <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
           <div>
             <CardTitle className="text-base">Campos adicionales de la ficha</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               Espacio para definir campos personalizados en futuras fases.
             </p>
           </div>
@@ -177,8 +177,8 @@ export function ConfiguracionContactos() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="border-border bg-muted/40 rounded-lg border border-dashed p-6 text-center">
+            <p className="text-muted-foreground text-sm">
               Sin campos adicionales definidos en esta fase.
             </p>
             <div className="mt-3 flex justify-center">
@@ -188,5 +188,5 @@ export function ConfiguracionContactos() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

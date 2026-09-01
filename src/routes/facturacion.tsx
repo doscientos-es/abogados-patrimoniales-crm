@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from '@tanstack/react-router'
 
-import { PendingPanel, SectionHeader, StatusBadge } from "@/components/common";
-import { Card, CardContent } from "@/components/ui/card";
+import { PendingPanel, SectionHeader, StatusBadge } from '@/components/common'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -9,26 +9,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { FACTURAS } from "@/data/mock";
+} from '@/components/ui/table'
+import { FACTURAS } from '@/data/mock'
 
-export const Route = createFileRoute("/facturacion")({
+export const Route = createFileRoute('/facturacion')({
   head: () => ({
     meta: [
-      { title: "Facturación — LEX" },
+      { title: 'Facturación — LEX' },
       {
-        name: "description",
-        content: "Provisiones, facturas emitidas y cobros pendientes del despacho.",
+        name: 'description',
+        content: 'Provisiones, facturas emitidas y cobros pendientes del despacho.',
       },
-      { property: "og:title", content: "Facturación — LEX" },
+      { property: 'og:title', content: 'Facturación — LEX' },
       {
-        property: "og:description",
-        content: "Estado económico de los encargos: emitido, cobrado y pendiente.",
+        property: 'og:description',
+        content: 'Estado económico de los encargos: emitido, cobrado y pendiente.',
       },
     ],
   }),
   component: FacturacionPage,
-});
+})
 
 function FacturacionPage() {
   return (
@@ -39,12 +39,12 @@ function FacturacionPage() {
       />
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         {[
-          ["Emitido en el año", "312.400 €"],
-          ["Cobrado", "268.900 €"],
-          ["Pendiente de cobro", "14.000 €"],
+          ['Emitido en el año', '312.400 €'],
+          ['Cobrado', '268.900 €'],
+          ['Pendiente de cobro', '14.000 €'],
         ].map(([l, v]) => (
-          <div key={l} className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{l}</p>
+          <div key={l} className="border-border bg-card rounded-lg border p-4">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">{l}</p>
             <p className="mt-1 font-serif text-2xl font-semibold">{v}</p>
           </div>
         ))}
@@ -96,5 +96,5 @@ function FacturacionPage() {
         />
       </div>
     </div>
-  );
+  )
 }

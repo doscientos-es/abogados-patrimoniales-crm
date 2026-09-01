@@ -1,29 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from "@/components/common";
-import { FechasWorkspace } from "@/components/fechas/workspace";
+import { SectionHeader } from '@/components/common'
+import { FechasWorkspace } from '@/components/fechas/workspace'
 
-export const Route = createFileRoute("/calendario")({
+export const Route = createFileRoute('/calendario')({
   head: () => ({
     meta: [
-      { title: "Fechas y plazos — LEX" },
+      { title: 'Fechas y plazos — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Repositorio temporal único del despacho: recordatorios, fechas, eventos y plazos judiciales y extrajudiciales con validación profesional del vencimiento.",
+          'Repositorio temporal único del despacho: recordatorios, fechas, eventos y plazos judiciales y extrajudiciales con validación profesional del vencimiento.',
       },
-      { property: "og:title", content: "Fechas y plazos — LEX" },
+      { property: 'og:title', content: 'Fechas y plazos — LEX' },
       {
-        property: "og:description",
+        property: 'og:description',
         content:
-          "Listado y calendario de todos los compromisos temporales del despacho, con trazabilidad hasta su origen.",
+          'Listado y calendario de todos los compromisos temporales del despacho, con trazabilidad hasta su origen.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: FechasPage,
-});
+})
 
 function FechasPage() {
   return (
@@ -34,5 +34,5 @@ function FechasPage() {
       />
       <FechasWorkspace />
     </div>
-  );
+  )
 }

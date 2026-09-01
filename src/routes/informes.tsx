@@ -1,34 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { PendingPanel, SectionHeader } from "@/components/common";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PendingPanel, SectionHeader } from '@/components/common'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export const Route = createFileRoute("/informes")({
+export const Route = createFileRoute('/informes')({
   head: () => ({
     meta: [
-      { title: "Informes — LEX" },
+      { title: 'Informes — LEX' },
       {
-        name: "description",
-        content: "Indicadores del despacho: producción, rentabilidad, conversión y cartera.",
+        name: 'description',
+        content: 'Indicadores del despacho: producción, rentabilidad, conversión y cartera.',
       },
-      { property: "og:title", content: "Informes — LEX" },
+      { property: 'og:title', content: 'Informes — LEX' },
       {
-        property: "og:description",
-        content: "Cuadro de mando previsto para el análisis del despacho patrimonial.",
+        property: 'og:description',
+        content: 'Cuadro de mando previsto para el análisis del despacho patrimonial.',
       },
     ],
   }),
   component: InformesPage,
-});
+})
 
 const informes = [
-  ["Conversión de leads", "Ratio de leads convertidos en encargo por origen y materia."],
-  ["Producción por profesional", "Horas registradas, facturables y coste asociado."],
-  ["Rentabilidad por asunto", "Presupuesto frente a coste real y desviaciones."],
-  ["Duración media por fase", "Tiempo de permanencia en cada una de las seis fases."],
-  ["Cartera de facturación", "Emitido, cobrado, pendiente y antigüedad de la deuda."],
-  ["Satisfacción del cliente", "Resultados de encuestas de cierre y aftercare."],
-];
+  ['Conversión de leads', 'Ratio de leads convertidos en encargo por origen y materia.'],
+  ['Producción por profesional', 'Horas registradas, facturables y coste asociado.'],
+  ['Rentabilidad por asunto', 'Presupuesto frente a coste real y desviaciones.'],
+  ['Duración media por fase', 'Tiempo de permanencia en cada una de las seis fases.'],
+  ['Cartera de facturación', 'Emitido, cobrado, pendiente y antigüedad de la deuda.'],
+  ['Satisfacción del cliente', 'Resultados de encuestas de cierre y aftercare.'],
+]
 
 function InformesPage() {
   return (
@@ -44,12 +44,12 @@ function InformesPage() {
               <CardTitle className="text-base">{titulo}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-4 text-sm text-muted-foreground">{desc}</p>
-              <div className="flex h-28 items-end gap-1.5 rounded-md border border-dashed border-border bg-muted/40 p-3">
+              <p className="text-muted-foreground mb-4 text-sm">{desc}</p>
+              <div className="border-border bg-muted/40 flex h-28 items-end gap-1.5 rounded-md border border-dashed p-3">
                 {[40, 65, 30, 80, 55, 70].map((h, i) => (
                   <span
                     key={i}
-                    className="flex-1 rounded-sm bg-primary/25"
+                    className="bg-primary/25 flex-1 rounded-sm"
                     style={{ height: `${h}%` }}
                   />
                 ))}
@@ -65,5 +65,5 @@ function InformesPage() {
         />
       </div>
     </div>
-  );
+  )
 }

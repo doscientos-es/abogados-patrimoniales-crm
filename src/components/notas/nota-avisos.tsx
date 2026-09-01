@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { ChevronDown, ChevronUp, ShieldAlert, StickyNote } from "lucide-react";
+import { ChevronDown, ChevronUp, ShieldAlert, StickyNote } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { AMBITO_META, type DisparadorNota } from "@/data/notas";
-import { avisosContextuales, notas, useNotas } from "@/lib/notas-store";
-import { NotaHistorialDialog } from "./nota-card";
-import type { NotaInterna } from "@/data/notas";
+import { Button } from '@/components/ui/button'
+import { AMBITO_META, type DisparadorNota } from '@/data/notas'
+import type { NotaInterna } from '@/data/notas'
+import { avisosContextuales, notas, useNotas } from '@/lib/notas-store'
+import { cn } from '@/lib/utils'
+
+import { NotaHistorialDialog } from './nota-card'
 
 /**
  * Aviso contextual discreto: agrupa las notas configuradas para aparecer en
@@ -17,50 +18,50 @@ export function NotaAvisos({
   expedienteId,
   oportunidadId,
   disparadores,
-  titulo = "Notas internas a tener en cuenta",
+  titulo = 'Notas internas a tener en cuenta',
 }: {
-  contactoId?: string;
-  expedienteId?: string;
-  oportunidadId?: string;
-  disparadores: DisparadorNota[];
-  titulo?: string;
+  contactoId?: string
+  expedienteId?: string
+  oportunidadId?: string
+  disparadores: DisparadorNota[]
+  titulo?: string
 }) {
-  const [minimizado, setMinimizado] = useState(false);
-  const [detalle, setDetalle] = useState<NotaInterna | null>(null);
+  const [minimizado, setMinimizado] = useState(false)
+  const [detalle, setDetalle] = useState<NotaInterna | null>(null)
   const ambito = {
     ...(contactoId ? { contactoId } : {}),
     ...(expedienteId ? { expedienteId } : {}),
     ...(oportunidadId ? { oportunidadId } : {}),
-  };
+  }
 
   const lista = useNotas((s) => {
-    const mapa = new Map<string, NotaInterna>();
+    const mapa = new Map<string, NotaInterna>()
     for (const d of disparadores) {
-      for (const n of avisosContextuales(s, d, ambito)) mapa.set(n.id, n);
+      for (const n of avisosContextuales(s, d, ambito)) mapa.set(n.id, n)
     }
-    return Array.from(mapa.values());
-  });
-  const usuario = useNotas((s) => s.usuario);
+    return Array.from(mapa.values())
+  })
+  const usuario = useNotas((s) => s.usuario)
 
-  if (!lista.length) return null;
+  if (!lista.length) return null
 
-  const criticas = lista.filter((n) => n.critica);
+  const criticas = lista.filter((n) => n.critica)
 
   return (
     <section
       className={cn(
-        "mb-4 rounded-lg border bg-card p-3",
-        criticas.length ? "border-destructive/50" : "border-border",
+        'mb-4 rounded-lg border bg-card p-3',
+        criticas.length ? 'border-destructive/50' : 'border-border',
       )}
       aria-label={titulo}
     >
       <header className="flex items-center gap-2">
         {criticas.length ? (
-          <ShieldAlert className="h-4 w-4 text-destructive" aria-hidden />
+          <ShieldAlert className="text-destructive h-4 w-4" aria-hidden />
         ) : (
-          <StickyNote className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <StickyNote className="text-muted-foreground h-4 w-4" aria-hidden />
         )}
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-foreground text-sm font-medium">
           {titulo} ({lista.length})
         </p>
         <Button
@@ -70,29 +71,29 @@ export function NotaAvisos({
           onClick={() => setMinimizado((m) => !m)}
         >
           {minimizado ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          {minimizado ? "Mostrar" : "Minimizar"}
+          {minimizado ? 'Mostrar' : 'Minimizar'}
         </Button>
       </header>
 
       {minimizado ? null : (
         <ul className="mt-2 space-y-2">
           {lista.map((n) => {
-            const meta = AMBITO_META[n.ambito];
-            const confirmada = n.confirmaciones.some((c) => c.usuario === usuario);
+            const meta = AMBITO_META[n.ambito]
+            const confirmada = n.confirmaciones.some((c) => c.usuario === usuario)
             return (
               <li
                 key={n.id}
                 className={cn(
-                  "rounded-md border px-3 py-2 text-sm",
+                  'rounded-md border px-3 py-2 text-sm',
                   meta.clase,
-                  n.critica && "ring-1 ring-destructive/60",
+                  n.critica && 'ring-1 ring-destructive/60',
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide">
+                    <p className="text-[11px] font-semibold tracking-wide uppercase">
                       {meta.label}
-                      {n.critica ? " · Advertencia crítica" : ""}
+                      {n.critica ? ' · Advertencia crítica' : ''}
                     </p>
                     {n.titulo ? <p className="font-medium">{n.titulo}</p> : null}
                     <p className="whitespace-pre-wrap">{n.contenido}</p>
@@ -105,7 +106,7 @@ export function NotaAvisos({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 border-current/40 bg-background/50 text-xs"
+                        className="bg-background/50 h-7 border-current/40 text-xs"
                         onClick={() => notas.confirmarLectura(n.id)}
                       >
                         Confirmar lectura
@@ -146,7 +147,7 @@ export function NotaAvisos({
                   </div>
                 </div>
               </li>
-            );
+            )
           })}
         </ul>
       )}
@@ -159,5 +160,5 @@ export function NotaAvisos({
         />
       ) : null}
     </section>
-  );
+  )
 }

@@ -1,11 +1,3 @@
-// IA CUMPLIMENTACIÓN — panel transversal de asistencia al alta.
-//
-// Mismo comportamiento en todos los formularios de LEX: subir documentos,
-// revisar los datos propuestos uno a uno, decidir sobre las personas
-// detectadas, responder preguntas y aplicar al formulario. Nada se guarda sin
-// validación humana explícita.
-import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import {
   AlertTriangle,
   Check,
@@ -15,22 +7,30 @@ import {
   Sparkles,
   Trash2,
   X,
-} from "lucide-react";
+} from 'lucide-react'
+// IA CUMPLIMENTACIÓN — panel transversal de asistencia al alta.
+//
+// Mismo comportamiento en todos los formularios de LEX: subir documentos,
+// revisar los datos propuestos uno a uno, decidir sobre las personas
+// detectadas, responder preguntas y aplicar al formulario. Nada se guarda sin
+// validación humana explícita.
+import { useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
@@ -38,8 +38,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sheet'
 import {
   ESQUEMAS,
   RELACIONES_IA,
@@ -51,8 +50,8 @@ import {
   type FormularioIA,
   type PersonaDetectada,
   type SesionIA,
-} from "@/data/ia-cumplimentacion";
-import { extraerDocumentoIA } from "@/lib/ia-cumplimentacion.functions";
+} from '@/data/ia-cumplimentacion'
+import { ops } from '@/lib/expedientes-store'
 import {
   actualizarDato,
   datoManual,
@@ -62,30 +61,31 @@ import {
   registrarSesionAplicada,
   traza,
   valoresAplicables,
-} from "@/lib/ia-cumplimentacion-store";
-import { ops } from "@/lib/expedientes-store";
+} from '@/lib/ia-cumplimentacion-store'
+import { extraerDocumentoIA } from '@/lib/ia-cumplimentacion.functions'
+import { cn } from '@/lib/utils'
 
-const PASOS = ["Documentos", "Datos", "Personas", "Preguntas", "Resumen"] as const;
-type Paso = (typeof PASOS)[number];
+const PASOS = ['Documentos', 'Datos', 'Personas', 'Preguntas', 'Resumen'] as const
+type Paso = (typeof PASOS)[number]
 
 const COLOR_ESTADO: Record<EstadoDato, string> = {
-  confirmado: "border-success/50 bg-success/10 text-success-foreground",
-  pendiente: "border-warning/50 bg-warning/10 text-warning-foreground",
-  dudoso: "border-destructive/50 bg-destructive/10 text-destructive",
-  manual: "border-border bg-muted text-muted-foreground",
-  descartado: "border-border bg-muted/60 text-muted-foreground line-through",
-};
+  confirmado: 'border-success/50 bg-success/10 text-success-foreground',
+  pendiente: 'border-warning/50 bg-warning/10 text-warning-foreground',
+  dudoso: 'border-destructive/50 bg-destructive/10 text-destructive',
+  manual: 'border-border bg-muted text-muted-foreground',
+  descartado: 'border-border bg-muted/60 text-muted-foreground line-through',
+}
 
 function leerArchivo(f: File) {
   return new Promise<string>((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onerror = () => reject(new Error("No se ha podido leer el archivo."));
+    const fr = new FileReader()
+    fr.onerror = () => reject(new Error('No se ha podido leer el archivo.'))
     fr.onload = () => {
-      const r = String(fr.result ?? "");
-      resolve(r.slice(r.indexOf(",") + 1));
-    };
-    fr.readAsDataURL(f);
-  });
+      const r = String(fr.result ?? '')
+      resolve(r.slice(r.indexOf(',') + 1))
+    }
+    fr.readAsDataURL(f)
+  })
 }
 
 export function CumplimentarIA({
@@ -93,103 +93,106 @@ export function CumplimentarIA({
   contexto,
   valoresActuales = {},
   onAplicar,
-  etiqueta = "Cumplimentar con IA",
+  etiqueta = 'Cumplimentar con IA',
   destacado = false,
 }: {
-  formulario: FormularioIA;
-  contexto?: string;
-  valoresActuales?: Record<string, string>;
-  onAplicar: (valores: Record<string, string>, personas: PersonaDetectada[]) => void;
-  etiqueta?: string;
-  destacado?: boolean;
+  formulario: FormularioIA
+  contexto?: string
+  valoresActuales?: Record<string, string>
+  onAplicar: (valores: Record<string, string>, personas: PersonaDetectada[]) => void
+  etiqueta?: string
+  destacado?: boolean
 }) {
-  const esquema = ESQUEMAS[formulario];
-  const [abierto, setAbierto] = useState(false);
-  const [paso, setPaso] = useState<Paso>("Documentos");
+  const esquema = ESQUEMAS[formulario]
+  const [abierto, setAbierto] = useState(false)
+  const [paso, setPaso] = useState<Paso>('Documentos')
   const [sesion, setSesion] = useState<SesionIA>(() =>
     nuevaSesion(formulario, ops.usuarioActual(), contexto),
-  );
-  const [procesando, setProcesando] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  )
+  const [procesando, setProcesando] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const pendientes = sesion.datos.filter((d) => d.estado === "pendiente" || d.estado === "dudoso");
-  const listos = sesion.datos.filter((d) => d.estado === "confirmado" || d.estado === "manual");
-  const preguntasPendientes = sesion.preguntas.filter((p) => p.estado === "pendiente");
+  const pendientes = sesion.datos.filter((d) => d.estado === 'pendiente' || d.estado === 'dudoso')
+  const listos = sesion.datos.filter((d) => d.estado === 'confirmado' || d.estado === 'manual')
+  const preguntasPendientes = sesion.preguntas.filter((p) => p.estado === 'pendiente')
 
   const camposCumplimentados = useMemo(
-    () => Object.entries(valoresActuales).filter(([, v]) => v?.trim()).map(([k]) => k),
+    () =>
+      Object.entries(valoresActuales)
+        .filter(([, v]) => v?.trim())
+        .map(([k]) => k),
     [valoresActuales],
-  );
+  )
 
   const subir = async (files: FileList | null) => {
-    if (!files?.length) return;
-    setProcesando(true);
-    let actual = sesion;
+    if (!files?.length) return
+    setProcesando(true)
+    let actual = sesion
     for (const file of Array.from(files)) {
-      const doc = nuevoDocumento(file.name, file.type || "application/pdf", file.size, "");
+      const doc = nuevoDocumento(file.name, file.type || 'application/pdf', file.size, '')
       try {
-        const datos = await leerArchivo(file);
-        doc.datos = datos;
-        doc.estado = "leyendo";
-        actual = { ...actual, documentos: [...actual.documentos, doc] };
-        setSesion(actual);
+        const datos = await leerArchivo(file)
+        doc.datos = datos
+        doc.estado = 'leyendo'
+        actual = { ...actual, documentos: [...actual.documentos, doc] }
+        setSesion(actual)
 
         const lectura = await extraerDocumentoIA({
           data: {
             formulario: esquema.titulo,
-            contexto: contexto ?? "",
+            contexto: contexto ?? '',
             documento: { nombre: file.name, mime: doc.mime, datos },
             campos: esquema.campos,
             camposYaCumplimentados: camposCumplimentados,
           },
-        });
-        actual = integrarLectura(actual, doc.id, lectura);
-        setSesion(actual);
-        toast.success(`${file.name}: lectura completada.`);
+        })
+        actual = integrarLectura(actual, doc.id, lectura)
+        setSesion(actual)
+        toast.success(`${file.name}: lectura completada.`)
       } catch (e) {
-        const mensaje = e instanceof Error ? e.message : "No se ha podido leer el documento.";
+        const mensaje = e instanceof Error ? e.message : 'No se ha podido leer el documento.'
         actual = {
           ...actual,
           documentos: actual.documentos.map((d) =>
-            d.id === doc.id ? { ...d, estado: "error", error: mensaje } : d,
+            d.id === doc.id ? { ...d, estado: 'error', error: mensaje } : d,
           ),
-        };
-        actual = traza(actual, "Error de lectura", `${file.name}: ${mensaje}`);
-        setSesion(actual);
-        toast.error(mensaje);
+        }
+        actual = traza(actual, 'Error de lectura', `${file.name}: ${mensaje}`)
+        setSesion(actual)
+        toast.error(mensaje)
       }
     }
-    setProcesando(false);
-    if (inputRef.current) inputRef.current.value = "";
-    if (actual.datos.length || actual.personas.length) setPaso("Datos");
-  };
+    setProcesando(false)
+    if (inputRef.current) inputRef.current.value = ''
+    if (actual.datos.length || actual.personas.length) setPaso('Datos')
+  }
 
   const aplicar = () => {
-    const valores = valoresAplicables(sesion);
+    const valores = valoresAplicables(sesion)
     const personas = sesion.personas.filter(
-      (p) => p.decision === "crear" || p.decision === "vincular",
-    );
+      (p) => p.decision === 'crear' || p.decision === 'vincular',
+    )
     if (!Object.keys(valores).length && !personas.length) {
-      toast.error("No hay ningún dato validado para trasladar al formulario.");
-      return;
+      toast.error('No hay ningún dato validado para trasladar al formulario.')
+      return
     }
     const final = traza(
       sesion,
-      "Datos aplicados al formulario",
+      'Datos aplicados al formulario',
       `${Object.keys(valores).length} campo(s) y ${personas.length} persona(s).`,
-    );
-    registrarSesionAplicada(final);
-    onAplicar(valores, personas);
+    )
+    registrarSesionAplicada(final)
+    onAplicar(valores, personas)
     toast.success(
       `${Object.keys(valores).length} campo(s) trasladados. Revisa el formulario antes de guardar.`,
-    );
-    setAbierto(false);
-  };
+    )
+    setAbierto(false)
+  }
 
   return (
     <Sheet open={abierto} onOpenChange={setAbierto}>
       <SheetTrigger asChild>
-        <Button variant={destacado ? "default" : "outline"} type="button" className="gap-2">
+        <Button variant={destacado ? 'default' : 'outline'} type="button" className="gap-2">
           <Sparkles className="h-4 w-4" />
           {etiqueta}
         </Button>
@@ -213,10 +216,10 @@ export function CumplimentarIA({
               type="button"
               onClick={() => setPaso(p)}
               className={cn(
-                "rounded-md px-2 py-1 transition-colors",
+                'rounded-md px-2 py-1 transition-colors',
                 paso === p
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted",
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted',
               )}
             >
               {i + 1}. {p}
@@ -226,7 +229,7 @@ export function CumplimentarIA({
 
         <ScrollArea className="flex-1">
           <div className="space-y-4 p-5">
-            {paso === "Documentos" ? (
+            {paso === 'Documentos' ? (
               <PasoDocumentos
                 sesion={sesion}
                 procesando={procesando}
@@ -241,7 +244,7 @@ export function CumplimentarIA({
               />
             ) : null}
 
-            {paso === "Datos" ? (
+            {paso === 'Datos' ? (
               <PasoDatos
                 sesion={sesion}
                 onCambio={setSesion}
@@ -250,31 +253,35 @@ export function CumplimentarIA({
               />
             ) : null}
 
-            {paso === "Personas" ? <PasoPersonas sesion={sesion} onCambio={setSesion} /> : null}
+            {paso === 'Personas' ? <PasoPersonas sesion={sesion} onCambio={setSesion} /> : null}
 
-            {paso === "Preguntas" ? <PasoPreguntas sesion={sesion} onCambio={setSesion} /> : null}
+            {paso === 'Preguntas' ? <PasoPreguntas sesion={sesion} onCambio={setSesion} /> : null}
 
-            {paso === "Resumen" ? <PasoResumen sesion={sesion} /> : null}
+            {paso === 'Resumen' ? <PasoResumen sesion={sesion} /> : null}
           </div>
         </ScrollArea>
 
         <div className="flex items-center justify-between gap-2 border-t px-5 py-3">
-          <span className="text-xs text-muted-foreground">
-            {listos.length} validado(s) · {pendientes.length} por revisar ·{" "}
+          <span className="text-muted-foreground text-xs">
+            {listos.length} validado(s) · {pendientes.length} por revisar ·{' '}
             {preguntasPendientes.length} pregunta(s)
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" type="button" onClick={() => setAbierto(false)}>
               Cerrar
             </Button>
-            <Button type="button" onClick={aplicar} disabled={!listos.length && !sesion.personas.length}>
+            <Button
+              type="button"
+              onClick={aplicar}
+              disabled={!listos.length && !sesion.personas.length}
+            >
               Aplicar al formulario
             </Button>
           </div>
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }
 
 /* ----------------------------- Paso 1 ------------------------------ */
@@ -286,20 +293,20 @@ function PasoDocumentos({
   onSubir,
   onQuitar,
 }: {
-  sesion: SesionIA;
-  procesando: boolean;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  onSubir: (f: FileList | null) => void;
-  onQuitar: (id: string) => void;
+  sesion: SesionIA
+  procesando: boolean
+  inputRef: React.RefObject<HTMLInputElement | null>
+  onSubir: (f: FileList | null) => void
+  onQuitar: (id: string) => void
 }) {
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Documentos de partida</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
-            PDF (con texto o escaneado) e imágenes. Se conservan como origen de los datos para
-            poder consultarlos en cualquier momento.
+          <p className="text-muted-foreground mt-1 text-xs">
+            PDF (con texto o escaneado) e imágenes. Se conservan como origen de los datos para poder
+            consultarlos en cualquier momento.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -323,7 +330,7 @@ function PasoDocumentos({
             ) : (
               <Paperclip className="h-4 w-4" />
             )}
-            {procesando ? "Leyendo documentos…" : "Añadir documentos"}
+            {procesando ? 'Leyendo documentos…' : 'Añadir documentos'}
           </Button>
 
           {sesion.documentos.length ? (
@@ -333,25 +340,25 @@ function PasoDocumentos({
                   key={d.id}
                   className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm"
                 >
-                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FileText className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{d.nombre}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {d.estado === "error"
+                    <p className="text-muted-foreground text-xs">
+                      {d.estado === 'error'
                         ? d.error
-                        : d.estado === "leido"
-                          ? `${d.tipoDocumental ?? "Documento"} · leído ${d.subidoEn}`
-                          : "Pendiente de lectura"}
+                        : d.estado === 'leido'
+                          ? `${d.tipoDocumental ?? 'Documento'} · leído ${d.subidoEn}`
+                          : 'Pendiente de lectura'}
                     </p>
                   </div>
                   <button type="button" onClick={() => onQuitar(d.id)} aria-label="Quitar">
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    <Trash2 className="text-muted-foreground hover:text-destructive h-4 w-4" />
                   </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Todavía no has añadido documentos. También puedes cumplimentar el formulario a mano y
               usar la IA sólo para completar lo que falte.
             </p>
@@ -359,7 +366,7 @@ function PasoDocumentos({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 /* ----------------------------- Paso 2 ------------------------------ */
@@ -370,49 +377,49 @@ function PasoDatos({
   pendientes,
   listos,
 }: {
-  sesion: SesionIA;
-  onCambio: (s: SesionIA) => void;
-  pendientes: DatoExtraido[];
-  listos: DatoExtraido[];
+  sesion: SesionIA
+  onCambio: (s: SesionIA) => void
+  pendientes: DatoExtraido[]
+  listos: DatoExtraido[]
 }) {
-  const [campoNuevo, setCampoNuevo] = useState("");
-  const [valorNuevo, setValorNuevo] = useState("");
-  const esquema = ESQUEMAS[sesion.formulario];
+  const [campoNuevo, setCampoNuevo] = useState('')
+  const [valorNuevo, setValorNuevo] = useState('')
+  const esquema = ESQUEMAS[sesion.formulario]
   const docNombre = (id?: string) =>
-    sesion.documentos.find((d) => d.id === id)?.nombre ?? "Sin documento";
+    sesion.documentos.find((d) => d.id === id)?.nombre ?? 'Sin documento'
 
   if (!sesion.datos.length) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         Aún no hay datos propuestos. Añade documentos en el paso anterior o introduce los datos que
         falten manualmente desde aquí una vez existan lecturas.
       </p>
-    );
+    )
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Revisa dato por dato. Nada se traslada al formulario hasta que lo confirmes. Puedes corregir
         cualquier valor: la corrección queda registrada.
       </p>
 
       {[...pendientes, ...listos].map((d) => (
-        <div key={d.id} className={cn("rounded-md border p-3", COLOR_ESTADO[d.estado])}>
+        <div key={d.id} className={cn('rounded-md border p-3', COLOR_ESTADO[d.estado])}>
           <div className="flex items-start justify-between gap-2">
-            <Label className="text-xs uppercase tracking-wide">{d.etiqueta}</Label>
+            <Label className="text-xs tracking-wide uppercase">{d.etiqueta}</Label>
             <Badge variant="outline" className="shrink-0 text-[10px]">
               {TEXTO_ESTADO[d.estado]}
             </Badge>
           </div>
           <Input
             value={d.valor}
-            className="mt-2 bg-background"
+            className="bg-background mt-2"
             onChange={(e) =>
               onCambio(
                 actualizarDato(sesion, d.id, {
                   valor: e.target.value,
-                  estado: "manual",
+                  estado: 'manual',
                   corregido: true,
                 }),
               )
@@ -420,13 +427,13 @@ function PasoDatos({
           />
           <p className="mt-1.5 text-xs opacity-80">
             Origen: {docNombre(d.documentoId)}
-            {d.pagina ? ` · pág. ${d.pagina}` : ""}
-            {d.fragmento ? ` · «${d.fragmento}»` : ""}
+            {d.pagina ? ` · pág. ${d.pagina}` : ''}
+            {d.fragmento ? ` · «${d.fragmento}»` : ''}
           </p>
 
           {d.versiones.length ? (
-            <div className="mt-2 rounded-md border border-destructive/40 bg-background/70 p-2 text-xs">
-              <p className="flex items-center gap-1 font-medium text-destructive">
+            <div className="border-destructive/40 bg-background/70 mt-2 rounded-md border p-2 text-xs">
+              <p className="text-destructive flex items-center gap-1 font-medium">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Dato contradictorio entre documentos
               </p>
@@ -444,7 +451,7 @@ function PasoDatos({
                         actualizarDato(sesion, d.id, {
                           valor: v.valor,
                           documentoId: v.documentoId,
-                          estado: "confirmado",
+                          estado: 'confirmado',
                           versiones: [],
                         }),
                       )
@@ -462,7 +469,7 @@ function PasoDatos({
               size="sm"
               type="button"
               className="gap-1"
-              onClick={() => onCambio(actualizarDato(sesion, d.id, { estado: "confirmado" }))}
+              onClick={() => onCambio(actualizarDato(sesion, d.id, { estado: 'confirmado' }))}
             >
               <Check className="h-3.5 w-3.5" />
               Confirmar
@@ -472,7 +479,7 @@ function PasoDatos({
               variant="ghost"
               type="button"
               className="gap-1"
-              onClick={() => onCambio(actualizarDato(sesion, d.id, { estado: "descartado" }))}
+              onClick={() => onCambio(actualizarDato(sesion, d.id, { estado: 'descartado' }))}
             >
               <X className="h-3.5 w-3.5" />
               Descartar
@@ -483,7 +490,7 @@ function PasoDatos({
 
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        <Label className="text-muted-foreground text-xs tracking-wide uppercase">
           Añadir un dato manualmente
         </Label>
         <div className="flex flex-wrap gap-2">
@@ -509,10 +516,10 @@ function PasoDatos({
             type="button"
             variant="outline"
             onClick={() => {
-              const campo = esquema.campos.find((c) => c.id === campoNuevo);
-              if (!campo || !valorNuevo.trim()) return;
-              onCambio(datoManual(sesion, campo.id, campo.label, valorNuevo.trim()));
-              setValorNuevo("");
+              const campo = esquema.campos.find((c) => c.id === campoNuevo)
+              if (!campo || !valorNuevo.trim()) return
+              onCambio(datoManual(sesion, campo.id, campo.label, valorNuevo.trim()))
+              setValorNuevo('')
             }}
           >
             Añadir
@@ -520,35 +527,29 @@ function PasoDatos({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 /* ----------------------------- Paso 3 ------------------------------ */
 
-function PasoPersonas({
-  sesion,
-  onCambio,
-}: {
-  sesion: SesionIA;
-  onCambio: (s: SesionIA) => void;
-}) {
+function PasoPersonas({ sesion, onCambio }: { sesion: SesionIA; onCambio: (s: SesionIA) => void }) {
   if (!sesion.personas.length) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         No se ha detectado ninguna persona o entidad en los documentos aportados.
       </p>
-    );
+    )
   }
 
   const set = (id: string, cambios: Partial<PersonaDetectada>) =>
     onCambio({
       ...sesion,
       personas: sesion.personas.map((p) => (p.id === id ? { ...p, ...cambios } : p)),
-    });
+    })
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Cada persona detectada requiere una decisión. La relación con el despacho nunca la propone
         la IA: la eliges tú. Ninguna ficha se fusiona automáticamente.
       </p>
@@ -557,15 +558,15 @@ function PasoPersonas({
         <Card key={p.id}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{p.nombre}</CardTitle>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {p.naturaleza}
-              {p.documento ? ` · ${p.documento}` : ""}
-              {p.domicilio ? ` · ${p.domicilio}` : ""}
+              {p.documento ? ` · ${p.documento}` : ''}
+              {p.domicilio ? ` · ${p.domicilio}` : ''}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {p.coincidencias.length ? (
-              <div className="rounded-md border border-warning/50 bg-warning/10 p-2 text-xs text-warning-foreground">
+              <div className="border-warning/50 bg-warning/10 text-warning-foreground rounded-md border p-2 text-xs">
                 <p className="font-medium">Posible duplicado</p>
                 {p.coincidencias.map((c) => (
                   <div key={c.contactoId} className="mt-1 flex items-center justify-between gap-2">
@@ -577,7 +578,7 @@ function PasoPersonas({
                       variant="outline"
                       type="button"
                       onClick={() =>
-                        set(p.id, { decision: "vincular", contactoVinculado: c.contactoId })
+                        set(p.id, { decision: 'vincular', contactoVinculado: c.contactoId })
                       }
                     >
                       Vincular
@@ -589,7 +590,7 @@ function PasoPersonas({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Rol documental</Label>
+                <Label className="text-muted-foreground text-xs">Rol documental</Label>
                 <Select
                   value={p.rolDocumental}
                   onValueChange={(v) => set(p.id, { rolDocumental: v })}
@@ -606,13 +607,13 @@ function PasoPersonas({
                   </SelectContent>
                 </Select>
               </div>
-              {sesion.formulario !== "contacto" ? (
+              {sesion.formulario !== 'contacto' ? (
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Interviene como</Label>
+                  <Label className="text-muted-foreground text-xs">Interviene como</Label>
                   <Select
                     value={p.rolExpediente}
                     onValueChange={(v) =>
-                      set(p.id, { rolExpediente: v as PersonaDetectada["rolExpediente"] })
+                      set(p.id, { rolExpediente: v as PersonaDetectada['rolExpediente'] })
                     }
                   >
                     <SelectTrigger>
@@ -629,11 +630,11 @@ function PasoPersonas({
                 </div>
               ) : null}
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Relación con el despacho</Label>
+                <Label className="text-muted-foreground text-xs">Relación con el despacho</Label>
                 <Select
-                  value={p.relacion ?? ""}
+                  value={p.relacion ?? ''}
                   onValueChange={(v) =>
-                    set(p.id, { relacion: v as NonNullable<PersonaDetectada["relacion"]> })
+                    set(p.id, { relacion: v as NonNullable<PersonaDetectada['relacion']> })
                   }
                 >
                   <SelectTrigger>
@@ -649,12 +650,10 @@ function PasoPersonas({
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Decisión</Label>
+                <Label className="text-muted-foreground text-xs">Decisión</Label>
                 <Select
                   value={p.decision}
-                  onValueChange={(v) =>
-                    set(p.id, { decision: v as PersonaDetectada["decision"] })
-                  }
+                  onValueChange={(v) => set(p.id, { decision: v as PersonaDetectada['decision'] })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -671,13 +670,13 @@ function PasoPersonas({
             </div>
 
             {p.fragmento ? (
-              <p className="text-xs text-muted-foreground">Origen: «{p.fragmento}»</p>
+              <p className="text-muted-foreground text-xs">Origen: «{p.fragmento}»</p>
             ) : null}
           </CardContent>
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 /* ----------------------------- Paso 4 ------------------------------ */
@@ -686,56 +685,61 @@ function PasoPreguntas({
   sesion,
   onCambio,
 }: {
-  sesion: SesionIA;
-  onCambio: (s: SesionIA) => void;
+  sesion: SesionIA
+  onCambio: (s: SesionIA) => void
 }) {
-  const pendientes = sesion.preguntas.filter((p) => p.estado === "pendiente");
+  const pendientes = sesion.preguntas.filter((p) => p.estado === 'pendiente')
   if (!pendientes.length) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         No quedan preguntas pendientes. La IA sólo pregunta por lo que falta o resulta ambiguo.
       </p>
-    );
+    )
   }
 
   const responder = (id: string, respuesta: string) => {
-    const pregunta = sesion.preguntas.find((q) => q.id === id);
+    const pregunta = sesion.preguntas.find((q) => q.id === id)
     let s: SesionIA = {
       ...sesion,
       preguntas: sesion.preguntas.map((q) =>
-        q.id === id ? { ...q, respuesta, estado: "respondida" } : q,
+        q.id === id ? { ...q, respuesta, estado: 'respondida' } : q,
       ),
-    };
+    }
     if (pregunta?.personaId) {
       s = {
         ...s,
         personas: s.personas.map((p) =>
           p.id === pregunta.personaId
-            ? { ...p, relacion: respuesta as NonNullable<PersonaDetectada["relacion"]> }
+            ? { ...p, relacion: respuesta as NonNullable<PersonaDetectada['relacion']> }
             : p,
         ),
-      };
+      }
     } else if (pregunta?.campoId) {
-      const campo = ESQUEMAS[sesion.formulario].campos.find((c) => c.id === pregunta.campoId);
-      if (campo) s = datoManual(s, campo.id, campo.label, respuesta);
+      const campo = ESQUEMAS[sesion.formulario].campos.find((c) => c.id === pregunta.campoId)
+      if (campo) s = datoManual(s, campo.id, campo.label, respuesta)
     }
-    onCambio(traza(s, "Pregunta respondida", `${pregunta?.texto ?? ""} → ${respuesta}`));
-  };
+    onCambio(traza(s, 'Pregunta respondida', `${pregunta?.texto ?? ''} → ${respuesta}`))
+  }
 
   return (
     <div className="space-y-3">
       {pendientes.map((q) => (
-        <PreguntaItem key={q.id} pregunta={q} onResponder={responder} onOmitir={(id) =>
-          onCambio({
-            ...sesion,
-            preguntas: sesion.preguntas.map((x) =>
-              x.id === id ? { ...x, estado: "omitida" } : x,
-            ),
-          })
-        } />
+        <PreguntaItem
+          key={q.id}
+          pregunta={q}
+          onResponder={responder}
+          onOmitir={(id) =>
+            onCambio({
+              ...sesion,
+              preguntas: sesion.preguntas.map((x) =>
+                x.id === id ? { ...x, estado: 'omitida' } : x,
+              ),
+            })
+          }
+        />
       ))}
     </div>
-  );
+  )
 }
 
 function PreguntaItem({
@@ -743,11 +747,11 @@ function PreguntaItem({
   onResponder,
   onOmitir,
 }: {
-  pregunta: { id: string; texto: string; opciones: string[] };
-  onResponder: (id: string, respuesta: string) => void;
-  onOmitir: (id: string) => void;
+  pregunta: { id: string; texto: string; opciones: string[] }
+  onResponder: (id: string, respuesta: string) => void
+  onOmitir: (id: string) => void
 }) {
-  const [texto, setTexto] = useState("");
+  const [texto, setTexto] = useState('')
   return (
     <Card>
       <CardContent className="space-y-2 pt-4">
@@ -793,18 +797,18 @@ function PreguntaItem({
         </Button>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 /* ----------------------------- Paso 5 ------------------------------ */
 
 function PasoResumen({ sesion }: { sesion: SesionIA }) {
-  const valores = valoresAplicables(sesion);
+  const valores = valoresAplicables(sesion)
   const personas = sesion.personas.filter(
-    (p) => p.decision === "crear" || p.decision === "vincular",
-  );
-  const sinDecidir = sesion.personas.filter((p) => p.decision === "pendiente");
-  const sinValidar = sesion.datos.filter((d) => d.estado === "pendiente" || d.estado === "dudoso");
+    (p) => p.decision === 'crear' || p.decision === 'vincular',
+  )
+  const sinDecidir = sesion.personas.filter((p) => p.decision === 'pendiente')
+  const sinValidar = sesion.datos.filter((d) => d.estado === 'pendiente' || d.estado === 'dudoso')
 
   return (
     <div className="space-y-4">
@@ -815,12 +819,12 @@ function PasoResumen({ sesion }: { sesion: SesionIA }) {
         <CardContent className="space-y-1 text-sm">
           {Object.keys(valores).length ? (
             Object.entries(valores).map(([k, v]) => {
-              const dato = sesion.datos.find((d) => d.campoId === k);
+              const dato = sesion.datos.find((d) => d.campoId === k)
               return (
                 <p key={k}>
                   <span className="text-muted-foreground">{dato?.etiqueta ?? k}:</span> {v}
                 </p>
-              );
+              )
             })
           ) : (
             <p className="text-muted-foreground">Ningún dato validado todavía.</p>
@@ -836,16 +840,16 @@ function PasoResumen({ sesion }: { sesion: SesionIA }) {
           {personas.length ? (
             personas.map((p) => (
               <p key={p.id}>
-                {p.nombre} — {p.decision === "crear" ? "alta nueva" : "vinculación"}
-                {sesion.formulario !== "contacto" ? ` · ${p.rolExpediente}` : ""} ·{" "}
-                {p.relacion ?? "relación sin decidir"}
+                {p.nombre} — {p.decision === 'crear' ? 'alta nueva' : 'vinculación'}
+                {sesion.formulario !== 'contacto' ? ` · ${p.rolExpediente}` : ''} ·{' '}
+                {p.relacion ?? 'relación sin decidir'}
               </p>
             ))
           ) : (
             <p className="text-muted-foreground">Sin altas ni vinculaciones propuestas.</p>
           )}
           {sinDecidir.length ? (
-            <p className="text-xs text-warning-foreground">
+            <p className="text-warning-foreground text-xs">
               {sinDecidir.length} persona(s) sin decisión: no se harán cambios sobre ellas.
             </p>
           ) : null}
@@ -853,7 +857,7 @@ function PasoResumen({ sesion }: { sesion: SesionIA }) {
       </Card>
 
       {sinValidar.length ? (
-        <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+        <div className="border-warning/50 bg-warning/10 text-warning-foreground rounded-md border px-3 py-2 text-xs">
           Quedan {sinValidar.length} dato(s) sin validar. No se trasladarán al formulario.
         </div>
       ) : null}
@@ -862,7 +866,7 @@ function PasoResumen({ sesion }: { sesion: SesionIA }) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Trazabilidad de la sesión</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-1 text-xs text-muted-foreground">
+        <CardContent className="text-muted-foreground space-y-1 text-xs">
           {sesion.trazabilidad.map((e) => (
             <p key={e.id}>
               {e.fecha} · {e.usuario} · {e.accion} — {e.detalle}
@@ -871,5 +875,5 @@ function PasoResumen({ sesion }: { sesion: SesionIA }) {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

@@ -1,61 +1,58 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { Search, StickyNote } from "lucide-react";
+import { Search, StickyNote } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { parseFecha } from "@/data/pipeline";
-import { AMBITO_META, type NotaInterna } from "@/data/notas";
-import { estaVencida, necesitaRevision } from "@/lib/notas-store";
+} from '@/components/ui/select'
+import { AMBITO_META, type NotaInterna } from '@/data/notas'
+import { parseFecha } from '@/data/pipeline'
+import { estaVencida, necesitaRevision } from '@/lib/notas-store'
+import { cn } from '@/lib/utils'
 
-import { NotaCard } from "./nota-card";
+import { NotaCard } from './nota-card'
 
 const VISTAS = [
-  { id: "todas", label: "Todas" },
-  { id: "persona", label: "De la persona" },
-  { id: "expediente", label: "De expedientes" },
-  { id: "oportunidad", label: "De oportunidades" },
-  { id: "destacadas", label: "Destacadas" },
-  { id: "activas", label: "Activas" },
-  { id: "temporales", label: "Temporales" },
-  { id: "revisar", label: "Para revisar" },
-  { id: "resueltas", label: "Resueltas" },
-  { id: "archivadas", label: "Archivadas" },
-] as const;
-type VistaId = (typeof VISTAS)[number]["id"];
+  { id: 'todas', label: 'Todas' },
+  { id: 'persona', label: 'De la persona' },
+  { id: 'expediente', label: 'De expedientes' },
+  { id: 'oportunidad', label: 'De oportunidades' },
+  { id: 'destacadas', label: 'Destacadas' },
+  { id: 'activas', label: 'Activas' },
+  { id: 'temporales', label: 'Temporales' },
+  { id: 'revisar', label: 'Para revisar' },
+  { id: 'resueltas', label: 'Resueltas' },
+  { id: 'archivadas', label: 'Archivadas' },
+] as const
+type VistaId = (typeof VISTAS)[number]['id']
 
-const fechaOrden = (n: NotaInterna) => parseFecha(n.creada.slice(0, 10))?.getTime() ?? 0;
+const fechaOrden = (n: NotaInterna) => parseFecha(n.creada.slice(0, 10))?.getTime() ?? 0
 
 export function NotaMuro({
   notas: lista,
-  vacio = "No hay notas internas todavía. Añade aquí información de contexto que pueda ser útil para el trabajo del equipo.",
+  vacio = 'No hay notas internas todavía. Añade aquí información de contexto que pueda ser útil para el trabajo del equipo.',
   mostrarOrigen = true,
   acciones,
   columnas = 3,
 }: {
-  notas: NotaInterna[];
-  vacio?: string;
-  mostrarOrigen?: boolean;
-  acciones?: ReactNode;
-  columnas?: 2 | 3;
+  notas: NotaInterna[]
+  vacio?: string
+  mostrarOrigen?: boolean
+  acciones?: ReactNode
+  columnas?: 2 | 3
 }) {
-  const [vista, setVista] = useState<VistaId>("todas");
-  const [texto, setTexto] = useState("");
-  const [autor, setAutor] = useState("todos");
-  const [expediente, setExpediente] = useState("todos");
-  const [orden, setOrden] = useState<"destacadas" | "recientes" | "antiguas">("destacadas");
+  const [vista, setVista] = useState<VistaId>('todas')
+  const [texto, setTexto] = useState('')
+  const [autor, setAutor] = useState('todos')
+  const [expediente, setExpediente] = useState('todos')
+  const [orden, setOrden] = useState<'destacadas' | 'recientes' | 'antiguas'>('destacadas')
 
-  const autores = useMemo(
-    () => Array.from(new Set(lista.map((n) => n.autor))).sort(),
-    [lista],
-  );
+  const autores = useMemo(() => Array.from(new Set(lista.map((n) => n.autor))).sort(), [lista])
   const expedientes = useMemo(
     () =>
       Array.from(
@@ -66,45 +63,45 @@ export function NotaMuro({
         ),
       ),
     [lista],
-  );
+  )
 
   const filtradas = useMemo(() => {
-    const q = texto.trim().toLowerCase();
+    const q = texto.trim().toLowerCase()
     let out = lista.filter((n) => {
-      if (q && !`${n.titulo ?? ""} ${n.contenido} ${n.origen.etiqueta}`.toLowerCase().includes(q))
-        return false;
-      if (autor !== "todos" && n.autor !== autor) return false;
-      if (expediente !== "todos" && n.expedienteId !== expediente) return false;
+      if (q && !`${n.titulo ?? ''} ${n.contenido} ${n.origen.etiqueta}`.toLowerCase().includes(q))
+        return false
+      if (autor !== 'todos' && n.autor !== autor) return false
+      if (expediente !== 'todos' && n.expedienteId !== expediente) return false
       switch (vista) {
-        case "persona":
-          return n.ambito === "persona" && n.estado !== "archivada";
-        case "expediente":
-          return n.ambito === "expediente" && n.estado !== "archivada";
-        case "oportunidad":
-          return n.ambito === "oportunidad" && n.estado !== "archivada";
-        case "destacadas":
-          return n.destacada && n.estado !== "archivada";
-        case "activas":
-          return n.estado === "activa";
-        case "temporales":
-          return n.vigencia === "temporal" && n.estado !== "archivada";
-        case "revisar":
-          return necesitaRevision(n) || (estaVencida(n) && n.estado === "activa");
-        case "resueltas":
-          return n.estado === "resuelta";
-        case "archivadas":
-          return n.estado === "archivada";
+        case 'persona':
+          return n.ambito === 'persona' && n.estado !== 'archivada'
+        case 'expediente':
+          return n.ambito === 'expediente' && n.estado !== 'archivada'
+        case 'oportunidad':
+          return n.ambito === 'oportunidad' && n.estado !== 'archivada'
+        case 'destacadas':
+          return n.destacada && n.estado !== 'archivada'
+        case 'activas':
+          return n.estado === 'activa'
+        case 'temporales':
+          return n.vigencia === 'temporal' && n.estado !== 'archivada'
+        case 'revisar':
+          return necesitaRevision(n) || (estaVencida(n) && n.estado === 'activa')
+        case 'resueltas':
+          return n.estado === 'resuelta'
+        case 'archivadas':
+          return n.estado === 'archivada'
         default:
-          return n.estado !== "archivada";
+          return n.estado !== 'archivada'
       }
-    });
+    })
     out = [...out].sort((a, b) => {
-      if (orden === "destacadas" && a.destacada !== b.destacada) return a.destacada ? -1 : 1;
-      const dif = fechaOrden(b) - fechaOrden(a);
-      return orden === "antiguas" ? -dif : dif;
-    });
-    return out;
-  }, [lista, texto, autor, expediente, vista, orden]);
+      if (orden === 'destacadas' && a.destacada !== b.destacada) return a.destacada ? -1 : 1
+      const dif = fechaOrden(b) - fechaOrden(a)
+      return orden === 'antiguas' ? -dif : dif
+    })
+    return out
+  }, [lista, texto, autor, expediente, vista, orden])
 
   return (
     <div className="space-y-4">
@@ -113,7 +110,7 @@ export function NotaMuro({
           <Button
             key={v.id}
             size="sm"
-            variant={vista === v.id ? "default" : "outline"}
+            variant={vista === v.id ? 'default' : 'outline'}
             className="h-7 text-xs"
             onClick={() => setVista(v.id)}
           >
@@ -125,7 +122,7 @@ export function NotaMuro({
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -172,45 +169,49 @@ export function NotaMuro({
         </Select>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        {filtradas.length} nota(s) · Las notas son internas y nunca se envían al cliente ni a terceros.
+      <p className="text-muted-foreground text-xs">
+        {filtradas.length} nota(s) · Las notas son internas y nunca se envían al cliente ni a
+        terceros.
       </p>
 
       {filtradas.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center">
-          <StickyNote className="mx-auto h-6 w-6 text-muted-foreground" />
-          <p className="mt-2 text-sm text-muted-foreground">{vacio}</p>
+        <div className="border-border bg-muted/30 rounded-lg border border-dashed p-6 text-center">
+          <StickyNote className="text-muted-foreground mx-auto h-6 w-6" />
+          <p className="text-muted-foreground mt-2 text-sm">{vacio}</p>
         </div>
       ) : (
-        <div
-          className={cn(
-            "grid gap-4 sm:grid-cols-2",
-            columnas === 3 ? "xl:grid-cols-3" : "",
-          )}
-        >
+        <div className={cn('grid gap-4 sm:grid-cols-2', columnas === 3 ? 'xl:grid-cols-3' : '')}>
           {filtradas.map((n) => (
             <NotaCard key={n.id} nota={n} mostrarOrigen={mostrarOrigen} />
           ))}
         </div>
       )}
     </div>
-  );
+  )
 }
 
 /** Resumen compacto de notas (por ejemplo, en la pestaña Resumen). */
-export function NotaResumenMuro({ notas: lista, limite = 3 }: { notas: NotaInterna[]; limite?: number }) {
+export function NotaResumenMuro({
+  notas: lista,
+  limite = 3,
+}: {
+  notas: NotaInterna[]
+  limite?: number
+}) {
   const visibles = [...lista]
-    .filter((n) => n.estado === "activa")
-    .sort((a, b) => (a.destacada === b.destacada ? fechaOrden(b) - fechaOrden(a) : a.destacada ? -1 : 1))
-    .slice(0, limite);
+    .filter((n) => n.estado === 'activa')
+    .sort((a, b) =>
+      a.destacada === b.destacada ? fechaOrden(b) - fechaOrden(a) : a.destacada ? -1 : 1,
+    )
+    .slice(0, limite)
 
   if (!visibles.length) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         No hay notas internas relacionadas con este contacto. Añade aquí información de contexto que
         pueda ser útil para el trabajo del equipo.
       </p>
-    );
+    )
   }
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -218,7 +219,7 @@ export function NotaResumenMuro({ notas: lista, limite = 3 }: { notas: NotaInter
         <NotaCard key={n.id} nota={n} />
       ))}
     </div>
-  );
+  )
 }
 
-export const etiquetaAmbito = (n: NotaInterna) => AMBITO_META[n.ambito].label;
+export const etiquetaAmbito = (n: NotaInterna) => AMBITO_META[n.ambito].label

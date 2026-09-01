@@ -1,43 +1,39 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AlarmClock, Archive, Pin, ShieldAlert, Timer } from "lucide-react";
+import { createFileRoute } from '@tanstack/react-router'
+import { AlarmClock, Archive, Pin, ShieldAlert, Timer } from 'lucide-react'
 
-import { SectionHeader, StatTile } from "@/components/common";
-import { NotaMuro } from "@/components/notas/nota-muro";
-import { NuevaNotaBoton } from "@/components/notas/nota-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AVISO_INTERNO } from "@/data/notas";
-import { contadores, notasVisibles, useNotas } from "@/lib/notas-store";
+import { SectionHeader, StatTile } from '@/components/common'
+import { NuevaNotaBoton } from '@/components/notas/nota-form'
+import { NotaMuro } from '@/components/notas/nota-muro'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AVISO_INTERNO } from '@/data/notas'
+import { contadores, notasVisibles, useNotas } from '@/lib/notas-store'
 
-export const Route = createFileRoute("/notas")({
+export const Route = createFileRoute('/notas')({
   head: () => ({
     meta: [
-      { title: "Notas internas — LEX" },
+      { title: 'Notas internas — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Panel transversal de notas internas del despacho: contexto, avisos, vigencia y trazabilidad.",
+          'Panel transversal de notas internas del despacho: contexto, avisos, vigencia y trazabilidad.',
       },
-      { property: "og:title", content: "Notas internas — LEX" },
+      { property: 'og:title', content: 'Notas internas — LEX' },
       {
-        property: "og:description",
-        content: "Busca y gestiona las notas internas de contactos, expedientes y oportunidades.",
+        property: 'og:description',
+        content: 'Busca y gestiona las notas internas de contactos, expedientes y oportunidades.',
       },
     ],
   }),
   component: NotasPage,
-});
+})
 
 function NotasPage() {
-  const lista = useNotas(notasVisibles);
-  const c = useNotas(contadores);
+  const lista = useNotas(notasVisibles)
+  const c = useNotas(contadores)
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <SectionHeader
-        title="Notas internas"
-        subtitle={AVISO_INTERNO}
-        actions={<NuevaNotaBoton />}
-      />
+      <SectionHeader title="Notas internas" subtitle={AVISO_INTERNO} actions={<NuevaNotaBoton />} />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile label="Destacadas activas" value={c.destacadas} tono="info" />
@@ -58,7 +54,7 @@ function NotasPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-4 flex flex-wrap items-center gap-4 text-xs">
         <span className="inline-flex items-center gap-1">
           <ShieldAlert className="h-3.5 w-3.5" /> Crítica
         </span>
@@ -73,5 +69,5 @@ function NotasPage() {
         </span>
       </p>
     </div>
-  );
+  )
 }
