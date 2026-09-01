@@ -1,0 +1,361 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Sistema de diseño: azul oscuro, gris grafito, blanco y neutros.
+ * Todos los colores en oklch y expuestos como tokens semánticos.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "IBM Plex Serif", ui-serif, Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-postit: var(--postit);
+  --color-postit-foreground: var(--postit-foreground);
+  --color-postit-border: var(--postit-border);
+}
+
+:root {
+  --radius: 0.375rem;
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.22 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 255);
+  --primary: oklch(0.33 0.075 258);
+  --primary-foreground: oklch(0.985 0.003 250);
+  --secondary: oklch(0.945 0.006 255);
+  --secondary-foreground: oklch(0.32 0.03 258);
+  --muted: oklch(0.955 0.005 255);
+  --muted-foreground: oklch(0.52 0.02 257);
+  --accent: oklch(0.935 0.014 256);
+  --accent-foreground: oklch(0.3 0.05 258);
+  --destructive: oklch(0.52 0.19 25);
+  --destructive-foreground: oklch(0.985 0.003 250);
+  --warning: oklch(0.72 0.13 72);
+  --warning-foreground: oklch(0.38 0.09 62);
+  --success: oklch(0.55 0.11 160);
+  --success-foreground: oklch(0.3 0.07 160);
+  --border: oklch(0.9 0.008 255);
+  --input: oklch(0.9 0.008 255);
+  --ring: oklch(0.45 0.07 258);
+  --chart-1: oklch(0.33 0.075 258);
+  --chart-2: oklch(0.55 0.06 250);
+  --chart-3: oklch(0.7 0.04 250);
+  --chart-4: oklch(0.72 0.13 72);
+  --chart-5: oklch(0.55 0.11 160);
+  --sidebar: oklch(0.25 0.045 258);
+  --sidebar-foreground: oklch(0.93 0.008 250);
+  --sidebar-primary: oklch(0.6 0.09 250);
+  --sidebar-primary-foreground: oklch(0.16 0.03 258);
+  --sidebar-accent: oklch(0.32 0.05 258);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.34 0.04 258);
+  --sidebar-ring: oklch(0.6 0.09 250);
+  --postit: oklch(0.945 0.09 100);
+  --postit-foreground: oklch(0.32 0.05 80);
+  --postit-border: oklch(0.87 0.1 98);
+}
+
+.dark {
+  --background: oklch(0.19 0.03 258);
+  --foreground: oklch(0.96 0.005 250);
+  --card: oklch(0.235 0.032 258);
+  --card-foreground: oklch(0.96 0.005 250);
+  --popover: oklch(0.235 0.032 258);
+  --popover-foreground: oklch(0.96 0.005 250);
+  --primary: oklch(0.72 0.075 250);
+  --primary-foreground: oklch(0.18 0.03 258);
+  --secondary: oklch(0.29 0.035 258);
+  --secondary-foreground: oklch(0.96 0.005 250);
+  --muted: oklch(0.29 0.035 258);
+  --muted-foreground: oklch(0.72 0.02 255);
+  --accent: oklch(0.32 0.04 258);
+  --accent-foreground: oklch(0.96 0.005 250);
+  --destructive: oklch(0.65 0.18 25);
+  --destructive-foreground: oklch(0.98 0.003 250);
+  --warning: oklch(0.78 0.13 72);
+  --warning-foreground: oklch(0.9 0.08 80);
+  --success: oklch(0.7 0.11 160);
+  --success-foreground: oklch(0.9 0.07 160);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.6 0.06 255);
+  --chart-1: oklch(0.72 0.075 250);
+  --chart-2: oklch(0.6 0.06 250);
+  --chart-3: oklch(0.45 0.05 250);
+  --chart-4: oklch(0.78 0.13 72);
+  --chart-5: oklch(0.7 0.11 160);
+  --sidebar: oklch(0.165 0.028 258);
+  --sidebar-foreground: oklch(0.93 0.008 250);
+  --sidebar-primary: oklch(0.6 0.09 250);
+  --sidebar-primary-foreground: oklch(0.16 0.03 258);
+  --sidebar-accent: oklch(0.26 0.035 258);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.6 0.09 250);
+  --postit: oklch(0.46 0.075 95);
+  --postit-foreground: oklch(0.96 0.02 95);
+  --postit-border: oklch(0.55 0.08 95);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Notas internas: tonos estables por ámbito (nunca elegibles a mano) */
+/* ---------------------------------------------------------------- */
+:root {
+  --nota-persona: oklch(0.945 0.09 100);
+  --nota-persona-fg: oklch(0.32 0.05 80);
+  --nota-persona-bd: oklch(0.87 0.1 98);
+  --nota-expediente: oklch(0.935 0.045 245);
+  --nota-expediente-fg: oklch(0.32 0.06 255);
+  --nota-expediente-bd: oklch(0.86 0.06 245);
+  --nota-oportunidad: oklch(0.935 0.05 155);
+  --nota-oportunidad-fg: oklch(0.32 0.06 160);
+  --nota-oportunidad-bd: oklch(0.86 0.07 155);
+  --nota-ejecucion: oklch(0.935 0.05 305);
+  --nota-ejecucion-fg: oklch(0.33 0.07 305);
+  --nota-ejecucion-bd: oklch(0.87 0.06 305);
+  --nota-presupuesto: oklch(0.94 0.05 55);
+  --nota-presupuesto-fg: oklch(0.33 0.06 50);
+  --nota-presupuesto-bd: oklch(0.87 0.07 55);
+  --nota-inactiva: oklch(0.94 0.004 258);
+  --nota-inactiva-fg: oklch(0.42 0.015 258);
+  --nota-inactiva-bd: oklch(0.86 0.008 258);
+}
+
+.dark {
+  --nota-persona: oklch(0.46 0.075 95);
+  --nota-persona-fg: oklch(0.96 0.02 95);
+  --nota-persona-bd: oklch(0.55 0.08 95);
+  --nota-expediente: oklch(0.4 0.06 250);
+  --nota-expediente-fg: oklch(0.96 0.015 250);
+  --nota-expediente-bd: oklch(0.5 0.07 250);
+  --nota-oportunidad: oklch(0.4 0.06 160);
+  --nota-oportunidad-fg: oklch(0.96 0.015 160);
+  --nota-oportunidad-bd: oklch(0.5 0.07 160);
+  --nota-ejecucion: oklch(0.41 0.07 305);
+  --nota-ejecucion-fg: oklch(0.96 0.015 305);
+  --nota-ejecucion-bd: oklch(0.51 0.08 305);
+  --nota-presupuesto: oklch(0.43 0.06 55);
+  --nota-presupuesto-fg: oklch(0.96 0.02 55);
+  --nota-presupuesto-bd: oklch(0.53 0.07 55);
+  --nota-inactiva: oklch(0.3 0.02 258);
+  --nota-inactiva-fg: oklch(0.9 0.008 258);
+  --nota-inactiva-bd: oklch(0.4 0.02 258);
+}
+
+.nota-tono-persona {
+  background-color: var(--nota-persona);
+  color: var(--nota-persona-fg);
+  border-color: var(--nota-persona-bd);
+}
+.nota-tono-expediente {
+  background-color: var(--nota-expediente);
+  color: var(--nota-expediente-fg);
+  border-color: var(--nota-expediente-bd);
+}
+.nota-tono-oportunidad {
+  background-color: var(--nota-oportunidad);
+  color: var(--nota-oportunidad-fg);
+  border-color: var(--nota-oportunidad-bd);
+}
+.nota-tono-ejecucion {
+  background-color: var(--nota-ejecucion);
+  color: var(--nota-ejecucion-fg);
+  border-color: var(--nota-ejecucion-bd);
+}
+.nota-tono-presupuesto {
+  background-color: var(--nota-presupuesto);
+  color: var(--nota-presupuesto-fg);
+  border-color: var(--nota-presupuesto-bd);
+}
+.nota-tono-inactiva {
+  background-color: var(--nota-inactiva);
+  color: var(--nota-inactiva-fg);
+  border-color: var(--nota-inactiva-bd);
+}
+
+/* ---------------------------------------------------------------- */
+/* Megafases de LEX: color estable y reutilizable      */
+/* ---------------------------------------------------------------- */
+:root {
+  --mf-f1: oklch(0.62 0.07 265);
+  --mf-f2: oklch(0.6 0.07 205);
+  --mf-f3: oklch(0.55 0.07 250);
+  --mf-f4: oklch(0.58 0.07 165);
+  --mf-f5: oklch(0.62 0.08 75);
+  --mf-f6: oklch(0.58 0.07 305);
+  --mf-especial: oklch(0.55 0.02 258);
+}
+
+.dark {
+  --mf-f1: oklch(0.75 0.07 265);
+  --mf-f2: oklch(0.75 0.07 205);
+  --mf-f3: oklch(0.74 0.07 250);
+  --mf-f4: oklch(0.75 0.07 165);
+  --mf-f5: oklch(0.78 0.08 75);
+  --mf-f6: oklch(0.75 0.07 305);
+  --mf-especial: oklch(0.72 0.02 258);
+}
+
+.mf-f1 { --mf: var(--mf-f1); }
+.mf-f2 { --mf: var(--mf-f2); }
+.mf-f3 { --mf: var(--mf-f3); }
+.mf-f4 { --mf: var(--mf-f4); }
+.mf-f5 { --mf: var(--mf-f5); }
+.mf-f6 { --mf: var(--mf-f6); }
+.mf-especial { --mf: var(--mf-especial); }
+
+.mf-banda {
+  background-color: color-mix(in oklab, var(--mf) 12%, transparent);
+  border-color: color-mix(in oklab, var(--mf) 38%, transparent);
+  color: var(--mf);
+}
+
+.mf-columna {
+  border-top: 3px solid color-mix(in oklab, var(--mf) 55%, transparent);
+}
+
+.mf-punto {
+  background-color: var(--mf);
+}
+
+/* ---------------------------------------------------------------- */
+/* Etiquetas de tareas: paleta acotada del catálogo                   */
+/* ---------------------------------------------------------------- */
+:root {
+  --etq-azul: oklch(0.5 0.09 250);
+  --etq-verde: oklch(0.5 0.08 160);
+  --etq-ambar: oklch(0.55 0.1 75);
+  --etq-rojo: oklch(0.52 0.13 25);
+  --etq-morado: oklch(0.5 0.09 305);
+  --etq-turquesa: oklch(0.5 0.08 200);
+  --etq-rosa: oklch(0.52 0.1 355);
+  --etq-gris: oklch(0.48 0.015 258);
+}
+
+.dark {
+  --etq-azul: oklch(0.76 0.08 250);
+  --etq-verde: oklch(0.76 0.08 160);
+  --etq-ambar: oklch(0.79 0.09 75);
+  --etq-rojo: oklch(0.74 0.11 25);
+  --etq-morado: oklch(0.76 0.08 305);
+  --etq-turquesa: oklch(0.76 0.07 200);
+  --etq-rosa: oklch(0.76 0.09 355);
+  --etq-gris: oklch(0.74 0.015 258);
+}
+
+.etq-azul { --etq: var(--etq-azul); }
+.etq-verde { --etq: var(--etq-verde); }
+.etq-ambar { --etq: var(--etq-ambar); }
+.etq-rojo { --etq: var(--etq-rojo); }
+.etq-morado { --etq: var(--etq-morado); }
+.etq-turquesa { --etq: var(--etq-turquesa); }
+.etq-rosa { --etq: var(--etq-rosa); }
+.etq-gris { --etq: var(--etq-gris); }
+
+.etq-chip {
+  background-color: color-mix(in oklab, var(--etq) 10%, transparent);
+  border-color: color-mix(in oklab, var(--etq) 32%, transparent);
+  color: var(--etq);
+}
+
+.etq-punto {
+  background-color: var(--etq);
+}
+
+/* --------------------------------------------------------------- */
+/* Colores permanentes de fase (Leads y Onboarding)                 */
+/* Cada fase conserva siempre el mismo color en kanban, etiquetas,  */
+/* filtros, listas, fichas e historial.                             */
+/* --------------------------------------------------------------- */
+
+.fase-azul { --fase: var(--etq-azul); }
+.fase-cian { --fase: var(--etq-turquesa); }
+.fase-indigo { --fase: oklch(0.5 0.11 275); }
+.fase-ambar { --fase: var(--etq-ambar); }
+.fase-violeta { --fase: var(--etq-morado); }
+.fase-turquesa { --fase: oklch(0.5 0.09 190); }
+.fase-verde { --fase: var(--etq-verde); }
+.fase-rojo { --fase: var(--etq-rojo); }
+.fase-gris { --fase: var(--etq-gris); }
+
+.dark .fase-indigo { --fase: oklch(0.76 0.09 275); }
+.dark .fase-turquesa { --fase: oklch(0.76 0.08 190); }
+
+.fase-chip {
+  background-color: color-mix(in oklab, var(--fase) 12%, transparent);
+  border-color: color-mix(in oklab, var(--fase) 38%, transparent);
+  color: var(--fase);
+}
+
+.fase-columna {
+  border-top: 3px solid var(--fase);
+  background-color: color-mix(in oklab, var(--fase) 5%, transparent);
+}
+
+.fase-tarjeta {
+  border-left: 3px solid var(--fase);
+}
+
+.fase-punto { background-color: var(--fase); }
+.fase-texto { color: var(--fase); }
