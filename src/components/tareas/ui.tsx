@@ -1,5 +1,4 @@
 // Módulo general de tareas: tarjeta operativa y diálogos de acción.
-import { useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Ban,
@@ -15,14 +14,17 @@ import {
   Target,
   ThumbsDown,
   UserCheck,
-} from "lucide-react";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
-import { CalendarClock } from "lucide-react";
-
-import { Field, ToneBadge } from "@/components/crm/ui";
-import { ReunionInstruccionesDialog } from "@/components/tareas/reunion-dialog";
-import { SelectorFecha, SelectorHora } from "@/components/fechas/datetime";
+import { PriorityBadge } from '@/components/common'
+import { SelectorFecha, SelectorHora } from '@/components/fechas/datetime'
+import { SelectorEtiquetas } from '@/components/tareas/etiquetas'
+import { ReunionInstruccionesDialog } from '@/components/tareas/reunion-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Command,
   CommandEmpty,
@@ -30,13 +32,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { EtiquetasInline, SelectorEtiquetas } from "@/components/tareas/etiquetas";
-
-import { PriorityBadge } from "@/components/common";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from '@/components/ui/command'
 import {
   Dialog,
   DialogContent,
@@ -45,84 +41,98 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { USUARIOS } from "@/data/crm";
-import { sumarDias } from "@/data/pipeline";
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { USUARIOS } from '@/data/crm'
 import {
   MOTIVOS_ESPERA,
   MOTIVOS_RECHAZO,
   TITULOS_TAREA_INICIALES,
   type MotivoEspera,
-  type OrigenRelacion,
   type MotivoRechazo,
+  type OrigenRelacion,
   type TareaOp,
-} from "@/data/expedientes-model";
-
-import { ops, useOps, type SenalesTarea } from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/data/expedientes-model'
+import { sumarDias } from '@/data/pipeline'
+import { Field, ToneBadge } from '@/features/crm'
+import { ops, useOps, type SenalesTarea } from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
 /** Catálogo de títulos frecuentes para el autocompletado (texto libre). */
-export const TITULOS_SUGERIDOS = [...TITULOS_TAREA_INICIALES];
-
+export const TITULOS_SUGERIDOS = [...TITULOS_TAREA_INICIALES]
 
 /* ------------------------------ Señales ---------------------------- */
 
 export type Chip = {
-  tono: "riesgo" | "aviso" | "info" | "neutro";
-  icon: ReactNode;
-  texto: string;
-};
+  tono: 'riesgo' | 'aviso' | 'info' | 'neutro'
+  icon: ReactNode
+  texto: string
+}
 
 /**
  * SEÑALES automáticas de una tarea. No son estados: sólo describen su
  * situación (vencida, bloqueada, en cadena, con documento vinculado…).
  */
 export function chipsDeTarea(tarea: TareaOp, senales: SenalesTarea): Chip[] {
-  const chips: Chip[] = [];
+  const chips: Chip[] = []
   if (tarea.esSiguienteAccion)
-    chips.push({ tono: "info", icon: <Target className="h-3 w-3" />, texto: "Siguiente acción" });
+    chips.push({ tono: 'info', icon: <Target className="h-3 w-3" />, texto: 'Siguiente acción' })
   if (senales.vencida)
-    chips.push({ tono: "riesgo", icon: <AlertTriangle className="h-3 w-3" />, texto: "Vencida" });
-  if (senales.hoy) chips.push({ tono: "aviso", icon: <Clock className="h-3 w-3" />, texto: "Vence hoy" });
+    chips.push({ tono: 'riesgo', icon: <AlertTriangle className="h-3 w-3" />, texto: 'Vencida' })
+  if (senales.hoy)
+    chips.push({ tono: 'aviso', icon: <Clock className="h-3 w-3" />, texto: 'Vence hoy' })
   if (senales.bloqueada)
-    chips.push({ tono: "neutro", icon: <Lock className="h-3 w-3" />, texto: "Bloqueada" });
+    chips.push({ tono: 'neutro', icon: <Lock className="h-3 w-3" />, texto: 'Bloqueada' })
   if (senales.rechazada)
-    chips.push({ tono: "riesgo", icon: <ThumbsDown className="h-3 w-3" />, texto: "Rechazada" });
+    chips.push({ tono: 'riesgo', icon: <ThumbsDown className="h-3 w-3" />, texto: 'Rechazada' })
   if (senales.reclamada)
-    chips.push({ tono: "aviso", icon: <Megaphone className="h-3 w-3" />, texto: "Recordada al responsable" });
-  if (senales.sinAbrir) chips.push({ tono: "info", icon: <Eye className="h-3 w-3" />, texto: "Sin abrir" });
+    chips.push({
+      tono: 'aviso',
+      icon: <Megaphone className="h-3 w-3" />,
+      texto: 'Recordada al responsable',
+    })
+  if (senales.sinAbrir)
+    chips.push({ tono: 'info', icon: <Eye className="h-3 w-3" />, texto: 'Sin abrir' })
   if (senales.diferidaVencida)
-    chips.push({ tono: "aviso", icon: <Clock className="h-3 w-3" />, texto: "Revisar espera" });
+    chips.push({ tono: 'aviso', icon: <Clock className="h-3 w-3" />, texto: 'Revisar espera' })
   if (senales.enCadena)
     chips.push({
-      tono: "info",
+      tono: 'info',
       icon: <ListOrdered className="h-3 w-3" />,
-      texto: `En cadena ${senales.posicionCadena ?? ""}`.trim(),
-    });
+      texto: `En cadena ${senales.posicionCadena ?? ''}`.trim(),
+    })
   if (senales.conRecordatorio)
-    chips.push({ tono: "neutro", icon: <BellPlus className="h-3 w-3" />, texto: "Recordatorio activo" });
+    chips.push({
+      tono: 'neutro',
+      icon: <BellPlus className="h-3 w-3" />,
+      texto: 'Recordatorio activo',
+    })
   if ((tarea.documentosVinculados ?? []).length)
-    chips.push({ tono: "neutro", icon: <Paperclip className="h-3 w-3" />, texto: "Documento vinculado" });
+    chips.push({
+      tono: 'neutro',
+      icon: <Paperclip className="h-3 w-3" />,
+      texto: 'Documento vinculado',
+    })
   if (tarea.actuacionId)
-    chips.push({ tono: "info", icon: <Target className="h-3 w-3" />, texto: "Actuación" });
+    chips.push({ tono: 'info', icon: <Target className="h-3 w-3" />, texto: 'Actuación' })
   if (senales.esperandoRespuesta)
-    chips.push({ tono: "info", icon: <Clock className="h-3 w-3" />, texto: "Esperando respuesta" });
+    chips.push({ tono: 'info', icon: <Clock className="h-3 w-3" />, texto: 'Esperando respuesta' })
   if (senales.emailsEnviados)
     chips.push({
-      tono: "neutro",
+      tono: 'neutro',
       icon: <Mail className="h-3 w-3" />,
-      texto: `${senales.emailsEnviados} ${senales.emailsEnviados === 1 ? "email" : "emails"}`,
-    });
-  return chips;
+      texto: `${senales.emailsEnviados} ${senales.emailsEnviados === 1 ? 'email' : 'emails'}`,
+    })
+  return chips
 }
 
 /* ------------------------------ Tarjeta ---------------------------- */
@@ -133,76 +143,78 @@ export function TareaCard({
   contexto,
   onAbrir,
 }: {
-  tarea: TareaOp;
-  senales: SenalesTarea;
-  contexto?: string;
-  onAbrir: () => void;
+  tarea: TareaOp
+  senales: SenalesTarea
+  contexto?: string
+  onAbrir: () => void
 }) {
   // SEÑALES: se calculan solas y nunca son estados. En la tarjeta, máximo 3 + N.
-  const chips = chipsDeTarea(tarea, senales);
+  const chips = chipsDeTarea(tarea, senales)
   return (
     <Card
       onClick={onAbrir}
       className={cn(
-        "cursor-pointer border-border transition-colors hover:border-primary/40",
-        senales.vencida && "border-destructive/50",
-        senales.bloqueada && "border-dashed",
-        tarea.esSiguienteAccion && "border-primary/60 shadow-sm ring-1 ring-primary/30",
+        'cursor-pointer border-border transition-colors hover:border-primary/40',
+        senales.vencida && 'border-destructive/50',
+        senales.bloqueada && 'border-dashed',
+        tarea.esSiguienteAccion && 'border-primary/60 shadow-sm ring-1 ring-primary/30',
       )}
     >
       <CardContent className="space-y-2 p-3">
         {tarea.esSiguienteAccion ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+          <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
             <Target className="h-3 w-3" /> Siguiente acción
           </span>
         ) : null}
         <div className="flex items-start justify-between gap-2">
-          <p className="min-w-0 text-sm font-medium leading-snug text-foreground line-clamp-2">
+          <p className="text-foreground line-clamp-2 min-w-0 text-sm leading-snug font-medium">
             {tarea.titulo}
           </p>
           <PriorityBadge value={tarea.prioridad} />
         </div>
 
         {contexto ? (
-          <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+          <p className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px]">
             <Link2 className="h-3 w-3 shrink-0" /> {contexto}
           </p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground">
+          <span className="border-border bg-secondary text-secondary-foreground rounded-full border px-2 py-0.5 text-[11px]">
             {tarea.responsable}
           </span>
           {tarea.vencimiento ? (
             <span
               className={cn(
-                "inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground",
-                senales.vencida && "font-medium text-destructive",
+                'inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground',
+                senales.vencida && 'font-medium text-destructive',
               )}
             >
               <Clock className="h-3 w-3" /> {tarea.vencimiento}
             </span>
           ) : (
-            <span className="text-[11px] text-muted-foreground">Sin fecha</span>
+            <span className="text-muted-foreground text-[11px]">Sin fecha</span>
           )}
           {tarea.horaLimite ? (
-            <span className="text-[11px] tabular-nums text-muted-foreground">{tarea.horaLimite}</span>
+            <span className="text-muted-foreground text-[11px] tabular-nums">
+              {tarea.horaLimite}
+            </span>
           ) : null}
         </div>
 
         {chips.length ? (
-          <div className="flex flex-wrap gap-1.5 border-t border-border/70 pt-2">
+          <div className="border-border/70 flex flex-wrap gap-1.5 border-t pt-2">
             {chips.slice(0, 3).map((c) => (
               <SenalChip key={c.texto} tono={c.tono} icon={c.icon} texto={c.texto} />
             ))}
             {chips.length > 3 ? (
-              <span className="text-[11px] text-muted-foreground">+{chips.length - 3}</span>
+              <span className="text-muted-foreground text-[11px]">+{chips.length - 3}</span>
             ) : null}
           </div>
         ) : null}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function SenalChip({
@@ -210,9 +222,9 @@ function SenalChip({
   icon,
   texto,
 }: {
-  tono: "riesgo" | "aviso" | "info" | "neutro";
-  icon: ReactNode;
-  texto: string;
+  tono: 'riesgo' | 'aviso' | 'info' | 'neutro'
+  icon: ReactNode
+  texto: string
 }) {
   return (
     <span className="inline-flex items-center gap-1">
@@ -223,21 +235,21 @@ function SenalChip({
         </span>
       </ToneBadge>
     </span>
-  );
+  )
 }
 
 /* ------------------------------ Diálogos --------------------------- */
 
 /** Creación rápida: título y responsable bastan; el resto es opcional. */
 export type BorradorTareaRapida = {
-  titulo: string;
-  responsable: string;
-  vencimiento: string;
-  horaLimite: string;
-  prioridad: "Alta" | "Media" | "Baja";
-  etiquetas: string[];
-  descripcion: string;
-};
+  titulo: string
+  responsable: string
+  vencimiento: string
+  horaLimite: string
+  prioridad: 'Alta' | 'Media' | 'Baja'
+  etiquetas: string[]
+  descripcion: string
+}
 
 export function NuevaTareaRapidaDialog({
   trigger,
@@ -255,63 +267,61 @@ export function NuevaTareaRapidaDialog({
   open,
   onOpenChange,
 }: {
-  trigger?: ReactNode;
-  expedienteId?: string;
-  lineaId?: string;
-  contextoLabel?: string;
+  trigger?: ReactNode
+  expedienteId?: string
+  lineaId?: string
+  contextoLabel?: string
   /** Vínculo con el contexto (Lead, Onboarding, Presupuesto…). */
-  origen?: OrigenRelacion;
+  origen?: OrigenRelacion
   /** La tarea se guarda ya marcada como SIGUIENTE ACCIÓN del contexto. */
-  comoSiguienteAccion?: boolean;
+  comoSiguienteAccion?: boolean
   /** Precompletado (conversión de subtarea, creación desde documento…). */
-  tituloInicial?: string;
-  descripcionInicial?: string;
-  responsableInicial?: string;
+  tituloInicial?: string
+  descripcionInicial?: string
+  responsableInicial?: string
   /** Documento que quedará vinculado a la tarea creada. */
-  documentoId?: string;
+  documentoId?: string
   /** Se invoca con el id de la tarea, sólo tras confirmar la creación. */
-  onCreada?: (id: string) => void;
+  onCreada?: (id: string) => void
   /**
    * Modo borrador: la tarea no se crea todavía (el contexto aún no existe).
    * Se devuelve el borrador para persistirlo después con `ops.crearTareaRapida`.
    */
-  onCreate?: (borrador: BorradorTareaRapida) => void;
-  open?: boolean;
-  onOpenChange?: (v: boolean) => void;
+  onCreate?: (borrador: BorradorTareaRapida) => void
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
 }) {
-
-  const catalogo = useOps((s) => s.titulosTarea);
-  const usuarioActual = useOps((s) => s.usuario);
-  const [interno, setInterno] = useState(false);
-  const abierto = open ?? interno;
+  const catalogo = useOps((s) => s.titulosTarea)
+  const usuarioActual = useOps((s) => s.usuario)
+  const [interno, setInterno] = useState(false)
+  const abierto = open ?? interno
   const setAbierto = (v: boolean) => {
-    setInterno(v);
-    onOpenChange?.(v);
-  };
-  const [titulo, setTitulo] = useState(tituloInicial ?? "");
-  const [responsable, setResponsable] = useState(responsableInicial ?? usuarioActual);
-  const [vencimiento, setVencimiento] = useState("");
-  const [horaLimite, setHoraLimite] = useState("");
-  const [prioridad, setPrioridad] = useState<"Alta" | "Media" | "Baja">("Media");
-  const [etiquetas, setEtiquetas] = useState<string[]>([]);
-  const [descripcion, setDescripcion] = useState(descripcionInicial ?? "");
+    setInterno(v)
+    onOpenChange?.(v)
+  }
+  const [titulo, setTitulo] = useState(tituloInicial ?? '')
+  const [responsable, setResponsable] = useState(responsableInicial ?? usuarioActual)
+  const [vencimiento, setVencimiento] = useState('')
+  const [horaLimite, setHoraLimite] = useState('')
+  const [prioridad, setPrioridad] = useState<'Alta' | 'Media' | 'Baja'>('Media')
+  const [etiquetas, setEtiquetas] = useState<string[]>([])
+  const [descripcion, setDescripcion] = useState(descripcionInicial ?? '')
   // Desplegable de tareas preestablecidas: normales + TAREAS ESPECIALES.
-  const [catalogoAbierto, setCatalogoAbierto] = useState(false);
-  const [especialAbierta, setEspecialAbierta] = useState<null | "reunion">(null);
-
+  const [catalogoAbierto, setCatalogoAbierto] = useState(false)
+  const [especialAbierta, setEspecialAbierta] = useState<null | 'reunion'>(null)
 
   // El precompletado se refresca cada vez que se abre el diálogo.
   useEffect(() => {
-    if (!abierto) return;
-    setTitulo(tituloInicial ?? "");
-    setDescripcion(descripcionInicial ?? "");
-    setResponsable(responsableInicial ?? usuarioActual);
-  }, [abierto, tituloInicial, descripcionInicial, responsableInicial, usuarioActual]);
+    if (!abierto) return
+    setTitulo(tituloInicial ?? '')
+    setDescripcion(descripcionInicial ?? '')
+    setResponsable(responsableInicial ?? usuarioActual)
+  }, [abierto, tituloInicial, descripcionInicial, responsableInicial, usuarioActual])
 
   const guardar = () => {
     if (!titulo.trim()) {
-      toast.error("Indica al menos un título.");
-      return;
+      toast.error('Indica al menos un título.')
+      return
     }
     if (onCreate) {
       onCreate({
@@ -322,8 +332,8 @@ export function NuevaTareaRapidaDialog({
         prioridad,
         etiquetas,
         descripcion,
-      });
-      toast.success("Tarea añadida al alta", { description: `${titulo} · ${responsable}` });
+      })
+      toast.success('Tarea añadida al alta', { description: `${titulo} · ${responsable}` })
     } else {
       const id = ops.crearTareaRapida({
         titulo: titulo.trim(),
@@ -338,20 +348,20 @@ export function NuevaTareaRapidaDialog({
         ...(origen ? { origen } : {}),
         ...(documentoId ? { documentoId } : {}),
         ...(comoSiguienteAccion ? { esSiguienteAccion: true } : {}),
-      });
-      toast.success(comoSiguienteAccion ? "Siguiente acción definida" : "Tarea creada", {
+      })
+      toast.success(comoSiguienteAccion ? 'Siguiente acción definida' : 'Tarea creada', {
         description: `${titulo} · ${responsable}`,
-      });
-      onCreada?.(id);
+      })
+      onCreada?.(id)
     }
 
-    setTitulo("");
-    setDescripcion("");
-    setEtiquetas([]);
-    setVencimiento("");
-    setHoraLimite("");
-    setAbierto(false);
-  };
+    setTitulo('')
+    setDescripcion('')
+    setEtiquetas([])
+    setVencimiento('')
+    setHoraLimite('')
+    setAbierto(false)
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -361,10 +371,10 @@ export function NuevaTareaRapidaDialog({
           <DialogTitle>Nueva tarea</DialogTitle>
           <DialogDescription>
             {comoSiguienteAccion
-              ? `¿Qué hay que hacer ahora para que ${contextoLabel ?? "este asunto"} avance? La tarea quedará marcada como SIGUIENTE ACCIÓN.`
+              ? `¿Qué hay que hacer ahora para que ${contextoLabel ?? 'este asunto'} avance? La tarea quedará marcada como SIGUIENTE ACCIÓN.`
               : contextoLabel
                 ? `Quedará vinculada a ${contextoLabel}.`
-                : "Sólo el título es obligatorio; el resto puede completarse después."}
+                : 'Sólo el título es obligatorio; el resto puede completarse después.'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-1 sm:grid-cols-2">
@@ -400,8 +410,8 @@ export function NuevaTareaRapidaDialog({
                               key={t}
                               value={t}
                               onSelect={() => {
-                                setTitulo(t);
-                                setCatalogoAbierto(false);
+                                setTitulo(t)
+                                setCatalogoAbierto(false)
                               }}
                             >
                               {t}
@@ -414,8 +424,8 @@ export function NuevaTareaRapidaDialog({
                             <CommandItem
                               value="Reunión reunion tarea especial"
                               onSelect={() => {
-                                setCatalogoAbierto(false);
-                                setEspecialAbierta("reunion");
+                                setCatalogoAbierto(false)
+                                setEspecialAbierta('reunion')
                               }}
                             >
                               <CalendarClock className="mr-2 h-3.5 w-3.5" />
@@ -433,21 +443,19 @@ export function NuevaTareaRapidaDialog({
 
           {!onCreate ? (
             <ReunionInstruccionesDialog
-              open={especialAbierta === "reunion"}
-              onOpenChange={(v) => setEspecialAbierta(v ? "reunion" : null)}
+              open={especialAbierta === 'reunion'}
+              onOpenChange={(v) => setEspecialAbierta(v ? 'reunion' : null)}
               {...(expedienteId ? { expedienteId } : {})}
               {...(lineaId ? { lineaId } : {})}
               {...(origen ? { origen } : {})}
               {...(contextoLabel ? { contextoLabel } : {})}
               onCreada={(id) => {
-                setEspecialAbierta(null);
-                setAbierto(false);
-                onCreada?.(id);
+                setEspecialAbierta(null)
+                setAbierto(false)
+                onCreada?.(id)
               }}
             />
           ) : null}
-
-
 
           <Field label="Asignada a">
             <Select value={responsable} onValueChange={setResponsable}>
@@ -468,7 +476,6 @@ export function NuevaTareaRapidaDialog({
           </Field>
           <Field label="Hora límite">
             <SelectorHora value={horaLimite} onChange={setHoraLimite} />
-
           </Field>
           <Field label="Prioridad">
             <Select value={prioridad} onValueChange={(v) => setPrioridad(v as typeof prioridad)}>
@@ -484,7 +491,11 @@ export function NuevaTareaRapidaDialog({
           </Field>
           <div className="sm:col-span-2">
             <Field label="Etiquetas">
-              <SelectorEtiquetas valor={etiquetas} onChange={setEtiquetas} etiqueta="Sin etiquetas" />
+              <SelectorEtiquetas
+                valor={etiquetas}
+                onChange={setEtiquetas}
+                etiqueta="Sin etiquetas"
+              />
             </Field>
           </div>
           <div className="sm:col-span-2">
@@ -496,11 +507,10 @@ export function NuevaTareaRapidaDialog({
                 placeholder="Indicaciones para quien recibe el encargo"
               />
             </Field>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-[11px]">
               Se publicará como primer mensaje de la conversación de la tarea.
             </p>
           </div>
-
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setAbierto(false)}>
@@ -510,7 +520,7 @@ export function NuevaTareaRapidaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /**
@@ -524,31 +534,31 @@ export function SiguienteTareaDialog({
   open,
   onOpenChange,
 }: {
-  tareaId: string;
-  trigger?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (v: boolean) => void;
+  tareaId: string
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
 }) {
-  const [interno, setInterno] = useState(false);
-  const abierto = open ?? interno;
+  const [interno, setInterno] = useState(false)
+  const abierto = open ?? interno
   const setAbierto = (v: boolean) => {
-    setInterno(v);
-    onOpenChange?.(v);
-  };
+    setInterno(v)
+    onOpenChange?.(v)
+  }
 
-  const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre);
-  const [prioridad, setPrioridad] = useState<"Alta" | "Media" | "Baja">("Media");
-  const [plazoModo, setPlazoModo] = useState<"fija" | "dias" | "sin">("dias");
-  const [dias, setDias] = useState("7");
-  const [vencimiento, setVencimiento] = useState(sumarDias(10));
-  const [horaLimite, setHoraLimite] = useState("18:00");
+  const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre)
+  const [prioridad, setPrioridad] = useState<'Alta' | 'Media' | 'Baja'>('Media')
+  const [plazoModo, setPlazoModo] = useState<'fija' | 'dias' | 'sin'>('dias')
+  const [dias, setDias] = useState('7')
+  const [vencimiento, setVencimiento] = useState(sumarDias(10))
+  const [horaLimite, setHoraLimite] = useState('18:00')
 
   const crear = () => {
     if (!titulo.trim()) {
-      toast.error("Indica el título de la siguiente tarea.");
-      return;
+      toast.error('Indica el título de la siguiente tarea.')
+      return
     }
     const r = ops.añadirSiguienteTarea(tareaId, {
       titulo: titulo.trim(),
@@ -557,20 +567,20 @@ export function SiguienteTareaDialog({
       prioridad,
       plazoModo,
       horaLimite,
-      ...(plazoModo === "fija" ? { vencimiento } : {}),
-      ...(plazoModo === "dias" ? { dias: Number(dias) || 7 } : {}),
-    });
+      ...(plazoModo === 'fija' ? { vencimiento } : {}),
+      ...(plazoModo === 'dias' ? { dias: Number(dias) || 7 } : {}),
+    })
     if (!r.ok) {
-      toast.error(r.error);
-      return;
+      toast.error(r.error)
+      return
     }
-    toast.success("Fase encadenada", {
-      description: "Permanecerá bloqueada hasta que se complete la anterior.",
-    });
-    setTitulo("");
-    setDescripcion("");
-    setAbierto(false);
-  };
+    toast.success('Fase encadenada', {
+      description: 'Permanecerá bloqueada hasta que se complete la anterior.',
+    })
+    setTitulo('')
+    setDescripcion('')
+    setAbierto(false)
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -627,22 +637,34 @@ export function SiguienteTareaDialog({
               </SelectContent>
             </Select>
           </Field>
-          {plazoModo === "dias" ? (
+          {plazoModo === 'dias' ? (
             <Field label="Días">
               <Input value={dias} onChange={(e) => setDias(e.target.value)} inputMode="numeric" />
             </Field>
           ) : null}
-          {plazoModo === "fija" ? (
+          {plazoModo === 'fija' ? (
             <Field label="Vencimiento">
-              <Input value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} placeholder="dd/mm/aaaa" />
+              <Input
+                value={vencimiento}
+                onChange={(e) => setVencimiento(e.target.value)}
+                placeholder="dd/mm/aaaa"
+              />
             </Field>
           ) : null}
           <Field label="Hora límite">
-            <Input value={horaLimite} onChange={(e) => setHoraLimite(e.target.value)} placeholder="HH:MM" />
+            <Input
+              value={horaLimite}
+              onChange={(e) => setHoraLimite(e.target.value)}
+              placeholder="HH:MM"
+            />
           </Field>
           <div className="sm:col-span-2">
             <Field label="Mensaje inicial">
-              <Textarea rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+              <Textarea
+                rows={3}
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+              />
             </Field>
           </div>
         </div>
@@ -656,7 +678,7 @@ export function SiguienteTareaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** EN ESPERA: motivo tasado y fecha de revisión obligatorios. */
@@ -666,15 +688,15 @@ export function EsperaDialog({
   onOpenChange,
   onConfirmado,
 }: {
-  tarea: TareaOp;
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
   /** Se invoca sólo tras confirmar motivo y fecha de revisión. */
-  onConfirmado?: () => void;
+  onConfirmado?: () => void
 }) {
-  const [motivo, setMotivo] = useState<MotivoEspera>("Esperando a tercero");
-  const [hasta, setHasta] = useState(sumarDias(7));
-  const [detalle, setDetalle] = useState("");
+  const [motivo, setMotivo] = useState<MotivoEspera>('Esperando a tercero')
+  const [hasta, setHasta] = useState(sumarDias(7))
+  const [detalle, setDetalle] = useState('')
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -702,9 +724,13 @@ export function EsperaDialog({
             </Select>
           </Field>
           <Field label="Revisar el">
-            <Input value={hasta} onChange={(e) => setHasta(e.target.value)} placeholder="dd/mm/aaaa" />
+            <Input
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              placeholder="dd/mm/aaaa"
+            />
           </Field>
-          <Field label={motivo === "Otro" ? "Explicación (obligatoria)" : "Detalle"}>
+          <Field label={motivo === 'Otro' ? 'Explicación (obligatoria)' : 'Detalle'}>
             <Textarea rows={2} value={detalle} onChange={(e) => setDetalle(e.target.value)} />
           </Field>
         </div>
@@ -714,14 +740,14 @@ export function EsperaDialog({
           </Button>
           <Button
             onClick={() => {
-              const r = ops.ponerEnEspera(tarea.id, hasta, motivo, detalle);
+              const r = ops.ponerEnEspera(tarea.id, hasta, motivo, detalle)
               if (!r.ok) {
-                toast.error(r.error);
-                return;
+                toast.error(r.error)
+                return
               }
-              toast.success("Tarea en espera", { description: `${motivo} · revisión ${hasta}` });
-              onConfirmado?.();
-              onOpenChange(false);
+              toast.success('Tarea en espera', { description: `${motivo} · revisión ${hasta}` })
+              onConfirmado?.()
+              onOpenChange(false)
             }}
           >
             Poner en espera
@@ -729,7 +755,7 @@ export function EsperaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Cancelación con motivo obligatorio: la tarea nunca desaparece del histórico. */
@@ -738,11 +764,11 @@ export function CancelarTareaDialog({
   abierto,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState('')
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -764,12 +790,12 @@ export function CancelarTareaDialog({
             className="gap-1.5"
             onClick={() => {
               if (!motivo.trim()) {
-                toast.error("La cancelación exige un motivo.");
-                return;
+                toast.error('La cancelación exige un motivo.')
+                return
               }
-              ops.cancelarTarea(tarea.id, motivo.trim());
-              toast.success("Tarea cancelada");
-              onOpenChange(false);
+              ops.cancelarTarea(tarea.id, motivo.trim())
+              toast.success('Tarea cancelada')
+              onOpenChange(false)
             }}
           >
             <Ban className="h-4 w-4" /> Cancelar tarea
@@ -777,7 +803,7 @@ export function CancelarTareaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** RECORDAR AL RESPONSABLE: «¿qué hay de lo mío?». No cambia el estado. */
@@ -786,11 +812,11 @@ export function RecordarResponsableDialog({
   abierto,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [mensaje, setMensaje] = useState("");
+  const [mensaje, setMensaje] = useState('')
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -816,10 +842,10 @@ export function RecordarResponsableDialog({
           <Button
             className="gap-1.5"
             onClick={() => {
-              ops.reclamarTarea(tarea.id, mensaje.trim() || "¿Qué hay de lo mío?");
-              toast.success("Recordatorio enviado al responsable");
-              setMensaje("");
-              onOpenChange(false);
+              ops.reclamarTarea(tarea.id, mensaje.trim() || '¿Qué hay de lo mío?')
+              toast.success('Recordatorio enviado al responsable')
+              setMensaje('')
+              onOpenChange(false)
             }}
           >
             <Megaphone className="h-4 w-4" /> Recordar
@@ -827,7 +853,7 @@ export function RecordarResponsableDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Rechazo motivado del destinatario. Ni borra ni cancela: devuelve la pelota. */
@@ -836,12 +862,12 @@ export function RechazarTareaDialog({
   abierto,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [motivo, setMotivo] = useState<MotivoRechazo>("No me corresponde");
-  const [explicacion, setExplicacion] = useState("");
+  const [motivo, setMotivo] = useState<MotivoRechazo>('No me corresponde')
+  const [explicacion, setExplicacion] = useState('')
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -849,8 +875,8 @@ export function RechazarTareaDialog({
         <DialogHeader>
           <DialogTitle>Rechazar el encargo</DialogTitle>
           <DialogDescription>
-            El encargo no desaparece: vuelve a {tarea.creador ?? "quien lo encargó"} con tu motivo, que
-            decidirá si lo mantiene, lo reasigna o lo cancela.
+            El encargo no desaparece: vuelve a {tarea.creador ?? 'quien lo encargó'} con tu motivo,
+            que decidirá si lo mantiene, lo reasigna o lo cancela.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-1">
@@ -885,14 +911,16 @@ export function RechazarTareaDialog({
             variant="destructive"
             className="gap-1.5"
             onClick={() => {
-              const r = ops.rechazarTarea(tarea.id, motivo, explicacion);
+              const r = ops.rechazarTarea(tarea.id, motivo, explicacion)
               if (!r.ok) {
-                toast.error(r.error);
-                return;
+                toast.error(r.error)
+                return
               }
-              toast.success("Rechazo registrado", { description: "Se ha avisado a quien te lo encargó." });
-              setExplicacion("");
-              onOpenChange(false);
+              toast.success('Rechazo registrado', {
+                description: 'Se ha avisado a quien te lo encargó.',
+              })
+              setExplicacion('')
+              onOpenChange(false)
             }}
           >
             <ThumbsDown className="h-4 w-4" /> Rechazar
@@ -900,7 +928,7 @@ export function RechazarTareaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Resolución del rechazo por parte del creador. */
@@ -909,16 +937,16 @@ export function GestionRechazoDialog({
   abierto,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [accion, setAccion] = useState<"reenviar" | "reasignar" | "mantener" | "saltar" | "cancelar">(
-    "reenviar",
-  );
-  const [mensaje, setMensaje] = useState("");
-  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre);
-  const [motivo, setMotivo] = useState("");
+  const [accion, setAccion] = useState<
+    'reenviar' | 'reasignar' | 'mantener' | 'saltar' | 'cancelar'
+  >('reenviar')
+  const [mensaje, setMensaje] = useState('')
+  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre)
+  const [motivo, setMotivo] = useState('')
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -928,7 +956,7 @@ export function GestionRechazoDialog({
           <DialogDescription>
             {tarea.rechazo
               ? `${tarea.rechazo.autor} rechazó el encargo el ${tarea.rechazo.fecha} · ${tarea.rechazo.motivo}: ${tarea.rechazo.explicacion}`
-              : "Sin rechazo pendiente."}
+              : 'Sin rechazo pendiente.'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-1">
@@ -946,7 +974,7 @@ export function GestionRechazoDialog({
               </SelectContent>
             </Select>
           </Field>
-          {accion === "reasignar" ? (
+          {accion === 'reasignar' ? (
             <Field label="Nuevo responsable">
               <Select value={responsable} onValueChange={setResponsable}>
                 <SelectTrigger>
@@ -962,7 +990,7 @@ export function GestionRechazoDialog({
               </Select>
             </Field>
           ) : null}
-          {accion === "saltar" || accion === "cancelar" ? (
+          {accion === 'saltar' || accion === 'cancelar' ? (
             <Field label="Motivo">
               <Textarea rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
             </Field>
@@ -979,13 +1007,13 @@ export function GestionRechazoDialog({
           <Button
             className="gap-1.5"
             onClick={() => {
-              const r = ops.gestionarRechazo(tarea.id, accion, { mensaje, responsable, motivo });
+              const r = ops.gestionarRechazo(tarea.id, accion, { mensaje, responsable, motivo })
               if (!r.ok) {
-                toast.error(r.error);
-                return;
+                toast.error(r.error)
+                return
               }
-              toast.success("Rechazo resuelto");
-              onOpenChange(false);
+              toast.success('Rechazo resuelto')
+              onOpenChange(false)
             }}
           >
             <UserCheck className="h-4 w-4" /> Aplicar
@@ -993,7 +1021,7 @@ export function GestionRechazoDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Recordatorio de la tarea: se registra en Fechas y plazos. */
@@ -1003,21 +1031,21 @@ export function RecordatorioTareaDialog({
   open,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  trigger?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (v: boolean) => void;
+  tarea: TareaOp
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
 }) {
-  const [interno, setInterno] = useState(false);
-  const abierto = open ?? interno;
+  const [interno, setInterno] = useState(false)
+  const abierto = open ?? interno
   const setAbierto = (v: boolean) => {
-    setInterno(v);
-    onOpenChange?.(v);
-  };
-  const [fecha, setFecha] = useState(sumarDias(2));
-  const [hora, setHora] = useState("09:00");
-  const [responsable, setResponsable] = useState(tarea.responsable);
-  const [titulo, setTitulo] = useState("");
+    setInterno(v)
+    onOpenChange?.(v)
+  }
+  const [fecha, setFecha] = useState(sumarDias(2))
+  const [hora, setHora] = useState('09:00')
+  const [responsable, setResponsable] = useState(tarea.responsable)
+  const [titulo, setTitulo] = useState('')
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -1032,7 +1060,11 @@ export function RecordatorioTareaDialog({
         </DialogHeader>
         <div className="grid gap-4 py-1 sm:grid-cols-2">
           <Field label="Fecha">
-            <Input value={fecha} onChange={(e) => setFecha(e.target.value)} placeholder="dd/mm/aaaa" />
+            <Input
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              placeholder="dd/mm/aaaa"
+            />
           </Field>
           <Field label="Hora">
             <Input value={hora} onChange={(e) => setHora(e.target.value)} placeholder="HH:MM" />
@@ -1052,7 +1084,11 @@ export function RecordatorioTareaDialog({
             </Select>
           </Field>
           <Field label="Texto">
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder={`Recordar: ${tarea.titulo}`} />
+            <Input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder={`Recordar: ${tarea.titulo}`}
+            />
           </Field>
         </div>
         <DialogFooter>
@@ -1062,13 +1098,15 @@ export function RecordatorioTareaDialog({
           <Button
             className="gap-1.5"
             onClick={() => {
-              const r = ops.crearRecordatorioTarea(tarea.id, { fecha, hora, responsable, titulo });
+              const r = ops.crearRecordatorioTarea(tarea.id, { fecha, hora, responsable, titulo })
               if (!r.ok) {
-                toast.error(r.error);
-                return;
+                toast.error(r.error)
+                return
               }
-              toast.success("Recordatorio creado", { description: `${fecha} ${hora} · ${responsable}` });
-              setAbierto(false);
+              toast.success('Recordatorio creado', {
+                description: `${fecha} ${hora} · ${responsable}`,
+              })
+              setAbierto(false)
             }}
           >
             <BellPlus className="h-4 w-4" /> Crear recordatorio
@@ -1076,7 +1114,7 @@ export function RecordatorioTareaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /**
@@ -1088,21 +1126,25 @@ export function VincularDocumentoDialog({
   expedienteId,
   trigger,
 }: {
-  tareaId: string;
-  expedienteId?: string;
-  trigger: ReactNode;
+  tareaId: string
+  expedienteId?: string
+  trigger: ReactNode
 }) {
-  const documentos = useOps((s) => s.documentos);
-  const vinculados = useOps((s) => s.tareas.find((t) => t.id === tareaId)?.documentosVinculados ?? []);
-  const [abierto, setAbierto] = useState(false);
-  const [q, setQ] = useState("");
+  const documentos = useOps((s) => s.documentos)
+  const vinculados = useOps(
+    (s) => s.tareas.find((t) => t.id === tareaId)?.documentosVinculados ?? [],
+  )
+  const [abierto, setAbierto] = useState(false)
+  const [q, setQ] = useState('')
 
   const candidatos = documentos
     .filter((d) => !vinculados.includes(d.id))
     .filter((d) => `${d.nombre} ${d.tipoDocumental}`.toLowerCase().includes(q.toLowerCase()))
     // Prioriza los documentos del mismo expediente.
-    .sort((a, b) => Number(b.expedienteId === expedienteId) - Number(a.expedienteId === expedienteId))
-    .slice(0, 40);
+    .sort(
+      (a, b) => Number(b.expedienteId === expedienteId) - Number(a.expedienteId === expedienteId),
+    )
+    .slice(0, 40)
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -1122,23 +1164,25 @@ export function VincularDocumentoDialog({
                 key={d.id}
                 type="button"
                 onClick={() => {
-                  ops.vincularDocumentoTarea(tareaId, d.id);
-                  toast.success("Documento vinculado", { description: d.nombre });
+                  ops.vincularDocumentoTarea(tareaId, d.id)
+                  toast.success('Documento vinculado', { description: d.nombre })
                 }}
-                className="flex w-full items-center justify-between gap-2 rounded-md border border-border p-2.5 text-left hover:bg-muted/60"
+                className="border-border hover:bg-muted/60 flex w-full items-center justify-between gap-2 rounded-md border p-2.5 text-left"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-foreground">{d.nombre}</span>
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="text-foreground block truncate text-sm">{d.nombre}</span>
+                  <span className="text-muted-foreground block text-[11px]">
                     {d.tipoDocumental} · v{d.version} · {d.estado}
-                    {d.expedienteId === expedienteId ? " · mismo expediente" : ""}
+                    {d.expedienteId === expedienteId ? ' · mismo expediente' : ''}
                   </span>
                 </span>
-                <Link2 className="size-4 shrink-0 text-muted-foreground" />
+                <Link2 className="text-muted-foreground size-4 shrink-0" />
               </button>
             ))
           ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground">Sin documentos disponibles.</p>
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              Sin documentos disponibles.
+            </p>
           )}
         </div>
         <DialogFooter>
@@ -1148,5 +1192,5 @@ export function VincularDocumentoDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

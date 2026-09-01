@@ -1,19 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { SectionHeader, StatTile } from "@/components/common";
-import { ToneBadge, ViewSwitch } from "@/components/crm/ui";
-import { Bloque, DatoLinea, Vacio, euros } from "@/components/expedientes/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader, StatTile } from '@/components/common'
+import { Bloque, DatoLinea, euros, Vacio } from '@/components/expedientes/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -21,47 +20,50 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   ESTADOS_EJECUCION_EXTRA,
   FASES_EJECUCION_JUDICIAL,
   saldoEjecucion,
-} from "@/data/expedientes-model";
-import { ops, useOps } from "@/lib/expedientes-store";
+} from '@/data/expedientes-model'
+import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { ops, useOps } from '@/lib/expedientes-store'
 
-export const Route = createFileRoute("/ejecuciones")({
+export const Route = createFileRoute('/ejecuciones')({
   head: () => ({
     meta: [
-      { title: "Ejecuciones — LEX" },
+      { title: 'Ejecuciones — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Control de ejecuciones judiciales y extrajudiciales: título, obligado, importes reclamados y recuperados, estado y próximo control.",
+          'Control de ejecuciones judiciales y extrajudiciales: título, obligado, importes reclamados y recuperados, estado y próximo control.',
       },
-      { property: "og:title", content: "Ejecuciones — LEX" },
+      { property: 'og:title', content: 'Ejecuciones — LEX' },
       {
-        property: "og:description",
-        content: "Seguimiento del cumplimiento efectivo de acuerdos, contratos y resoluciones.",
+        property: 'og:description',
+        content: 'Seguimiento del cumplimiento efectivo de acuerdos, contratos y resoluciones.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: EjecucionesPage,
-});
+})
 
 function EjecucionesPage() {
-  const ejecuciones = useOps((s) => s.ejecuciones);
-  const expedientes = useOps((s) => s.expedientes);
-  const [vista, setVista] = useState("judicial");
+  const ejecuciones = useOps((s) => s.ejecuciones)
+  const expedientes = useOps((s) => s.expedientes)
+  const [vista, setVista] = useState('judicial')
 
-  const codigo = (id: string) => expedientes.find((e) => e.id === id)?.codigo ?? id;
+  const codigo = (id: string) => expedientes.find((e) => e.id === id)?.codigo ?? id
   const lista = ejecuciones.filter((e) =>
-    vista === "judicial" ? e.modalidad === "Ejecución judicial" : e.modalidad === "Ejecución extrajudicial",
-  );
+    vista === 'judicial'
+      ? e.modalidad === 'Ejecución judicial'
+      : e.modalidad === 'Ejecución extrajudicial',
+  )
 
-  const totalReclamado = ejecuciones.reduce((t, e) => t + e.importeReclamado, 0);
-  const totalRecuperado = ejecuciones.reduce((t, e) => t + e.importeRecuperado, 0);
+  const totalReclamado = ejecuciones.reduce((t, e) => t + e.importeReclamado, 0)
+  const totalRecuperado = ejecuciones.reduce((t, e) => t + e.importeRecuperado, 0)
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
@@ -73,8 +75,8 @@ function EjecucionesPage() {
             value={vista}
             onChange={setVista}
             options={[
-              { id: "judicial", label: "Judiciales" },
-              { id: "extrajudicial", label: "Extrajudiciales" },
+              { id: 'judicial', label: 'Judiciales' },
+              { id: 'extrajudicial', label: 'Extrajudiciales' },
             ]}
           />
         }
@@ -90,7 +92,6 @@ function EjecucionesPage() {
         />
       </div>
 
-
       {lista.length ? (
         <div className="space-y-4">
           {lista.map((e) => (
@@ -102,31 +103,35 @@ function EjecucionesPage() {
                   <Link
                     to="/expedientes/$id"
                     params={{ id: e.expedienteId }}
-                    className="text-xs text-muted-foreground hover:underline"
+                    className="text-muted-foreground text-xs hover:underline"
                   >
                     {codigo(e.expedienteId)}
                   </Link>
-                  <Select value={e.estado} onValueChange={(v) => ops.actualizarEjecucion(e.id, { estado: v })}>
+                  <Select
+                    value={e.estado}
+                    onValueChange={(v) => ops.actualizarEjecucion(e.id, { estado: v })}
+                  >
                     <SelectTrigger className="h-8 w-64">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(e.modalidad === "Ejecución judicial" ? FASES_EJECUCION_JUDICIAL : ESTADOS_EJECUCION_EXTRA).map(
-                        (s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ),
-                      )}
+                      {(e.modalidad === 'Ejecución judicial'
+                        ? FASES_EJECUCION_JUDICIAL
+                        : ESTADOS_EJECUCION_EXTRA
+                      ).map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  {e.modalidad === "Ejecución extrajudicial" ? (
+                  {e.modalidad === 'Ejecución extrajudicial' ? (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        ops.derivarAJudicial(e.id);
-                        toast.success("Derivada a ejecución judicial");
+                        ops.derivarAJudicial(e.id)
+                        toast.success('Derivada a ejecución judicial')
                       }}
                     >
                       Derivar a judicial
@@ -151,7 +156,11 @@ function EjecucionesPage() {
                 <DatoLinea
                   label="Próximo control"
                   value={
-                    e.proximoControl ? e.proximoControl : <ToneBadge tono="riesgo">Sin control fijado</ToneBadge>
+                    e.proximoControl ? (
+                      e.proximoControl
+                    ) : (
+                      <ToneBadge tono="riesgo">Sin control fijado</ToneBadge>
+                    )
                   }
                 />
                 <DatoLinea
@@ -159,11 +168,11 @@ function EjecucionesPage() {
                   value={
                     <ToneBadge
                       tono={
-                        e.situacionPresupuestaria === "Incluida"
-                          ? "exito"
-                          : e.situacionPresupuestaria === "Pendiente de comprobar"
-                            ? "aviso"
-                            : "riesgo"
+                        e.situacionPresupuestaria === 'Incluida'
+                          ? 'exito'
+                          : e.situacionPresupuestaria === 'Pendiente de comprobar'
+                            ? 'aviso'
+                            : 'riesgo'
                       }
                     >
                       {e.situacionPresupuestaria}
@@ -195,22 +204,27 @@ function EjecucionesPage() {
               {ejecuciones.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>
-                    <Link to="/expedientes/$id" params={{ id: e.expedienteId }} className="hover:underline">
+                    <Link
+                      to="/expedientes/$id"
+                      params={{ id: e.expedienteId }}
+                      className="hover:underline"
+                    >
                       {codigo(e.expedienteId)}
                     </Link>
                   </TableCell>
                   <TableCell className="max-w-[280px] truncate">{e.titulo}</TableCell>
                   <TableCell>{e.modalidad}</TableCell>
                   <TableCell>{e.estado}</TableCell>
-                  <TableCell className="text-right tabular-nums">{euros(saldoEjecucion(e))}</TableCell>
-                  <TableCell>{e.proximoControl || "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {euros(saldoEjecucion(e))}
+                  </TableCell>
+                  <TableCell>{e.proximoControl || '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-
     </div>
-  );
+  )
 }

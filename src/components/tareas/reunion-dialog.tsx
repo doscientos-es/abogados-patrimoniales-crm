@@ -5,11 +5,10 @@
 // organizarla y notas (sistema general de NOTAS, nunca un textarea propio).
 // La reunión nace siempre en estado PREPARACIÓN y es la MISMA pieza durante
 // todo el ciclo.
-import { useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
-import { Field } from "@/components/crm/ui";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -18,23 +17,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { USUARIOS } from "@/data/crm";
-import {
-  TIPOS_REUNION,
-  type FranjaReunion,
-  type OrigenRelacion,
-} from "@/data/expedientes-model";
-import { ops, useOps } from "@/lib/expedientes-store";
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { USUARIOS } from '@/data/crm'
+import { TIPOS_REUNION, type FranjaReunion, type OrigenRelacion } from '@/data/expedientes-model'
+import { Field } from '@/features/crm'
+import { ops, useOps } from '@/lib/expedientes-store'
 
 import {
   SelectorDuracion,
@@ -43,17 +39,17 @@ import {
   SelectorParticipantes,
   SelectorPreferenciaFecha,
   type Participante,
-} from "./reunion-campos";
+} from './reunion-campos'
 
 function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <h3 className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
         {titulo}
       </h3>
       {children}
     </section>
-  );
+  )
 }
 
 export function ReunionInstruccionesDialog({
@@ -66,44 +62,44 @@ export function ReunionInstruccionesDialog({
   contextoLabel,
   onCreada,
 }: {
-  trigger?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (v: boolean) => void;
-  expedienteId?: string;
-  lineaId?: string;
-  origen?: OrigenRelacion;
-  contextoLabel?: string;
-  onCreada?: (id: string) => void;
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
+  expedienteId?: string
+  lineaId?: string
+  origen?: OrigenRelacion
+  contextoLabel?: string
+  onCreada?: (id: string) => void
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [interno, setInterno] = useState(false);
-  const abierto = open ?? interno;
+  const usuario = useOps((s) => s.usuario)
+  const [interno, setInterno] = useState(false)
+  const abierto = open ?? interno
   const setAbierto = (v: boolean) => {
-    setInterno(v);
-    onOpenChange?.(v);
-  };
+    setInterno(v)
+    onOpenChange?.(v)
+  }
 
-  const [tipo, setTipo] = useState<string>(TIPOS_REUNION[0]);
-  const [participantes, setParticipantes] = useState<Participante[]>([]);
-  const [objeto, setObjeto] = useState("");
-  const [responsable, setResponsable] = useState(usuario);
-  const [duracion, setDuracion] = useState("60 min");
-  const [prefFecha, setPrefFecha] = useState<string>("Sin preferencia");
-  const [prefFechaValor, setPrefFechaValor] = useState("");
-  const [franja, setFranja] = useState<FranjaReunion>("Indiferente");
-  const [lugar, setLugar] = useState<string>("Despacho Bilbao");
-  const [direccion, setDireccion] = useState("");
-  const [indicaciones, setIndicaciones] = useState("");
+  const [tipo, setTipo] = useState<string>(TIPOS_REUNION[0])
+  const [participantes, setParticipantes] = useState<Participante[]>([])
+  const [objeto, setObjeto] = useState('')
+  const [responsable, setResponsable] = useState(usuario)
+  const [duracion, setDuracion] = useState('60 min')
+  const [prefFecha, setPrefFecha] = useState<string>('Sin preferencia')
+  const [prefFechaValor, setPrefFechaValor] = useState('')
+  const [franja, setFranja] = useState<FranjaReunion>('Indiferente')
+  const [lugar, setLugar] = useState<string>('Despacho Bilbao')
+  const [direccion, setDireccion] = useState('')
+  const [indicaciones, setIndicaciones] = useState('')
 
   const guardar = () => {
     if (!participantes.length || !objeto.trim()) {
-      toast.error("Indica con quién es la reunión y su objeto.");
-      return;
+      toast.error('Indica con quién es la reunión y su objeto.')
+      return
     }
 
     const id = ops.crearTareaReunion({
       tipo,
-      conQuien: participantes.map((p) => p.nombre).join(", "),
+      conQuien: participantes.map((p) => p.nombre).join(', '),
       objeto: objeto.trim(),
       responsable,
       duracionEstimada: duracion,
@@ -112,19 +108,19 @@ export function ReunionInstruccionesDialog({
       indicaciones,
       franja,
       ...(prefFechaValor ? { preferenciaFechaValor: prefFechaValor } : {}),
-      ...(lugar === "Fuera del despacho" && direccion ? { direccion } : {}),
+      ...(lugar === 'Fuera del despacho' && direccion ? { direccion } : {}),
       asistentes: participantes,
       ...(expedienteId ? { expedienteId } : {}),
       ...(lineaId ? { lineaId } : {}),
       ...(origen ? { origen } : {}),
-    });
-    toast.success("Reunión creada · PREPARACIÓN", { description: `${objeto} · ${responsable}` });
-    setAbierto(false);
-    setParticipantes([]);
-    setObjeto("");
-    setIndicaciones("");
-    onCreada?.(id);
-  };
+    })
+    toast.success('Reunión creada · PREPARACIÓN', { description: `${objeto} · ${responsable}` })
+    setAbierto(false)
+    setParticipantes([])
+    setObjeto('')
+    setIndicaciones('')
+    onCreada?.(id)
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -133,7 +129,8 @@ export function ReunionInstruccionesDialog({
         <DialogHeader>
           <DialogTitle>Instrucciones de la reunión</DialogTitle>
           <DialogDescription>
-            Tarea especial · Reunión. {contextoLabel ? `Quedará vinculada a ${contextoLabel}. ` : ""}
+            Tarea especial · Reunión.{' '}
+            {contextoLabel ? `Quedará vinculada a ${contextoLabel}. ` : ''}
             Nace en PREPARACIÓN: primero se organiza, después se agenda.
           </DialogDescription>
         </DialogHeader>
@@ -189,7 +186,7 @@ export function ReunionInstruccionesDialog({
                 </SelectContent>
               </Select>
             </Field>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-muted-foreground text-[11px]">
               Quien organiza y deja la reunión preparada y agendada; no implica que vaya a asistir.
             </p>
           </Grupo>
@@ -231,7 +228,7 @@ export function ReunionInstruccionesDialog({
             </div>
           </Grupo>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-muted-foreground text-[11px]">
             Las notas internas se añaden desde la ficha de la reunión, con el sistema general de
             NOTAS de LEX. Nunca forman parte del portal del cliente.
           </p>
@@ -245,5 +242,5 @@ export function ReunionInstruccionesDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

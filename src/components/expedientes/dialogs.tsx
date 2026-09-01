@@ -1,13 +1,12 @@
 // Diálogos operativos: alta de actuaciones, documentos, tareas, fechas,
 // comunicaciones, líneas y ejecuciones. Toda la lógica escribe en el store
 // operativo; no hay integraciones externas en esta fase.
-import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { Link } from '@tanstack/react-router'
+import { useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
-import { Field } from "@/components/crm/ui";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -16,13 +15,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { hoyTexto, sumarDias } from "@/data/pipeline";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import { CONTACTOS, nombreCompleto } from '@/data/contactos'
 import {
   CANALES_JUDICIALES,
   DEPENDENCIAS,
@@ -47,11 +52,18 @@ import {
   type ExpedienteOp,
   type OrigenRelacion,
   type TipoFecha,
-} from "@/data/expedientes-model";
-import { CONTACTOS, nombreCompleto } from "@/data/contactos";
-import { ops, useOps } from "@/lib/expedientes-store";
+} from '@/data/expedientes-model'
+import { hoyTexto, sumarDias } from '@/data/pipeline'
+import { Field } from '@/features/crm'
+import { ops, useOps } from '@/lib/expedientes-store'
 
-const RESPONSABLES = ["Igor Belmonte", "Ana Torregrosa", "Luis Ferrán", "Marta Solé", "Nuria Casals"];
+const RESPONSABLES = [
+  'Igor Belmonte',
+  'Ana Torregrosa',
+  'Luis Ferrán',
+  'Marta Solé',
+  'Nuria Casals',
+]
 
 function Opciones({ items }: { items: readonly string[] }) {
   return (
@@ -62,7 +74,7 @@ function Opciones({ items }: { items: readonly string[] }) {
         </SelectItem>
       ))}
     </>
-  );
+  )
 }
 
 function Selector({
@@ -70,9 +82,9 @@ function Selector({
   onChange,
   items,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  items: readonly string[];
+  value: string
+  onChange: (v: string) => void
+  items: readonly string[]
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
@@ -83,7 +95,7 @@ function Selector({
         <Opciones items={items} />
       </SelectContent>
     </Select>
-  );
+  )
 }
 
 function Base({
@@ -91,19 +103,19 @@ function Base({
   title,
   description,
   onConfirm,
-  confirmLabel = "Guardar",
+  confirmLabel = 'Guardar',
   children,
   disabled,
 }: {
-  trigger: ReactNode;
-  title: string;
-  description?: string;
-  onConfirm: () => boolean | void;
-  confirmLabel?: string;
-  children: ReactNode;
-  disabled?: boolean;
+  trigger: ReactNode
+  title: string
+  description?: string
+  onConfirm: () => boolean | void
+  confirmLabel?: string
+  children: ReactNode
+  disabled?: boolean
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(false)
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -120,8 +132,8 @@ function Base({
           <Button
             disabled={disabled}
             onClick={() => {
-              const r = onConfirm();
-              if (r !== false) setAbierto(false);
+              const r = onConfirm()
+              if (r !== false) setAbierto(false)
             }}
           >
             {confirmLabel}
@@ -129,7 +141,7 @@ function Base({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -142,12 +154,14 @@ function CampoLinea({
   value,
   onChange,
 }: {
-  expedienteId?: string | undefined;
-  value: string;
-  onChange: (v: string) => void;
+  expedienteId?: string | undefined
+  value: string
+  onChange: (v: string) => void
 }) {
-  const lineas = useOps((s) => s.lineas.filter((l) => expedienteId && l.expedienteId === expedienteId));
-  if (!expedienteId || !lineas.length) return null;
+  const lineas = useOps((s) =>
+    s.lineas.filter((l) => expedienteId && l.expedienteId === expedienteId),
+  )
+  if (!expedienteId || !lineas.length) return null
   return (
     <Field label="Línea de trabajo (opcional)">
       <Select value={value} onValueChange={onChange}>
@@ -164,7 +178,7 @@ function CampoLinea({
         </SelectContent>
       </Select>
     </Field>
-  );
+  )
 }
 
 export function NuevaActuacionDialog({
@@ -172,27 +186,27 @@ export function NuevaActuacionDialog({
   trigger,
   lineaId,
 }: {
-  expedienteId: string;
-  trigger: ReactNode;
-  lineaId?: string;
+  expedienteId: string
+  trigger: ReactNode
+  lineaId?: string
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const lineas = useOps((s) => s.lineas.filter((l) => l.expedienteId === expedienteId));
-  const [tipo, setTipo] = useState<string>(TIPOS_ACTUACION[0]);
-  const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [fecha, setFecha] = useState(hoyTexto());
-  const [horaV, setHoraV] = useState("10:00");
-  const [responsable, setResponsable] = useState(usuario);
-  const [linea, setLinea] = useState(lineaId ?? "sin");
-  const [estado, setEstado] = useState<EstadoActuacion>("Completada");
-  const [resultado, setResultado] = useState("");
-  const [proxima, setProxima] = useState("");
-  const [tiempo, setTiempo] = useState("0,5");
-  const [facturable, setFacturable] = useState(true);
-  const [visible, setVisible] = useState(true);
-  const [crearTarea, setCrearTarea] = useState(false);
-  const [crearFecha, setCrearFecha] = useState(false);
+  const usuario = useOps((s) => s.usuario)
+  const lineas = useOps((s) => s.lineas.filter((l) => l.expedienteId === expedienteId))
+  const [tipo, setTipo] = useState<string>(TIPOS_ACTUACION[0])
+  const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [fecha, setFecha] = useState(hoyTexto())
+  const [horaV, setHoraV] = useState('10:00')
+  const [responsable, setResponsable] = useState(usuario)
+  const [linea, setLinea] = useState(lineaId ?? 'sin')
+  const [estado, setEstado] = useState<EstadoActuacion>('Completada')
+  const [resultado, setResultado] = useState('')
+  const [proxima, setProxima] = useState('')
+  const [tiempo, setTiempo] = useState('0,5')
+  const [facturable, setFacturable] = useState(true)
+  const [visible, setVisible] = useState(true)
+  const [crearTarea, setCrearTarea] = useState(false)
+  const [crearFecha, setCrearFecha] = useState(false)
 
   return (
     <Base
@@ -201,9 +215,9 @@ export function NuevaActuacionDialog({
       description="Toda actuación queda vinculada al expediente y, opcionalmente, a una línea de trabajo."
       disabled={!titulo.trim()}
       onConfirm={() => {
-        const datos: Omit<Actuacion, "id"> = {
+        const datos: Omit<Actuacion, 'id'> = {
           expedienteId,
-          ...(linea !== "sin" ? { lineaId: linea } : {}),
+          ...(linea !== 'sin' ? { lineaId: linea } : {}),
           tipo,
           titulo,
           descripcion,
@@ -215,47 +229,47 @@ export function NuevaActuacionDialog({
           estado,
           resultado,
           proximaAccion: proxima,
-          tiempo: Number(tiempo.replace(",", ".")) || 0,
+          tiempo: Number(tiempo.replace(',', '.')) || 0,
           facturable,
           visibleCliente: visible,
           clienteInformado: false,
-        };
-        const id = ops.crearActuacion(datos);
+        }
+        const id = ops.crearActuacion(datos)
         if (crearTarea && proxima)
           ops.crearTarea({
             titulo: proxima,
             descripcion: `Derivada de la actuación «${titulo}»`,
             expedienteId,
-            origen: { tipo: "Actuación", id, label: titulo },
+            origen: { tipo: 'Actuación', id, label: titulo },
             responsable,
             colaboradores: [],
-            prioridad: "Media",
-            estado: "En curso",
+            prioridad: 'Media',
+            estado: 'En curso',
             fechaInicio: hoyTexto(),
             vencimiento: sumarDias(7),
             recordatorio: sumarDias(5),
             checklist: [],
-            resultado: "",
+            resultado: '',
             tiempo: 0,
             documentos: [],
-          });
+          })
         if (crearFecha && proxima)
           ops.crearFecha({
             expedienteId,
-            origen: { tipo: "Actuación", id, label: titulo },
-            tipo: "Vencimiento interno",
+            origen: { tipo: 'Actuación', id, label: titulo },
+            tipo: 'Vencimiento interno',
             titulo: proxima,
             fecha: sumarDias(7),
-            hora: "10:00",
+            hora: '10:00',
             responsable,
             validada: false,
-            criticidad: "Media",
-            avisos: "Aviso 2 días antes",
-            observaciones: "Generada desde una actuación; requiere validación.",
-            resultado: "",
+            criticidad: 'Media',
+            avisos: 'Aviso 2 días antes',
+            observaciones: 'Generada desde una actuación; requiere validación.',
+            resultado: '',
             sincronizadaCalendar: false,
-          });
-        toast.success("Actuación registrada");
+          })
+        toast.success('Actuación registrada')
       }}
     >
       <Field label="Tipo de actuación">
@@ -266,7 +280,11 @@ export function NuevaActuacionDialog({
       </Field>
       <div className="sm:col-span-2">
         <Field label="Título">
-          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Descripción breve" />
+          <Input
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Descripción breve"
+          />
         </Field>
       </div>
       <div className="sm:col-span-2">
@@ -296,7 +314,11 @@ export function NuevaActuacionDialog({
         </Select>
       </Field>
       <Field label="Estado">
-        <Selector value={estado} onChange={(v) => setEstado(v as EstadoActuacion)} items={ESTADOS_ACTUACION} />
+        <Selector
+          value={estado}
+          onChange={(v) => setEstado(v as EstadoActuacion)}
+          items={ESTADOS_ACTUACION}
+        />
       </Field>
       <div className="sm:col-span-2">
         <Field label="Resultado">
@@ -312,26 +334,26 @@ export function NuevaActuacionDialog({
         <Input value={tiempo} onChange={(e) => setTiempo(e.target.value)} />
       </Field>
       <div className="flex items-end gap-4 pb-1">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
           <Switch checked={facturable} onCheckedChange={setFacturable} /> Facturable
         </label>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
           <Switch checked={visible} onCheckedChange={setVisible} /> Visible para cliente
         </label>
       </div>
-      <div className="sm:col-span-2 space-y-2 rounded-md border border-border bg-muted/40 p-3">
-        <p className="text-xs font-medium text-foreground">Acciones derivadas</p>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox checked={crearTarea} onCheckedChange={(v) => setCrearTarea(Boolean(v))} /> Crear tarea con la próxima
-          acción
+      <div className="border-border bg-muted/40 space-y-2 rounded-md border p-3 sm:col-span-2">
+        <p className="text-foreground text-xs font-medium">Acciones derivadas</p>
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+          <Checkbox checked={crearTarea} onCheckedChange={(v) => setCrearTarea(Boolean(v))} /> Crear
+          tarea con la próxima acción
         </label>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox checked={crearFecha} onCheckedChange={(v) => setCrearFecha(Boolean(v))} /> Crear fecha de control
-          (pendiente de validar)
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+          <Checkbox checked={crearFecha} onCheckedChange={(v) => setCrearFecha(Boolean(v))} /> Crear
+          fecha de control (pendiente de validar)
         </label>
       </div>
     </Base>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -342,26 +364,26 @@ export function NuevoDocumentoDialog({
   expedienteId,
   trigger,
 }: {
-  expedienteId?: string;
-  trigger: ReactNode;
+  expedienteId?: string
+  trigger: ReactNode
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const expedientes = useOps((s) => s.expedientes);
-  const [exp, setExp] = useState(expedienteId ?? "sin");
-  const [nombre, setNombre] = useState("");
-  const [archivo, setArchivo] = useState("documento.pdf");
-  const [origen, setOrigen] = useState<string>(ORIGENES_DOCUMENTO[0]);
-  const [tipoDocumental, setTipoDocumental] = useState("Escrito procesal");
-  const [autor, setAutor] = useState("");
-  const [destinatario, setDestinatario] = useState("");
-  const [fecha, setFecha] = useState(hoyTexto());
-  const [judicial, setJudicial] = useState(false);
-  const [entregable, setEntregable] = useState(false);
-  const [posiblePlazo, setPosiblePlazo] = useState(false);
-  const [canal, setCanal] = useState<string>(CANALES_JUDICIALES[0]);
-  const [observaciones, setObservaciones] = useState("");
+  const usuario = useOps((s) => s.usuario)
+  const expedientes = useOps((s) => s.expedientes)
+  const [exp, setExp] = useState(expedienteId ?? 'sin')
+  const [nombre, setNombre] = useState('')
+  const [archivo, setArchivo] = useState('documento.pdf')
+  const [origen, setOrigen] = useState<string>(ORIGENES_DOCUMENTO[0])
+  const [tipoDocumental, setTipoDocumental] = useState('Escrito procesal')
+  const [autor, setAutor] = useState('')
+  const [destinatario, setDestinatario] = useState('')
+  const [fecha, setFecha] = useState(hoyTexto())
+  const [judicial, setJudicial] = useState(false)
+  const [entregable, setEntregable] = useState(false)
+  const [posiblePlazo, setPosiblePlazo] = useState(false)
+  const [canal, setCanal] = useState<string>(CANALES_JUDICIALES[0])
+  const [observaciones, setObservaciones] = useState('')
 
-  const recibido = origen === "Recibido" || origen === "Firmado o completado por tercero";
+  const recibido = origen === 'Recibido' || origen === 'Firmado o completado por tercero'
 
   return (
     <Base
@@ -372,7 +394,7 @@ export function NuevoDocumentoDialog({
       onConfirm={() => {
         ops.crearDocumento({
           nombre,
-          ...(exp !== "sin" ? { expedienteId: exp } : {}),
+          ...(exp !== 'sin' ? { expedienteId: exp } : {}),
           actuacionesRelacionadas: [],
           archivo,
           descripcion: observaciones,
@@ -383,12 +405,21 @@ export function NuevoDocumentoDialog({
           fechaDocumento: fecha,
           fechaIncorporacion: hoyTexto(),
           responsable: usuario,
-          estado: recibido ? "Sin clasificar" : "Borrador",
+          estado: recibido ? 'Sin clasificar' : 'Borrador',
           version: 1,
           versiones: recibido
             ? []
-            : [{ numero: 1, tipo: "Documento de trabajo", autor: usuario, fecha: hoyTexto(), comentarios: "Alta", definitiva: false }],
-          confidencialidad: "Normal",
+            : [
+                {
+                  numero: 1,
+                  tipo: 'Documento de trabajo',
+                  autor: usuario,
+                  fecha: hoyTexto(),
+                  comentarios: 'Alta',
+                  definitiva: false,
+                },
+              ],
+          confidencialidad: 'Normal',
           etiquetas: [],
           observaciones,
           judicial,
@@ -396,22 +427,24 @@ export function NuevoDocumentoDialog({
           ...(judicial
             ? {
                 datosJudiciales: {
-                  organo: "",
-                  autos: "",
-                  nig: "",
-                  tipoProcedimiento: "",
-                  parte: recibido ? "Juzgado" : "Despacho",
-                  procurador: "",
-                  fechaRecepcion: recibido ? hoyTexto() : "",
-                  fechaNotificacion: recibido ? hoyTexto() : "",
-                  fechaPresentacion: "",
+                  organo: '',
+                  autos: '',
+                  nig: '',
+                  tipoProcedimiento: '',
+                  parte: recibido ? 'Juzgado' : 'Despacho',
+                  procurador: '',
+                  fechaRecepcion: recibido ? hoyTexto() : '',
+                  fechaNotificacion: recibido ? hoyTexto() : '',
+                  fechaPresentacion: '',
                   canal,
-                  justificante: "",
+                  justificante: '',
                   puedeContenerPlazo: posiblePlazo,
-                  estadoPlazo: posiblePlazo ? ("Posible plazo pendiente de validar" as const) : ("No contiene plazo" as const),
-                  actuacionExigida: "",
+                  estadoPlazo: posiblePlazo
+                    ? ('Posible plazo pendiente de validar' as const)
+                    : ('No contiene plazo' as const),
+                  actuacionExigida: '',
                   responsableControl: usuario,
-                  criticidad: posiblePlazo ? ("Alta" as const) : ("Media" as const),
+                  criticidad: posiblePlazo ? ('Alta' as const) : ('Media' as const),
                 },
               }
             : {}),
@@ -419,24 +452,24 @@ export function NuevoDocumentoDialog({
             ? {
                 datosEntregable: {
                   destinatario,
-                  finalidad: "",
+                  finalidad: '',
                   requiereRevision: true,
                   requiereAprobacion: false,
                   requiereFirma: false,
                   fechaPrevista: sumarDias(7),
-                  fechaEfectiva: "",
-                  medio: "",
-                  justificante: "",
+                  fechaEfectiva: '',
+                  medio: '',
+                  justificante: '',
                 },
               }
             : {}),
           clienteInformado: false,
-        });
+        })
         toast.success(
           posiblePlazo
-            ? "Documento incorporado. Se ha marcado un posible plazo pendiente de validación."
-            : "Documento incorporado",
-        );
+            ? 'Documento incorporado. Se ha marcado un posible plazo pendiente de validación.'
+            : 'Documento incorporado',
+        )
       }}
     >
       <div className="sm:col-span-2">
@@ -482,10 +515,10 @@ export function NuevoDocumentoDialog({
         <Input value={fecha} onChange={(e) => setFecha(e.target.value)} />
       </Field>
       <div className="flex items-end gap-4 pb-1">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
           <Switch checked={judicial} onCheckedChange={setJudicial} /> Judicial
         </label>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
           <Switch checked={entregable} onCheckedChange={setEntregable} /> Entregable
         </label>
       </div>
@@ -495,29 +528,40 @@ export function NuevoDocumentoDialog({
             <Selector value={canal} onChange={setCanal} items={CANALES_JUDICIALES} />
           </Field>
           <div className="flex items-end pb-1">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch checked={posiblePlazo} onCheckedChange={setPosiblePlazo} /> Puede contener plazo
+            <label className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Switch checked={posiblePlazo} onCheckedChange={setPosiblePlazo} /> Puede contener
+              plazo
             </label>
           </div>
         </>
       ) : null}
       <div className="sm:col-span-2">
         <Field label="Observaciones">
-          <Textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+          <Textarea
+            rows={2}
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+          />
         </Field>
       </div>
     </Base>
-  );
+  )
 }
 
-export function ValidarPlazoDialog({ documentoId, trigger }: { documentoId: string; trigger: ReactNode }) {
-  const doc = useOps((s) => s.documentos.find((d) => d.id === documentoId));
-  const usuario = useOps((s) => s.usuario);
-  const [titulo, setTitulo] = useState("Plazo derivado de la resolución");
-  const [fecha, setFecha] = useState(sumarDias(20));
-  const [criticidad, setCriticidad] = useState("Alta");
+export function ValidarPlazoDialog({
+  documentoId,
+  trigger,
+}: {
+  documentoId: string
+  trigger: ReactNode
+}) {
+  const doc = useOps((s) => s.documentos.find((d) => d.id === documentoId))
+  const usuario = useOps((s) => s.usuario)
+  const [titulo, setTitulo] = useState('Plazo derivado de la resolución')
+  const [fecha, setFecha] = useState(sumarDias(20))
+  const [criticidad, setCriticidad] = useState('Alta')
 
-  if (!doc) return null;
+  if (!doc) return null
   return (
     <Base
       trigger={trigger}
@@ -530,8 +574,8 @@ export function ValidarPlazoDialog({ documentoId, trigger }: { documentoId: stri
           fecha,
           responsable: usuario,
           criticidad: criticidad as never,
-        });
-        toast.success("Plazo validado y fecha crítica creada");
+        })
+        toast.success('Plazo validado y fecha crítica creada')
       }}
     >
       <div className="sm:col-span-2">
@@ -543,26 +587,31 @@ export function ValidarPlazoDialog({ documentoId, trigger }: { documentoId: stri
         <Input value={fecha} onChange={(e) => setFecha(e.target.value)} />
       </Field>
       <Field label="Criticidad">
-        <Selector value={criticidad} onChange={setCriticidad} items={["Alta", "Media", "Baja"]} />
+        <Selector value={criticidad} onChange={setCriticidad} items={['Alta', 'Media', 'Baja']} />
       </Field>
     </Base>
-  );
+  )
 }
 
-export function AsignarDocumentoDialog({ documentoId, trigger }: { documentoId: string; trigger: ReactNode }) {
-  const expedientes = useOps((s) => s.expedientes);
-  const [exp, setExp] = useState(expedientes[0]?.id ?? "");
+export function AsignarDocumentoDialog({
+  documentoId,
+  trigger,
+}: {
+  documentoId: string
+  trigger: ReactNode
+}) {
+  const expedientes = useOps((s) => s.expedientes)
+  const [exp, setExp] = useState(expedientes[0]?.id ?? '')
   return (
     <Base
       trigger={trigger}
       title="Asignar documento a expediente"
       onConfirm={() => {
-        if (!exp) return false;
-        ops.asignarDocumento(documentoId, exp);
-        toast.success("Documento asignado");
-        return true;
+        if (!exp) return false
+        ops.asignarDocumento(documentoId, exp)
+        toast.success('Documento asignado')
+        return true
       }}
-
     >
       <div className="sm:col-span-2">
         <Field label="Expediente">
@@ -581,14 +630,20 @@ export function AsignarDocumentoDialog({ documentoId, trigger }: { documentoId: 
         </Field>
       </div>
     </Base>
-  );
+  )
 }
 
-export function NuevaVersionDialog({ documentoId, trigger }: { documentoId: string; trigger: ReactNode }) {
-  const usuario = useOps((s) => s.usuario);
-  const [tipo, setTipo] = useState("Documento de trabajo");
-  const [comentarios, setComentarios] = useState("");
-  const [definitiva, setDefinitiva] = useState(false);
+export function NuevaVersionDialog({
+  documentoId,
+  trigger,
+}: {
+  documentoId: string
+  trigger: ReactNode
+}) {
+  const usuario = useOps((s) => s.usuario)
+  const [tipo, setTipo] = useState('Documento de trabajo')
+  const [comentarios, setComentarios] = useState('')
+  const [definitiva, setDefinitiva] = useState(false)
   return (
     <Base
       trigger={trigger}
@@ -601,13 +656,13 @@ export function NuevaVersionDialog({ documentoId, trigger }: { documentoId: stri
           fecha: hoyTexto(),
           comentarios,
           definitiva,
-        });
+        })
         if (!r.ok) {
-          toast.error(r.motivo);
-          return false;
+          toast.error(r.motivo)
+          return false
         }
-        toast.success("Versión añadida");
-        return true;
+        toast.success('Versión añadida')
+        return true
       }}
     >
       <Field label="Tipo de versión">
@@ -615,18 +670,19 @@ export function NuevaVersionDialog({ documentoId, trigger }: { documentoId: stri
           value={tipo}
           onChange={setTipo}
           items={[
-            "Documento de trabajo",
-            "Versión revisada",
-            "Versión aprobada",
-            "Versión firmada",
-            "Versión presentada o entregada",
-            "Justificante",
+            'Documento de trabajo',
+            'Versión revisada',
+            'Versión aprobada',
+            'Versión firmada',
+            'Versión presentada o entregada',
+            'Justificante',
           ]}
         />
       </Field>
       <div className="flex items-end pb-1">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Switch checked={definitiva} onCheckedChange={setDefinitiva} /> Marcar como versión definitiva
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+          <Switch checked={definitiva} onCheckedChange={setDefinitiva} /> Marcar como versión
+          definitiva
         </label>
       </div>
       <div className="sm:col-span-2">
@@ -635,7 +691,7 @@ export function NuevaVersionDialog({ documentoId, trigger }: { documentoId: stri
         </Field>
       </div>
     </Base>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -647,17 +703,17 @@ export function NuevaTareaOpDialog({
   origen,
   trigger,
 }: {
-  expedienteId?: string;
-  origen?: OrigenRelacion;
-  trigger: ReactNode;
+  expedienteId?: string
+  origen?: OrigenRelacion
+  trigger: ReactNode
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [responsable, setResponsable] = useState(usuario);
-  const [prioridad, setPrioridad] = useState("Media");
-  const [vencimiento, setVencimiento] = useState(sumarDias(7));
-  const [linea, setLinea] = useState("sin");
+  const usuario = useOps((s) => s.usuario)
+  const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [responsable, setResponsable] = useState(usuario)
+  const [prioridad, setPrioridad] = useState('Media')
+  const [vencimiento, setVencimiento] = useState(sumarDias(7))
+  const [linea, setLinea] = useState('sin')
   return (
     <Base
       trigger={trigger}
@@ -668,21 +724,21 @@ export function NuevaTareaOpDialog({
           titulo,
           descripcion,
           ...(expedienteId ? { expedienteId } : {}),
-          ...(linea !== "sin" ? { lineaId: linea } : {}),
+          ...(linea !== 'sin' ? { lineaId: linea } : {}),
           ...(origen ? { origen } : {}),
           responsable,
           colaboradores: [],
           prioridad: prioridad as never,
-          estado: "En curso",
+          estado: 'En curso',
           fechaInicio: hoyTexto(),
           vencimiento,
           recordatorio: vencimiento,
           checklist: [],
-          resultado: "",
+          resultado: '',
           tiempo: 0,
           documentos: [],
-        });
-        toast.success("Tarea creada");
+        })
+        toast.success('Tarea creada')
       }}
     >
       <div className="sm:col-span-2">
@@ -699,32 +755,32 @@ export function NuevaTareaOpDialog({
         <Selector value={responsable} onChange={setResponsable} items={RESPONSABLES} />
       </Field>
       <Field label="Prioridad">
-        <Selector value={prioridad} onChange={setPrioridad} items={["Alta", "Media", "Baja"]} />
+        <Selector value={prioridad} onChange={setPrioridad} items={['Alta', 'Media', 'Baja']} />
       </Field>
       <Field label="Vencimiento">
         <Input value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
       </Field>
       <CampoLinea expedienteId={expedienteId} value={linea} onChange={setLinea} />
     </Base>
-  );
+  )
 }
 
 export function NuevaFechaDialog({
   expedienteId,
   trigger,
 }: {
-  expedienteId?: string;
-  trigger: ReactNode;
+  expedienteId?: string
+  trigger: ReactNode
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [tipo, setTipo] = useState<TipoFecha>("Fecha crítica");
-  const [titulo, setTitulo] = useState("");
-  const [fecha, setFecha] = useState(sumarDias(10));
-  const [horaV, setHoraV] = useState("10:00");
-  const [criticidad, setCriticidad] = useState("Media");
-  const [validada, setValidada] = useState(false);
-  const [avisos, setAvisos] = useState("Aviso 3 días antes");
-  const [linea, setLinea] = useState("sin");
+  const usuario = useOps((s) => s.usuario)
+  const [tipo, setTipo] = useState<TipoFecha>('Fecha crítica')
+  const [titulo, setTitulo] = useState('')
+  const [fecha, setFecha] = useState(sumarDias(10))
+  const [horaV, setHoraV] = useState('10:00')
+  const [criticidad, setCriticidad] = useState('Media')
+  const [validada, setValidada] = useState(false)
+  const [avisos, setAvisos] = useState('Aviso 3 días antes')
+  const [linea, setLinea] = useState('sin')
   return (
     <Base
       trigger={trigger}
@@ -734,7 +790,7 @@ export function NuevaFechaDialog({
       onConfirm={() => {
         ops.crearFecha({
           ...(expedienteId ? { expedienteId } : {}),
-          ...(linea !== "sin" ? { lineaId: linea } : {}),
+          ...(linea !== 'sin' ? { lineaId: linea } : {}),
           tipo,
           titulo,
           fecha,
@@ -744,11 +800,11 @@ export function NuevaFechaDialog({
           ...(validada ? { validadaPor: usuario } : {}),
           criticidad: criticidad as never,
           avisos,
-          observaciones: "",
-          resultado: "",
+          observaciones: '',
+          resultado: '',
           sincronizadaCalendar: false,
-        });
-        toast.success("Fecha registrada");
+        })
+        toast.success('Fecha registrada')
       }}
     >
       <Field label="Tipo">
@@ -756,7 +812,7 @@ export function NuevaFechaDialog({
       </Field>
       <CampoLinea expedienteId={expedienteId} value={linea} onChange={setLinea} />
       <Field label="Criticidad">
-        <Selector value={criticidad} onChange={setCriticidad} items={["Alta", "Media", "Baja"]} />
+        <Selector value={criticidad} onChange={setCriticidad} items={['Alta', 'Media', 'Baja']} />
       </Field>
       <div className="sm:col-span-2">
         <Field label="Título">
@@ -773,29 +829,29 @@ export function NuevaFechaDialog({
         <Input value={avisos} onChange={(e) => setAvisos(e.target.value)} />
       </Field>
       <div className="flex items-end pb-1">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-2 text-xs">
           <Switch checked={validada} onCheckedChange={setValidada} /> Validar ahora
         </label>
       </div>
     </Base>
-  );
+  )
 }
 
 export function NuevaComunicacionDialog({
   expedienteId,
   trigger,
 }: {
-  expedienteId: string;
-  trigger: ReactNode;
+  expedienteId: string
+  trigger: ReactNode
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [tipo, setTipo] = useState<string>(TIPOS_COMUNICACION[0]);
-  const [tipoEnvio, setTipoEnvio] = useState<string>(TIPOS_ENVIO[0]);
-  const [destinatarios, setDestinatarios] = useState("");
-  const [asunto, setAsunto] = useState("");
-  const [contenido, setContenido] = useState("");
-  const [previsualizar, setPrevisualizar] = useState(false);
-  const [linea, setLinea] = useState("sin");
+  const usuario = useOps((s) => s.usuario)
+  const [tipo, setTipo] = useState<string>(TIPOS_COMUNICACION[0])
+  const [tipoEnvio, setTipoEnvio] = useState<string>(TIPOS_ENVIO[0])
+  const [destinatarios, setDestinatarios] = useState('')
+  const [asunto, setAsunto] = useState('')
+  const [contenido, setContenido] = useState('')
+  const [previsualizar, setPrevisualizar] = useState(false)
+  const [linea, setLinea] = useState('sin')
   return (
     <Base
       trigger={trigger}
@@ -806,25 +862,28 @@ export function NuevaComunicacionDialog({
       onConfirm={() => {
         ops.crearComunicacion({
           expedienteId,
-          ...(linea !== "sin" ? { lineaId: linea } : {}),
+          ...(linea !== 'sin' ? { lineaId: linea } : {}),
           tipo,
           fecha: hoyTexto(),
           hora: new Date().toTimeString().slice(0, 5),
           emisor: usuario,
-          destinatarios: destinatarios.split(",").map((d) => d.trim()).filter(Boolean),
+          destinatarios: destinatarios
+            .split(',')
+            .map((d) => d.trim())
+            .filter(Boolean),
           participantes: [],
           canal: tipo,
           asunto: `${tipoEnvio}: ${asunto}`,
           contenido,
-          resultado: "Registrada",
+          resultado: 'Registrada',
           adjuntos: [],
-          proximaAccion: "",
+          proximaAccion: '',
           clienteInformado: true,
           incluibleReporte: true,
           responsable: usuario,
           enviada: false,
-        });
-        toast.success("Comunicación registrada (sin envío real)");
+        })
+        toast.success('Comunicación registrada (sin envío real)')
       }}
     >
       <CampoLinea expedienteId={expedienteId} value={linea} onChange={setLinea} />
@@ -850,34 +909,40 @@ export function NuevaComunicacionDialog({
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 p-3">
-          <Label className="text-xs text-muted-foreground">Vista previa del envío</Label>
+        <div className="border-border bg-muted/40 flex items-center justify-between rounded-md border p-3">
+          <Label className="text-muted-foreground text-xs">Vista previa del envío</Label>
           <Switch checked={previsualizar} onCheckedChange={setPrevisualizar} />
         </div>
         {previsualizar ? (
-          <div className="mt-2 rounded-md border border-border p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">{asunto || "(sin asunto)"}</p>
-            <p className="mt-1">Para: {destinatarios || "(sin destinatarios)"}</p>
-            <p className="mt-2 whitespace-pre-wrap">{contenido || "(sin contenido)"}</p>
+          <div className="border-border text-muted-foreground mt-2 rounded-md border p-3 text-xs">
+            <p className="text-foreground font-medium">{asunto || '(sin asunto)'}</p>
+            <p className="mt-1">Para: {destinatarios || '(sin destinatarios)'}</p>
+            <p className="mt-2 whitespace-pre-wrap">{contenido || '(sin contenido)'}</p>
           </div>
         ) : null}
       </div>
     </Base>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
 /* Línea de trabajo, ejecución, interviniente                          */
 /* ------------------------------------------------------------------ */
 
-export function NuevaLineaDialog({ expedienteId, trigger }: { expedienteId: string; trigger: ReactNode }) {
-  const usuario = useOps((s) => s.usuario);
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState<string>(TIPOS_LINEA[0]);
-  const [descripcion, setDescripcion] = useState("");
-  const [estado, setEstado] = useState<string>(ESTADOS_LINEA[0]);
-  const [dependencia, setDependencia] = useState<Dependencia>("Debemos actuar nosotros");
-  const [presupuesto, setPresupuesto] = useState<string>(SITUACIONES_PRESUPUESTARIAS[3]);
+export function NuevaLineaDialog({
+  expedienteId,
+  trigger,
+}: {
+  expedienteId: string
+  trigger: ReactNode
+}) {
+  const usuario = useOps((s) => s.usuario)
+  const [nombre, setNombre] = useState('')
+  const [tipo, setTipo] = useState<string>(TIPOS_LINEA[0])
+  const [descripcion, setDescripcion] = useState('')
+  const [estado, setEstado] = useState<string>(ESTADOS_LINEA[0])
+  const [dependencia, setDependencia] = useState<Dependencia>('Debemos actuar nosotros')
+  const [presupuesto, setPresupuesto] = useState<string>(SITUACIONES_PRESUPUESTARIAS[3])
   return (
     <Base
       trigger={trigger}
@@ -893,12 +958,12 @@ export function NuevaLineaDialog({ expedienteId, trigger }: { expedienteId: stri
           estado: estado as never,
           responsable: usuario,
           fechaInicio: hoyTexto(),
-          dondeEstamos: "",
-          proximaAccion: "",
+          dondeEstamos: '',
+          proximaAccion: '',
           dependencia,
           presupuesto,
-        });
-        toast.success("Línea creada");
+        })
+        toast.success('Línea creada')
       }}
     >
       <div className="sm:col-span-2">
@@ -913,10 +978,18 @@ export function NuevaLineaDialog({ expedienteId, trigger }: { expedienteId: stri
         <Selector value={estado} onChange={setEstado} items={ESTADOS_LINEA} />
       </Field>
       <Field label="De quién depende">
-        <Selector value={dependencia} onChange={(v) => setDependencia(v as Dependencia)} items={DEPENDENCIAS} />
+        <Selector
+          value={dependencia}
+          onChange={(v) => setDependencia(v as Dependencia)}
+          items={DEPENDENCIAS}
+        />
       </Field>
       <Field label="Situación presupuestaria">
-        <Selector value={presupuesto} onChange={setPresupuesto} items={SITUACIONES_PRESUPUESTARIAS} />
+        <Selector
+          value={presupuesto}
+          onChange={setPresupuesto}
+          items={SITUACIONES_PRESUPUESTARIAS}
+        />
       </Field>
       <div className="sm:col-span-2">
         <Field label="Descripción">
@@ -924,33 +997,35 @@ export function NuevaLineaDialog({ expedienteId, trigger }: { expedienteId: stri
         </Field>
       </div>
     </Base>
-  );
+  )
 }
 
 export function ActivarEjecucionDialog({
   expediente,
   trigger,
 }: {
-  expediente: ExpedienteOp;
-  trigger: ReactNode;
+  expediente: ExpedienteOp
+  trigger: ReactNode
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const judicialPorDefecto = expediente.naturaleza === "Judicial";
+  const usuario = useOps((s) => s.usuario)
+  const judicialPorDefecto = expediente.naturaleza === 'Judicial'
   const [modalidad, setModalidad] = useState(
-    judicialPorDefecto ? "Ejecución judicial" : "Ejecución extrajudicial",
-  );
-  const judicial = modalidad === "Ejecución judicial";
-  const [tipo, setTipo] = useState(judicialPorDefecto ? "Sentencia firme" : TIPOS_EJECUCION_EXTRA[0]);
+    judicialPorDefecto ? 'Ejecución judicial' : 'Ejecución extrajudicial',
+  )
+  const judicial = modalidad === 'Ejecución judicial'
+  const [tipo, setTipo] = useState(
+    judicialPorDefecto ? 'Sentencia firme' : TIPOS_EJECUCION_EXTRA[0],
+  )
   const [estado, setEstado] = useState<string>(
     judicialPorDefecto ? FASES_EJECUCION_JUDICIAL[0] : ESTADOS_EJECUCION_EXTRA[0],
-  );
-  const [titulo, setTitulo] = useState("");
-  const [objeto, setObjeto] = useState("");
-  const [obligado, setObligado] = useState("");
-  const [prestacion, setPrestacion] = useState("");
-  const [importe, setImporte] = useState("0");
-  const [presupuesto, setPresupuesto] = useState<string>(SITUACIONES_PRESUPUESTARIAS[3]);
-  const [control, setControl] = useState(sumarDias(15));
+  )
+  const [titulo, setTitulo] = useState('')
+  const [objeto, setObjeto] = useState('')
+  const [obligado, setObligado] = useState('')
+  const [prestacion, setPrestacion] = useState('')
+  const [importe, setImporte] = useState('0')
+  const [presupuesto, setPresupuesto] = useState<string>(SITUACIONES_PRESUPUESTARIAS[3])
+  const [control, setControl] = useState(sumarDias(15))
 
   return (
     <Base
@@ -968,47 +1043,53 @@ export function ActivarEjecucionDialog({
           titulo,
           objeto,
           obligado,
-          beneficiario: "Cliente",
+          beneficiario: 'Cliente',
           prestacion,
-          importeReclamado: Number(importe.replace(",", ".")) || 0,
+          importeReclamado: Number(importe.replace(',', '.')) || 0,
           importeRecuperado: 0,
           responsable: usuario,
           fechaInicio: hoyTexto(),
-          dondeEstamos: "Ejecución recién activada.",
-          proximaAccion: "Definir primeras actuaciones de ejecución",
-          dependencia: "Debemos actuar nosotros",
-          alcance: "Pendiente de concretar",
+          dondeEstamos: 'Ejecución recién activada.',
+          proximaAccion: 'Definir primeras actuaciones de ejecución',
+          dependencia: 'Debemos actuar nosotros',
+          alcance: 'Pendiente de concretar',
           situacionPresupuestaria: presupuesto as never,
           proximoControl: control,
           naturalezaOriginal: expediente.naturaleza,
-        });
-        toast.success("Ejecución activada y línea de trabajo creada");
+        })
+        toast.success('Ejecución activada y línea de trabajo creada')
       }}
     >
       <Field label="Modalidad">
         <Selector
           value={modalidad}
           onChange={(v) => {
-            setModalidad(v);
-            setEstado(v === "Ejecución judicial" ? FASES_EJECUCION_JUDICIAL[0] : ESTADOS_EJECUCION_EXTRA[0]);
-            setTipo(v === "Ejecución judicial" ? "Sentencia firme" : TIPOS_EJECUCION_EXTRA[0]);
+            setModalidad(v)
+            setEstado(
+              v === 'Ejecución judicial' ? FASES_EJECUCION_JUDICIAL[0] : ESTADOS_EJECUCION_EXTRA[0],
+            )
+            setTipo(v === 'Ejecución judicial' ? 'Sentencia firme' : TIPOS_EJECUCION_EXTRA[0])
           }}
-          items={["Ejecución judicial", "Ejecución extrajudicial"]}
+          items={['Ejecución judicial', 'Ejecución extrajudicial']}
         />
       </Field>
-      <Field label={judicial ? "Tipo de título" : "Tipo de ejecución"}>
+      <Field label={judicial ? 'Tipo de título' : 'Tipo de ejecución'}>
         <Selector
           value={tipo}
           onChange={setTipo}
           items={
             judicial
-              ? ["Sentencia firme", "Auto", "Decreto", "Acuerdo homologado", "Título notarial"]
+              ? ['Sentencia firme', 'Auto', 'Decreto', 'Acuerdo homologado', 'Título notarial']
               : TIPOS_EJECUCION_EXTRA
           }
         />
       </Field>
-      <Field label={judicial ? "Fase de ejecución" : "Estado de ejecución"}>
-        <Selector value={estado} onChange={setEstado} items={judicial ? FASES_EJECUCION_JUDICIAL : ESTADOS_EJECUCION_EXTRA} />
+      <Field label={judicial ? 'Fase de ejecución' : 'Estado de ejecución'}>
+        <Selector
+          value={estado}
+          onChange={setEstado}
+          items={judicial ? FASES_EJECUCION_JUDICIAL : ESTADOS_EJECUCION_EXTRA}
+        />
       </Field>
       <Field label="Próximo control">
         <Input value={control} onChange={(e) => setControl(e.target.value)} />
@@ -1033,32 +1114,42 @@ export function ActivarEjecucionDialog({
         <Input value={importe} onChange={(e) => setImporte(e.target.value)} />
       </Field>
       <Field label="Situación presupuestaria">
-        <Selector value={presupuesto} onChange={setPresupuesto} items={SITUACIONES_PRESUPUESTARIAS} />
+        <Selector
+          value={presupuesto}
+          onChange={setPresupuesto}
+          items={SITUACIONES_PRESUPUESTARIAS}
+        />
       </Field>
     </Base>
-  );
+  )
 }
 
-export function NuevoIntervinienteDialog({ expedienteId, trigger }: { expedienteId: string; trigger: ReactNode }) {
-  const [contactoId, setContactoId] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [rol, setRol] = useState<string>(ROLES_INTERVINIENTE[0]);
-  const [contacto, setContacto] = useState("");
-  const [observaciones, setObservaciones] = useState("");
+export function NuevoIntervinienteDialog({
+  expedienteId,
+  trigger,
+}: {
+  expedienteId: string
+  trigger: ReactNode
+}) {
+  const [contactoId, setContactoId] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [rol, setRol] = useState<string>(ROLES_INTERVINIENTE[0])
+  const [contacto, setContacto] = useState('')
+  const [observaciones, setObservaciones] = useState('')
 
   const resultados = CONTACTOS.filter((c) => {
-    const t = busqueda.trim().toLowerCase();
-    if (!t) return false;
-    return `${nombreCompleto(c)} ${c.nif} ${c.email}`.toLowerCase().includes(t);
-  }).slice(0, 6);
+    const t = busqueda.trim().toLowerCase()
+    if (!t) return false
+    return `${nombreCompleto(c)} ${c.nif} ${c.email}`.toLowerCase().includes(t)
+  }).slice(0, 6)
 
   const seleccionar = (c: (typeof CONTACTOS)[number]) => {
-    setContactoId(c.id);
-    setNombre(nombreCompleto(c));
-    setContacto([c.telefono, c.email].filter(Boolean).join(" · "));
-    setBusqueda("");
-  };
+    setContactoId(c.id)
+    setNombre(nombreCompleto(c))
+    setContacto([c.telefono, c.email].filter(Boolean).join(' · '))
+    setBusqueda('')
+  }
 
   return (
     <Base
@@ -1073,9 +1164,9 @@ export function NuevoIntervinienteDialog({ expedienteId, trigger }: { expediente
           rol,
           contacto,
           observaciones,
-          confidencialidad: "Normal",
-        });
-        toast.success("Interviniente añadido");
+          confidencialidad: 'Normal',
+        })
+        toast.success('Interviniente añadido')
       }}
     >
       <Field label="Buscar contacto existente">
@@ -1085,24 +1176,24 @@ export function NuevoIntervinienteDialog({ expedienteId, trigger }: { expediente
           placeholder="Nombre, razón social, NIF o correo"
         />
         {resultados.length ? (
-          <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-border">
+          <div className="border-border mt-2 max-h-44 overflow-y-auto rounded-md border">
             {resultados.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => seleccionar(c)}
-                className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted"
+                className="hover:bg-muted flex w-full flex-col items-start px-3 py-2 text-left text-sm"
               >
                 <span className="font-medium">{nombreCompleto(c)}</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {c.id} · {c.tipoPersona} · {c.relacion}
                 </span>
               </button>
             ))}
           </div>
         ) : null}
-        <p className="mt-2 text-xs text-muted-foreground">
-          ¿No existe todavía?{" "}
+        <p className="text-muted-foreground mt-2 text-xs">
+          ¿No existe todavía?{' '}
           <Link to="/contactos/nuevo" className="text-primary hover:underline">
             Crear contacto nuevo
           </Link>
@@ -1110,7 +1201,11 @@ export function NuevoIntervinienteDialog({ expedienteId, trigger }: { expediente
         </p>
       </Field>
       <Field label="Contacto seleccionado">
-        <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del interviniente" />
+        <Input
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          placeholder="Nombre del interviniente"
+        />
       </Field>
       <Field label="Interviene como">
         <Selector value={rol} onChange={setRol} items={ROLES_INTERVINIENTE} />
@@ -1122,23 +1217,29 @@ export function NuevoIntervinienteDialog({ expedienteId, trigger }: { expediente
         <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
       </Field>
     </Base>
-  );
+  )
 }
 
 export function NuevoExpedienteOpDialog({ trigger }: { trigger: ReactNode }) {
-  const [nombre, setNombre] = useState("");
-  const [contactoId, setContactoId] = useState("CT-0001");
-  const [naturaleza, setNaturaleza] = useState("Extrajudicial");
-  const [area, setArea] = useState("Civil patrimonial");
-  const [tipoAsunto, setTipoAsunto] = useState("");
+  const [nombre, setNombre] = useState('')
+  const [contactoId, setContactoId] = useState('CT-0001')
+  const [naturaleza, setNaturaleza] = useState('Extrajudicial')
+  const [area, setArea] = useState('Civil patrimonial')
+  const [tipoAsunto, setTipoAsunto] = useState('')
   return (
     <Base
       trigger={trigger}
       title="Abrir expediente"
       disabled={!nombre.trim()}
       onConfirm={() => {
-        ops.crearExpediente({ nombre, contactoId, naturaleza: naturaleza as never, area, tipoAsunto });
-        toast.success("Expediente abierto");
+        ops.crearExpediente({
+          nombre,
+          contactoId,
+          naturaleza: naturaleza as never,
+          area,
+          tipoAsunto,
+        })
+        toast.success('Expediente abierto')
       }}
     >
       <div className="sm:col-span-2">
@@ -1150,7 +1251,11 @@ export function NuevoExpedienteOpDialog({ trigger }: { trigger: ReactNode }) {
         <Input value={contactoId} onChange={(e) => setContactoId(e.target.value)} />
       </Field>
       <Field label="Naturaleza">
-        <Selector value={naturaleza} onChange={setNaturaleza} items={["Judicial", "Extrajudicial"]} />
+        <Selector
+          value={naturaleza}
+          onChange={setNaturaleza}
+          items={['Judicial', 'Extrajudicial']}
+        />
       </Field>
       <Field label="Área">
         <Input value={area} onChange={(e) => setArea(e.target.value)} />
@@ -1159,5 +1264,5 @@ export function NuevoExpedienteOpDialog({ trigger }: { trigger: ReactNode }) {
         <Input value={tipoAsunto} onChange={(e) => setTipoAsunto(e.target.value)} />
       </Field>
     </Base>
-  );
+  )
 }

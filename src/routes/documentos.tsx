@@ -1,22 +1,20 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { FileText, Sparkles } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { FileText, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
-import { SectionHeader } from "@/components/common";
-import { DatoLinea } from "@/components/expedientes/ui";
-import { ToneBadge, ViewSwitch } from "@/components/crm/ui";
+import { SectionHeader } from '@/components/common'
 import {
   AsignarDocumentoDialog,
   NuevaVersionDialog,
   NuevoDocumentoDialog,
   ValidarPlazoDialog,
-} from "@/components/expedientes/dialogs";
-import { DndKanban, TipoDocBadges, Vacio } from "@/components/expedientes/ui";
-import { TareaFicha } from "@/components/tareas/ficha-modal";
-import { NuevaTareaRapidaDialog } from "@/components/tareas/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from '@/components/expedientes/dialogs'
+import { DatoLinea, DndKanban, TipoDocBadges, Vacio } from '@/components/expedientes/ui'
+import { TareaFicha } from '@/components/tareas/ficha-modal'
+import { NuevaTareaRapidaDialog } from '@/components/tareas/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -24,68 +22,62 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ESTADOS_DOC_SIMPLE, type Documento } from "@/data/expedientes-model";
-import { ops, useOps } from "@/lib/expedientes-store";
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { ESTADOS_DOC_SIMPLE, type Documento } from '@/data/expedientes-model'
+import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { ops, useOps } from '@/lib/expedientes-store'
 
-export const Route = createFileRoute("/documentos")({
+export const Route = createFileRoute('/documentos')({
   validateSearch: (search: Record<string, unknown>) =>
-    typeof search['doc'] === "string" && search['doc']
+    typeof search['doc'] === 'string' && search['doc']
       ? { doc: search['doc'] as string }
       : ({} as { doc?: string }),
   head: () => ({
     meta: [
-      { title: "Documentos — LEX" },
+      { title: 'Documentos — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Gestión documental del despacho: flujo simple de tratamiento, tareas vinculadas, versiones, documentos judiciales y entregables al cliente.",
+          'Gestión documental del despacho: flujo simple de tratamiento, tareas vinculadas, versiones, documentos judiciales y entregables al cliente.',
       },
-      { property: "og:title", content: "Documentos — LEX" },
+      { property: 'og:title', content: 'Documentos — LEX' },
       {
-        property: "og:description",
-        content: "Flujo documental de cuatro estados, versionado, tareas vinculadas y control de plazos.",
+        property: 'og:description',
+        content:
+          'Flujo documental de cuatro estados, versionado, tareas vinculadas y control de plazos.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: DocumentosPage,
-});
+})
 
 /** Columnas del flujo documental mínimo acordado. */
 const COLUMNAS_FLUJO = [
-  { id: "Pendiente de tratar", nombre: "Pendiente de tratar", tono: "aviso" as const },
-  { id: "En tratamiento", nombre: "En tratamiento", tono: "info" as const },
-  { id: "Tratado", nombre: "Tratado", tono: "exito" as const },
-  { id: "Archivado / solo consulta", nombre: "Archivado / solo consulta", tono: "neutro" as const },
-];
+  { id: 'Pendiente de tratar', nombre: 'Pendiente de tratar', tono: 'aviso' as const },
+  { id: 'En tratamiento', nombre: 'En tratamiento', tono: 'info' as const },
+  { id: 'Tratado', nombre: 'Tratado', tono: 'exito' as const },
+  { id: 'Archivado / solo consulta', nombre: 'Archivado / solo consulta', tono: 'neutro' as const },
+]
 
-function TarjetaDoc({
-  d,
-  codigo,
-  onAbrir,
-}: {
-  d: Documento;
-  codigo: string;
-  onAbrir: () => void;
-}) {
-  const tareas = useOps((s) => s.tareas.filter((t) => (d.tareasVinculadas ?? []).includes(t.id)));
+function TarjetaDoc({ d, codigo, onAbrir }: { d: Documento; codigo: string; onAbrir: () => void }) {
+  const tareas = useOps((s) => s.tareas.filter((t) => (d.tareasVinculadas ?? []).includes(t.id)))
   return (
-    <article className="rounded-md border border-border bg-card p-3">
+    <article className="border-border bg-card rounded-md border p-3">
       <button type="button" onClick={onAbrir} className="block w-full text-left">
-        <p className="truncate text-[11px] text-muted-foreground">{codigo}</p>
-        <p className="line-clamp-2 text-sm font-medium text-foreground">{d.nombre}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground truncate text-[11px]">{codigo}</p>
+        <p className="text-foreground line-clamp-2 text-sm font-medium">{d.nombre}</p>
+        <p className="text-muted-foreground mt-1 text-xs">
           {d.tipoDocumental} · v{d.version} · {d.responsable}
         </p>
       </button>
@@ -97,20 +89,24 @@ function TarjetaDoc({
         />
       </div>
       {tareas.length ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
-          {tareas.length} tarea{tareas.length === 1 ? "" : "s"} vinculada
-          {tareas.length === 1 ? "" : "s"}
+        <p className="text-muted-foreground mt-1.5 text-[11px]">
+          {tareas.length} tarea{tareas.length === 1 ? '' : 's'} vinculada
+          {tareas.length === 1 ? '' : 's'}
         </p>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <button type="button" onClick={onAbrir} className="text-[11px] text-primary hover:underline">
+        <button
+          type="button"
+          onClick={onAbrir}
+          className="text-primary text-[11px] hover:underline"
+        >
           Ver ficha
         </button>
         {d.expedienteId ? (
           <Link
             to="/expedientes/$id"
             params={{ id: d.expedienteId }}
-            className="text-[11px] text-muted-foreground hover:underline"
+            className="text-muted-foreground text-[11px] hover:underline"
           >
             Ver expediente
           </Link>
@@ -118,16 +114,19 @@ function TarjetaDoc({
         <NuevaVersionDialog
           documentoId={d.id}
           trigger={
-            <button type="button" className="text-[11px] text-muted-foreground hover:underline">
+            <button type="button" className="text-muted-foreground text-[11px] hover:underline">
               Nueva versión
             </button>
           }
         />
-        {d.datosJudiciales?.estadoPlazo === "Posible plazo pendiente de validar" ? (
+        {d.datosJudiciales?.estadoPlazo === 'Posible plazo pendiente de validar' ? (
           <ValidarPlazoDialog
             documentoId={d.id}
             trigger={
-              <button type="button" className="text-[11px] font-medium text-destructive hover:underline">
+              <button
+                type="button"
+                className="text-destructive text-[11px] font-medium hover:underline"
+              >
                 Validar plazo
               </button>
             }
@@ -135,7 +134,7 @@ function TarjetaDoc({
         ) : null}
       </div>
     </article>
-  );
+  )
 }
 
 /** Ficha del documento: datos, tareas, actuación y primera capa de IA. */
@@ -144,20 +143,20 @@ function FichaDocumento({
   onOpenChange,
   onAbrirTarea,
 }: {
-  documentoId: string | null;
-  onOpenChange: (v: boolean) => void;
-  onAbrirTarea: (id: string) => void;
+  documentoId: string | null
+  onOpenChange: (v: boolean) => void
+  onAbrirTarea: (id: string) => void
 }) {
-  const d = useOps((s) => s.documentos.find((x) => x.id === documentoId));
-  const expediente = useOps((s) => s.expedientes.find((e) => e.id === d?.expedienteId));
-  const tareas = useOps((s) => s.tareas.filter((t) => (d?.tareasVinculadas ?? []).includes(t.id)));
+  const d = useOps((s) => s.documentos.find((x) => x.id === documentoId))
+  const expediente = useOps((s) => s.expedientes.find((e) => e.id === d?.expedienteId))
+  const tareas = useOps((s) => s.tareas.filter((t) => (d?.tareasVinculadas ?? []).includes(t.id)))
   const actuacion = useOps((s) =>
     s.actuaciones.find((a) => (d?.actuacionesRelacionadas ?? []).includes(a.id)),
-  );
-  const [ia, setIa] = useState(false);
-  if (!d) return null;
+  )
+  const [ia, setIa] = useState(false)
+  if (!d) return null
 
-  const responsableInferido = d.responsable;
+  const responsableInferido = d.responsable
 
   return (
     <Dialog open={Boolean(documentoId)} onOpenChange={onOpenChange}>
@@ -167,7 +166,7 @@ function FichaDocumento({
             <ToneBadge tono="neutro">{d.id}</ToneBadge>
             <ToneBadge
               tono={
-                d.estado === "Tratado" ? "exito" : d.estado === "En tratamiento" ? "info" : "aviso"
+                d.estado === 'Tratado' ? 'exito' : d.estado === 'En tratamiento' ? 'info' : 'aviso'
               }
             >
               {d.estado}
@@ -181,39 +180,39 @@ function FichaDocumento({
           <DialogTitle className="text-left font-serif text-xl">{d.nombre}</DialogTitle>
           <DialogDescription className="text-left">
             {d.tipoDocumental} · v{d.version} · {d.fechaDocumento || d.fechaIncorporacion}
-            {expediente ? ` · ${expediente.codigo} · ${expediente.nombre}` : " · sin expediente"}
+            {expediente ? ` · ${expediente.codigo} · ${expediente.nombre}` : ' · sin expediente'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <DatoLinea label="Fecha del documento" value={d.fechaDocumento || "—"} />
+          <DatoLinea label="Fecha del documento" value={d.fechaDocumento || '—'} />
           <DatoLinea label="Incorporado" value={d.fechaIncorporacion} />
           <DatoLinea label="Tipo documental" value={d.tipoDocumental} />
           <DatoLinea label="Estado documental" value={d.estado} />
           <DatoLinea label="Responsable de tratamiento" value={responsableInferido} />
           <DatoLinea label="Origen" value={d.origen} />
-          <DatoLinea label="Emisor / autor" value={d.autorEmisor || "—"} />
+          <DatoLinea label="Emisor / autor" value={d.autorEmisor || '—'} />
           <DatoLinea label="Confidencialidad" value={d.confidencialidad} />
           <DatoLinea
             label="Fecha o plazo vinculado"
-            value={d.fechaVinculadaId ?? "Sin fecha vinculada (módulo Fechas y plazos)"}
+            value={d.fechaVinculadaId ?? 'Sin fecha vinculada (módulo Fechas y plazos)'}
           />
-          <DatoLinea label="Actuación vinculada" value={actuacion?.titulo ?? "—"} />
+          <DatoLinea label="Actuación vinculada" value={actuacion?.titulo ?? '—'} />
         </div>
 
         <Separator />
 
         {/* Estado documental: flujo simple, sin workflow complejo */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
             Estado
           </span>
           <Select
             value={d.estado}
             onValueChange={(v) => {
-              const r = ops.cambiarEstadoDocumento(d.id, v);
-              if (!r.ok) toast.error(r.motivo);
-              else toast.success("Estado documental actualizado");
+              const r = ops.cambiarEstadoDocumento(d.id, v)
+              if (!r.ok) toast.error(r.motivo)
+              else toast.success('Estado documental actualizado')
             }}
           >
             <SelectTrigger className="h-9 w-64">
@@ -227,7 +226,7 @@ function FichaDocumento({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-muted-foreground text-[11px]">
             Con una tarea viva vinculada, el documento se mantiene EN TRATAMIENTO.
           </span>
         </div>
@@ -235,19 +234,21 @@ function FichaDocumento({
         {/* Tareas vinculadas */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
               Tareas vinculadas
             </p>
             <NuevaTareaRapidaDialog
               tituloInicial={`Tratar ${d.nombre}`}
               descripcionInicial={`Documento ${d.id} · ${d.tipoDocumental}${
-                expediente ? ` · ${expediente.codigo}` : ""
+                expediente ? ` · ${expediente.codigo}` : ''
               }. Revisar y decidir el tratamiento.`}
               responsableInicial={responsableInferido}
               documentoId={d.id}
               {...(d.expedienteId ? { expedienteId: d.expedienteId } : {})}
               {...(d.lineaId ? { lineaId: d.lineaId } : {})}
-              contextoLabel={expediente ? `${expediente.codigo} · ${expediente.nombre}` : "este documento"}
+              contextoLabel={
+                expediente ? `${expediente.codigo} · ${expediente.nombre}` : 'este documento'
+              }
               trigger={
                 <Button size="sm" variant="outline">
                   Crear tarea
@@ -259,11 +260,11 @@ function FichaDocumento({
             tareas.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border p-2.5"
+                className="border-border flex items-center justify-between gap-2 rounded-md border p-2.5"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-foreground">{t.titulo}</span>
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="text-foreground block truncate text-sm">{t.titulo}</span>
+                  <span className="text-muted-foreground block text-[11px]">
                     {t.id} · {t.estado} · {t.responsable}
                   </span>
                 </span>
@@ -278,9 +279,9 @@ function FichaDocumento({
         </div>
 
         {/* Primera capa de IA documental: propuesta a validar, nunca automática */}
-        <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/40 p-3">
+        <div className="border-border bg-muted/40 space-y-2 rounded-md border border-dashed p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-foreground">
+            <p className="text-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
               <Sparkles className="h-3.5 w-3.5" /> Resumir con IA
             </p>
             <Button size="sm" variant="outline" onClick={() => setIa(true)}>
@@ -288,12 +289,14 @@ function FichaDocumento({
             </Button>
           </div>
           {ia ? (
-            <div className="space-y-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground space-y-1 text-xs">
               <p className="text-foreground">
-                Este documento no tiene todavía un archivo procesable cargado en LEX, de modo que no hay
-                contenido que leer. LEX no inventa el resumen ni los datos.
+                Este documento no tiene todavía un archivo procesable cargado en LEX, de modo que no
+                hay contenido que leer. LEX no inventa el resumen ni los datos.
               </p>
-              <p>La propuesta, cuando exista archivo, se mostrará siempre como borrador a validar:</p>
+              <p>
+                La propuesta, cuando exista archivo, se mostrará siempre como borrador a validar:
+              </p>
               <ul className="list-disc pl-4">
                 <li>nombre normalizado y tipo documental;</li>
                 <li>fecha y emisor u órgano;</li>
@@ -307,7 +310,7 @@ function FichaDocumento({
               </p>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Primera capa: propone ficha y resumen a validar. Nunca valida plazos por su cuenta.
             </p>
           )}
@@ -320,41 +323,43 @@ function FichaDocumento({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 function DocumentosPage() {
-  const { doc: docBuscado } = Route.useSearch();
-  const navigate = useNavigate();
-  const documentos = useOps((s) => s.documentos);
-  const expedientes = useOps((s) => s.expedientes);
-  const [vista, setVista] = useState("flujo");
-  const [q, setQ] = useState("");
-  const [expediente, setExpediente] = useState("todos");
-  const [ficha, setFicha] = useState<string | null>(null);
-  const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
+  const { doc: docBuscado } = Route.useSearch()
+  const navigate = useNavigate()
+  const documentos = useOps((s) => s.documentos)
+  const expedientes = useOps((s) => s.expedientes)
+  const [vista, setVista] = useState('flujo')
+  const [q, setQ] = useState('')
+  const [expediente, setExpediente] = useState('todos')
+  const [ficha, setFicha] = useState<string | null>(null)
+  const [tareaAbierta, setTareaAbierta] = useState<string | null>(null)
 
   // Apertura directa de la ficha al llegar con ?doc=DOC-XXXX (p. ej. desde una tarea).
   useEffect(() => {
-    if (docBuscado) setFicha(docBuscado);
-  }, [docBuscado]);
+    if (docBuscado) setFicha(docBuscado)
+  }, [docBuscado])
 
   const cerrarFicha = () => {
-    setFicha(null);
-    if (docBuscado) void navigate({ to: "/documentos", search: {}, replace: true });
-  };
+    setFicha(null)
+    if (docBuscado) void navigate({ to: '/documentos', search: {}, replace: true })
+  }
 
   const codigo = (id?: string) =>
-    id ? (expedientes.find((e) => e.id === id)?.codigo ?? id) : "Sin expediente";
+    id ? (expedientes.find((e) => e.id === id)?.codigo ?? id) : 'Sin expediente'
 
   const filtrados = documentos.filter(
     (d) =>
-      `${d.nombre} ${d.tipoDocumental} ${codigo(d.expedienteId)}`.toLowerCase().includes(q.toLowerCase()) &&
-      (expediente === "todos" || d.expedienteId === expediente),
-  );
+      `${d.nombre} ${d.tipoDocumental} ${codigo(d.expedienteId)}`
+        .toLowerCase()
+        .includes(q.toLowerCase()) &&
+      (expediente === 'todos' || d.expedienteId === expediente),
+  )
 
-  const sinAsignar = documentos.filter((d) => !d.expedienteId);
-  const enFlujo = filtrados.filter((d) => d.expedienteId);
+  const sinAsignar = documentos.filter((d) => !d.expedienteId)
+  const enFlujo = filtrados.filter((d) => d.expedienteId)
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
@@ -367,8 +372,8 @@ function DocumentosPage() {
               value={vista}
               onChange={setVista}
               options={[
-                { id: "flujo", label: "Flujo documental" },
-                { id: "bandeja", label: `Bandeja (${sinAsignar.length})` },
+                { id: 'flujo', label: 'Flujo documental' },
+                { id: 'bandeja', label: `Bandeja (${sinAsignar.length})` },
               ]}
             />
             <NuevoDocumentoDialog trigger={<Button size="sm">Incorporar documento</Button>} />
@@ -398,11 +403,13 @@ function DocumentosPage() {
         </Select>
       </div>
 
-      {vista === "bandeja" ? (
+      {vista === 'bandeja' ? (
         <Card>
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold text-foreground">Documentos pendientes de asignación</h2>
-            <p className="mb-3 text-xs text-muted-foreground">
+            <h2 className="text-foreground text-sm font-semibold">
+              Documentos pendientes de asignación
+            </h2>
+            <p className="text-muted-foreground mb-3 text-xs">
               Un documento puede entrar en el sistema sin expediente y asignarse después.
             </p>
             {sinAsignar.length ? (
@@ -410,11 +417,15 @@ function DocumentosPage() {
                 {sinAsignar.map((d) => (
                   <li
                     key={d.id}
-                    className="flex items-center justify-between gap-2 rounded-md border border-border p-3"
+                    className="border-border flex items-center justify-between gap-2 rounded-md border p-3"
                   >
-                    <button type="button" onClick={() => setFicha(d.id)} className="min-w-0 text-left">
-                      <p className="truncate text-sm font-medium text-foreground">{d.nombre}</p>
-                      <p className="text-xs text-muted-foreground">
+                    <button
+                      type="button"
+                      onClick={() => setFicha(d.id)}
+                      className="min-w-0 text-left"
+                    >
+                      <p className="text-foreground truncate text-sm font-medium">{d.nombre}</p>
+                      <p className="text-muted-foreground text-xs">
                         {d.tipoDocumental} · {d.origen} · {d.fechaIncorporacion}
                       </p>
                     </button>
@@ -446,9 +457,9 @@ function DocumentosPage() {
           columnOf={(d) => d.estado}
           idOf={(d) => d.id}
           onDrop={(id, columna) => {
-            const r = ops.cambiarEstadoDocumento(id, columna);
-            if (!r.ok) toast.error(r.motivo);
-            else toast.success("Estado del documento actualizado");
+            const r = ops.cambiarEstadoDocumento(id, columna)
+            if (!r.ok) toast.error(r.motivo)
+            else toast.success('Estado del documento actualizado')
           }}
           renderCard={(d) => (
             <TarjetaDoc d={d} codigo={codigo(d.expedienteId)} onAbrir={() => setFicha(d.id)} />
@@ -459,12 +470,12 @@ function DocumentosPage() {
 
       <Card>
         <CardContent className="p-4">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <h2 className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
             <FileText className="h-4 w-4" /> Control de documentos judiciales
           </h2>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Ningún plazo se calcula automáticamente: el sistema sólo advierte de que un documento puede
-            contener plazo.
+          <p className="text-muted-foreground mb-3 text-xs">
+            Ningún plazo se calcula automáticamente: el sistema sólo advierte de que un documento
+            puede contener plazo.
           </p>
           {documentos.filter((d) => d.judicial).length ? (
             <div className="space-y-2">
@@ -473,22 +484,26 @@ function DocumentosPage() {
                 .map((d) => (
                   <div
                     key={d.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3"
+                    className="border-border flex flex-wrap items-center justify-between gap-2 rounded-md border p-3"
                   >
-                    <button type="button" onClick={() => setFicha(d.id)} className="min-w-0 text-left">
-                      <p className="truncate text-sm text-foreground">{d.nombre}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {d.datosJudiciales?.organo} · autos {d.datosJudiciales?.autos || "—"} ·{" "}
+                    <button
+                      type="button"
+                      onClick={() => setFicha(d.id)}
+                      className="min-w-0 text-left"
+                    >
+                      <p className="text-foreground truncate text-sm">{d.nombre}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {d.datosJudiciales?.organo} · autos {d.datosJudiciales?.autos || '—'} ·{' '}
                         {d.datosJudiciales?.canal}
                       </p>
                     </button>
                     <ToneBadge
                       tono={
-                        d.datosJudiciales?.estadoPlazo === "Posible plazo pendiente de validar"
-                          ? "riesgo"
-                          : d.datosJudiciales?.estadoPlazo === "Plazo validado"
-                            ? "exito"
-                            : "neutro"
+                        d.datosJudiciales?.estadoPlazo === 'Posible plazo pendiente de validar'
+                          ? 'riesgo'
+                          : d.datosJudiciales?.estadoPlazo === 'Plazo validado'
+                            ? 'exito'
+                            : 'neutro'
                       }
                     >
                       {d.datosJudiciales?.estadoPlazo}
@@ -506,11 +521,11 @@ function DocumentosPage() {
         documentoId={ficha}
         onOpenChange={(v) => !v && cerrarFicha()}
         onAbrirTarea={(id) => {
-          cerrarFicha();
-          setTareaAbierta(id);
+          cerrarFicha()
+          setTareaAbierta(id)
         }}
       />
       <TareaFicha tareaId={tareaAbierta} onOpenChange={(v) => !v && setTareaAbierta(null)} />
     </div>
-  );
+  )
 }

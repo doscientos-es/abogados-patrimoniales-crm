@@ -4,14 +4,21 @@
 // Los botones PREPARAR EN GMAIL y ABRIR EN WHATSAPP BUSINESS quedan como
 // controles conceptuales deshabilitados; el contenido se guarda como
 // comunicación preparada dentro de LEX.
-import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { MessageCircle, Phone, Mail } from "lucide-react";
-import { toast } from "sonner";
+import { Link } from '@tanstack/react-router'
+import { Mail, MessageCircle, Phone } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
-import { Field, ToneBadge } from "@/components/crm/ui";
-import { PendingBadge } from "@/components/common";
-import { Button } from "@/components/ui/button";
+import { PendingBadge } from '@/components/common'
+import {
+  ctxLimpio,
+  emailContactoPorId,
+  nombreContactoPorId,
+  telefonoContactoPorId,
+  type ContextoComunicacion,
+} from '@/components/comunicaciones/contexto'
+import { SelectorFecha, SelectorHora } from '@/components/fechas/datetime'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -20,65 +27,56 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { CONTACTOS, nombreCompleto } from "@/data/contactos";
-import { CUENTAS_CORREO, aplicarVariables, canalDe } from "@/data/comunicaciones";
-import type { Comunicacion } from "@/data/expedientes-model";
-
-/** Equipo del despacho (datos de prueba, parametrizable en Configuración). */
-const RESPONSABLES = ["Igor Belmonte", "Ana Torregrosa", "Luis Ferrán", "Marta Solé", "Nuria Casals"];
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { CUENTAS_CORREO, aplicarVariables, canalDe } from '@/data/comunicaciones'
+import { CONTACTOS, nombreCompleto } from '@/data/contactos'
+import type { Comunicacion } from '@/data/expedientes-model'
+import { hoyTexto } from '@/data/pipeline'
 import {
   PLANTILLAS_LEX,
-  PLANTILLA_BASE_EMAIL,
-  PLANTILLA_BASE_WHATSAPP,
   faseDeContexto,
   plantillasRecientes,
   registrarUsoPlantilla,
   type FaseLex,
   type PlantillaLex,
-} from "@/data/plantillas";
-import { hoyTexto } from "@/data/pipeline";
-import { SelectorFecha, SelectorHora } from "@/components/fechas/datetime";
-import { getOps, ops, propuestaVinculacion, useOps } from "@/lib/expedientes-store";
-import { useCrm } from "@/lib/crm-store";
-import { useOnboarding } from "@/lib/onboarding-store";
-import {
-  emailContactoPorId,
-  nombreContactoPorId,
-  telefonoContactoPorId,
-  ctxLimpio,
-  type ContextoComunicacion,
-} from "@/components/comunicaciones/contexto";
+} from '@/data/plantillas'
+import { Field, ToneBadge } from '@/features/crm'
+import { useCrm } from '@/lib/crm-store'
+import { getOps, ops, propuestaVinculacion, useOps } from '@/lib/expedientes-store'
+import { useOnboarding } from '@/lib/onboarding-store'
 
-const horaActual = () => new Date().toTimeString().slice(0, 5);
+/** Equipo del despacho (datos de prueba, parametrizable en Configuración). */
+const RESPONSABLES = [
+  'Igor Belmonte',
+  'Ana Torregrosa',
+  'Luis Ferrán',
+  'Marta Solé',
+  'Nuria Casals',
+]
+
+const horaActual = () => new Date().toTimeString().slice(0, 5)
 
 /* --------------------------- Selector contacto --------------------- */
 
-function SelectorContacto({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function SelectorContacto({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const lista = useMemo(
     () =>
       CONTACTOS.map((c) => ({ id: c.id, nombre: nombreCompleto(c) })).sort((a, b) =>
         a.nombre.localeCompare(b.nombre),
       ),
     [],
-  );
+  )
   return (
-    <Select value={value || "ninguno"} onValueChange={(v) => onChange(v === "ninguno" ? "" : v)}>
+    <Select value={value || 'ninguno'} onValueChange={(v) => onChange(v === 'ninguno' ? '' : v)}>
       <SelectTrigger>
         <SelectValue placeholder="Selecciona un contacto" />
       </SelectTrigger>
@@ -91,7 +89,7 @@ function SelectorContacto({
         ))}
       </SelectContent>
     </Select>
-  );
+  )
 }
 
 /* ---------------------------- Plantillas --------------------------- */
@@ -107,45 +105,45 @@ export function SelectorPlantilla({
   seleccionada,
   onAplicar,
 }: {
-  canal: "Email" | "WhatsApp";
-  fase?: FaseLex;
-  seleccionada?: string;
-  onAplicar: (p: PlantillaLex) => void;
+  canal: 'Email' | 'WhatsApp'
+  fase?: FaseLex
+  seleccionada?: string
+  onAplicar: (p: PlantillaLex) => void
 }) {
-  const [grupo, setGrupo] = useState<"fase" | "favoritas" | "recientes" | "todas">(
-    fase ? "fase" : "favoritas",
-  );
-  const disponibles = PLANTILLAS_LEX.filter((p) => p.canal === canal);
+  const [grupo, setGrupo] = useState<'fase' | 'favoritas' | 'recientes' | 'todas'>(
+    fase ? 'fase' : 'favoritas',
+  )
+  const disponibles = PLANTILLAS_LEX.filter((p) => p.canal === canal)
   const lista =
-    grupo === "fase"
+    grupo === 'fase'
       ? disponibles.filter((p) => p.fase === fase)
-      : grupo === "favoritas"
+      : grupo === 'favoritas'
         ? disponibles.filter((p) => p.favorita)
-        : grupo === "recientes"
+        : grupo === 'recientes'
           ? plantillasRecientes(canal)
-          : disponibles;
+          : disponibles
 
   const aplicar = (p: PlantillaLex) => {
-    registrarUsoPlantilla(p.id);
-    onAplicar(p);
-  };
+    registrarUsoPlantilla(p.id)
+    onAplicar(p)
+  }
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {(
           [
-            ["favoritas", "Favoritas"],
-            ["recientes", "Recientes"],
-            ["fase", fase ? `De esta fase (${fase})` : "De esta fase"],
-            ["todas", "Todas"],
+            ['favoritas', 'Favoritas'],
+            ['recientes', 'Recientes'],
+            ['fase', fase ? `De esta fase (${fase})` : 'De esta fase'],
+            ['todas', 'Todas'],
           ] as const
         ).map(([id, label]) => (
           <Button
             key={id}
             type="button"
             size="sm"
-            variant={grupo === id ? "default" : "outline"}
+            variant={grupo === id ? 'default' : 'outline'}
             className="h-7 text-[11px]"
             onClick={() => setGrupo(id)}
           >
@@ -160,40 +158,40 @@ export function SelectorPlantilla({
               key={p.id}
               type="button"
               size="sm"
-              variant={seleccionada === p.id ? "default" : "secondary"}
+              variant={seleccionada === p.id ? 'default' : 'secondary'}
               className="h-7 text-[11px]"
               title={p.finalidad}
               onClick={() => aplicar(p)}
             >
               {p.nombre}
-              {p.formato !== "Texto" ? " · audio" : ""}
+              {p.formato !== 'Texto' ? ' · audio' : ''}
             </Button>
           ))
         ) : (
-          <span className="text-xs text-muted-foreground">Sin plantillas en este grupo.</span>
+          <span className="text-muted-foreground text-xs">Sin plantillas en este grupo.</span>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 /* ----------- Destinatario / contexto / documentos DESDE EXPEDIENTE -------- */
 
-const pareceEmail = (v: string) => v.includes("@");
-const pareceTelefono = (v: string) => /\d{6,}/.test(v.replace(/\s/g, ""));
+const pareceEmail = (v: string) => v.includes('@')
+const pareceTelefono = (v: string) => /\d{6,}/.test(v.replace(/\s/g, ''))
 
 /** Dato de contacto disponible de un interviniente para el canal indicado. */
 function datoDeInterviniente(
   i: { contacto: string; contactoId?: string },
-  canal: "Email" | "WhatsApp",
+  canal: 'Email' | 'WhatsApp',
 ): string {
-  const propio = (i.contacto ?? "").trim();
-  if (canal === "Email") {
-    if (pareceEmail(propio)) return propio;
-    return emailContactoPorId(i.contactoId) || "";
+  const propio = (i.contacto ?? '').trim()
+  if (canal === 'Email') {
+    if (pareceEmail(propio)) return propio
+    return emailContactoPorId(i.contactoId) || ''
   }
-  if (pareceTelefono(propio) && !pareceEmail(propio)) return propio;
-  return telefonoContactoPorId(i.contactoId) || "";
+  if (pareceTelefono(propio) && !pareceEmail(propio)) return propio
+  return telefonoContactoPorId(i.contactoId) || ''
 }
 
 /**
@@ -206,30 +204,35 @@ export function SelectorInterviniente({
   value,
   onChange,
 }: {
-  expedienteId: string;
-  canal: "Email" | "WhatsApp";
-  value: string;
-  onChange: (dato: string, interviniente: { id: string; nombre: string; contactoId?: string }) => void;
+  expedienteId: string
+  canal: 'Email' | 'WhatsApp'
+  value: string
+  onChange: (
+    dato: string,
+    interviniente: { id: string; nombre: string; contactoId?: string },
+  ) => void
 }) {
-  const intervinientes = useOps((s) => s.intervinientes.filter((i) => i.expedienteId === expedienteId));
-  const [seleccionado, setSeleccionado] = useState("");
-  const actual = intervinientes.find((i) => i.id === seleccionado);
-  const dato = actual ? datoDeInterviniente(actual, canal) : "";
+  const intervinientes = useOps((s) =>
+    s.intervinientes.filter((i) => i.expedienteId === expedienteId),
+  )
+  const [seleccionado, setSeleccionado] = useState('')
+  const actual = intervinientes.find((i) => i.id === seleccionado)
+  const dato = actual ? datoDeInterviniente(actual, canal) : ''
 
   return (
     <div className="space-y-1.5">
       <Select
-        value={seleccionado || "ninguno"}
+        value={seleccionado || 'ninguno'}
         onValueChange={(v) => {
-          setSeleccionado(v === "ninguno" ? "" : v);
-          const i = intervinientes.find((x) => x.id === v);
+          setSeleccionado(v === 'ninguno' ? '' : v)
+          const i = intervinientes.find((x) => x.id === v)
           if (i) {
             onChange(datoDeInterviniente(i, canal), {
               id: i.id,
               nombre: i.nombre,
               ...(i.contactoId ? { contactoId: i.contactoId } : {}),
-            });
-          } else onChange("", { id: "", nombre: "" });
+            })
+          } else onChange('', { id: '', nombre: '' })
         }}
       >
         <SelectTrigger>
@@ -238,13 +241,13 @@ export function SelectorInterviniente({
         <SelectContent className="max-h-72">
           <SelectItem value="ninguno">Sin seleccionar</SelectItem>
           {intervinientes.map((i) => {
-            const d = datoDeInterviniente(i, canal);
+            const d = datoDeInterviniente(i, canal)
             return (
               <SelectItem key={i.id} value={i.id}>
                 {i.nombre} · {i.rol}
-                {d ? "" : canal === "Email" ? " — sin email" : " — sin teléfono"}
+                {d ? '' : canal === 'Email' ? ' — sin email' : ' — sin teléfono'}
               </SelectItem>
-            );
+            )
           })}
           {intervinientes.length ? null : (
             <SelectItem value="vacio" disabled>
@@ -255,29 +258,29 @@ export function SelectorInterviniente({
       </Select>
       {actual ? (
         dato ? (
-          <p className="text-xs text-muted-foreground">
-            {canal === "Email" ? "Email" : "Teléfono"} del interviniente:{" "}
+          <p className="text-muted-foreground text-xs">
+            {canal === 'Email' ? 'Email' : 'Teléfono'} del interviniente:{' '}
             <strong className="text-foreground">{value || dato}</strong>
           </p>
         ) : (
-          <p className="text-xs text-destructive">
-            {canal === "Email"
-              ? "Este interviniente no tiene email registrado en su ficha."
-              : "Este interviniente no tiene teléfono registrado en su ficha."}{" "}
+          <p className="text-destructive text-xs">
+            {canal === 'Email'
+              ? 'Este interviniente no tiene email registrado en su ficha.'
+              : 'Este interviniente no tiene teléfono registrado en su ficha.'}{' '}
             LEX no lo inventa: complétalo en su ficha o indícalo manualmente.
           </p>
         )
       ) : null}
     </div>
-  );
+  )
 }
 
 /** Contexto heredado del expediente: información, no selector editable. */
 export function ContextoExpedienteFijo({ expedienteId }: { expedienteId: string }) {
-  const exp = useOps((s) => s.expedientes.find((e) => e.id === expedienteId));
-  if (!exp) return null;
+  const exp = useOps((s) => s.expedientes.find((e) => e.id === expedienteId))
+  if (!exp) return null
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs">
+    <div className="border-border bg-muted/30 flex flex-wrap items-center gap-2 rounded-md border border-dashed px-3 py-2 text-xs">
       <span className="text-muted-foreground">Expediente:</span>
       <strong className="text-foreground">
         {exp.codigo} · {exp.nombre}
@@ -285,12 +288,12 @@ export function ContextoExpedienteFijo({ expedienteId }: { expedienteId: string 
       <Link
         to="/expedientes/$id"
         params={{ id: exp.id }}
-        className="ml-auto text-primary hover:underline"
+        className="text-primary ml-auto hover:underline"
       >
         Ver expediente
       </Link>
     </div>
-  );
+  )
 }
 
 /**
@@ -303,18 +306,18 @@ export function AdjuntosDelExpediente({
   seleccion,
   onChange,
 }: {
-  expedienteId: string;
-  seleccion: string[];
-  onChange: (v: string[]) => void;
+  expedienteId: string
+  seleccion: string[]
+  onChange: (v: string[]) => void
 }) {
-  const documentos = useOps((s) => s.documentos.filter((d) => d.expedienteId === expedienteId));
+  const documentos = useOps((s) => s.documentos.filter((d) => d.expedienteId === expedienteId))
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value=""
           onValueChange={(v) => {
-            if (!seleccion.includes(v)) onChange([...seleccion, v]);
+            if (!seleccion.includes(v)) onChange([...seleccion, v])
           }}
         >
           <SelectTrigger className="w-full sm:w-[420px]">
@@ -339,7 +342,7 @@ export function AdjuntosDelExpediente({
       {seleccion.length ? (
         <div className="flex flex-wrap gap-1.5">
           {seleccion.map((id) => {
-            const d = documentos.find((x) => x.id === id);
+            const d = documentos.find((x) => x.id === id)
             return (
               <Button
                 key={id}
@@ -352,12 +355,12 @@ export function AdjuntosDelExpediente({
               >
                 {d?.nombre ?? id} ✕
               </Button>
-            );
+            )
           })}
         </div>
       ) : null}
     </div>
-  );
+  )
 }
 
 /**
@@ -371,33 +374,33 @@ export function ContactoContexto({
   expedienteId,
   contactoId,
   onChange,
-  label = "Contacto",
+  label = 'Contacto',
 }: {
-  expedienteId?: string;
-  contactoId: string;
-  onChange: (v: string) => void;
-  label?: string;
+  expedienteId?: string
+  contactoId: string
+  onChange: (v: string) => void
+  label?: string
 }) {
   const intervinientes = useOps((s) =>
     expedienteId ? s.intervinientes.filter((i) => i.expedienteId === expedienteId) : [],
-  );
-  const propuesta = useOps((s) => propuestaVinculacion(s, contactoId || undefined));
-  const [q, setQ] = useState("");
+  )
+  const propuesta = useOps((s) => propuestaVinculacion(s, contactoId || undefined))
+  const [q, setQ] = useState('')
 
   const resultados = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (t.length < 2) return [];
+    const t = q.trim().toLowerCase()
+    if (t.length < 2) return []
     return CONTACTOS.map((c) => ({ id: c.id, nombre: nombreCompleto(c) }))
       .filter((c) => c.nombre.toLowerCase().includes(t))
-      .slice(0, 8);
-  }, [q]);
+      .slice(0, 8)
+  }, [q])
 
   if (expedienteId) {
     return (
       <Field label={label}>
         <Select
-          value={contactoId || "ninguno"}
-          onValueChange={(v) => onChange(v === "ninguno" ? "" : v)}
+          value={contactoId || 'ninguno'}
+          onValueChange={(v) => onChange(v === 'ninguno' ? '' : v)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Interviniente del expediente" />
@@ -414,7 +417,7 @@ export function ContactoContexto({
           </SelectContent>
         </Select>
       </Field>
-    );
+    )
   }
 
   return (
@@ -430,9 +433,9 @@ export function ContactoContexto({
         <Button
           type="button"
           size="sm"
-          variant={contactoId ? "outline" : "default"}
+          variant={contactoId ? 'outline' : 'default'}
           className="h-7 text-[11px]"
-          onClick={() => onChange("")}
+          onClick={() => onChange('')}
         >
           Sin registrar
         </Button>
@@ -441,7 +444,7 @@ export function ContactoContexto({
             key={c.id}
             type="button"
             size="sm"
-            variant={contactoId === c.id ? "default" : "secondary"}
+            variant={contactoId === c.id ? 'default' : 'secondary'}
             className="h-7 text-[11px]"
             onClick={() => onChange(c.id)}
           >
@@ -449,14 +452,14 @@ export function ContactoContexto({
           </Button>
         ))}
         {q.trim().length >= 2 && !resultados.length ? (
-          <span className="text-xs text-muted-foreground">Sin resultados en CONTACTOS.</span>
+          <span className="text-muted-foreground text-xs">Sin resultados en CONTACTOS.</span>
         ) : null}
       </div>
       {contactoId ? (
-        <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs">
+        <div className="border-border bg-muted/30 rounded-md border border-dashed px-3 py-2 text-xs">
           <p className="text-foreground">{nombreContactoPorId(contactoId)}</p>
           {propuesta.abiertos.length || propuesta.cerrados.length ? (
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
               <span>Expedientes relacionados:</span>
               {[...propuesta.abiertos, ...propuesta.cerrados].map((e) => (
                 <Link
@@ -470,32 +473,27 @@ export function ContactoContexto({
               ))}
             </div>
           ) : (
-            <p className="mt-1 text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               Sin expedientes asociados: la llamada queda en la ficha del contacto.
             </p>
           )}
         </div>
       ) : null}
     </div>
-  );
+  )
 }
-
-
-
-
-
 
 /** Valores de contexto para sustituir las variables de la plantilla. */
 function valoresContexto(ctx: ContextoComunicacion, remitente: string) {
-  const s = getOps();
-  const exp = ctx.expedienteId ? s.expedientes.find((e) => e.id === ctx.expedienteId) : undefined;
+  const s = getOps()
+  const exp = ctx.expedienteId ? s.expedientes.find((e) => e.id === ctx.expedienteId) : undefined
   return {
-    NUM_EXPEDIENTE: exp?.codigo ?? "[indicar expediente]",
-    TITULO_EXPEDIENTE: exp?.nombre ?? "[indicar asunto]",
-    CONTACTO: nombreContactoPorId(ctx.contactoId) || "[indicar destinatario]",
-    DESPACHO: "Abogados Patrimoniales",
+    NUM_EXPEDIENTE: exp?.codigo ?? '[indicar expediente]',
+    TITULO_EXPEDIENTE: exp?.nombre ?? '[indicar asunto]',
+    CONTACTO: nombreContactoPorId(ctx.contactoId) || '[indicar destinatario]',
+    DESPACHO: 'Abogados Patrimoniales',
     REMITENTE: remitente,
-  };
+  }
 }
 
 /* ------------------------- Vinculación de contexto ------------------ */
@@ -508,28 +506,28 @@ export function CamposContexto({
   ctx,
   onChange,
 }: {
-  ctx: ContextoComunicacion;
-  onChange: (c: ContextoComunicacion) => void;
+  ctx: ContextoComunicacion
+  onChange: (c: ContextoComunicacion) => void
 }) {
-  const expedientes = useOps((s) => s.expedientes);
-  const propuesta = useOps((s) => propuestaVinculacion(s, ctx.contactoId));
-  const leads = useCrm((s) => s.oportunidades);
-  const onboardings = useOnboarding((s) => s.onboardings);
+  const expedientes = useOps((s) => s.expedientes)
+  const propuesta = useOps((s) => propuestaVinculacion(s, ctx.contactoId))
+  const leads = useCrm((s) => s.oportunidades)
+  const onboardings = useOnboarding((s) => s.onboardings)
 
-  const set = (parcial: Partial<ContextoComunicacion>) => onChange({ ...ctx, ...parcial });
+  const set = (parcial: Partial<ContextoComunicacion>) => onChange({ ...ctx, ...parcial })
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Contacto">
         <SelectorContacto
-          value={ctx.contactoId ?? ""}
+          value={ctx.contactoId ?? ''}
           onChange={(v) => onChange({ contactoId: v || undefined })}
         />
       </Field>
       <Field label="Expediente">
         <Select
-          value={ctx.expedienteId ?? "ninguno"}
-          onValueChange={(v) => set({ expedienteId: v === "ninguno" ? undefined : v })}
+          value={ctx.expedienteId ?? 'ninguno'}
+          onValueChange={(v) => set({ expedienteId: v === 'ninguno' ? undefined : v })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -546,8 +544,8 @@ export function CamposContexto({
       </Field>
       <Field label="Lead">
         <Select
-          value={ctx.leadId ?? "ninguno"}
-          onValueChange={(v) => set({ leadId: v === "ninguno" ? undefined : v })}
+          value={ctx.leadId ?? 'ninguno'}
+          onValueChange={(v) => set({ leadId: v === 'ninguno' ? undefined : v })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -564,8 +562,8 @@ export function CamposContexto({
       </Field>
       <Field label="Onboarding">
         <Select
-          value={ctx.onboardingId ?? "ninguno"}
-          onValueChange={(v) => set({ onboardingId: v === "ninguno" ? undefined : v })}
+          value={ctx.onboardingId ?? 'ninguno'}
+          onValueChange={(v) => set({ onboardingId: v === 'ninguno' ? undefined : v })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -582,10 +580,10 @@ export function CamposContexto({
       </Field>
 
       {ctx.contactoId ? (
-        <div className="sm:col-span-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <div className="border-border bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs sm:col-span-2">
           {propuesta.propuesto ? (
             <span className="flex flex-wrap items-center gap-2">
-              Propuesta de LEX: expediente abierto{" "}
+              Propuesta de LEX: expediente abierto{' '}
               <strong className="text-foreground">{propuesta.propuesto.codigo}</strong>
               <Button
                 type="button"
@@ -612,7 +610,7 @@ export function CamposContexto({
         </div>
       ) : null}
     </div>
-  );
+  )
 }
 
 /* ------------------------------ Nuevo email ------------------------ */
@@ -625,73 +623,72 @@ export function NuevoEmailDialog({
   respuestaDe,
   onRegistrada,
 }: {
-  trigger: ReactNode;
+  trigger: ReactNode
   /** Contexto heredado automáticamente desde donde se abre. */
-  contexto?: ContextoComunicacion;
-  destinatarioInicial?: string;
-  asuntoInicial?: string;
-  respuestaDe?: string;
-  onRegistrada?: (id: string) => void;
+  contexto?: ContextoComunicacion
+  destinatarioInicial?: string
+  asuntoInicial?: string
+  respuestaDe?: string
+  onRegistrada?: (id: string) => void
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [abierto, setAbierto] = useState(false);
-  const [ctx, setCtx] = useState<ContextoComunicacion>(contexto ?? {});
-  const [cuenta, setCuenta] = useState(CUENTAS_CORREO[0]!.direccion);
-  const [para, setPara] = useState(destinatarioInicial ?? "");
-  const [cc, setCc] = useState("");
-  const [asunto, setAsunto] = useState(asuntoInicial ?? "");
-  const [cuerpo, setCuerpo] = useState("");
-  const [adjuntos, setAdjuntos] = useState("");
-  const [docsExpediente, setDocsExpediente] = useState<string[]>([]);
+  const usuario = useOps((s) => s.usuario)
+  const [abierto, setAbierto] = useState(false)
+  const [ctx, setCtx] = useState<ContextoComunicacion>(contexto ?? {})
+  const [cuenta, setCuenta] = useState(CUENTAS_CORREO[0]!.direccion)
+  const [para, setPara] = useState(destinatarioInicial ?? '')
+  const [cc, setCc] = useState('')
+  const [asunto, setAsunto] = useState(asuntoInicial ?? '')
+  const [cuerpo, setCuerpo] = useState('')
+  const [adjuntos, setAdjuntos] = useState('')
+  const [docsExpediente, setDocsExpediente] = useState<string[]>([])
   /** Abierto DESDE un expediente: contexto heredado, no editable. */
-  const desdeExpediente = contexto?.expedienteId;
+  const desdeExpediente = contexto?.expedienteId
   const documentos = useOps((s) =>
     desdeExpediente ? s.documentos.filter((d) => d.expedienteId === desdeExpediente) : [],
-  );
+  )
 
   const abrir = (v: boolean) => {
-    setAbierto(v);
+    setAbierto(v)
     if (v) {
-      setCtx(contexto ?? {});
-      setPara(destinatarioInicial ?? emailContactoPorId(contexto?.contactoId) ?? "");
-      setAsunto(asuntoInicial ?? "");
-      setDocsExpediente([]);
+      setCtx(contexto ?? {})
+      setPara(destinatarioInicial ?? emailContactoPorId(contexto?.contactoId) ?? '')
+      setAsunto(asuntoInicial ?? '')
+      setDocsExpediente([])
     }
-  };
-
+  }
 
   const aplicarPlantilla = (p: PlantillaLex) => {
-    const v = valoresContexto(ctx, usuario);
-    if (p.asunto) setAsunto(aplicarVariables(p.asunto, v));
-    setCuerpo(aplicarVariables(p.cuerpo, v));
-  };
+    const v = valoresContexto(ctx, usuario)
+    if (p.asunto) setAsunto(aplicarVariables(p.asunto, v))
+    setCuerpo(aplicarVariables(p.cuerpo, v))
+  }
 
   const guardar = () => {
     if (!para.trim()) {
-      toast.error("Indica al menos un destinatario.");
-      return;
+      toast.error('Indica al menos un destinatario.')
+      return
     }
     if (!asunto.trim()) {
-      toast.error("Indica el asunto.");
-      return;
+      toast.error('Indica el asunto.')
+      return
     }
     const id = ops.registrarComunicacion({
-      canal: "Email",
-      direccion: "Salida",
+      canal: 'Email',
+      direccion: 'Salida',
       asunto,
       contenido: cuerpo,
       cuenta,
       emisor: usuario,
       destinatarios: [para, ...(cc ? [`CC: ${cc}`] : [])],
-      estadoEnvio: "Borrador",
-      triaje: "Tratada",
+      estadoEnvio: 'Borrador',
+      triaje: 'Tratada',
       ...(respuestaDe ? { respuestaDe } : {}),
       ...ctxLimpio(ctx),
       ...(adjuntos.trim() || docsExpediente.length
         ? {
             adjuntosRef: [
               ...adjuntos
-                .split(",")
+                .split(',')
                 .map((n) => n.trim())
                 .filter(Boolean)
                 .map((nombre) => ({ nombre })),
@@ -702,18 +699,18 @@ export function NuevoEmailDialog({
             ],
           }
         : {}),
-    });
-    if (respuestaDe) ops.marcarContestada(respuestaDe);
-    toast.success("Email preparado", {
-      description: "Queda registrado en COMUNICACIONES como preparado. El envío real está pendiente de integración.",
-    });
-    onRegistrada?.(id);
-    setAbierto(false);
-    setCuerpo("");
-    setAdjuntos("");
-    setDocsExpediente([]);
-
-  };
+    })
+    if (respuestaDe) ops.marcarContestada(respuestaDe)
+    toast.success('Email preparado', {
+      description:
+        'Queda registrado en COMUNICACIONES como preparado. El envío real está pendiente de integración.',
+    })
+    onRegistrada?.(id)
+    setAbierto(false)
+    setCuerpo('')
+    setAdjuntos('')
+    setDocsExpediente([])
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={abrir}>
@@ -737,7 +734,7 @@ export function NuevoEmailDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CUENTAS_CORREO.filter((c) => c.canal === "Email").map((c) => (
+                  {CUENTAS_CORREO.filter((c) => c.canal === 'Email').map((c) => (
                     <SelectItem key={c.id} value={c.direccion}>
                       {c.direccion}
                     </SelectItem>
@@ -752,12 +749,16 @@ export function NuevoEmailDialog({
                   canal="Email"
                   value={para}
                   onChange={(dato, i) => {
-                    setPara(dato);
-                    setCtx((c) => ({ ...c, ...(i.contactoId ? { contactoId: i.contactoId } : {}) }));
+                    setPara(dato)
+                    setCtx((c) => ({ ...c, ...(i.contactoId ? { contactoId: i.contactoId } : {}) }))
                   }}
                 />
               ) : (
-                <Input value={para} onChange={(e) => setPara(e.target.value)} placeholder="correo@dominio.es" />
+                <Input
+                  value={para}
+                  onChange={(e) => setPara(e.target.value)}
+                  placeholder="correo@dominio.es"
+                />
               )}
             </Field>
             <Field label="CC (opcional)">
@@ -799,25 +800,23 @@ export function NuevoEmailDialog({
           ) : null}
 
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {desdeExpediente ? "Contexto heredado" : "Contacto y contexto"}
+            <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wide uppercase">
+              {desdeExpediente ? 'Contexto heredado' : 'Contacto y contexto'}
             </p>
             {desdeExpediente ? (
               <ContextoExpedienteFijo expedienteId={desdeExpediente} />
             ) : (
               <ContactoContexto
                 label="Contacto"
-                contactoId={ctx.contactoId ?? ""}
+                contactoId={ctx.contactoId ?? ''}
                 onChange={(v) => {
-                  setCtx(v ? { contactoId: v } : {});
-                  const email = emailContactoPorId(v);
-                  if (email) setPara(email);
+                  setCtx(v ? { contactoId: v } : {})
+                  const email = emailContactoPorId(v)
+                  if (email) setPara(email)
                 }}
               />
             )}
           </div>
-
-
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
@@ -834,7 +833,7 @@ export function NuevoEmailDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /* ---------------------------- Nuevo WhatsApp ------------------------ */
@@ -844,51 +843,51 @@ export function NuevoWhatsappDialog({
   contexto,
   onRegistrada,
 }: {
-  trigger: ReactNode;
-  contexto?: ContextoComunicacion;
-  onRegistrada?: (id: string) => void;
+  trigger: ReactNode
+  contexto?: ContextoComunicacion
+  onRegistrada?: (id: string) => void
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [abierto, setAbierto] = useState(false);
-  const [ctx, setCtx] = useState<ContextoComunicacion>(contexto ?? {});
-  const [destinatario, setDestinatario] = useState("");
-  const [texto, setTexto] = useState("");
-  const [adjunto, setAdjunto] = useState("");
-  const [docsExpediente, setDocsExpediente] = useState<string[]>([]);
+  const usuario = useOps((s) => s.usuario)
+  const [abierto, setAbierto] = useState(false)
+  const [ctx, setCtx] = useState<ContextoComunicacion>(contexto ?? {})
+  const [destinatario, setDestinatario] = useState('')
+  const [texto, setTexto] = useState('')
+  const [adjunto, setAdjunto] = useState('')
+  const [docsExpediente, setDocsExpediente] = useState<string[]>([])
   /** Abierto DESDE un expediente: contexto heredado, no editable. */
-  const desdeExpediente = contexto?.expedienteId;
+  const desdeExpediente = contexto?.expedienteId
   const documentos = useOps((s) =>
     desdeExpediente ? s.documentos.filter((d) => d.expedienteId === desdeExpediente) : [],
-  );
+  )
 
   const abrir = (v: boolean) => {
-    setAbierto(v);
+    setAbierto(v)
     if (v) {
-      setCtx(contexto ?? {});
-      setDestinatario(telefonoContactoPorId(contexto?.contactoId));
-      setDocsExpediente([]);
+      setCtx(contexto ?? {})
+      setDestinatario(telefonoContactoPorId(contexto?.contactoId))
+      setDocsExpediente([])
     }
-  };
+  }
 
   const guardar = () => {
     if (!destinatario.trim()) {
-      toast.error("Indica el destinatario.");
-      return;
+      toast.error('Indica el destinatario.')
+      return
     }
     if (!texto.trim()) {
-      toast.error("Escribe el mensaje.");
-      return;
+      toast.error('Escribe el mensaje.')
+      return
     }
     const id = ops.registrarComunicacion({
-      canal: "WhatsApp",
-      direccion: "Salida",
+      canal: 'WhatsApp',
+      direccion: 'Salida',
       asunto: texto.slice(0, 80),
       contenido: texto,
       emisor: usuario,
       destinatarios: [destinatario],
-      cuenta: CUENTAS_CORREO.find((c) => c.canal === "WhatsApp")?.direccion ?? "",
-      estadoEnvio: "Borrador",
-      triaje: "Tratada",
+      cuenta: CUENTAS_CORREO.find((c) => c.canal === 'WhatsApp')?.direccion ?? '',
+      estadoEnvio: 'Borrador',
+      triaje: 'Tratada',
       ...ctxLimpio(ctx),
       ...(adjunto.trim() || docsExpediente.length
         ? {
@@ -901,16 +900,17 @@ export function NuevoWhatsappDialog({
             ],
           }
         : {}),
-    });
-    toast.success("Mensaje preparado", {
-      description: "Registrado en COMUNICACIONES. El envío por WhatsApp Business está pendiente de integración.",
-    });
-    onRegistrada?.(id);
-    setAbierto(false);
-    setTexto("");
-    setAdjunto("");
-    setDocsExpediente([]);
-  };
+    })
+    toast.success('Mensaje preparado', {
+      description:
+        'Registrado en COMUNICACIONES. El envío por WhatsApp Business está pendiente de integración.',
+    })
+    onRegistrada?.(id)
+    setAbierto(false)
+    setTexto('')
+    setAdjunto('')
+    setDocsExpediente([])
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={abrir}>
@@ -933,12 +933,16 @@ export function NuevoWhatsappDialog({
                 canal="WhatsApp"
                 value={destinatario}
                 onChange={(dato, i) => {
-                  setDestinatario(dato);
-                  setCtx((c) => ({ ...c, ...(i.contactoId ? { contactoId: i.contactoId } : {}) }));
+                  setDestinatario(dato)
+                  setCtx((c) => ({ ...c, ...(i.contactoId ? { contactoId: i.contactoId } : {}) }))
                 }}
               />
             ) : (
-              <Input value={destinatario} onChange={(e) => setDestinatario(e.target.value)} placeholder="+34 ..." />
+              <Input
+                value={destinatario}
+                onChange={(e) => setDestinatario(e.target.value)}
+                placeholder="+34 ..."
+              />
             )}
           </Field>
           <Field label="Plantilla">
@@ -964,25 +968,23 @@ export function NuevoWhatsappDialog({
             </Field>
           ) : null}
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {desdeExpediente ? "Contexto heredado" : "Contacto y contexto"}
+            <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wide uppercase">
+              {desdeExpediente ? 'Contexto heredado' : 'Contacto y contexto'}
             </p>
             {desdeExpediente ? (
               <ContextoExpedienteFijo expedienteId={desdeExpediente} />
             ) : (
               <ContactoContexto
                 label="Contacto"
-                contactoId={ctx.contactoId ?? ""}
+                contactoId={ctx.contactoId ?? ''}
                 onChange={(v) => {
-                  setCtx(v ? { contactoId: v } : {});
-                  const tel = telefonoContactoPorId(v);
-                  if (tel) setDestinatario(tel);
+                  setCtx(v ? { contactoId: v } : {})
+                  const tel = telefonoContactoPorId(v)
+                  if (tel) setDestinatario(tel)
                 }}
               />
             )}
           </div>
-
-
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
@@ -999,7 +1001,7 @@ export function NuevoWhatsappDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /* -------------------------- Registro de llamada --------------------- */
@@ -1008,57 +1010,57 @@ export function RegistroLlamadaDialog({
   trigger,
   contexto,
   contactoInicial,
-  direccionInicial = "Entrada",
+  direccionInicial = 'Entrada',
   open,
   onOpenChange,
   onRegistrada,
 }: {
-  trigger?: ReactNode;
-  contexto?: ContextoComunicacion;
-  contactoInicial?: string;
-  direccionInicial?: "Entrada" | "Salida";
-  open?: boolean;
-  onOpenChange?: (v: boolean) => void;
-  onRegistrada?: (id: string) => void;
+  trigger?: ReactNode
+  contexto?: ContextoComunicacion
+  contactoInicial?: string
+  direccionInicial?: 'Entrada' | 'Salida'
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
+  onRegistrada?: (id: string) => void
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [interno, setInterno] = useState(false);
-  const abierto = open ?? interno;
+  const usuario = useOps((s) => s.usuario)
+  const [interno, setInterno] = useState(false)
+  const abierto = open ?? interno
   const setAbierto = (v: boolean) => {
-    setInterno(v);
-    onOpenChange?.(v);
-  };
+    setInterno(v)
+    onOpenChange?.(v)
+  }
   const [ctx, setCtx] = useState<ContextoComunicacion>(
     contexto ?? (contactoInicial ? { contactoId: contactoInicial } : {}),
-  );
-  const [direccion, setDireccion] = useState<"Entrada" | "Salida">(direccionInicial);
-  const [fecha, setFecha] = useState(hoyTexto());
-  const [hora, setHora] = useState(horaActual());
-  const [notas, setNotas] = useState("");
-  const [ultima, setUltima] = useState<string | null>(null);
+  )
+  const [direccion, setDireccion] = useState<'Entrada' | 'Salida'>(direccionInicial)
+  const [fecha, setFecha] = useState(hoyTexto())
+  const [hora, setHora] = useState(horaActual())
+  const [notas, setNotas] = useState('')
+  const [ultima, setUltima] = useState<string | null>(null)
 
   const guardar = (): string | undefined => {
     /** El contacto puede quedar SIN REGISTRAR: la llamada se registra igual. */
-    const quien = ctx.contactoId ? nombreContactoPorId(ctx.contactoId) : "Sin identificar";
+    const quien = ctx.contactoId ? nombreContactoPorId(ctx.contactoId) : 'Sin identificar'
     const id = ops.registrarComunicacion({
-      canal: "Llamada",
+      canal: 'Llamada',
       direccion,
       fecha,
       hora,
-      asunto: `Llamada ${direccion === "Entrada" ? "recibida" : "realizada"} · ${quien}`,
+      asunto: `Llamada ${direccion === 'Entrada' ? 'recibida' : 'realizada'} · ${quien}`,
       notasInternas: notas,
-      emisor: direccion === "Entrada" ? quien : usuario,
-      destinatarios: [direccion === "Entrada" ? usuario : quien],
-      triaje: "Tratada",
+      emisor: direccion === 'Entrada' ? quien : usuario,
+      destinatarios: [direccion === 'Entrada' ? usuario : quien],
+      triaje: 'Tratada',
       ...ctxLimpio(ctx),
-    });
-    setUltima(id);
-    onRegistrada?.(id);
-    toast.success("Llamada registrada en COMUNICACIONES");
-    setAbierto(false);
-    setNotas("");
-    return id;
-  };
+    })
+    setUltima(id)
+    onRegistrada?.(id)
+    toast.success('Llamada registrada en COMUNICACIONES')
+    setAbierto(false)
+    setNotas('')
+    return id
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -1076,7 +1078,10 @@ export function RegistroLlamadaDialog({
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Sentido">
-              <Select value={direccion} onValueChange={(v) => setDireccion(v as "Entrada" | "Salida")}>
+              <Select
+                value={direccion}
+                onValueChange={(v) => setDireccion(v as 'Entrada' | 'Salida')}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1099,7 +1104,7 @@ export function RegistroLlamadaDialog({
           </Field>
 
           <div className="space-y-2">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wide uppercase">
               Contacto y contexto
             </p>
             {ctx.expedienteId ? (
@@ -1108,23 +1113,20 @@ export function RegistroLlamadaDialog({
                 <ContactoContexto
                   label="Contacto de la llamada"
                   expedienteId={ctx.expedienteId}
-                  contactoId={ctx.contactoId ?? ""}
+                  contactoId={ctx.contactoId ?? ''}
                   onChange={(v) => setCtx({ ...ctx, contactoId: v || undefined })}
                 />
               </>
             ) : (
               <ContactoContexto
                 label="Contacto de la llamada"
-                contactoId={ctx.contactoId ?? ""}
+                contactoId={ctx.contactoId ?? ''}
                 onChange={(v) => setCtx({ ...ctx, contactoId: v || undefined })}
               />
             )}
           </div>
 
-
-          {ultima ? (
-            <ToneBadge tono="exito">Última llamada registrada: {ultima}</ToneBadge>
-          ) : null}
+          {ultima ? <ToneBadge tono="exito">Última llamada registrada: {ultima}</ToneBadge> : null}
         </div>
 
         {/* La llamada se registra primero; las tareas nacen después desde la
@@ -1137,7 +1139,7 @@ export function RegistroLlamadaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /* ------------- TAREA ESPECIAL DE COMUNICACIÓN (Email/WA/Llamada) ------------- */
@@ -1154,47 +1156,47 @@ export function TareaEspecialComunicacionDialog({
   trigger,
   onCreada,
 }: {
-  comunicacion: Comunicacion;
-  canalInicial?: "Email" | "WhatsApp" | "Llamada";
-  trigger: ReactNode;
-  onCreada?: (tareaId: string) => void;
+  comunicacion: Comunicacion
+  canalInicial?: 'Email' | 'WhatsApp' | 'Llamada'
+  trigger: ReactNode
+  onCreada?: (tareaId: string) => void
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const [abierto, setAbierto] = useState(false);
-  const canalPorDefecto: "Email" | "WhatsApp" | "Llamada" =
-    canalInicial ?? (canalDe(comunicacion) === "Otro" ? "Email" : (canalDe(comunicacion) as never));
-  const [canal, setCanal] = useState<"Email" | "WhatsApp" | "Llamada">(canalPorDefecto);
-  const [indicaciones, setIndicaciones] = useState("");
-  const [responsable, setResponsable] = useState(comunicacion.responsable || usuario);
-  const [vencimiento, setVencimiento] = useState("");
+  const usuario = useOps((s) => s.usuario)
+  const [abierto, setAbierto] = useState(false)
+  const canalPorDefecto: 'Email' | 'WhatsApp' | 'Llamada' =
+    canalInicial ?? (canalDe(comunicacion) === 'Otro' ? 'Email' : (canalDe(comunicacion) as never))
+  const [canal, setCanal] = useState<'Email' | 'WhatsApp' | 'Llamada'>(canalPorDefecto)
+  const [indicaciones, setIndicaciones] = useState('')
+  const [responsable, setResponsable] = useState(comunicacion.responsable || usuario)
+  const [vencimiento, setVencimiento] = useState('')
 
-  const contacto = nombreContactoPorId(comunicacion.contactoId) || comunicacion.emisor;
+  const contacto = nombreContactoPorId(comunicacion.contactoId) || comunicacion.emisor
 
   /**
    * TÍTULO OBLIGATORIO Y AUTOGENERADO. LEX lo propone según canal, sentido de
    * la comunicación original y contacto; el usuario puede editarlo.
    */
-  const tituloSugerido = (c: "Email" | "WhatsApp" | "Llamada") => {
-    const quien = contacto || "el contacto";
-    const entrante = (comunicacion.direccion ?? "Entrada") === "Entrada";
-    if (c === "Llamada") return entrante ? `Devolver llamada a ${quien}` : `Llamar a ${quien}`;
-    if (c === "WhatsApp")
-      return entrante ? `Responder WhatsApp a ${quien}` : `Enviar WhatsApp a ${quien}`;
-    return entrante ? `Responder email a ${quien}` : `Enviar email a ${quien}`;
-  };
+  const tituloSugerido = (c: 'Email' | 'WhatsApp' | 'Llamada') => {
+    const quien = contacto || 'el contacto'
+    const entrante = (comunicacion.direccion ?? 'Entrada') === 'Entrada'
+    if (c === 'Llamada') return entrante ? `Devolver llamada a ${quien}` : `Llamar a ${quien}`
+    if (c === 'WhatsApp')
+      return entrante ? `Responder WhatsApp a ${quien}` : `Enviar WhatsApp a ${quien}`
+    return entrante ? `Responder email a ${quien}` : `Enviar email a ${quien}`
+  }
 
-  const [titulo, setTitulo] = useState(() => tituloSugerido(canalPorDefecto));
-  const [tituloTocado, setTituloTocado] = useState(false);
+  const [titulo, setTitulo] = useState(() => tituloSugerido(canalPorDefecto))
+  const [tituloTocado, setTituloTocado] = useState(false)
 
-  const cambiarCanal = (c: "Email" | "WhatsApp" | "Llamada") => {
-    setCanal(c);
-    if (!tituloTocado) setTitulo(tituloSugerido(c));
-  };
+  const cambiarCanal = (c: 'Email' | 'WhatsApp' | 'Llamada') => {
+    setCanal(c)
+    if (!tituloTocado) setTitulo(tituloSugerido(c))
+  }
 
   const crear = () => {
     if (!titulo.trim()) {
-      toast.error("El título es obligatorio.");
-      return;
+      toast.error('El título es obligatorio.')
+      return
     }
     const id = ops.crearTareaEspecialComunicacion({
       canal,
@@ -1208,14 +1210,13 @@ export function TareaEspecialComunicacionDialog({
       ...(comunicacion.leadId ? { leadId: comunicacion.leadId } : {}),
       ...(comunicacion.onboardingId ? { onboardingId: comunicacion.onboardingId } : {}),
       ...(comunicacion.expedienteId ? { expedienteId: comunicacion.expedienteId } : {}),
-    });
-    setAbierto(false);
-    toast.success("Tarea especial de comunicación creada", {
-      description: "La comunicación original queda accesible desde la propia tarea.",
-    });
-    if (id) onCreada?.(id);
-  };
-
+    })
+    setAbierto(false)
+    toast.success('Tarea especial de comunicación creada', {
+      description: 'La comunicación original queda accesible desde la propia tarea.',
+    })
+    if (id) onCreada?.(id)
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -1224,8 +1225,8 @@ export function TareaEspecialComunicacionDialog({
         <DialogHeader>
           <DialogTitle>Tarea especial de comunicación</DialogTitle>
           <DialogDescription>
-            Lo que hay que hacer es comunicar. Si además hay trabajo jurídico, crea una tarea
-            normal desde la ficha de la comunicación.
+            Lo que hay que hacer es comunicar. Si además hay trabajo jurídico, crea una tarea normal
+            desde la ficha de la comunicación.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -1261,8 +1262,8 @@ export function TareaEspecialComunicacionDialog({
             <Input
               value={titulo}
               onChange={(e) => {
-                setTitulo(e.target.value);
-                setTituloTocado(true);
+                setTitulo(e.target.value)
+                setTituloTocado(true)
               }}
               placeholder={tituloSugerido(canal)}
             />
@@ -1279,8 +1280,8 @@ export function TareaEspecialComunicacionDialog({
           <Field label="Vencimiento (opcional)">
             <SelectorFecha value={vencimiento} onChange={setVencimiento} />
           </Field>
-          <p className="rounded-md border border-border bg-muted/40 p-2.5 text-xs text-muted-foreground">
-            Comunicación original: {comunicacion.asunto || "(sin asunto)"} · {comunicacion.fecha}{" "}
+          <p className="border-border bg-muted/40 text-muted-foreground rounded-md border p-2.5 text-xs">
+            Comunicación original: {comunicacion.asunto || '(sin asunto)'} · {comunicacion.fecha}{' '}
             {comunicacion.hora}
           </p>
         </div>
@@ -1292,5 +1293,5 @@ export function TareaEspecialComunicacionDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

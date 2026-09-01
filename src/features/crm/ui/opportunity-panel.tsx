@@ -1,12 +1,4 @@
-import { Cronologia } from "@/components/comunicaciones/cronologia";
-import {
-  NuevoEmailDialog,
-  RegistroLlamadaDialog,
-} from "@/components/comunicaciones/dialogos";
-import { comunicacionesDeLead, useOps as useOpsComs } from "@/lib/expedientes-store";
-import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
+import { Link } from '@tanstack/react-router'
 import {
   AlertTriangle,
   ArrowDown,
@@ -19,12 +11,20 @@ import {
   ShieldCheck,
   Trash2,
   X,
-} from "lucide-react";
+} from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Field, ToneBadge } from "@/components/crm/ui";
-import { PendingBadge } from "@/components/common";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PendingBadge, StatTile } from '@/components/common'
+import { Cronologia } from '@/components/comunicaciones/cronologia'
+import { NuevoEmailDialog, RegistroLlamadaDialog } from '@/components/comunicaciones/dialogos'
+import { NuevaNotaBoton } from '@/components/notas/nota-form'
+import { NotaMuro } from '@/components/notas/nota-muro'
+import { TareaFicha } from '@/components/tareas/ficha-modal'
+import { SiguienteAccionBloque } from '@/components/tareas/siguiente-accion'
+import { NuevaTareaRapidaDialog, TareaCard } from '@/components/tareas/ui'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -33,37 +33,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatTile } from "@/components/common";
-import { NuevaNotaBoton } from "@/components/notas/nota-form";
-import { IniciarOnboardingDesdeLead } from "@/components/crm/onboarding-lead-action";
-
-import { NotaMuro } from "@/components/notas/nota-muro";
-import { AVISO_INTERNO } from "@/data/notas";
-import { estaVencida, necesitaRevision, notasDeOportunidad, useNotas } from "@/lib/notas-store";
-
-import { Textarea } from "@/components/ui/textarea";
-import { USUARIOS, nombreContacto, type Prioridad, type Tono } from "@/data/crm";
+} from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { USUARIOS, nombreContacto, type Prioridad, type Tono } from '@/data/crm'
+import { AVISO_INTERNO } from '@/data/notas'
 import {
-  FORMAS_ACEPTACION,
   DECISIONES_CUALIFICACION,
   ESTADOS_CITA,
-  ESTADOS_OPERATIVOS,
   ESTADOS_PRESUPUESTO_ESPEJO,
   FASES,
   FASES_ACTIVAS,
+  FORMAS_ACEPTACION,
   LUGARES_CITA,
   PREGUNTAS_CUALIFICACION_SUGERIDAS,
   RESULTADOS_CITA,
+  ROLES_OPORTUNIDAD,
   TIPOS_CIERRE,
   alertasDe,
   diasDesde,
@@ -75,21 +68,26 @@ import {
   type OportunidadCRM,
   type PreguntaCualificacion,
   type RespuestaCualificacion,
-  ROLES_OPORTUNIDAD,
-} from "@/data/pipeline";
-import { SiguienteAccionBloque } from "@/components/tareas/siguiente-accion";
-import { NuevaTareaRapidaDialog, TareaCard } from "@/components/tareas/ui";
-import { TareaFicha } from "@/components/tareas/ficha-modal";
-import { senalesTarea, useOps } from "@/lib/expedientes-store";
-import { crm, useCrm } from "@/lib/crm-store";
+} from '@/data/pipeline'
+import { crm, useCrm } from '@/lib/crm-store'
+import {
+  comunicacionesDeLead,
+  senalesTarea,
+  useOps,
+  useOps as useOpsComs,
+} from '@/lib/expedientes-store'
+import { estaVencida, necesitaRevision, notasDeOportunidad, useNotas } from '@/lib/notas-store'
+
+import { IniciarOnboardingDesdeLead } from './onboarding-lead-action'
+import { Field, ToneBadge } from './ui'
 
 function Dato({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="mt-0.5 text-sm text-foreground">{value || "—"}</div>
+      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">{label}</p>
+      <div className="text-foreground mt-0.5 text-sm">{value || '—'}</div>
     </div>
-  );
+  )
 }
 
 function Bloque({
@@ -97,21 +95,21 @@ function Bloque({
   children,
   action,
 }: {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
+  title: string
+  children: React.ReactNode
+  action?: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <section className="border-border bg-card rounded-lg border p-4">
       <header className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           {title}
         </h3>
         {action}
       </header>
       {children}
     </section>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -123,15 +121,15 @@ export function CerrarOportunidadDialog({
   trigger,
   onDone,
 }: {
-  o: OportunidadCRM;
-  trigger: React.ReactNode;
-  onDone?: () => void;
+  o: OportunidadCRM
+  trigger: React.ReactNode
+  onDone?: () => void
 }) {
-  const [abierto, setAbierto] = useState(false);
-  const [tipo, setTipo] = useState<string>(TIPOS_CIERRE[0].label);
-  const [motivo, setMotivo] = useState<string>(TIPOS_CIERRE[0].motivos[0]);
-  const [comentario, setComentario] = useState("");
-  const motivos = TIPOS_CIERRE.find((t) => t.label === tipo)?.motivos ?? [];
+  const [abierto, setAbierto] = useState(false)
+  const [tipo, setTipo] = useState<string>(TIPOS_CIERRE[0].label)
+  const [motivo, setMotivo] = useState<string>(TIPOS_CIERRE[0].motivos[0])
+  const [comentario, setComentario] = useState('')
+  const motivos = TIPOS_CIERRE.find((t) => t.label === tipo)?.motivos ?? []
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -148,8 +146,8 @@ export function CerrarOportunidadDialog({
             <Select
               value={tipo}
               onValueChange={(v) => {
-                setTipo(v);
-                setMotivo(TIPOS_CIERRE.find((t) => t.label === v)?.motivos[0] ?? "");
+                setTipo(v)
+                setMotivo(TIPOS_CIERRE.find((t) => t.label === v)?.motivos[0] ?? '')
               }}
             >
               <SelectTrigger>
@@ -189,10 +187,10 @@ export function CerrarOportunidadDialog({
           <Button
             variant="destructive"
             onClick={() => {
-              crm.cerrar(o.id, { tipo, motivo, comentario });
-              toast.success("Lead cerrado", { description: `${tipo} · ${motivo}` });
-              setAbierto(false);
-              onDone?.();
+              crm.cerrar(o.id, { tipo, motivo, comentario })
+              toast.success('Lead cerrado', { description: `${tipo} · ${motivo}` })
+              setAbierto(false)
+              onDone?.()
             }}
           >
             Cerrar Lead
@@ -200,17 +198,17 @@ export function CerrarOportunidadDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export function ReabrirDialog({ o, trigger }: { o: OportunidadCRM; trigger: React.ReactNode }) {
-  const rol = useCrm((s) => s.rol);
-  const [abierto, setAbierto] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [destino, setDestino] = useState<FaseId>("cualificacion");
-  const [responsable, setResponsable] = useState(o.responsable || USUARIOS[1]!.nombre);
-  const [accion, setAccion] = useState("Contactar de nuevo con el cliente");
-  const permitido = rol === "Administrador/Igor";
+  const rol = useCrm((s) => s.rol)
+  const [abierto, setAbierto] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [destino, setDestino] = useState<FaseId>('cualificacion')
+  const [responsable, setResponsable] = useState(o.responsable || USUARIOS[1]!.nombre)
+  const [accion, setAccion] = useState('Contactar de nuevo con el cliente')
+  const permitido = rol === 'Administrador/Igor'
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -223,7 +221,7 @@ export function ReabrirDialog({ o, trigger }: { o: OportunidadCRM; trigger: Reac
           </DialogDescription>
         </DialogHeader>
         {!permitido ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-3 text-sm">
             Tu perfil actual ({rol}) no puede reabrir Leads cerrados.
           </p>
         ) : (
@@ -277,16 +275,16 @@ export function ReabrirDialog({ o, trigger }: { o: OportunidadCRM; trigger: Reac
                 responsable,
                 proximaAccion: {
                   descripcion: accion,
-                  tipo: "Seguimiento",
+                  tipo: 'Seguimiento',
                   responsable,
                   fechaPrevista: sumarDias(1),
-                  fechaLimite: "",
-                  prioridad: "Media",
-                  estado: "Pendiente",
+                  fechaLimite: '',
+                  prioridad: 'Media',
+                  estado: 'Pendiente',
                 },
-              });
-              toast.success("Lead reabierto");
-              setAbierto(false);
+              })
+              toast.success('Lead reabierto')
+              setAbierto(false)
             }}
           >
             Reabrir
@@ -294,7 +292,7 @@ export function ReabrirDialog({ o, trigger }: { o: OportunidadCRM; trigger: Reac
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export function GateDialog({
@@ -305,38 +303,38 @@ export function GateDialog({
   oportunidad,
   onForzar,
 }: {
-  abierto: boolean;
-  onOpenChange: (v: boolean) => void;
-  destino: FaseId | null;
-  faltantes: { label: string; ok: boolean }[];
-  oportunidad?: OportunidadCRM | undefined;
-  onForzar?: ((motivo: string) => void) | undefined;
+  abierto: boolean
+  onOpenChange: (v: boolean) => void
+  destino: FaseId | null
+  faltantes: { label: string; ok: boolean }[]
+  oportunidad?: OportunidadCRM | undefined
+  onForzar?: ((motivo: string) => void) | undefined
 }) {
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState('')
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Movimiento bloqueado</DialogTitle>
           <DialogDescription>
-            {oportunidad?.codigo} no cumple los requisitos para pasar a{" "}
-            {destino ? faseDef(destino).nombre : ""}.
+            {oportunidad?.codigo} no cumple los requisitos para pasar a{' '}
+            {destino ? faseDef(destino).nombre : ''}.
           </DialogDescription>
         </DialogHeader>
         <ul className="space-y-2 py-1">
           {faltantes.map((f) => (
-            <li key={f.label} className="flex items-start gap-2 text-sm text-foreground">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <li key={f.label} className="text-foreground flex items-start gap-2 text-sm">
+              <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
               {f.label}
             </li>
           ))}
         </ul>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Completa los datos en el panel del Lead (pestañas Cualificación, Primera cita, Presupuesto
           o Contratación) y vuelve a intentarlo.
         </p>
         {onForzar ? (
-          <div className="space-y-2 rounded-md border border-border p-3">
+          <div className="border-border space-y-2 rounded-md border p-3">
             <Field label="Motivo de la excepción (Administrador/Igor)">
               <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} />
             </Field>
@@ -345,8 +343,8 @@ export function GateDialog({
               variant="outline"
               disabled={!motivo.trim()}
               onClick={() => {
-                onForzar(motivo);
-                setMotivo("");
+                onForzar(motivo)
+                setMotivo('')
               }}
             >
               Mover con excepción autorizada
@@ -360,7 +358,7 @@ export function GateDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -368,30 +366,30 @@ export function GateDialog({
 /* ------------------------------------------------------------------ */
 
 export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
-  const o = useCrm((s) => s.oportunidades.find((x) => x.id === oportunidadId) ?? null);
+  const o = useCrm((s) => s.oportunidades.find((x) => x.id === oportunidadId) ?? null)
 
-  const rol = useCrm((s) => s.rol);
-  const usuario = useCrm((s) => s.usuario);
+  const rol = useCrm((s) => s.rol)
+  const usuario = useCrm((s) => s.usuario)
 
   if (!o) {
     return (
-      <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+      <p className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
         No se ha encontrado el Lead solicitado.
       </p>
-    );
+    )
   }
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <div className="rounded-lg border border-border bg-card">
-        <div className="border-b border-border p-5">
+      <div className="border-border bg-card rounded-lg border">
+        <div className="border-border border-b p-5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">{o.codigo}</span>
+            <span className="text-muted-foreground text-xs font-medium">{o.codigo}</span>
             <ToneBadge tono={faseDef(o.fase).tono}>{faseDef(o.fase).nombre}</ToneBadge>
             <ToneBadge tono="neutro">{o.subestado}</ToneBadge>
           </div>
           <h1 className="mt-1 text-left font-serif text-2xl">{o.titulo}</h1>
-          <p className="text-left text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-left text-sm">
             {nombreContacto(o.contactoId)} · {o.area} · {o.responsable} · {antiguedadLead(o)} como
             Lead
           </p>
@@ -399,7 +397,7 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
             {alertasDe(o).map((a) => (
               <span
                 key={a}
-                className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
+                className="border-destructive/30 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
               >
                 <AlertTriangle className="h-3 w-3" /> {a}
               </span>
@@ -459,7 +457,7 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
                 <Dato label="Origen" value={o.origen} />
                 <Dato
                   label="Tiempo como Lead"
-                  value={`${antiguedadLead(o)} · desde ${o.fechaEntrada || "—"}`}
+                  value={`${antiguedadLead(o)} · desde ${o.fechaEntrada || '—'}`}
                 />
               </div>
             </Bloque>
@@ -472,7 +470,7 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
                 <Dato label="Presupuesto" value={o.presupuestoEspejo.estado} />
                 <Dato
                   label="Aceptación"
-                  value={o.aceptacion ? `Aceptado · ${o.aceptacion.fecha}` : "Sin aceptación"}
+                  value={o.aceptacion ? `Aceptado · ${o.aceptacion.fecha}` : 'Sin aceptación'}
                 />
               </div>
             </Bloque>
@@ -480,7 +478,7 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
             {o.expedienteId ? (
               <Bloque title="Expediente">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-foreground">{o.expedienteId}</p>
+                  <p className="text-foreground text-sm font-medium">{o.expedienteId}</p>
                   <Button size="sm" variant="outline" asChild>
                     <Link to="/expedientes">
                       Abrir expediente <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -511,11 +509,11 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field label="Rol en el Lead">
                   <Select
-                    value={o.rolContacto?.rol || ""}
+                    value={o.rolContacto?.rol || ''}
                     onValueChange={(v) =>
                       crm.actualizar(
                         o.id,
-                        { rolContacto: { rol: v, aclaracion: o.rolContacto?.aclaracion ?? "" } },
+                        { rolContacto: { rol: v, aclaracion: o.rolContacto?.aclaracion ?? '' } },
                         `Rol del contacto: ${v}`,
                       )
                     }
@@ -537,19 +535,19 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
 
             <Bloque title="Otros intervinientes">
               {(o.otrosIntervinientes ?? []).length ? (
-                <ul className="divide-y divide-border">
+                <ul className="divide-border divide-y">
                   {(o.otrosIntervinientes ?? []).map((i) => (
                     <li key={i.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                      <span className="font-medium text-foreground">{i.nombre}</span>
+                      <span className="text-foreground font-medium">{i.nombre}</span>
                       <span className="text-muted-foreground">— {i.rol}</span>
                       {i.aclaracion ? (
-                        <span className="text-xs text-muted-foreground">· {i.aclaracion}</span>
+                        <span className="text-muted-foreground text-xs">· {i.aclaracion}</span>
                       ) : null}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   No hay otros intervinientes vinculados a este Lead.
                 </p>
               )}
@@ -559,23 +557,23 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
               <div className="space-y-3 text-sm">
                 <Dato
                   label="¿Qué ha ocurrido?"
-                  value={o.informacionInicial?.queHaOcurrido || o.descripcion || "—"}
+                  value={o.informacionInicial?.queHaOcurrido || o.descripcion || '—'}
                 />
-                <Dato label="¿Qué solicita?" value={o.informacionInicial?.queSolicita || "—"} />
+                <Dato label="¿Qué solicita?" value={o.informacionInicial?.queSolicita || '—'} />
                 <Dato
                   label="¿Existe algún procedimiento ya iniciado?"
-                  value={o.informacionInicial?.procedimientoIniciado || "—"}
+                  value={o.informacionInicial?.procedimientoIniciado || '—'}
                 />
                 <Dato
                   label="¿Qué documentación manifiesta tener?"
-                  value={o.informacionInicial?.documentacionManifestada || "—"}
+                  value={o.informacionInicial?.documentacionManifestada || '—'}
                 />
                 <Dato
                   label="¿Existe alguna urgencia o fecha relevante?"
                   value={
                     o.urgencia?.opcion
-                      ? `${o.urgencia.opcion}${o.urgencia.detalle ? ` — ${o.urgencia.detalle}` : ""}`
-                      : "Sin indicar"
+                      ? `${o.urgencia.opcion}${o.urgencia.detalle ? ` — ${o.urgencia.detalle}` : ''}`
+                      : 'Sin indicar'
                   }
                 />
               </div>
@@ -677,7 +675,7 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
                     onBlur={(e) => crm.actualizar(o.id, { documentacionPendiente: e.target.value })}
                   />
                 </Field>
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <p className="text-muted-foreground flex items-center gap-2 text-xs">
                   <FileText className="h-3.5 w-3.5" /> La gestión documental completa se
                   desarrollará con el módulo Documentos. <PendingBadge />
                 </p>
@@ -687,17 +685,17 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
 
           <TabsContent value="historial" className="mt-4 space-y-4">
             <Bloque title="Historial del Lead">
-              <ol className="relative ml-2 border-l border-border pl-5">
+              <ol className="border-border relative ml-2 border-l pl-5">
                 {[...o.historial].reverse().map((h, i) => (
                   <li key={i} className="relative pb-4 last:pb-0">
-                    <span className="absolute -left-[1.55rem] top-1.5 h-2.5 w-2.5 rounded-full bg-muted-foreground/60" />
+                    <span className="bg-muted-foreground/60 absolute top-1.5 -left-[1.55rem] h-2.5 w-2.5 rounded-full" />
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{h.tipo}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-foreground text-sm font-medium">{h.tipo}</span>
+                      <span className="text-muted-foreground text-xs">
                         {h.fecha} · {h.usuario}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{h.descripcion}</p>
+                    <p className="text-muted-foreground text-sm">{h.descripcion}</p>
                   </li>
                 ))}
               </ol>
@@ -706,39 +704,39 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
         </Tabs>
       </div>
     </div>
-  );
+  )
 }
 
 /** Módulo transversal de notas internas, en el ámbito de la oportunidad. */
 function NotasOportunidad({ o }: { o: OportunidadCRM }) {
-  const lista = useNotas((s) => notasDeOportunidad(s, o.id));
-  const activas = lista.filter((n) => n.estado !== "archivada");
+  const lista = useNotas((s) => notasDeOportunidad(s, o.id))
+  const activas = lista.filter((n) => n.estado !== 'archivada')
   const dias = (v?: string) =>
-    v ? Math.ceil((new Date(v).getTime() - Date.now()) / 86_400_000) : null;
+    v ? Math.ceil((new Date(v).getTime() - Date.now()) / 86_400_000) : null
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">{AVISO_INTERNO}</p>
+        <p className="text-muted-foreground max-w-2xl text-sm">{AVISO_INTERNO}</p>
         <NuevaNotaBoton
           origenFijo={{
             id: o.id,
             etiqueta: `${o.codigo} · ${o.titulo}`,
             contactos: o.contactoId ? [o.contactoId] : [],
           }}
-          inicial={{ ambito: "oportunidad", oportunidadId: o.id }}
+          inicial={{ ambito: 'oportunidad', oportunidadId: o.id }}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
           label="Destacadas activas"
-          value={activas.filter((n) => n.destacada && n.estado === "activa").length}
+          value={activas.filter((n) => n.destacada && n.estado === 'activa').length}
           tono="info"
         />
         <StatTile
           label="Advertencias críticas"
-          value={activas.filter((n) => n.critica && n.estado === "activa").length}
+          value={activas.filter((n) => n.critica && n.estado === 'activa').length}
           tono="riesgo"
         />
         <StatTile
@@ -748,15 +746,15 @@ function NotasOportunidad({ o }: { o: OportunidadCRM }) {
         />
         <StatTile
           label="Vencidas pendientes"
-          value={activas.filter((n) => estaVencida(n) && n.estado === "activa").length}
+          value={activas.filter((n) => estaVencida(n) && n.estado === 'activa').length}
           tono="aviso"
         />
         <StatTile
           label="Vencen en 7 días"
           value={
             activas.filter((n) => {
-              const d = dias(n.vencimiento);
-              return d !== null && d >= 0 && d <= 7;
+              const d = dias(n.vencimiento)
+              return d !== null && d >= 0 && d <= 7
             }).length
           }
           tono="neutro"
@@ -767,13 +765,13 @@ function NotasOportunidad({ o }: { o: OportunidadCRM }) {
         <NotaMuro notas={lista} columnas={2} vacio="Todavía no hay notas internas en este Lead." />
       </Bloque>
     </div>
-  );
+  )
 }
 
 /** Compatibilidad: la ficha se muestra en pantalla completa. */
 export function OpportunityPanel({ oportunidadId }: { oportunidadId: string | null }) {
-  if (!oportunidadId) return null;
-  return <OportunidadFicha oportunidadId={oportunidadId} />;
+  if (!oportunidadId) return null
+  return <OportunidadFicha oportunidadId={oportunidadId} />
 }
 
 /* ------------------------------------------------------------------ */
@@ -782,43 +780,43 @@ export function OpportunityPanel({ oportunidadId }: { oportunidadId: string | nu
 
 function AccionesRapidas({ o }: { o: OportunidadCRM }) {
   const [gate, setGate] = useState<{
-    destino: FaseId;
-    faltantes: { label: string; ok: boolean }[];
-  } | null>(null);
+    destino: FaseId
+    faltantes: { label: string; ok: boolean }[]
+  } | null>(null)
 
   const avanzar = () => {
     const orden: FaseId[] = [
-      "entrada",
-      "cualificacion",
-      "primera-cita",
-      "presupuesto",
-      "validacion",
-      "contratacion",
-      "ganada",
-    ];
-    const idx = orden.indexOf(o.fase);
-    const destino = orden[idx + 1];
-    if (!destino) return;
-    if (destino === "ganada") {
-      const r = crm.convertirEnExpediente(o.id);
-      if (!r.ok) setGate({ destino, faltantes: r.faltantes });
-      else toast.success(`Expediente ${r.expedienteId} creado`);
-      return;
+      'entrada',
+      'cualificacion',
+      'primera-cita',
+      'presupuesto',
+      'validacion',
+      'contratacion',
+      'ganada',
+    ]
+    const idx = orden.indexOf(o.fase)
+    const destino = orden[idx + 1]
+    if (!destino) return
+    if (destino === 'ganada') {
+      const r = crm.convertirEnExpediente(o.id)
+      if (!r.ok) setGate({ destino, faltantes: r.faltantes })
+      else toast.success(`Expediente ${r.expedienteId} creado`)
+      return
     }
-    const r = crm.moverFase(o.id, destino);
-    if (!r.ok) setGate({ destino, faltantes: r.faltantes });
-    else toast.success(`Movida a ${faseDef(destino).nombre}`);
-  };
+    const r = crm.moverFase(o.id, destino)
+    if (!r.ok) setGate({ destino, faltantes: r.faltantes })
+    else toast.success(`Movida a ${faseDef(destino).nombre}`)
+  }
 
   return (
     <div className="flex flex-wrap gap-2 pt-3">
-      {o.fase !== "ganada" && o.fase !== "cerrada" ? (
+      {o.fase !== 'ganada' && o.fase !== 'cerrada' ? (
         <Button size="sm" onClick={avanzar}>
           Avanzar de fase
         </Button>
       ) : null}
       <NuevaTareaRapidaDialog
-        origen={{ tipo: "Oportunidad", id: o.id, label: o.codigo }}
+        origen={{ tipo: 'Oportunidad', id: o.id, label: o.codigo }}
         contextoLabel={o.codigo}
         responsableInicial={o.responsable}
         trigger={
@@ -828,7 +826,7 @@ function AccionesRapidas({ o }: { o: OportunidadCRM }) {
         }
       />
 
-      {o.fase !== "cerrada" && o.fase !== "ganada" ? (
+      {o.fase !== 'cerrada' && o.fase !== 'ganada' ? (
         <CerrarOportunidadDialog
           o={o}
           trigger={
@@ -838,7 +836,7 @@ function AccionesRapidas({ o }: { o: OportunidadCRM }) {
           }
         />
       ) : null}
-      {o.fase === "cerrada" ? (
+      {o.fase === 'cerrada' ? (
         <ReabrirDialog
           o={o}
           trigger={
@@ -851,7 +849,7 @@ function AccionesRapidas({ o }: { o: OportunidadCRM }) {
       {o.expedienteId ? (
         <Link
           to="/expedientes"
-          className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+          className="border-border hover:bg-accent inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium"
         >
           Expediente {o.expedienteId} <ExternalLink className="h-3 w-3" />
         </Link>
@@ -864,7 +862,7 @@ function AccionesRapidas({ o }: { o: OportunidadCRM }) {
         oportunidad={o}
       />
     </div>
-  );
+  )
 }
 
 /**
@@ -874,19 +872,19 @@ function AccionesRapidas({ o }: { o: OportunidadCRM }) {
 function ProximaAccionBloque({ o }: { o: OportunidadCRM }) {
   return (
     <section>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
         Siguiente acción
       </h3>
       <SiguienteAccionBloque
         destacado
-        contexto={{ tipo: "Oportunidad", id: o.id, label: o.codigo }}
+        contexto={{ tipo: 'Oportunidad', id: o.id, label: o.codigo }}
       />
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-2 text-xs">
         ¿Qué hay que hacer ahora para que este Lead avance? Se gestiona como una tarea ordinaria del
         módulo de Tareas.
       </p>
     </section>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -895,24 +893,24 @@ function ProximaAccionBloque({ o }: { o: OportunidadCRM }) {
 
 /** Tiempo TOTAL desde la entrada del Lead en el despacho (no días en fase). */
 export function antiguedadLead(o: OportunidadCRM): string {
-  const dias = diasDesde(o.fechaEntrada);
-  if (dias <= 0) return "Hoy";
-  if (dias === 1) return "1 día";
-  if (dias < 31) return `${dias} días`;
-  const meses = Math.floor(dias / 30);
-  return `${meses} ${meses === 1 ? "mes" : "meses"} (${dias} días)`;
+  const dias = diasDesde(o.fechaEntrada)
+  if (dias <= 0) return 'Hoy'
+  if (dias === 1) return '1 día'
+  if (dias < 31) return `${dias} días`
+  const meses = Math.floor(dias / 30)
+  return `${meses} ${meses === 1 ? 'mes' : 'meses'} (${dias} días)`
 }
 
 /* ------------------------------------------------------------------ */
 /* Tareas del Lead — vista filtrada del módulo transversal TAREAS      */
 /* ------------------------------------------------------------------ */
 
-function TareasDelLead({ o, titulo = "Tareas del Lead" }: { o: OportunidadCRM; titulo?: string }) {
-  const estadoOps = useOps((s) => s);
-  const [abierta, setAbierta] = useState<string | null>(null);
+function TareasDelLead({ o, titulo = 'Tareas del Lead' }: { o: OportunidadCRM; titulo?: string }) {
+  const estadoOps = useOps((s) => s)
+  const [abierta, setAbierta] = useState<string | null>(null)
   const lista = estadoOps.tareas.filter(
-    (t) => t.origen?.tipo === "Oportunidad" && t.origen.id === o.id,
-  );
+    (t) => t.origen?.tipo === 'Oportunidad' && t.origen.id === o.id,
+  )
 
   return (
     <>
@@ -920,7 +918,7 @@ function TareasDelLead({ o, titulo = "Tareas del Lead" }: { o: OportunidadCRM; t
         title={`${titulo} (${lista.length})`}
         action={
           <NuevaTareaRapidaDialog
-            origen={{ tipo: "Oportunidad", id: o.id, label: o.codigo }}
+            origen={{ tipo: 'Oportunidad', id: o.id, label: o.codigo }}
             contextoLabel={o.codigo}
             responsableInicial={o.responsable}
             trigger={
@@ -943,14 +941,14 @@ function TareasDelLead({ o, titulo = "Tareas del Lead" }: { o: OportunidadCRM; t
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Sin tareas vinculadas. Toda tarea del Lead pertenece al módulo transversal de Tareas.
           </p>
         )}
       </Bloque>
       <TareaFicha tareaId={abierta} onOpenChange={(v) => !v && setAbierta(null)} />
     </>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -958,50 +956,50 @@ function TareasDelLead({ o, titulo = "Tareas del Lead" }: { o: OportunidadCRM; t
 /* ------------------------------------------------------------------ */
 
 const RESPUESTAS: { id: RespuestaCualificacion; label: string }[] = [
-  { id: "si", label: "Sí" },
-  { id: "no", label: "No" },
-  { id: "pendiente", label: "Pendiente" },
-];
+  { id: 'si', label: 'Sí' },
+  { id: 'no', label: 'No' },
+  { id: 'pendiente', label: 'Pendiente' },
+]
 
 function CualificacionBloque({ o }: { o: OportunidadCRM }) {
-  const preguntas = o.cualificacion.preguntas ?? [];
-  const [nueva, setNueva] = useState("");
+  const preguntas = o.cualificacion.preguntas ?? []
+  const [nueva, setNueva] = useState('')
 
   const guardar = (lista: PreguntaCualificacion[]) =>
-    crm.guardarCualificacion(o.id, { preguntas: lista });
+    crm.guardarCualificacion(o.id, { preguntas: lista })
 
   const añadir = (texto: string) => {
-    const t = texto.trim();
+    const t = texto.trim()
     if (!t) {
-      toast.error("Escribe la pregunta.");
-      return;
+      toast.error('Escribe la pregunta.')
+      return
     }
     guardar([
       ...preguntas,
-      { id: `PQ-${Date.now()}`, texto: t, respuesta: "pendiente", observacion: "" },
-    ]);
-    setNueva("");
-  };
+      { id: `PQ-${Date.now()}`, texto: t, respuesta: 'pendiente', observacion: '' },
+    ])
+    setNueva('')
+  }
 
   const editar = (id: string, patch: Partial<PreguntaCualificacion>) =>
-    guardar(preguntas.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    guardar(preguntas.map((p) => (p.id === id ? { ...p, ...patch } : p)))
 
-  const eliminar = (id: string) => guardar(preguntas.filter((p) => p.id !== id));
+  const eliminar = (id: string) => guardar(preguntas.filter((p) => p.id !== id))
 
   const mover = (i: number, delta: number) => {
-    const j = i + delta;
-    if (j < 0 || j >= preguntas.length) return;
-    const lista = [...preguntas];
-    const a = lista[i]!;
-    lista[i] = lista[j]!;
-    lista[j] = a;
-    guardar(lista);
-  };
+    const j = i + delta
+    if (j < 0 || j >= preguntas.length) return
+    const lista = [...preguntas]
+    const a = lista[i]!
+    lista[i] = lista[j]!
+    lista[j] = a
+    guardar(lista)
+  }
 
   return (
     <>
       <Bloque title="Preguntas de cualificación">
-        <p className="mb-3 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mb-3 text-xs">
           Cada asunto es distinto: las preguntas pertenecen a este Lead y pueden añadirse, editarse,
           reordenarse o eliminarse. No requieren autorización previa de un abogado.
         </p>
@@ -1009,7 +1007,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
         {preguntas.length ? (
           <ul className="space-y-3">
             {preguntas.map((p, i) => (
-              <li key={p.id} className="rounded-md border border-border p-3">
+              <li key={p.id} className="border-border rounded-md border p-3">
                 <div className="flex flex-wrap items-start gap-2">
                   <Input
                     className="min-w-[240px] flex-1"
@@ -1054,7 +1052,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
                       aria-label="Eliminar pregunta"
                       onClick={() => eliminar(p.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="text-destructive h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -1068,7 +1066,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Todavía no hay preguntas de cualificación en este Lead.
           </p>
         )}
@@ -1080,7 +1078,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
             value={nueva}
             onChange={(e) => setNueva(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") añadir(nueva);
+              if (e.key === 'Enter') añadir(nueva)
             }}
           />
           <Button size="sm" className="gap-1.5" onClick={() => añadir(nueva)}>
@@ -1095,7 +1093,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
               key={s}
               type="button"
               onClick={() => añadir(s)}
-              className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-accent"
+              className="border-border text-muted-foreground hover:bg-accent rounded-full border px-2.5 py-1 text-[11px]"
             >
               + {s}
             </button>
@@ -1113,7 +1111,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
               etiqueta: `${o.codigo} · ${o.titulo}`,
               contactos: o.contactoId ? [o.contactoId] : [],
             }}
-            inicial={{ ambito: "oportunidad", oportunidadId: o.id }}
+            inicial={{ ambito: 'oportunidad', oportunidadId: o.id }}
           />
         }
       >
@@ -1124,7 +1122,7 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Resultado">
             <Select
-              value={o.cualificacion.decision || ""}
+              value={o.cualificacion.decision || ''}
               onValueChange={(v) =>
                 crm.guardarCualificacion(o.id, { decision: v as DecisionCualificacion })
               }
@@ -1145,59 +1143,57 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
             <Field label="Observaciones">
               <Textarea
                 rows={3}
-                defaultValue={o.cualificacion.observaciones ?? ""}
+                defaultValue={o.cualificacion.observaciones ?? ''}
                 onBlur={(e) => crm.guardarCualificacion(o.id, { observaciones: e.target.value })}
               />
             </Field>
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-3 text-xs">
           La secretaría puede decidir directamente el paso a Primera cita. Si excepcionalmente
           necesita consultar a un abogado, se resuelve con una nota o una tarea, nunca con un estado
           obligatorio del workflow.
         </p>
       </Bloque>
     </>
-  );
+  )
 }
 
 /** Muro compacto de notas del Lead, reutilizando el módulo transversal NOTAS. */
 function NotasLead({ o }: { o: OportunidadCRM }) {
-  const lista = useNotas((s) => notasDeOportunidad(s, o.id));
-  return (
-    <NotaMuro notas={lista} columnas={2} vacio="Todavía no hay notas internas en este Lead." />
-  );
+  const lista = useNotas((s) => notasDeOportunidad(s, o.id))
+  return <NotaMuro notas={lista} columnas={2} vacio="Todavía no hay notas internas en este Lead." />
 }
 
 /* ------------------------------------------------------------------ */
 /* Primera cita                                                        */
 /* ------------------------------------------------------------------ */
 
-type ChipCita = { texto: string; tono: Tono };
+type ChipCita = { texto: string; tono: Tono }
 
 /** Chips automáticos: se deducen de los datos, nunca se eligen a mano. */
 function chipsCita(o: OportunidadCRM): ChipCita[] {
-  const c = o.citaCRM;
-  const chips: ChipCita[] = [];
-  if (c.estado === "Programada") chips.push({ texto: "CITA PROGRAMADA", tono: "info" });
-  if (c.estado === "Celebrada") chips.push({ texto: "CITA CELEBRADA", tono: "exito" });
-  if (c.estado === "No comparece") chips.push({ texto: "NO COMPARECE", tono: "riesgo" });
-  if (c.estado === "Reprogramación pendiente") chips.push({ texto: "NUEVA CITA", tono: "aviso" });
-  if (c.resultado === "Solicitar documentación" || o.documentacionPendiente.trim())
-    chips.push({ texto: "PENDIENTE DOCUMENTACIÓN", tono: "aviso" });
-  if (c.resultado === "Requiere análisis adicional")
-    chips.push({ texto: "REQUIERE ANÁLISIS", tono: "aviso" });
-  if (c.resultado === "Nueva cita") chips.push({ texto: "NUEVA CITA", tono: "aviso" });
-  if (c.resultado === "Seguimiento futuro") chips.push({ texto: "SEGUIMIENTO", tono: "neutro" });
-  return chips;
+  const c = o.citaCRM
+  const chips: ChipCita[] = []
+  if (c.estado === 'Programada') chips.push({ texto: 'CITA PROGRAMADA', tono: 'info' })
+  if (c.estado === 'Celebrada') chips.push({ texto: 'CITA CELEBRADA', tono: 'exito' })
+  if (c.estado === 'No comparece') chips.push({ texto: 'NO COMPARECE', tono: 'riesgo' })
+  if (c.estado === 'Reprogramación pendiente') chips.push({ texto: 'NUEVA CITA', tono: 'aviso' })
+  if (c.resultado === 'Solicitar documentación' || o.documentacionPendiente.trim())
+    chips.push({ texto: 'PENDIENTE DOCUMENTACIÓN', tono: 'aviso' })
+  if (c.resultado === 'Requiere análisis adicional')
+    chips.push({ texto: 'REQUIERE ANÁLISIS', tono: 'aviso' })
+  if (c.resultado === 'Nueva cita') chips.push({ texto: 'NUEVA CITA', tono: 'aviso' })
+  if (c.resultado === 'Seguimiento futuro') chips.push({ texto: 'SEGUIMIENTO', tono: 'neutro' })
+  return chips
 }
 
 function CitaBloque({ o }: { o: OportunidadCRM }) {
-  const c = o.citaCRM;
-  const [form, setForm] = useState(c);
-  const set = (patch: Partial<typeof c>) => setForm((f) => ({ ...f, ...patch }));
-  const lugarOpcion = form.lugarOpcion ?? (form.lugar ? "Otro" : "");
-  const chips = chipsCita(o);
+  const c = o.citaCRM
+  const [form, setForm] = useState(c)
+  const set = (patch: Partial<typeof c>) => setForm((f) => ({ ...f, ...patch }))
+  const lugarOpcion = form.lugarOpcion ?? (form.lugar ? 'Otro' : '')
+  const chips = chipsCita(o)
 
   return (
     <>
@@ -1214,7 +1210,7 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
       <Bloque
         title="Programación de la primera cita"
         action={
-          <ToneBadge tono={c.estado === "Celebrada" ? "exito" : "aviso"}>{c.estado}</ToneBadge>
+          <ToneBadge tono={c.estado === 'Celebrada' ? 'exito' : 'aviso'}>{c.estado}</ToneBadge>
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
@@ -1273,7 +1269,7 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
               onValueChange={(v) =>
                 set({
                   lugarOpcion: v,
-                  lugar: v === "Otro" ? (form.lugarOpcion === "Otro" ? form.lugar : "") : v,
+                  lugar: v === 'Otro' ? (form.lugarOpcion === 'Otro' ? form.lugar : '') : v,
                 })
               }
             >
@@ -1289,7 +1285,7 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
               </SelectContent>
             </Select>
           </Field>
-          {lugarOpcion === "Otro" ? (
+          {lugarOpcion === 'Otro' ? (
             <div className="sm:col-span-2">
               <Field label="Indica el lugar o el enlace">
                 <Input value={form.lugar} onChange={(e) => set({ lugar: e.target.value })} />
@@ -1332,11 +1328,11 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
           <Button
             size="sm"
             onClick={() => {
-              const estado = form.estado === "Sin programar" ? "Programada" : form.estado;
-              crm.guardarCita(o.id, { ...form, estado }, estado);
-              if (estado === "Programada" && o.fase === "cualificacion")
-                crm.moverFase(o.id, "primera-cita", { subestado: "Programada" });
-              toast.success("Programación de la cita guardada");
+              const estado = form.estado === 'Sin programar' ? 'Programada' : form.estado
+              crm.guardarCita(o.id, { ...form, estado }, estado)
+              if (estado === 'Programada' && o.fase === 'cualificacion')
+                crm.moverFase(o.id, 'primera-cita', { subestado: 'Programada' })
+              toast.success('Programación de la cita guardada')
             }}
           >
             <CalendarClock className="mr-1.5 h-4 w-4" /> Guardar programación
@@ -1345,15 +1341,15 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
             size="sm"
             variant="outline"
             onClick={() => {
-              crm.sincronizarCalendario(o.id);
-              toast.info("Sincronización simulada con Google Calendar", {
-                description: "La integración real se implementará en una iteración posterior.",
-              });
+              crm.sincronizarCalendario(o.id)
+              toast.info('Sincronización simulada con Google Calendar', {
+                description: 'La integración real se implementará en una iteración posterior.',
+              })
             }}
           >
             Sincronizar con Google Calendar
           </Button>
-          <span className="text-xs text-muted-foreground">{c.sincronizacionCalendar}</span>
+          <span className="text-muted-foreground text-xs">{c.sincronizacionCalendar}</span>
           <PendingBadge />
         </div>
       </Bloque>
@@ -1393,13 +1389,13 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
             <Field label="Observaciones">
               <Textarea
                 rows={2}
-                value={form.observaciones ?? ""}
+                value={form.observaciones ?? ''}
                 onChange={(e) => set({ observaciones: e.target.value })}
               />
             </Field>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="text-muted-foreground flex items-center gap-2 text-xs">
               <Checkbox
                 checked={form.autorizadaPresupuesto}
                 onCheckedChange={(v) => set({ autorizadaPresupuesto: Boolean(v) })}
@@ -1412,8 +1408,8 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
           <Button
             size="sm"
             onClick={() => {
-              crm.guardarCita(o.id, { ...form, estado: "Celebrada" }, "Celebrada");
-              toast.success("Resultado de la cita registrado");
+              crm.guardarCita(o.id, { ...form, estado: 'Celebrada' }, 'Celebrada')
+              toast.success('Resultado de la cita registrado')
             }}
           >
             Registrar resultado
@@ -1422,7 +1418,7 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
             size="sm"
             variant="outline"
             onClick={() =>
-              crm.guardarCita(o.id, { ...form, estado: "No comparece" }, "No comparece")
+              crm.guardarCita(o.id, { ...form, estado: 'No comparece' }, 'No comparece')
             }
           >
             No comparece
@@ -1433,15 +1429,15 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
             onClick={() =>
               crm.guardarCita(
                 o.id,
-                { ...form, estado: "Reprogramación pendiente" },
-                "Reprogramación pendiente",
+                { ...form, estado: 'Reprogramación pendiente' },
+                'Reprogramación pendiente',
               )
             }
           >
             Reprogramar
           </Button>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-3 text-xs">
           Cualquier paso posterior se gestiona como TAREA del módulo transversal, no como campo
           suelto de la cita.
         </p>
@@ -1449,23 +1445,23 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
 
       <TareasDelLead o={o} titulo="Tareas derivadas de la cita" />
     </>
-  );
+  )
 }
 
 function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
-  const p = o.presupuestoEspejo;
-  const [servicio, setServicio] = useState(p.servicio || o.titulo);
-  const [importe, setImporte] = useState(p.importe || "");
-  const [responsable, setResponsable] = useState(p.responsable || o.responsable);
-  const [incidencia, setIncidencia] = useState(p.incidencia);
+  const p = o.presupuestoEspejo
+  const [servicio, setServicio] = useState(p.servicio || o.titulo)
+  const [importe, setImporte] = useState(p.importe || '')
+  const [responsable, setResponsable] = useState(p.responsable || o.responsable)
+  const [incidencia, setIncidencia] = useState(p.incidencia)
 
-  const dias = p.fechaSolicitud ? `${p.fechaSolicitud} → ${p.fechaEnvio || "sin enviar"}` : "—";
+  const dias = p.fechaSolicitud ? `${p.fechaSolicitud} → ${p.fechaEnvio || 'sin enviar'}` : '—'
 
   return (
     <>
       <Bloque
         title="Presupuesto vinculado (espejo del módulo Presupuestos)"
-        action={<ToneBadge tono={p.estado === "Enviado" ? "exito" : "aviso"}>{p.estado}</ToneBadge>}
+        action={<ToneBadge tono={p.estado === 'Enviado' ? 'exito' : 'aviso'}>{p.estado}</ToneBadge>}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Dato label="Número" value={p.numero} />
@@ -1473,7 +1469,7 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
           <Dato label="Importe" value={p.importe} />
           <Dato label="Responsable de elaboración" value={p.responsable} />
           <Dato label="Fechas" value={dias} />
-          <Dato label="Versión" value={p.version ? `v${p.version}` : "—"} />
+          <Dato label="Versión" value={p.version ? `v${p.version}` : '—'} />
           <Dato label="Incidencia o bloqueo" value={p.incidencia} />
           <Dato
             label="Enlace"
@@ -1483,14 +1479,14 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
                   Ver en Presupuestos
                 </Link>
               ) : (
-                "—"
+                '—'
               )
             }
           />
         </div>
       </Bloque>
 
-      {p.estado === "No solicitado" ? (
+      {p.estado === 'No solicitado' ? (
         <Bloque title="Solicitar presupuesto">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -1526,10 +1522,10 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
             onClick={() => {
               crm.solicitarPresupuesto(o.id, {
                 servicio,
-                importe: importe || "Por determinar",
+                importe: importe || 'Por determinar',
                 responsable,
-              });
-              toast.success("Solicitud de presupuesto creada");
+              })
+              toast.success('Solicitud de presupuesto creada')
             }}
           >
             Solicitar presupuesto
@@ -1542,23 +1538,23 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
               <Select
                 value={p.estado}
                 onValueChange={(v) => {
-                  if (v === "Validado" && rol !== "Administrador/Igor") {
-                    toast.error("Solo el Administrador/Igor puede validar presupuestos.");
-                    return;
+                  if (v === 'Validado' && rol !== 'Administrador/Igor') {
+                    toast.error('Solo el Administrador/Igor puede validar presupuestos.')
+                    return
                   }
-                  crm.cambiarEstadoPresupuesto(o.id, v as EstadoPresupuestoEspejo, incidencia);
-                  if (v === "Enviado")
-                    toast.success("Presupuesto enviado", {
+                  crm.cambiarEstadoPresupuesto(o.id, v as EstadoPresupuestoEspejo, incidencia)
+                  if (v === 'Enviado')
+                    toast.success('Presupuesto enviado', {
                       description:
-                        "El Lead pasa a Enviado al cliente y se crea la tarea de seguimiento.",
-                    });
+                        'El Lead pasa a Enviado al cliente y se crea la tarea de seguimiento.',
+                    })
                 }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ESTADOS_PRESUPUESTO_ESPEJO.filter((e) => e !== "No solicitado").map((e) => (
+                  {ESTADOS_PRESUPUESTO_ESPEJO.filter((e) => e !== 'No solicitado').map((e) => (
                     <SelectItem key={e} value={e}>
                       {e}
                     </SelectItem>
@@ -1570,9 +1566,9 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
               <Input value={incidencia} onChange={(e) => setIncidencia(e.target.value)} />
             </Field>
           </div>
-          <ul className="mt-3 space-y-1 border-t border-border pt-3">
+          <ul className="border-border mt-3 space-y-1 border-t pt-3">
             {p.historial.map((h, i) => (
-              <li key={i} className="text-xs text-muted-foreground">
+              <li key={i} className="text-muted-foreground text-xs">
                 {h.fecha} · {h.usuario} — {h.texto}
               </li>
             ))}
@@ -1580,13 +1576,13 @@ function PresupuestoBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
         </Bloque>
       )}
     </>
-  );
+  )
 }
 
 function ContratacionBloque({ o }: { o: OportunidadCRM }) {
-  const c = o.contratacion;
-  const [motivoRechazo, setMotivoRechazo] = useState(c.motivoRechazo);
-  const [negociacion, setNegociacion] = useState(c.negociacion);
+  const c = o.contratacion
+  const [motivoRechazo, setMotivoRechazo] = useState(c.motivoRechazo)
+  const [negociacion, setNegociacion] = useState(c.negociacion)
 
   return (
     <>
@@ -1596,21 +1592,21 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
             <Select
               value={c.decision}
               onValueChange={(v) => {
-                if (v === "Rechazado" && !motivoRechazo.trim()) {
-                  toast.error("Indica el motivo de pérdida antes de registrar el rechazo.");
-                  return;
+                if (v === 'Rechazado' && !motivoRechazo.trim()) {
+                  toast.error('Indica el motivo de pérdida antes de registrar el rechazo.')
+                  return
                 }
                 crm.actualizarContratacion(o.id, {
                   decision: v as typeof c.decision,
                   motivoRechazo,
-                });
+                })
               }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["Pendiente", "Aceptado verbalmente", "Rechazado", "Aplazado"].map((d) => (
+                {['Pendiente', 'Aceptado verbalmente', 'Rechazado', 'Aplazado'].map((d) => (
                   <SelectItem key={d} value={d}>
                     {d}
                   </SelectItem>
@@ -1643,9 +1639,9 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
             size="sm"
             variant="outline"
             onClick={() => {
-              crm.cambiarEstadoPresupuesto(o.id, "Requiere modificación", negociacion);
-              crm.actualizarContratacion(o.id, { negociacion });
-              toast.info("Presupuesto devuelto a «Requiere modificación»");
+              crm.cambiarEstadoPresupuesto(o.id, 'Requiere modificación', negociacion)
+              crm.actualizarContratacion(o.id, { negociacion })
+              toast.info('Presupuesto devuelto a «Requiere modificación»')
             }}
           >
             Solicitar modificación del presupuesto
@@ -1666,7 +1662,7 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["Pendiente", "Enviada", "Firmada"].map((v) => (
+                {['Pendiente', 'Enviada', 'Firmada'].map((v) => (
                   <SelectItem key={v} value={v}>
                     {v}
                   </SelectItem>
@@ -1685,7 +1681,7 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["No generada", "Generada"].map((v) => (
+                {['No generada', 'Generada'].map((v) => (
                   <SelectItem key={v} value={v}>
                     {v}
                   </SelectItem>
@@ -1697,22 +1693,22 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
             <Select
               value={c.pago}
               onValueChange={(v) => {
-                if (v !== "No aplicable" && o.presupuestoEspejo.estado === "No solicitado") {
-                  toast.error("No puede registrarse el pago sin presupuesto vinculado.");
-                  return;
+                if (v !== 'No aplicable' && o.presupuestoEspejo.estado === 'No solicitado') {
+                  toast.error('No puede registrarse el pago sin presupuesto vinculado.')
+                  return
                 }
-                crm.actualizarContratacion(o.id, { pago: v as typeof c.pago });
-                if (v === "Recibido")
-                  toast.success("Pago registrado", {
-                    description: "Se ha comprobado el checklist de apertura.",
-                  });
+                crm.actualizarContratacion(o.id, { pago: v as typeof c.pago })
+                if (v === 'Recibido')
+                  toast.success('Pago registrado', {
+                    description: 'Se ha comprobado el checklist de apertura.',
+                  })
               }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["No aplicable", "Pendiente", "Recibido"].map((v) => (
+                {['No aplicable', 'Pendiente', 'Recibido'].map((v) => (
                   <SelectItem key={v} value={v}>
                     {v}
                   </SelectItem>
@@ -1728,13 +1724,13 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
             />
           </Field>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-3 text-xs">
           Firma electrónica, facturación y conciliación bancaria se conectarán en iteraciones
           posteriores. <PendingBadge />
         </p>
       </Bloque>
     </>
-  );
+  )
 }
 
 /**
@@ -1742,33 +1738,33 @@ function ContratacionBloque({ o }: { o: OportunidadCRM }) {
  * La apertura de expediente ya no pertenece al Lead: corresponde al Onboarding.
  */
 function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string }) {
-  const p = o.presupuestoEspejo;
-  const validado = Boolean(p.validadoVersion && p.validadoVersion === p.version);
-  const [observaciones, setObservaciones] = useState("");
-  const [instrucciones, setInstrucciones] = useState("");
-  const [destinatario, setDestinatario] = useState(p.destinatario ?? "");
-  const [canal, setCanal] = useState(p.canal ?? "Correo electrónico");
-  const [vigencia, setVigencia] = useState(p.vigencia ?? "");
-  const [acFecha, setAcFecha] = useState(o.aceptacion?.fecha ?? "");
-  const [acImporte, setAcImporte] = useState(o.aceptacion?.importe ?? p.importe);
-  const [acForma, setAcForma] = useState(o.aceptacion?.forma ?? FORMAS_ACEPTACION[0]!);
-  const [acSoporte, setAcSoporte] = useState(o.aceptacion?.soporte ?? "");
+  const p = o.presupuestoEspejo
+  const validado = Boolean(p.validadoVersion && p.validadoVersion === p.version)
+  const [observaciones, setObservaciones] = useState('')
+  const [instrucciones, setInstrucciones] = useState('')
+  const [destinatario, setDestinatario] = useState(p.destinatario ?? '')
+  const [canal, setCanal] = useState(p.canal ?? 'Correo electrónico')
+  const [vigencia, setVigencia] = useState(p.vigencia ?? '')
+  const [acFecha, setAcFecha] = useState(o.aceptacion?.fecha ?? '')
+  const [acImporte, setAcImporte] = useState(o.aceptacion?.importe ?? p.importe)
+  const [acForma, setAcForma] = useState(o.aceptacion?.forma ?? FORMAS_ACEPTACION[0]!)
+  const [acSoporte, setAcSoporte] = useState(o.aceptacion?.soporte ?? '')
 
   return (
     <>
       <Bloque title="Validación de Igor">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Dato label="Presupuesto" value={p.numero || "—"} />
+          <Dato label="Presupuesto" value={p.numero || '—'} />
           <Dato label="Versión vigente" value={String(p.version)} />
-          <Dato label="Elaborador" value={p.responsable || "—"} />
-          <Dato label="Importe" value={p.importe || "—"} />
+          <Dato label="Elaborador" value={p.responsable || '—'} />
+          <Dato label="Importe" value={p.importe || '—'} />
           <Dato
             label="Versión validada"
-            value={p.validadoVersion ? String(p.validadoVersion) : "Ninguna"}
+            value={p.validadoVersion ? String(p.validadoVersion) : 'Ninguna'}
           />
           <Dato
             label="Validado por"
-            value={p.validadoPor ? `${p.validadoPor} · ${p.fechaValidacion}` : "—"}
+            value={p.validadoPor ? `${p.validadoPor} · ${p.fechaValidacion}` : '—'}
           />
         </div>
         {validado ? (
@@ -1777,12 +1773,12 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
           </p>
         ) : null}
         {p.rectificacion ? (
-          <p className="mt-3 text-xs text-destructive">
+          <p className="text-destructive mt-3 text-xs">
             Rectificación solicitada: {p.rectificacion}
           </p>
         ) : null}
 
-        {rol === "Administrador/Igor" ? (
+        {rol === 'Administrador/Igor' ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Field label="Observaciones de validación">
               <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
@@ -1795,9 +1791,9 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
                 size="sm"
                 disabled={validado || !p.numero}
                 onClick={() => {
-                  crm.validarPresupuesto(o.id, observaciones);
-                  setObservaciones("");
-                  toast.success("Versión validada. Pendiente de envío al cliente.");
+                  crm.validarPresupuesto(o.id, observaciones)
+                  setObservaciones('')
+                  toast.success('Versión validada. Pendiente de envío al cliente.')
                 }}
               >
                 <ShieldCheck className="h-4 w-4" /> Validar versión {p.version}
@@ -1807,9 +1803,9 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
                 variant="outline"
                 disabled={!instrucciones.trim()}
                 onClick={() => {
-                  crm.devolverParaRectificacion(o.id, instrucciones);
-                  setInstrucciones("");
-                  toast.info("Devuelto a Solicitud de presupuesto para rectificación.");
+                  crm.devolverParaRectificacion(o.id, instrucciones)
+                  setInstrucciones('')
+                  toast.info('Devuelto a Solicitud de presupuesto para rectificación.')
                 }}
               >
                 Devolver para rectificación
@@ -1817,7 +1813,7 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-3 text-xs">
             Solo el perfil Administrador/Igor puede validar o devolver el presupuesto.
           </p>
         )}
@@ -1829,14 +1825,14 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
             <Dato label="Fecha de envío" value={p.fechaEnvio} />
             <Dato
               label="Versión enviada"
-              value={p.versionEnviada ? String(p.versionEnviada) : "—"}
+              value={p.versionEnviada ? String(p.versionEnviada) : '—'}
             />
-            <Dato label="Destinatario" value={p.destinatario ?? "—"} />
-            <Dato label="Canal" value={p.canal ?? "—"} />
-            <Dato label="Vigencia" value={p.vigencia ?? "—"} />
+            <Dato label="Destinatario" value={p.destinatario ?? '—'} />
+            <Dato label="Canal" value={p.canal ?? '—'} />
+            <Dato label="Vigencia" value={p.vigencia ?? '—'} />
           </div>
         ) : (
-          <p className="mb-3 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mb-3 text-sm">
             Todavía no se ha registrado el envío real.
           </p>
         )}
@@ -1860,15 +1856,15 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
           className="mt-3"
           disabled={!validado || !destinatario.trim()}
           onClick={() => {
-            const r = crm.registrarEnvioPresupuesto(o.id, { destinatario, canal, vigencia });
-            if (r.ok) toast.success("Envío registrado. Lead en «Enviado al cliente».");
-            else toast.error(r.faltantes[0]?.label ?? "No puede enviarse");
+            const r = crm.registrarEnvioPresupuesto(o.id, { destinatario, canal, vigencia })
+            if (r.ok) toast.success('Envío registrado. Lead en «Enviado al cliente».')
+            else toast.error(r.faltantes[0]?.label ?? 'No puede enviarse')
           }}
         >
           Registrar envío al cliente
         </Button>
         {!validado ? (
-          <p className="mt-2 text-xs text-destructive">
+          <p className="text-destructive mt-2 text-xs">
             No puede enviarse un presupuesto cuya versión vigente no esté validada.
           </p>
         ) : null}
@@ -1882,7 +1878,7 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
             <Dato label="Importe aceptado" value={o.aceptacion.importe} />
             <Dato label="Forma de aceptación" value={o.aceptacion.forma} />
             <Dato label="Registrada por" value={o.aceptacion.usuario} />
-            <Dato label="Soporte" value={o.aceptacion.soporte || "—"} />
+            <Dato label="Soporte" value={o.aceptacion.soporte || '—'} />
           </div>
         ) : (
           <>
@@ -1926,9 +1922,9 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
                   importe: acImporte,
                   forma: acForma,
                   soporte: acSoporte,
-                });
-                if (r.ok) toast.success("Lead aceptado. Siguiente proceso: Onboarding.");
-                else toast.error(r.faltantes[0]?.label ?? "Faltan datos de aceptación");
+                })
+                if (r.ok) toast.success('Lead aceptado. Siguiente proceso: Onboarding.')
+                else toast.error(r.faltantes[0]?.label ?? 'Faltan datos de aceptación')
               }}
             >
               Registrar aceptación
@@ -1937,9 +1933,9 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
         )}
       </Bloque>
 
-      {o.fase === "ganada" ? (
+      {o.fase === 'ganada' ? (
         <Bloque title="Siguiente proceso">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             El Lead queda comercialmente concluido. La proforma, el pago y la apertura del
             expediente pertenecen al módulo Onboarding.
           </p>
@@ -1949,22 +1945,16 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
 
       {o.revisionMigracion ? (
         <Bloque title="Revisión tras la migración">
-          <p className="text-xs text-muted-foreground">{o.revisionMigracion}</p>
+          <p className="text-muted-foreground text-xs">{o.revisionMigracion}</p>
         </Bloque>
       ) : null}
     </>
-  );
+  )
 }
 
-export { FASES };
-
+export { FASES }
 
 function ComunicacionesLead({ leadId }: { leadId: string }) {
-  const lista = useOpsComs((s) => comunicacionesDeLead(s, leadId));
-  return (
-    <Cronologia
-      comunicaciones={lista}
-      vacio="Sin comunicaciones vinculadas a este Lead."
-    />
-  );
+  const lista = useOpsComs((s) => comunicacionesDeLead(s, leadId))
+  return <Cronologia comunicaciones={lista} vacio="Sin comunicaciones vinculadas a este Lead." />
 }

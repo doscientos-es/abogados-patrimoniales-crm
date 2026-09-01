@@ -1,12 +1,11 @@
 // Etiquetas de tareas: catálogo propio (entidad) y relación muchos a muchos.
 // Aquí viven el chip, el selector múltiple, el filtro y la pantalla de gestión.
-import { useMemo, useState } from "react";
-import { Check, Merge, Plus, Search, Tag, X } from "lucide-react";
-import { toast } from "sonner";
+import { Check, Merge, Plus, Search, Tag, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Field } from "@/components/crm/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -14,16 +13,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,14 +30,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   COLORES_ETIQUETA,
   claveEtiqueta,
   type ColorEtiqueta,
   type EtiquetaTarea,
   type TareaOp,
-} from "@/data/expedientes-model";
+} from '@/data/expedientes-model'
+import { Field } from '@/features/crm'
 import {
   etiquetasActivas,
   etiquetasDeTarea,
@@ -47,19 +47,19 @@ import {
   puedeGestionarEtiquetas,
   useOps,
   usoEtiqueta,
-} from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
 const NOMBRE_COLOR: Record<ColorEtiqueta, string> = {
-  azul: "Azul",
-  verde: "Verde",
-  ambar: "Ámbar",
-  rojo: "Rojo",
-  morado: "Morado",
-  turquesa: "Turquesa",
-  rosa: "Rosa",
-  gris: "Gris",
-};
+  azul: 'Azul',
+  verde: 'Verde',
+  ambar: 'Ámbar',
+  rojo: 'Rojo',
+  morado: 'Morado',
+  turquesa: 'Turquesa',
+  rosa: 'Rosa',
+  gris: 'Gris',
+}
 
 /* -------------------------------- Chip ---------------------------- */
 
@@ -69,26 +69,26 @@ export function EtiquetaChip({
   onClick,
   className,
 }: {
-  etiqueta: EtiquetaTarea;
-  onQuitar?: () => void;
-  onClick?: () => void;
-  className?: string;
+  etiqueta: EtiquetaTarea
+  onQuitar?: () => void
+  onClick?: () => void
+  className?: string
 }) {
   return (
     <span
       onClick={
         onClick
           ? (e) => {
-              e.stopPropagation();
-              onClick();
+              e.stopPropagation()
+              onClick()
             }
           : undefined
       }
       className={cn(
-        "etq-chip inline-flex max-w-[160px] items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        'etq-chip inline-flex max-w-[160px] items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
         `etq-${etiqueta.color}`,
-        onClick && "cursor-pointer",
-        etiqueta.archivada && "opacity-60",
+        onClick && 'cursor-pointer',
+        etiqueta.archivada && 'opacity-60',
         className,
       )}
       title={etiqueta.nombre}
@@ -100,15 +100,15 @@ export function EtiquetaChip({
           aria-label={`Quitar ${etiqueta.nombre}`}
           className="shrink-0 opacity-70 hover:opacity-100"
           onClick={(e) => {
-            e.stopPropagation();
-            onQuitar();
+            e.stopPropagation()
+            onQuitar()
           }}
         >
           <X className="h-3 w-3" />
         </button>
       ) : null}
     </span>
-  );
+  )
 }
 
 /** Chips de una tarea, con corte discreto en +N. */
@@ -118,19 +118,19 @@ export function EtiquetasTarea({
   onClickEtiqueta,
   mostrarVacio = false,
 }: {
-  tarea: TareaOp;
-  max?: number;
-  onClickEtiqueta?: (id: string) => void;
-  mostrarVacio?: boolean;
+  tarea: TareaOp
+  max?: number
+  onClickEtiqueta?: (id: string) => void
+  mostrarVacio?: boolean
 }) {
-  const etiquetas = useOps((s) => etiquetasDeTarea(s, tarea));
+  const etiquetas = useOps((s) => etiquetasDeTarea(s, tarea))
   if (!etiquetas.length)
     return mostrarVacio ? (
-      <span className="text-[11px] text-muted-foreground">Sin etiquetas</span>
-    ) : null;
+      <span className="text-muted-foreground text-[11px]">Sin etiquetas</span>
+    ) : null
 
-  const visibles = etiquetas.slice(0, max);
-  const resto = etiquetas.length - visibles.length;
+  const visibles = etiquetas.slice(0, max)
+  const resto = etiquetas.length - visibles.length
   return (
     <span className="flex flex-wrap items-center gap-1">
       {visibles.map((e) => (
@@ -142,35 +142,35 @@ export function EtiquetasTarea({
       ))}
       {resto > 0 ? (
         <span
-          className="rounded-full border border-border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+          className="border-border bg-muted text-muted-foreground rounded-full border px-1.5 py-0.5 text-[11px]"
           title={etiquetas
             .slice(max)
             .map((e) => e.nombre)
-            .join(", ")}
+            .join(', ')}
         >
           +{resto}
         </span>
       ) : null}
     </span>
-  );
+  )
 }
 
 /** Chips + acceso siempre visible para etiquetar sin abrir la ficha. */
 export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: number }) {
-  const etiquetas = useOps((s) => etiquetasDeTarea(s, tarea));
-  const catalogo = useOps(etiquetasActivas);
-  const permitido = useOps((s) => puedeEtiquetarTarea(s, tarea));
-  const [abierto, setAbierto] = useState(false);
+  const etiquetas = useOps((s) => etiquetasDeTarea(s, tarea))
+  const catalogo = useOps(etiquetasActivas)
+  const permitido = useOps((s) => puedeEtiquetarTarea(s, tarea))
+  const [abierto, setAbierto] = useState(false)
 
-  const valor = tarea.etiquetas ?? [];
+  const valor = tarea.etiquetas ?? []
   const alternar = (id: string) => {
-    const ids = valor.includes(id) ? valor.filter((x) => x !== id) : [...valor, id];
-    const r = ops.aplicarEtiquetasTarea(tarea.id, ids);
-    if (!r.ok) toast.error(r.error);
-  };
+    const ids = valor.includes(id) ? valor.filter((x) => x !== id) : [...valor, id]
+    const r = ops.aplicarEtiquetasTarea(tarea.id, ids)
+    if (!r.ok) toast.error(r.error)
+  }
 
-  const visibles = etiquetas.slice(0, max);
-  const resto = etiquetas.length - visibles.length;
+  const visibles = etiquetas.slice(0, max)
+  const resto = etiquetas.length - visibles.length
 
   return (
     <span className="flex flex-wrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -178,12 +178,12 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
         <EtiquetaChip key={e.id} etiqueta={e} />
       ))}
       {resto > 0 ? (
-        <span className="rounded-full border border-border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+        <span className="border-border bg-muted text-muted-foreground rounded-full border px-1.5 py-0.5 text-[11px]">
           +{resto}
         </span>
       ) : null}
       {!etiquetas.length ? (
-        <span className="text-[11px] text-muted-foreground">Sin etiquetas</span>
+        <span className="text-muted-foreground text-[11px]">Sin etiquetas</span>
       ) : null}
       {permitido ? (
         <Popover open={abierto} onOpenChange={setAbierto}>
@@ -191,7 +191,7 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
             <button
               type="button"
               aria-label="Añadir etiqueta"
-              className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              className="border-border text-muted-foreground hover:border-primary/50 hover:text-foreground inline-flex items-center gap-0.5 rounded-full border border-dashed px-1.5 py-0.5 text-[11px]"
             >
               <Tag className="h-3 w-3" />
               <Plus className="h-3 w-3" />
@@ -204,11 +204,11 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
                   key={e.id}
                   type="button"
                   onClick={() => alternar(e.id)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
                 >
-                  <span className={cn("etq-punto h-2.5 w-2.5 rounded-full", `etq-${e.color}`)} />
+                  <span className={cn('etq-punto h-2.5 w-2.5 rounded-full', `etq-${e.color}`)} />
                   <span className="min-w-0 flex-1 truncate">{e.nombre}</span>
-                  {valor.includes(e.id) ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+                  {valor.includes(e.id) ? <Check className="text-primary h-3.5 w-3.5" /> : null}
                 </button>
               ))}
             </div>
@@ -216,7 +216,7 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
         </Popover>
       ) : null}
     </span>
-  );
+  )
 }
 
 /* ------------------------------ Selector -------------------------- */
@@ -226,43 +226,43 @@ export function SelectorEtiquetas({
   valor,
   onChange,
   disabled,
-  etiqueta = "Etiquetas",
+  etiqueta = 'Etiquetas',
   compacto = false,
 }: {
-  valor: string[];
-  onChange: (ids: string[]) => void;
-  disabled?: boolean;
-  etiqueta?: string;
-  compacto?: boolean;
+  valor: string[]
+  onChange: (ids: string[]) => void
+  disabled?: boolean
+  etiqueta?: string
+  compacto?: boolean
 }) {
-  const catalogo = useOps(etiquetasActivas);
-  const puedeCrear = useOps(puedeGestionarEtiquetas);
-  const todas = useOps((s) => s.etiquetas ?? []);
-  const [abierto, setAbierto] = useState(false);
-  const [q, setQ] = useState("");
+  const catalogo = useOps(etiquetasActivas)
+  const puedeCrear = useOps(puedeGestionarEtiquetas)
+  const todas = useOps((s) => s.etiquetas ?? [])
+  const [abierto, setAbierto] = useState(false)
+  const [q, setQ] = useState('')
 
   const filtradas = useMemo(
     () => catalogo.filter((e) => claveEtiqueta(e.nombre).includes(claveEtiqueta(q))),
     [catalogo, q],
-  );
-  const yaExiste = catalogo.some((e) => claveEtiqueta(e.nombre) === claveEtiqueta(q));
+  )
+  const yaExiste = catalogo.some((e) => claveEtiqueta(e.nombre) === claveEtiqueta(q))
   const seleccionadas = valor
     .map((id) => todas.find((e) => e.id === id))
-    .filter((e): e is EtiquetaTarea => Boolean(e));
+    .filter((e): e is EtiquetaTarea => Boolean(e))
 
   const alternar = (id: string) =>
-    onChange(valor.includes(id) ? valor.filter((x) => x !== id) : [...valor, id]);
+    onChange(valor.includes(id) ? valor.filter((x) => x !== id) : [...valor, id])
 
   const crear = () => {
-    const r = ops.crearEtiqueta(q.trim());
+    const r = ops.crearEtiqueta(q.trim())
     if (!r.ok) {
-      toast.error(r.error);
-      return;
+      toast.error(r.error)
+      return
     }
-    onChange([...new Set([...valor, r.id])]);
-    setQ("");
-    toast.success(r.reutilizada ? "Etiqueta ya existente aplicada" : "Etiqueta creada");
-  };
+    onChange([...new Set([...valor, r.id])])
+    setQ('')
+    toast.success(r.reutilizada ? 'Etiqueta ya existente aplicada' : 'Etiqueta creada')
+  }
 
   return (
     <div className="space-y-1.5">
@@ -271,65 +271,65 @@ export function SelectorEtiquetas({
           <Button
             type="button"
             variant="outline"
-            size={compacto ? "sm" : "default"}
+            size={compacto ? 'sm' : 'default'}
             disabled={disabled}
             className="w-full justify-start gap-1.5 font-normal"
           >
-            <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Tag className="text-muted-foreground h-4 w-4 shrink-0" />
             {seleccionadas.length ? (
-              <span className="truncate">{seleccionadas.map((e) => e.nombre).join(", ")}</span>
+              <span className="truncate">{seleccionadas.map((e) => e.nombre).join(', ')}</span>
             ) : (
               <span className="text-muted-foreground">{etiqueta}</span>
             )}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-72 p-0">
-          <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
+            <Search className="text-muted-foreground h-3.5 w-3.5" />
             <input
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar etiqueta…"
-              className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none"
             />
           </div>
           <div className="max-h-64 overflow-y-auto p-1">
             {filtradas.map((e) => {
-              const marcada = valor.includes(e.id);
+              const marcada = valor.includes(e.id)
               return (
                 <button
                   key={e.id}
                   type="button"
                   onClick={() => alternar(e.id)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
                 >
                   <span
-                    className={cn("etq-punto h-2.5 w-2.5 shrink-0 rounded-full", `etq-${e.color}`)}
+                    className={cn('etq-punto h-2.5 w-2.5 shrink-0 rounded-full', `etq-${e.color}`)}
                   />
                   <span className="min-w-0 flex-1 truncate">{e.nombre}</span>
-                  {marcada ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+                  {marcada ? <Check className="text-primary h-3.5 w-3.5" /> : null}
                 </button>
-              );
+              )
             })}
             {!filtradas.length ? (
-              <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+              <p className="text-muted-foreground px-2 py-3 text-center text-xs">
                 Sin coincidencias.
               </p>
             ) : null}
           </div>
           {q.trim() && !yaExiste ? (
-            <div className="border-t border-border p-1">
+            <div className="border-border border-t p-1">
               {puedeCrear ? (
                 <button
                   type="button"
                   onClick={crear}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
                 >
                   <Plus className="h-3.5 w-3.5" /> Crear «{q.trim()}»
                 </button>
               ) : (
-                <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                <p className="text-muted-foreground px-2 py-1.5 text-[11px]">
                   Tu perfil sólo puede aplicar etiquetas existentes.
                 </p>
               )}
@@ -349,22 +349,22 @@ export function SelectorEtiquetas({
         </span>
       ) : null}
     </div>
-  );
+  )
 }
 
 /** Etiquetas de una tarea concreta: aplica y traza el cambio en el histórico. */
 export function EtiquetasDeTarea({ tarea }: { tarea: TareaOp }) {
-  const permitido = useOps((s) => puedeEtiquetarTarea(s, tarea));
+  const permitido = useOps((s) => puedeEtiquetarTarea(s, tarea))
   return (
     <SelectorEtiquetas
       valor={tarea.etiquetas ?? []}
       disabled={!permitido}
       onChange={(ids) => {
-        const r = ops.aplicarEtiquetasTarea(tarea.id, ids);
-        if (!r.ok) toast.error(r.error);
+        const r = ops.aplicarEtiquetasTarea(tarea.id, ids)
+        if (!r.ok) toast.error(r.error)
       }}
     />
-  );
+  )
 }
 
 /* ------------------------------- Filtro --------------------------- */
@@ -376,20 +376,20 @@ export function FiltroEtiquetas({
   modo,
   onModo,
 }: {
-  valor: string[];
-  onChange: (ids: string[]) => void;
-  modo: "cualquiera" | "todas";
-  onModo: (m: "cualquiera" | "todas") => void;
+  valor: string[]
+  onChange: (ids: string[]) => void
+  modo: 'cualquiera' | 'todas'
+  onModo: (m: 'cualquiera' | 'todas') => void
 }) {
-  const catalogo = useOps(etiquetasActivas);
-  const [abierto, setAbierto] = useState(false);
+  const catalogo = useOps(etiquetasActivas)
+  const [abierto, setAbierto] = useState(false)
 
   return (
     <Popover open={abierto} onOpenChange={setAbierto}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
-          <Tag className="h-4 w-4 text-muted-foreground" />
-          {valor.length ? `${valor.length} etiqueta${valor.length === 1 ? "" : "s"}` : "Etiquetas"}
+          <Tag className="text-muted-foreground h-4 w-4" />
+          {valor.length ? `${valor.length} etiqueta${valor.length === 1 ? '' : 's'}` : 'Etiquetas'}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-2">
@@ -412,11 +412,11 @@ export function FiltroEtiquetas({
               onClick={() =>
                 onChange(valor.includes(e.id) ? valor.filter((x) => x !== e.id) : [...valor, e.id])
               }
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+              className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
             >
-              <span className={cn("etq-punto h-2.5 w-2.5 rounded-full", `etq-${e.color}`)} />
+              <span className={cn('etq-punto h-2.5 w-2.5 rounded-full', `etq-${e.color}`)} />
               <span className="min-w-0 flex-1 truncate">{e.nombre}</span>
-              {valor.includes(e.id) ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+              {valor.includes(e.id) ? <Check className="text-primary h-3.5 w-3.5" /> : null}
             </button>
           ))}
         </div>
@@ -427,7 +427,7 @@ export function FiltroEtiquetas({
         ) : null}
       </PopoverContent>
     </Popover>
-  );
+  )
 }
 
 /* ------------------------- Acciones masivas ----------------------- */
@@ -436,27 +436,27 @@ export function EtiquetadoMasivo({
   tareaIds,
   onHecho,
 }: {
-  tareaIds: string[];
-  onHecho: () => void;
+  tareaIds: string[]
+  onHecho: () => void
 }) {
-  const [abierto, setAbierto] = useState(false);
-  const [añadir, setAñadir] = useState<string[]>([]);
-  const [quitar, setQuitar] = useState<string[]>([]);
+  const [abierto, setAbierto] = useState(false)
+  const [añadir, setAñadir] = useState<string[]>([])
+  const [quitar, setQuitar] = useState<string[]>([])
 
   const aplicar = () => {
     if (!añadir.length && !quitar.length) {
-      toast.error("Elige qué etiquetas añadir o retirar.");
-      return;
+      toast.error('Elige qué etiquetas añadir o retirar.')
+      return
     }
-    const r = ops.etiquetarTareas(tareaIds, añadir, quitar);
+    const r = ops.etiquetarTareas(tareaIds, añadir, quitar)
     toast.success(`Etiquetas aplicadas a ${r.aplicadas} tareas`, {
       ...(r.omitidas ? { description: `${r.omitidas} omitidas por falta de permiso.` } : {}),
-    });
-    setAñadir([]);
-    setQuitar([]);
-    setAbierto(false);
-    onHecho();
-  };
+    })
+    setAñadir([])
+    setQuitar([])
+    setAbierto(false)
+    onHecho()
+  }
 
   return (
     <>
@@ -468,7 +468,8 @@ export function EtiquetadoMasivo({
           <DialogHeader>
             <DialogTitle>Etiquetar {tareaIds.length} tareas</DialogTitle>
             <DialogDescription>
-              Se registra en el histórico de cada tarea. Las tareas en las que no participas se omiten.
+              Se registra en el histórico de cada tarea. Las tareas en las que no participas se
+              omiten.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -488,31 +489,33 @@ export function EtiquetadoMasivo({
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }
 
 /* ------------------------------ Gestión --------------------------- */
 
 /** Catálogo del despacho: alta, renombrado, color, archivo y fusión. */
 export function GestionEtiquetas() {
-  const etiquetas = useOps((s) => [...(s.etiquetas ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
-  const usos = useOps((s) => Object.fromEntries(etiquetas.map((e) => [e.id, usoEtiqueta(s, e.id)])));
-  const puede = useOps(puedeGestionarEtiquetas);
+  const etiquetas = useOps((s) =>
+    [...(s.etiquetas ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+  )
+  const usos = useOps((s) => Object.fromEntries(etiquetas.map((e) => [e.id, usoEtiqueta(s, e.id)])))
+  const puede = useOps(puedeGestionarEtiquetas)
 
-  const [nombre, setNombre] = useState("");
-  const [color, setColor] = useState<ColorEtiqueta>("gris");
-  const [fusion, setFusion] = useState<EtiquetaTarea | null>(null);
-  const [destino, setDestino] = useState("");
+  const [nombre, setNombre] = useState('')
+  const [color, setColor] = useState<ColorEtiqueta>('gris')
+  const [fusion, setFusion] = useState<EtiquetaTarea | null>(null)
+  const [destino, setDestino] = useState('')
 
   const crear = () => {
-    const r = ops.crearEtiqueta(nombre, color);
+    const r = ops.crearEtiqueta(nombre, color)
     if (!r.ok) {
-      toast.error(r.error);
-      return;
+      toast.error(r.error)
+      return
     }
-    setNombre("");
-    toast.success(r.reutilizada ? "Ya existía: se reutiliza" : "Etiqueta creada");
-  };
+    setNombre('')
+    toast.success(r.reutilizada ? 'Ya existía: se reutiliza' : 'Etiqueta creada')
+  }
 
   return (
     <Card>
@@ -520,7 +523,7 @@ export function GestionEtiquetas() {
         <CardTitle className="text-base">Etiquetas de tareas</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Catálogo transversal del despacho. Archivar una etiqueta la retira de los selectores sin
           borrarla de las tareas que ya la llevan; fusionar traslada todas las tareas a la etiqueta
           de destino.
@@ -555,7 +558,7 @@ export function GestionEtiquetas() {
           </Button>
         </div>
         {!puede ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Sólo Administración y abogado responsable pueden gestionar el catálogo.
           </p>
         ) : null}
@@ -578,8 +581,8 @@ export function GestionEtiquetas() {
                     value={e.nombre}
                     disabled={!puede}
                     onChange={(ev) => {
-                      const r = ops.actualizarEtiqueta(e.id, { nombre: ev.target.value });
-                      if (!r.ok) toast.error(r.error);
+                      const r = ops.actualizarEtiqueta(e.id, { nombre: ev.target.value })
+                      if (!r.ok) toast.error(r.error)
                     }}
                     className="h-8 max-w-[220px]"
                   />
@@ -587,7 +590,9 @@ export function GestionEtiquetas() {
                 <TableCell>
                   <Select
                     value={e.color}
-                    onValueChange={(v) => ops.actualizarEtiqueta(e.id, { color: v as ColorEtiqueta })}
+                    onValueChange={(v) =>
+                      ops.actualizarEtiqueta(e.id, { color: v as ColorEtiqueta })
+                    }
                   >
                     <SelectTrigger className="h-8 w-36" disabled={!puede}>
                       <SelectValue />
@@ -601,9 +606,9 @@ export function GestionEtiquetas() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="tabular-nums text-sm">{usos[e.id] ?? 0}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {e.fusionadaEn ? "Fusionada" : e.archivada ? "Archivada" : "Activa"}
+                <TableCell className="text-sm tabular-nums">{usos[e.id] ?? 0}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {e.fusionadaEn ? 'Fusionada' : e.archivada ? 'Archivada' : 'Activa'}
                 </TableCell>
                 <TableCell className="text-right">
                   <span className="flex justify-end gap-1">
@@ -612,8 +617,8 @@ export function GestionEtiquetas() {
                       variant="ghost"
                       disabled={!puede || Boolean(e.fusionadaEn)}
                       onClick={() => {
-                        setFusion(e);
-                        setDestino("");
+                        setFusion(e)
+                        setDestino('')
                       }}
                       className="h-8 gap-1 px-2 text-xs"
                     >
@@ -624,12 +629,12 @@ export function GestionEtiquetas() {
                       variant="ghost"
                       disabled={!puede}
                       onClick={() => {
-                        const r = ops.archivarEtiqueta(e.id, !e.archivada);
-                        if (!r.ok) toast.error(r.error);
+                        const r = ops.archivarEtiqueta(e.id, !e.archivada)
+                        if (!r.ok) toast.error(r.error)
                       }}
                       className="h-8 px-2 text-xs"
                     >
-                      {e.archivada ? "Recuperar" : "Archivar"}
+                      {e.archivada ? 'Recuperar' : 'Archivar'}
                     </Button>
                   </span>
                 </TableCell>
@@ -670,13 +675,13 @@ export function GestionEtiquetas() {
             <Button
               onClick={() => {
                 if (!fusion || !destino) {
-                  toast.error("Elige la etiqueta de destino.");
-                  return;
+                  toast.error('Elige la etiqueta de destino.')
+                  return
                 }
-                const r = ops.fusionarEtiquetas(fusion.id, destino);
-                if (!r.ok) toast.error(r.error);
-                else toast.success(`Fusionadas · ${r.afectadas} tareas actualizadas`);
-                setFusion(null);
+                const r = ops.fusionarEtiquetas(fusion.id, destino)
+                if (!r.ok) toast.error(r.error)
+                else toast.success(`Fusionadas · ${r.afectadas} tareas actualizadas`)
+                setFusion(null)
               }}
             >
               Fusionar
@@ -685,5 +690,5 @@ export function GestionEtiquetas() {
         </DialogContent>
       </Dialog>
     </Card>
-  );
+  )
 }

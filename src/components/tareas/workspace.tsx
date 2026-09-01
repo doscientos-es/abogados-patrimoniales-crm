@@ -1,29 +1,27 @@
 // Puesto de trabajo de tareas: cabecera limpia, tablero de trabajo vivo
 // (Pendiente / En curso / En espera), lista con histórico e INBOX personal.
 // Se usa tal cual en el módulo general y dentro de la ficha del expediente.
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Inbox, Plus, SlidersHorizontal, Star } from "lucide-react";
+import { Inbox, Plus, SlidersHorizontal, Star } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
-import { StatTile } from "@/components/common";
-import { ToneBadge, ViewSwitch } from "@/components/crm/ui";
-import { Vacio } from "@/components/expedientes/ui";
-import { EtiquetadoMasivo, EtiquetasTarea, FiltroEtiquetas } from "@/components/tareas/etiquetas";
-import { InboxPersonal } from "@/components/tareas/inbox";
-import { EsperaDialog, NuevaTareaRapidaDialog, TareaCard } from "@/components/tareas/ui";
-import { TareaFicha } from "@/components/tareas/ficha-modal";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { StatTile } from '@/components/common'
+import { Vacio } from '@/components/expedientes/ui'
+import { EtiquetadoMasivo, EtiquetasTarea, FiltroEtiquetas } from '@/components/tareas/etiquetas'
+import { TareaFicha } from '@/components/tareas/ficha-modal'
+import { InboxPersonal } from '@/components/tareas/inbox'
+import { EsperaDialog, NuevaTareaRapidaDialog, TareaCard } from '@/components/tareas/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,159 +29,162 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { USUARIOS } from "@/data/crm";
-import { type EstadoTareaOp, type TareaOp } from "@/data/expedientes-model";
-import { etiquetasDeTarea, ops, senalesTarea, useOps, type OpsState } from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/table'
+import { USUARIOS } from '@/data/crm'
+import { type EstadoTareaOp, type TareaOp } from '@/data/expedientes-model'
+import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { etiquetasDeTarea, ops, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
 /** El tablero muestra sólo trabajo vivo; el cierre se consulta en Lista. */
-const COLUMNAS: { id: EstadoTareaOp; nombre: string; tono: "info" | "aviso" | "neutro" }[] = [
-  { id: "Pendiente", nombre: "Pendiente", tono: "neutro" },
-  { id: "En curso", nombre: "En curso", tono: "info" },
-  { id: "En espera", nombre: "En espera", tono: "aviso" },
-];
+const COLUMNAS: { id: EstadoTareaOp; nombre: string; tono: 'info' | 'aviso' | 'neutro' }[] = [
+  { id: 'Pendiente', nombre: 'Pendiente', tono: 'neutro' },
+  { id: 'En curso', nombre: 'En curso', tono: 'info' },
+  { id: 'En espera', nombre: 'En espera', tono: 'aviso' },
+]
 
-const ADMINISTRATIVOS = USUARIOS.filter((u) => u.rol === "Personal administrativo").map((u) => u.nombre);
+const ADMINISTRATIVOS = USUARIOS.filter((u) => u.rol === 'Personal administrativo').map(
+  (u) => u.nombre,
+)
 
 export function TareasWorkspace({
   expedienteId,
   compacto = false,
 }: {
-  expedienteId?: string;
-  compacto?: boolean;
+  expedienteId?: string
+  compacto?: boolean
 }) {
-  const usuario = useOps((s) => s.usuario);
-  const tareas = useOps((s) => s.tareas);
-  const expedientes = useOps((s) => s.expedientes);
-  const estadoOps = useOps((s: OpsState) => s);
+  const usuario = useOps((s) => s.usuario)
+  const tareas = useOps((s) => s.tareas)
+  const expedientes = useOps((s) => s.expedientes)
+  const estadoOps = useOps((s: OpsState) => s)
 
-  const [pestana, setPestana] = useState(expedienteId ? "todas" : "mias");
-  const [soloSiguientes, setSoloSiguientes] = useState(false);
-  const [vista, setVista] = useState<"tablero" | "lista" | "inbox">("tablero");
-  const [q, setQ] = useState("");
-  const [responsable, setResponsable] = useState("todos");
-  const [estadoFiltro, setEstadoFiltro] = useState("vivas");
-  const [vencimiento, setVencimiento] = useState("todos");
-  const [contexto, setContexto] = useState("todos");
-  const [etiquetas, setEtiquetas] = useState<string[]>([]);
-  const [modoEtiquetas, setModoEtiquetas] = useState<"cualquiera" | "todas">("cualquiera");
-  const [seleccion, setSeleccion] = useState<string[]>([]);
-  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [pestana, setPestana] = useState(expedienteId ? 'todas' : 'mias')
+  const [soloSiguientes, setSoloSiguientes] = useState(false)
+  const [vista, setVista] = useState<'tablero' | 'lista' | 'inbox'>('tablero')
+  const [q, setQ] = useState('')
+  const [responsable, setResponsable] = useState('todos')
+  const [estadoFiltro, setEstadoFiltro] = useState('vivas')
+  const [vencimiento, setVencimiento] = useState('todos')
+  const [contexto, setContexto] = useState('todos')
+  const [etiquetas, setEtiquetas] = useState<string[]>([])
+  const [modoEtiquetas, setModoEtiquetas] = useState<'cualquiera' | 'todas'>('cualquiera')
+  const [seleccion, setSeleccion] = useState<string[]>([])
+  const [seleccionada, setSeleccionada] = useState<string | null>(null)
   /** Arrastre a EN ESPERA: no cambia el estado hasta confirmar el diálogo. */
-  const [esperaPendiente, setEsperaPendiente] = useState<string | null>(null);
+  const [esperaPendiente, setEsperaPendiente] = useState<string | null>(null)
   /** Posición de caída solicitada al arrastrar a EN ESPERA (se aplica tras confirmar). */
-  const [esperaAntesDe, setEsperaAntesDe] = useState<string | null>(null);
+  const [esperaAntesDe, setEsperaAntesDe] = useState<string | null>(null)
 
   const codigoDe = useMemo(
     () => new Map(expedientes.map((e) => [e.id, `${e.codigo} · ${e.nombre}`])),
     [expedientes],
-  );
+  )
 
-  const base = expedienteId ? tareas.filter((t) => t.expedienteId === expedienteId) : tareas;
+  const base = expedienteId ? tareas.filter((t) => t.expedienteId === expedienteId) : tareas
 
   /** SIGUIENTE ACCIÓN: no es un estado ni una entidad, sólo una forma de filtrar. */
   const esSiguienteActiva = (t: TareaOp) =>
     Boolean(t.esSiguienteAccion) &&
-    t.estado !== "Completada" &&
-    t.estado !== "Cancelada" &&
-    Boolean(t.expedienteId || t.lineaId || t.origen);
+    t.estado !== 'Completada' &&
+    t.estado !== 'Cancelada' &&
+    Boolean(t.expedienteId || t.lineaId || t.origen)
 
   const enVista = (t: TareaOp) => {
     switch (pestana) {
-      case "mias":
-        return t.responsable === usuario;
-      case "delegadas":
-        return t.creador === usuario && t.responsable !== usuario;
-      case "administracion":
-        return ADMINISTRATIVOS.includes(t.responsable);
+      case 'mias':
+        return t.responsable === usuario
+      case 'delegadas':
+        return t.creador === usuario && t.responsable !== usuario
+      case 'administracion':
+        return ADMINISTRATIVOS.includes(t.responsable)
       default:
-        return true;
+        return true
     }
-  };
+  }
 
-  const enVistaLista = base.filter(enVista);
+  const enVistaLista = base.filter(enVista)
 
   /** Filtro adicional combinable con cualquiera de las cuatro vistas. */
-  const porPestana = soloSiguientes ? enVistaLista.filter(esSiguienteActiva) : enVistaLista;
+  const porPestana = soloSiguientes ? enVistaLista.filter(esSiguienteActiva) : enVistaLista
 
-  const siguientesCount = enVistaLista.filter(esSiguienteActiva).length;
-
+  const siguientesCount = enVistaLista.filter(esSiguienteActiva).length
 
   const filtradas = porPestana.filter((t) => {
-    const cerrada = t.estado === "Completada" || t.estado === "Cancelada";
-    if (estadoFiltro === "vivas" && cerrada) return false;
-    if (estadoFiltro === "cerradas" && !cerrada) return false;
-    if (!["vivas", "cerradas", "todas"].includes(estadoFiltro) && t.estado !== estadoFiltro) return false;
-    if (responsable !== "todos" && t.responsable !== responsable) return false;
-    if (contexto === "sin" && t.expedienteId) return false;
-    if (contexto === "expediente" && !t.expedienteId) return false;
-    const senales = senalesTarea(estadoOps, t);
-    if (vencimiento === "vencidas" && !senales.vencida) return false;
-    if (vencimiento === "sin-fecha" && t.vencimiento) return false;
-    if (vencimiento === "con-fecha" && !t.vencimiento) return false;
+    const cerrada = t.estado === 'Completada' || t.estado === 'Cancelada'
+    if (estadoFiltro === 'vivas' && cerrada) return false
+    if (estadoFiltro === 'cerradas' && !cerrada) return false
+    if (!['vivas', 'cerradas', 'todas'].includes(estadoFiltro) && t.estado !== estadoFiltro)
+      return false
+    if (responsable !== 'todos' && t.responsable !== responsable) return false
+    if (contexto === 'sin' && t.expedienteId) return false
+    if (contexto === 'expediente' && !t.expedienteId) return false
+    const senales = senalesTarea(estadoOps, t)
+    if (vencimiento === 'vencidas' && !senales.vencida) return false
+    if (vencimiento === 'sin-fecha' && t.vencimiento) return false
+    if (vencimiento === 'con-fecha' && !t.vencimiento) return false
     const nombresEtiquetas = etiquetasDeTarea(estadoOps, t)
       .map((e) => e.nombre)
-      .join(" ");
+      .join(' ')
     if (
       q &&
-      !`${t.titulo} ${t.descripcion} ${nombresEtiquetas} ${codigoDe.get(t.expedienteId ?? "") ?? ""}`
+      !`${t.titulo} ${t.descripcion} ${nombresEtiquetas} ${codigoDe.get(t.expedienteId ?? '') ?? ''}`
         .toLowerCase()
         .includes(q.toLowerCase())
     )
-      return false;
+      return false
     if (etiquetas.length) {
-      const propias = t.etiquetas ?? [];
+      const propias = t.etiquetas ?? []
       const cumple =
-        modoEtiquetas === "todas"
+        modoEtiquetas === 'todas'
           ? etiquetas.every((id) => propias.includes(id))
-          : etiquetas.some((id) => propias.includes(id));
-      if (!cumple) return false;
+          : etiquetas.some((id) => propias.includes(id))
+      if (!cumple) return false
     }
-    return true;
-  });
+    return true
+  })
 
   const metricas = {
-    curso: filtradas.filter((t) => t.estado === "En curso").length,
+    curso: filtradas.filter((t) => t.estado === 'En curso').length,
     vencidas: filtradas.filter((t) => senalesTarea(estadoOps, t).vencida).length,
     sinAbrir: filtradas.filter((t) => senalesTarea(estadoOps, t).sinAbrir).length,
-    diferidas: filtradas.filter((t) => t.estado === "En espera").length,
-  };
+    diferidas: filtradas.filter((t) => t.estado === 'En espera').length,
+  }
 
   const filtrosActivos =
-    Number(responsable !== "todos") +
-    Number(estadoFiltro !== "vivas") +
-    Number(vencimiento !== "todos") +
-    Number(contexto !== "todos") +
-    Number(etiquetas.length > 0);
+    Number(responsable !== 'todos') +
+    Number(estadoFiltro !== 'vivas') +
+    Number(vencimiento !== 'todos') +
+    Number(contexto !== 'todos') +
+    Number(etiquetas.length > 0)
 
   /** Movimiento entre columnas: LEX nunca inventa motivos ni fechas. */
   const mover = (id: string, destino: EstadoTareaOp, antesDe?: string) => {
-    const t = tareas.find((x) => x.id === id);
-    if (!t || t.estado === destino) return;
-    if (destino === "En espera") {
-      setEsperaPendiente(id);
-      setEsperaAntesDe(antesDe ?? null);
-      return;
+    const t = tareas.find((x) => x.id === id)
+    if (!t || t.estado === destino) return
+    if (destino === 'En espera') {
+      setEsperaPendiente(id)
+      setEsperaAntesDe(antesDe ?? null)
+      return
     }
-    ops.cambiarEstadoTarea(id, destino);
-    reordenar(destino, id, antesDe);
-  };
+    ops.cambiarEstadoTarea(id, destino)
+    reordenar(destino, id, antesDe)
+  }
 
   /** Orden manual persistente dentro de la columna. */
   const reordenar = (columna: EstadoTareaOp, id: string, antesDe?: string) => {
-    const actual = ordenarColumna(tareas.filter((t) => t.estado === columna)).map((t) => t.id);
-    const orden = actual.filter((x) => x !== id);
-    const pos = antesDe ? orden.indexOf(antesDe) : orden.length;
-    orden.splice(pos < 0 ? orden.length : pos, 0, id);
-    ops.reordenarTablero(columna, orden);
-  };
+    const actual = ordenarColumna(tareas.filter((t) => t.estado === columna)).map((t) => t.id)
+    const orden = actual.filter((x) => x !== id)
+    const pos = antesDe ? orden.indexOf(antesDe) : orden.length
+    orden.splice(pos < 0 ? orden.length : pos, 0, id)
+    ops.reordenarTablero(columna, orden)
+  }
 
   const inboxCount = tareas.filter(
     (t) => t.capturada && (t.inboxDe ?? t.responsable) === usuario,
-  ).length;
+  ).length
 
-  const tareaEspera = tareas.find((t) => t.id === esperaPendiente);
+  const tareaEspera = tareas.find((t) => t.id === esperaPendiente)
 
   return (
     <div className="space-y-4">
@@ -191,18 +192,18 @@ export function TareasWorkspace({
       <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
-          variant={vista === "inbox" ? "default" : "outline"}
+          variant={vista === 'inbox' ? 'default' : 'outline'}
           className="gap-1.5"
-          onClick={() => setVista(vista === "inbox" ? "tablero" : "inbox")}
+          onClick={() => setVista(vista === 'inbox' ? 'tablero' : 'inbox')}
         >
           <Inbox className="h-4 w-4" /> INBOX
-          <span className="rounded-full bg-foreground/10 px-1.5 text-[11px] tabular-nums">
+          <span className="bg-foreground/10 rounded-full px-1.5 text-[11px] tabular-nums">
             {inboxCount}
           </span>
         </Button>
         <NuevaTareaRapidaDialog
           {...(expedienteId
-            ? { expedienteId, contextoLabel: codigoDe.get(expedienteId) ?? "este expediente" }
+            ? { expedienteId, contextoLabel: codigoDe.get(expedienteId) ?? 'este expediente' }
             : {})}
           trigger={
             <Button size="sm" className="gap-1.5">
@@ -211,11 +212,11 @@ export function TareasWorkspace({
           }
         />
         <ViewSwitch
-          value={vista === "inbox" ? "tablero" : vista}
-          onChange={(v) => setVista(v as "tablero" | "lista")}
+          value={vista === 'inbox' ? 'tablero' : vista}
+          onChange={(v) => setVista(v as 'tablero' | 'lista')}
           options={[
-            { id: "tablero", label: "Kanban" },
-            { id: "lista", label: "Lista" },
+            { id: 'tablero', label: 'Kanban' },
+            { id: 'lista', label: 'Lista' },
           ]}
         />
         <Input
@@ -229,7 +230,7 @@ export function TareasWorkspace({
             <Button size="sm" variant="outline" className="gap-1.5">
               <SlidersHorizontal className="h-4 w-4" /> Filtros
               {filtrosActivos ? (
-                <span className="rounded-full bg-primary/15 px-1.5 text-[11px] tabular-nums text-primary">
+                <span className="bg-primary/15 text-primary rounded-full px-1.5 text-[11px] tabular-nums">
                   {filtrosActivos}
                 </span>
               ) : null}
@@ -296,39 +297,39 @@ export function TareasWorkspace({
               variant="ghost"
               className="w-full"
               onClick={() => {
-                setResponsable("todos");
-                setEstadoFiltro("vivas");
-                setVencimiento("todos");
-                setContexto("todos");
-                setEtiquetas([]);
+                setResponsable('todos')
+                setEstadoFiltro('vivas')
+                setVencimiento('todos')
+                setContexto('todos')
+                setEtiquetas([])
               }}
             >
               Limpiar filtros
             </Button>
           </PopoverContent>
         </Popover>
-        <span className="text-xs text-muted-foreground">{filtradas.length} tareas</span>
+        <span className="text-muted-foreground text-xs">{filtradas.length} tareas</span>
       </div>
 
-      {vista === "inbox" ? (
+      {vista === 'inbox' ? (
         <InboxPersonal />
       ) : (
         <>
           {/* Navegación secundaria discreta. */}
           <div className="flex flex-wrap items-center gap-1 text-xs">
             {[
-              { id: "mias", label: "Mis tareas" },
-              { id: "delegadas", label: "Delegadas" },
-              { id: "todas", label: "Todas" },
-              { id: "administracion", label: "Administración" },
+              { id: 'mias', label: 'Mis tareas' },
+              { id: 'delegadas', label: 'Delegadas' },
+              { id: 'todas', label: 'Todas' },
+              { id: 'administracion', label: 'Administración' },
             ].map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => setPestana(p.id)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground",
-                  pestana === p.id && "bg-muted font-medium text-foreground",
+                  'inline-flex items-center gap-1 rounded-md px-2 py-1 text-muted-foreground hover:text-foreground',
+                  pestana === p.id && 'bg-muted font-medium text-foreground',
                 )}
               >
                 {p.label}
@@ -339,12 +340,12 @@ export function TareasWorkspace({
               aria-pressed={soloSiguientes}
               onClick={() => setSoloSiguientes((v) => !v)}
               className={cn(
-                "ml-1 inline-flex items-center gap-1 rounded-md border border-transparent px-2 py-1 text-muted-foreground hover:text-foreground",
+                'ml-1 inline-flex items-center gap-1 rounded-md border border-transparent px-2 py-1 text-muted-foreground hover:text-foreground',
                 soloSiguientes &&
-                  "border-primary/40 bg-primary/10 font-medium text-primary hover:text-primary",
+                  'border-primary/40 bg-primary/10 font-medium text-primary hover:text-primary',
               )}
             >
-              <Star className={cn("h-3 w-3", soloSiguientes && "fill-current")} />
+              <Star className={cn('h-3 w-3', soloSiguientes && 'fill-current')} />
               Siguientes acciones
               <span className="tabular-nums">· {siguientesCount}</span>
             </button>
@@ -354,16 +355,24 @@ export function TareasWorkspace({
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <StatTile label="En curso" value={metricas.curso} />
               <StatTile label="Vencidas" value={metricas.vencidas} tono="riesgo" />
-              <StatTile label="Sin abrir por la persona asignada" value={metricas.sinAbrir} tono="aviso" />
-              <StatTile label="En espera" value={metricas.diferidas} hint="Con motivo y fecha de revisión" />
+              <StatTile
+                label="Sin abrir por la persona asignada"
+                value={metricas.sinAbrir}
+                tono="aviso"
+              />
+              <StatTile
+                label="En espera"
+                value={metricas.diferidas}
+                hint="Con motivo y fecha de revisión"
+              />
             </div>
           ) : null}
 
           {seleccion.length ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/60 px-3 py-2">
-              <span className="text-xs text-muted-foreground">
-                {seleccion.length} tarea{seleccion.length === 1 ? "" : "s"} seleccionada
-                {seleccion.length === 1 ? "" : "s"}
+            <div className="border-border bg-muted/60 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
+              <span className="text-muted-foreground text-xs">
+                {seleccion.length} tarea{seleccion.length === 1 ? '' : 's'} seleccionada
+                {seleccion.length === 1 ? '' : 's'}
               </span>
               <EtiquetadoMasivo tareaIds={seleccion} onHecho={() => setSeleccion([])} />
               <Button size="sm" variant="ghost" onClick={() => setSeleccion([])}>
@@ -372,11 +381,11 @@ export function TareasWorkspace({
             </div>
           ) : null}
 
-          {vista === "tablero" ? (
+          {vista === 'tablero' ? (
             <Tablero
               tareas={filtradas}
               estadoOps={estadoOps}
-              contextoDe={(t) => (expedienteId ? undefined : codigoDe.get(t.expedienteId ?? ""))}
+              contextoDe={(t) => (expedienteId ? undefined : codigoDe.get(t.expedienteId ?? ''))}
               onMover={mover}
               onReordenar={reordenar}
               onAbrir={setSeleccionada}
@@ -389,7 +398,9 @@ export function TareasWorkspace({
                     <TableRow>
                       <TableHead className="w-10">
                         <Checkbox
-                          checked={Boolean(filtradas.length) && seleccion.length === filtradas.length}
+                          checked={
+                            Boolean(filtradas.length) && seleccion.length === filtradas.length
+                          }
                           onCheckedChange={(v) => setSeleccion(v ? filtradas.map((t) => t.id) : [])}
                           aria-label="Seleccionar todas"
                         />
@@ -405,31 +416,39 @@ export function TareasWorkspace({
                   </TableHeader>
                   <TableBody>
                     {filtradas.map((t) => {
-                      const s = senalesTarea(estadoOps, t);
+                      const s = senalesTarea(estadoOps, t)
                       return (
-                        <TableRow key={t.id} className="cursor-pointer" onClick={() => setSeleccionada(t.id)}>
+                        <TableRow
+                          key={t.id}
+                          className="cursor-pointer"
+                          onClick={() => setSeleccionada(t.id)}
+                        >
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={seleccion.includes(t.id)}
                               onCheckedChange={(v) =>
-                                setSeleccion((sel) => (v ? [...sel, t.id] : sel.filter((x) => x !== t.id)))
+                                setSeleccion((sel) =>
+                                  v ? [...sel, t.id] : sel.filter((x) => x !== t.id),
+                                )
                               }
                               aria-label={`Seleccionar ${t.titulo}`}
                             />
                           </TableCell>
                           <TableCell className="max-w-[320px]">
-                            <p className="truncate text-sm font-medium text-foreground">{t.titulo}</p>
+                            <p className="text-foreground truncate text-sm font-medium">
+                              {t.titulo}
+                            </p>
                           </TableCell>
                           <TableCell className="max-w-[220px] truncate text-sm">
-                            {codigoDe.get(t.expedienteId ?? "") ?? "—"}
+                            {codigoDe.get(t.expedienteId ?? '') ?? '—'}
                           </TableCell>
                           <TableCell className="max-w-[200px]">
                             <EtiquetasTarea tarea={t} max={2} mostrarVacio />
                           </TableCell>
                           <TableCell className="text-sm">{t.responsable}</TableCell>
-                          <TableCell className="whitespace-nowrap text-sm">
-                            <span className={s.vencida ? "text-destructive" : ""}>
-                              {t.vencimiento || "Sin fecha"}
+                          <TableCell className="text-sm whitespace-nowrap">
+                            <span className={s.vencida ? 'text-destructive' : ''}>
+                              {t.vencimiento || 'Sin fecha'}
                             </span>
                           </TableCell>
                           <TableCell className="text-sm">{t.estado}</TableCell>
@@ -443,11 +462,14 @@ export function TareasWorkspace({
                             </span>
                           </TableCell>
                         </TableRow>
-                      );
+                      )
                     })}
                     {!filtradas.length ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                        <TableCell
+                          colSpan={8}
+                          className="text-muted-foreground py-10 text-center text-sm"
+                        >
                           No hay tareas en esta vista.
                         </TableCell>
                       </TableRow>
@@ -464,11 +486,11 @@ export function TareasWorkspace({
         <EsperaDialog
           tarea={tareaEspera}
           abierto
-          onConfirmado={() => reordenar("En espera", tareaEspera.id, esperaAntesDe ?? undefined)}
+          onConfirmado={() => reordenar('En espera', tareaEspera.id, esperaAntesDe ?? undefined)}
           onOpenChange={(v) => {
             if (!v) {
-              setEsperaPendiente(null);
-              setEsperaAntesDe(null);
+              setEsperaPendiente(null)
+              setEsperaAntesDe(null)
             }
           }}
         />
@@ -476,14 +498,14 @@ export function TareasWorkspace({
 
       <TareaFicha tareaId={seleccionada} onOpenChange={(v) => !v && setSeleccionada(null)} />
     </div>
-  );
+  )
 }
 
 /** Orden manual guardado; a igualdad, por antigüedad de creación. */
 function ordenarColumna(lista: TareaOp[]) {
   return lista
     .slice()
-    .sort((a, b) => (a.ordenTablero ?? 9999) - (b.ordenTablero ?? 9999) || a.id.localeCompare(b.id));
+    .sort((a, b) => (a.ordenTablero ?? 9999) - (b.ordenTablero ?? 9999) || a.id.localeCompare(b.id))
 }
 
 function Tablero({
@@ -494,47 +516,47 @@ function Tablero({
   onReordenar,
   onAbrir,
 }: {
-  tareas: TareaOp[];
-  estadoOps: OpsState;
-  contextoDe: (t: TareaOp) => string | undefined;
-  onMover: (id: string, destino: EstadoTareaOp, antesDe?: string) => void;
-  onReordenar: (columna: EstadoTareaOp, id: string, antesDe?: string) => void;
-  onAbrir: (id: string) => void;
+  tareas: TareaOp[]
+  estadoOps: OpsState
+  contextoDe: (t: TareaOp) => string | undefined
+  onMover: (id: string, destino: EstadoTareaOp, antesDe?: string) => void
+  onReordenar: (columna: EstadoTareaOp, id: string, antesDe?: string) => void
+  onAbrir: (id: string) => void
 }) {
-  const [sobre, setSobre] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null)
 
   const soltar = (columna: EstadoTareaOp, e: React.DragEvent, antesDe?: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSobre(null);
-    const id = e.dataTransfer.getData("text/plain");
-    if (!id) return;
-    const t = tareas.find((x) => x.id === id);
-    if (t && t.estado === columna) onReordenar(columna, id, antesDe);
-    else onMover(id, columna, antesDe);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setSobre(null)
+    const id = e.dataTransfer.getData('text/plain')
+    if (!id) return
+    const t = tareas.find((x) => x.id === id)
+    if (t && t.estado === columna) onReordenar(columna, id, antesDe)
+    else onMover(id, columna, antesDe)
+  }
 
   return (
     <div className="-mx-1 overflow-x-auto pb-3">
       <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
         {COLUMNAS.map((c) => {
-          const lista = ordenarColumna(tareas.filter((t) => t.estado === c.id));
+          const lista = ordenarColumna(tareas.filter((t) => t.estado === c.id))
           return (
             <section
               key={c.id}
               onDragOver={(e) => {
-                e.preventDefault();
-                setSobre(c.id);
+                e.preventDefault()
+                setSobre(c.id)
               }}
               onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
               onDrop={(e) => soltar(c.id, e)}
               className={cn(
-                "shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-80",
-                sobre === c.id && "bg-primary/10 ring-1 ring-primary/40",
+                'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-80',
+                sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
               )}
             >
               <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-                <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
                   {c.nombre}
                 </span>
                 <ToneBadge tono={c.tono}>{lista.length}</ToneBadge>
@@ -547,8 +569,8 @@ function Tablero({
                       draggable
                       className="cursor-grab transition-shadow active:cursor-grabbing active:shadow-lg"
                       onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", t.id);
-                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData('text/plain', t.id)
+                        e.dataTransfer.effectAllowed = 'move'
                       }}
                       onDrop={(e) => soltar(c.id, e, t.id)}
                     >
@@ -565,10 +587,9 @@ function Tablero({
                 )}
               </div>
             </section>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
-

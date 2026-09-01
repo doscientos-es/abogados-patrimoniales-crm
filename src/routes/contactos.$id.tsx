@@ -1,11 +1,4 @@
-import { Cronologia } from "@/components/comunicaciones/cronologia";
-import {
-  NuevoEmailDialog,
-  NuevoWhatsappDialog,
-  RegistroLlamadaDialog,
-} from "@/components/comunicaciones/dialogos";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import {
   Archive,
   ArrowLeft,
@@ -24,32 +17,38 @@ import {
   Plus,
   Save,
   ShieldAlert,
-  Star,
   Trash2,
   X,
-} from "lucide-react";
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
-import { PendingBadge, PendingPanel } from "@/components/common";
-import { NuevaTareaDialog } from "@/components/crm/task-dialog";
+import { PendingBadge, PendingPanel } from '@/components/common'
+import { Cronologia } from '@/components/comunicaciones/cronologia'
+import {
+  NuevoEmailDialog,
+  NuevoWhatsappDialog,
+  RegistroLlamadaDialog,
+} from '@/components/comunicaciones/dialogos'
 import {
   DocStatusBadge,
   EstadoBadge,
+  FichaEditContext,
   Field,
   FieldGrid,
-  FichaEditContext,
   FuturePlaceholder,
   InlineWarning,
   NaturalezaBadge,
-  Postit,
   RelacionBadge,
   SatisfactionMeter,
   maskIban,
   useFichaEdit,
-} from "@/components/contactos/ui";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/contactos/ui'
+import { NotaAvisos } from '@/components/notas/nota-avisos'
+import { NuevaNotaBoton } from '@/components/notas/nota-form'
+import { NotaMuro, NotaResumenMuro } from '@/components/notas/nota-muro'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -58,24 +57,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import {
   Table,
   TableBody,
@@ -83,12 +82,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import {
-  NATURALEZAS,
-  RELACIONES,
   SATISFACCIONES,
   TIPOS_RECLAMACION,
   avisoBancario,
@@ -101,80 +98,77 @@ import {
   type Recomendacion,
   type Satisfaccion,
   type Valoracion,
-} from "@/data/contactos";
+} from '@/data/contactos'
+import { AVISO_INTERNO } from '@/data/notas'
+import { NuevaTareaDialog } from '@/features/crm'
+import { comunicacionesDeContacto, useOps } from '@/lib/expedientes-store'
+import { notasDeContacto, useNotas } from '@/lib/notas-store'
 
-import { comunicacionesDeContacto, useOps } from "@/lib/expedientes-store";
-import { AVISO_INTERNO } from "@/data/notas";
-import { notasDeContacto, useNotas } from "@/lib/notas-store";
-import { NotaMuro, NotaResumenMuro } from "@/components/notas/nota-muro";
-import { NuevaNotaBoton } from "@/components/notas/nota-form";
-import { NotaAvisos } from "@/components/notas/nota-avisos";
-
-const AUTOR = "M. Sanchís";
+const AUTOR = 'M. Sanchís'
 const hoy = () =>
-  new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+  new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-export const Route = createFileRoute("/contactos/$id")({
+export const Route = createFileRoute('/contactos/$id')({
   loader: ({ params }) => {
-    const contacto = contactoPorId(params.id);
-    if (!contacto) throw notFound();
-    return { contacto };
+    const contacto = contactoPorId(params.id)
+    if (!contacto) throw notFound()
+    return { contacto }
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
       return {
-        meta: [{ title: "Ficha no disponible — LEX" }, { name: "robots", content: "noindex" }],
-      };
+        meta: [{ title: 'Ficha no disponible — LEX' }, { name: 'robots', content: 'noindex' }],
+      }
     }
-    const nombre = nombreCompleto(loaderData.contacto);
+    const nombre = nombreCompleto(loaderData.contacto)
     return {
       meta: [
         { title: `${nombre} — Ficha personal | LEX` },
         {
-          name: "description",
+          name: 'description',
           content: `Ficha personal de ${nombre}: datos generales, bancarios, perfil, archivos y notas internas.`,
         },
-        { property: "og:title", content: `${nombre} — Ficha personal` },
+        { property: 'og:title', content: `${nombre} — Ficha personal` },
         {
-          property: "og:description",
-          content: "Ficha personal del módulo de contactos del despacho patrimonial.",
+          property: 'og:description',
+          content: 'Ficha personal del módulo de contactos del despacho patrimonial.',
         },
       ],
-    };
+    }
   },
   component: FichaPage,
-});
+})
 
 /** Expedientes en los que interviene el contacto. */
 function useExpedientesDeContacto(contactoId: string) {
-  const expedientes = useOps((s) => s.expedientes);
-  const intervinientes = useOps((s) => s.intervinientes);
+  const expedientes = useOps((s) => s.expedientes)
+  const intervinientes = useOps((s) => s.intervinientes)
   return useMemo(() => {
-    const ids = new Set<string>();
+    const ids = new Set<string>()
     for (const e of expedientes) {
-      if (e.contactoId === contactoId || e.otrosClientes?.includes(contactoId)) ids.add(e.id);
+      if (e.contactoId === contactoId || e.otrosClientes?.includes(contactoId)) ids.add(e.id)
     }
     for (const i of intervinientes) {
-      if (i.contactoId === contactoId) ids.add(i.expedienteId);
+      if (i.contactoId === contactoId) ids.add(i.expedienteId)
     }
-    return expedientes.filter((e) => ids.has(e.id));
-  }, [expedientes, intervinientes, contactoId]);
+    return expedientes.filter((e) => ids.has(e.id))
+  }, [expedientes, intervinientes, contactoId])
 }
 
 function FichaPage() {
-  const contacto = Route.useLoaderData().contacto as Contacto;
-  const [editando, setEditando] = useState(false);
-  const expedientes = useExpedientesDeContacto(contacto.id);
+  const contacto = Route.useLoaderData().contacto as Contacto
+  const [editando, setEditando] = useState(false)
+  const expedientes = useExpedientesDeContacto(contacto.id)
   const incidenciaAbierta = contacto.incidencias.find(
-    (i) => i.estado === "Abierta" || i.estado === "En revisión",
-  );
+    (i) => i.estado === 'Abierta' || i.estado === 'En revisión',
+  )
 
   return (
     <FichaEditContext.Provider value={editando}>
       <div className="mx-auto max-w-[1400px]">
         <Link
           to="/contactos"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a contactos
@@ -190,20 +184,16 @@ function FichaPage() {
         />
 
         {incidenciaAbierta ? (
-          <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div className="border-destructive/40 bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Reclamación o incidencia abierta ({incidenciaAbierta.tipo}, {incidenciaAbierta.fecha}).
-              Consulta la pestaña Perfil.
+              Reclamación o incidencia abierta ({incidenciaAbierta.tipo}, {incidenciaAbierta.fecha}
+              ). Consulta la pestaña Perfil.
             </span>
           </div>
         ) : null}
 
-        <NotaAvisos
-          contactoId={contacto.id}
-          disparadores={["abrir-contacto", "antes-contactar"]}
-        />
-
+        <NotaAvisos contactoId={contacto.id} disparadores={['abrir-contacto', 'antes-contactar']} />
 
         <Tabs defaultValue="resumen">
           <TabsList className="flex-wrap">
@@ -235,12 +225,12 @@ function FichaPage() {
           </TabsContent>
         </Tabs>
 
-        <p className="mt-6 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-6 text-xs">
           Estructura preparada para incorporar nuevas pestañas en fases posteriores.
         </p>
       </div>
     </FichaEditContext.Provider>
-  );
+  )
 }
 
 function FichaHeader({
@@ -251,39 +241,38 @@ function FichaHeader({
   onGuardar,
   numExpedientes,
 }: {
-  contacto: Contacto;
-  editando: boolean;
-  onEditar: () => void;
-  onCancelar: () => void;
-  onGuardar: () => void;
-  numExpedientes: number;
+  contacto: Contacto
+  editando: boolean
+  onEditar: () => void
+  onCancelar: () => void
+  onGuardar: () => void
+  numExpedientes: number
 }) {
   const iniciales = nombreCompleto(contacto)
-    .split(" ")
+    .split(' ')
     .slice(0, 2)
     .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-  const doc = estadoDocumental(contacto);
-
+    .join('')
+    .toUpperCase()
+  const doc = estadoDocumental(contacto)
 
   return (
     <Card className="mb-4">
       <CardContent className="pt-6">
         <div className="flex flex-wrap items-start gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary font-serif text-lg font-semibold text-primary-foreground">
+          <span className="bg-primary text-primary-foreground flex h-14 w-14 shrink-0 items-center justify-center rounded-lg font-serif text-lg font-semibold">
             {iniciales}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
+              <h1 className="text-foreground font-serif text-2xl font-semibold tracking-tight">
                 {nombreCompleto(contacto)}
               </h1>
               <RelacionBadge value={contacto.relacion} />
               <NaturalezaBadge value={contacto.tipoPersona} />
               <EstadoBadge value={contacto.estado} />
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
               <span className="inline-flex items-center gap-1.5">
                 <Phone className="h-4 w-4" />
                 {contacto.telefono}
@@ -294,21 +283,20 @@ function FichaHeader({
               </span>
               <Link
                 to="/expedientes"
-                className="inline-flex items-center gap-1.5 hover:text-foreground"
+                className="hover:text-foreground inline-flex items-center gap-1.5"
               >
                 <Briefcase className="h-4 w-4" />
-                {numExpedientes} expediente{numExpedientes === 1 ? "" : "s"}
+                {numExpedientes} expediente{numExpedientes === 1 ? '' : 's'}
               </Link>
               {doc.aplica ? (
                 <span className="inline-flex items-center gap-1.5">
                   Documentación:
-                  <DocStatusBadge value={doc.pendientes.length === 0 ? "Completa" : "Pendiente"} />
+                  <DocStatusBadge value={doc.pendientes.length === 0 ? 'Completa' : 'Pendiente'} />
                 </span>
               ) : (
                 <span className="text-xs">Sin documentación obligatoria (no es cliente)</span>
               )}
             </div>
-
           </div>
           <div className="flex items-center gap-2">
             {editando ? (
@@ -367,7 +355,7 @@ function FichaHeader({
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 /**
@@ -375,36 +363,36 @@ function FichaHeader({
  * Aquí solo se consulta en modo lectura ("interviene como").
  */
 function IntervencionEnExpedientes({ contacto }: { contacto: Contacto }) {
-  const expedientes = useOps((s) => s.expedientes);
-  const intervinientes = useOps((s) => s.intervinientes);
+  const expedientes = useOps((s) => s.expedientes)
+  const intervinientes = useOps((s) => s.intervinientes)
   const filas = useMemo(() => {
-    const out: { expedienteId: string; nombre: string; rol: string }[] = [];
+    const out: { expedienteId: string; nombre: string; rol: string }[] = []
     for (const e of expedientes) {
       if (e.contactoId === contacto.id || e.otrosClientes?.includes(contacto.id)) {
-        out.push({ expedienteId: e.id, nombre: e.nombre, rol: "Cliente del expediente" });
+        out.push({ expedienteId: e.id, nombre: e.nombre, rol: 'Cliente del expediente' })
       }
     }
     for (const i of intervinientes) {
-      if (i.contactoId !== contacto.id) continue;
-      if (out.some((f) => f.expedienteId === i.expedienteId && f.rol === i.rol)) continue;
-      const e = expedientes.find((x) => x.id === i.expedienteId);
-      out.push({ expedienteId: i.expedienteId, nombre: e?.nombre ?? i.expedienteId, rol: i.rol });
+      if (i.contactoId !== contacto.id) continue
+      if (out.some((f) => f.expedienteId === i.expedienteId && f.rol === i.rol)) continue
+      const e = expedientes.find((x) => x.id === i.expedienteId)
+      out.push({ expedienteId: i.expedienteId, nombre: e?.nombre ?? i.expedienteId, rol: i.rol })
     }
-    return out;
-  }, [expedientes, intervinientes, contacto.id]);
+    return out
+  }, [expedientes, intervinientes, contacto.id])
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Interviene en expedientes</CardTitle>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           El rol se define en cada expediente y puede ser distinto en cada uno. No modifica la
           relación con el despacho.
         </p>
       </CardHeader>
       <CardContent>
         {filas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No interviene en ningún expediente.</p>
+          <p className="text-muted-foreground text-sm">No interviene en ningún expediente.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -421,7 +409,7 @@ function IntervencionEnExpedientes({ contacto }: { contacto: Contacto }) {
                     <Link
                       to="/expedientes/$id"
                       params={{ id: f.expedienteId }}
-                      className="font-medium text-primary hover:underline"
+                      className="text-primary font-medium hover:underline"
                     >
                       {f.expedienteId}
                     </Link>
@@ -435,13 +423,12 @@ function IntervencionEnExpedientes({ contacto }: { contacto: Contacto }) {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExpedientes: number }) {
-
-  const direccion = `${contacto.direccion}, ${contacto.cp} ${contacto.municipio} (${contacto.provincia}), ${contacto.pais}`;
-  const doc = estadoDocumental(contacto);
+  const direccion = `${contacto.direccion}, ${contacto.cp} ${contacto.municipio} (${contacto.provincia}), ${contacto.pais}`
+  const doc = estadoDocumental(contacto)
 
   return (
     <>
@@ -469,20 +456,30 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
                 label="Expedientes"
                 editable={false}
                 value={
-                  <Link to="/expedientes" className="inline-flex items-center gap-2 text-primary hover:underline">
+                  <Link
+                    to="/expedientes"
+                    className="text-primary inline-flex items-center gap-2 hover:underline"
+                  >
                     <Briefcase className="h-4 w-4" />
-                    {numExpedientes} expediente{numExpedientes === 1 ? "" : "s"}
+                    {numExpedientes} expediente{numExpedientes === 1 ? '' : 's'}
                   </Link>
                 }
               />
-              <Field label="Fecha de creación" value={`${contacto.creado} · ${contacto.creadoPor}`} />
+              <Field
+                label="Fecha de creación"
+                value={`${contacto.creado} · ${contacto.creadoPor}`}
+              />
               <Field
                 label="Última modificación"
                 value={`${contacto.modificado} · ${contacto.modificadoPor}`}
               />
-              <Field label="Estado" editable={false} value={<EstadoBadge value={contacto.estado} />} />
+              <Field
+                label="Estado"
+                editable={false}
+                value={<EstadoBadge value={contacto.estado} />}
+              />
             </FieldGrid>
-            <p className="mt-4 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-4 text-xs">
               La naturaleza indica qué es el contacto y la relación, qué es para el despacho. Cómo
               interviene se define en cada expediente, desde la pestaña Intervinientes.
             </p>
@@ -495,7 +492,7 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
           </CardHeader>
           <CardContent className="space-y-3">
             {!doc.aplica ? (
-              <div className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              <div className="border-border bg-muted/30 text-muted-foreground rounded-md border border-dashed p-4 text-sm">
                 Sin documentación obligatoria. Las exigencias de identificación, protección de datos
                 y poderes solo se aplican a los contactos con relación <strong>Cliente</strong>.
               </div>
@@ -503,34 +500,31 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
               <>
                 {doc.pendientes.length > 0 ? (
                   <InlineWarning>
-                    Documentación de cliente pendiente: {doc.pendientes.join("; ")}.
+                    Documentación de cliente pendiente: {doc.pendientes.join('; ')}.
                   </InlineWarning>
                 ) : null}
                 {[
-                  ["Identificación", contacto.documentacion.identificacion],
-                  ["Protección de datos", contacto.documentacion.rgpd],
-                  ["Poderes", contacto.documentacion.poderes],
+                  ['Identificación', contacto.documentacion.identificacion],
+                  ['Protección de datos', contacto.documentacion.rgpd],
+                  ['Poderes', contacto.documentacion.poderes],
                 ].map(([label, estado]) => (
                   <div
                     key={label}
-                    className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    className="border-border flex items-center justify-between rounded-md border px-3 py-2"
                   >
-                    <span className="text-sm text-foreground">{label}</span>
+                    <span className="text-foreground text-sm">{label}</span>
                     <DocStatusBadge value={String(estado)} />
                   </div>
                 ))}
               </>
             )}
-
           </CardContent>
         </Card>
       </div>
 
       <IntervencionEnExpedientes contacto={contacto} />
 
-
       <ComunicacionesDelContacto contactoId={contacto.id} />
-
 
       <Card>
         <CardHeader className="pb-2">
@@ -541,7 +535,6 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
         </CardContent>
       </Card>
 
-
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Áreas previstas en fases posteriores</CardTitle>
@@ -549,45 +542,49 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <FuturePlaceholder title="Presupuestos" description="Propuestas económicas emitidas." />
           <FuturePlaceholder title="Facturas" description="Minutas y su estado de cobro." />
-          <FuturePlaceholder title="Tareas" description="Tareas del equipo asociadas al contacto." />
-          <FuturePlaceholder title="Próximas actuaciones" description="Plazos y vencimientos previstos." />
+          <FuturePlaceholder
+            title="Tareas"
+            description="Tareas del equipo asociadas al contacto."
+          />
+          <FuturePlaceholder
+            title="Próximas actuaciones"
+            description="Plazos y vencimientos previstos."
+          />
         </CardContent>
       </Card>
     </>
-  );
+  )
 }
-
 
 /** Notas del contacto conectadas al motor transversal de notas internas. */
 function NotasDelContacto({ contacto, resumen }: { contacto: Contacto; resumen?: boolean }) {
-  const lista = useNotas((s) => notasDeContacto(s, contacto.id));
+  const lista = useNotas((s) => notasDeContacto(s, contacto.id))
   const inicial = {
-    ambito: "persona" as const,
+    ambito: 'persona' as const,
     contactos: [contacto.id],
-    origen: { tipo: "persona" as const, id: contacto.id, etiqueta: nombreCompleto(contacto) },
-  };
+    origen: { tipo: 'persona' as const, id: contacto.id, etiqueta: nombreCompleto(contacto) },
+  }
 
   return (
     <div className="space-y-3">
       <NotaResumenMuro notas={lista} limite={resumen ? 3 : 6} />
       <div className="flex flex-wrap items-center gap-2">
         <NuevaNotaBoton inicial={inicial} />
-        <span className="text-xs text-muted-foreground">{AVISO_INTERNO}</span>
+        <span className="text-muted-foreground text-xs">{AVISO_INTERNO}</span>
       </div>
     </div>
-  );
-
+  )
 }
 
 function TabGenerales({ contacto }: { contacto: Contacto }) {
-  const editando = useFichaEdit();
+  const editando = useFichaEdit()
   return (
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base">Datos generales</CardTitle>
           {editando ? (
-            <span className="text-xs text-muted-foreground">Modo edición activo</span>
+            <span className="text-muted-foreground text-xs">Modo edición activo</span>
           ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
@@ -598,14 +595,14 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
               editable={false}
               value={<RelacionBadge value={contacto.relacion} />}
             />
-            {contacto.tipoPersona === "Persona física" ? (
+            {contacto.tipoPersona === 'Persona física' ? (
               <>
                 <Field label="Nombre" value={contacto.nombre} />
                 <Field label="Apellidos" value={contacto.apellidos} />
                 <Field label="NIF / NIE" value={contacto.nif} />
                 <Field label="Fecha de nacimiento" value={contacto.nacimiento} />
-                </>
-            ) : contacto.tipoPersona === "Persona jurídica" ? (
+              </>
+            ) : contacto.tipoPersona === 'Persona jurídica' ? (
               <>
                 <Field label="Razón social" value={contacto.razonSocial ?? contacto.nombre} />
                 <Field label="CIF" value={contacto.nif} />
@@ -618,7 +615,10 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
                   label="Denominación oficial"
                   value={contacto.razonSocial ?? contacto.nombre}
                 />
-                <Field label="Código o identificación oficial" value={contacto.codigoOrgano ?? contacto.nif} />
+                <Field
+                  label="Código o identificación oficial"
+                  value={contacto.codigoOrgano ?? contacto.nif}
+                />
                 <Field label="Persona de contacto" value={contacto.personaContacto} />
                 <Field label="Cargo" value={contacto.cargoContacto} />
               </>
@@ -633,14 +633,13 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
             <Field label="Provincia" value={contacto.provincia} />
             <Field label="País" value={contacto.pais} />
           </FieldGrid>
-
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Notas internas</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             Anotaciones del equipo asociadas a este contacto.
           </p>
         </CardHeader>
@@ -649,20 +648,19 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
         </CardContent>
       </Card>
     </>
-  );
+  )
 }
 
-
-type DatosBanco = Contacto["banco"] & { desde?: string; hasta?: string };
+type DatosBanco = Contacto['banco'] & { desde?: string; hasta?: string }
 
 function BancoCampos({
   banco,
   visible,
   onToggle,
 }: {
-  banco: DatosBanco;
-  visible: boolean;
-  onToggle: () => void;
+  banco: DatosBanco
+  visible: boolean
+  onToggle: () => void
 }) {
   return (
     <FieldGrid>
@@ -674,12 +672,14 @@ function BancoCampos({
         value={
           banco.iban ? (
             <span className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs">{visible ? banco.iban : maskIban(banco.iban)}</span>
+              <span className="font-mono text-xs">
+                {visible ? banco.iban : maskIban(banco.iban)}
+              </span>
               <button
                 type="button"
                 onClick={onToggle}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label={visible ? "Ocultar IBAN" : "Mostrar IBAN"}
+                aria-label={visible ? 'Ocultar IBAN' : 'Mostrar IBAN'}
               >
                 {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -689,61 +689,77 @@ function BancoCampos({
       />
       <Field label="Entidad bancaria" value={banco.entidad} />
       <Field label="Código BIC/SWIFT" value={banco.bic} />
-      <Field label="Mandato SEPA" value={banco.sepa ? "Sí" : "No"} />
+      <Field label="Mandato SEPA" value={banco.sepa ? 'Sí' : 'No'} />
       <Field label="Fecha del mandato SEPA" value={banco.fechaSepa} />
-      <Field label="Estado del mandato" editable={false} value={<DocStatusBadge value={banco.estadoMandato} />} />
+      <Field
+        label="Estado del mandato"
+        editable={false}
+        value={<DocStatusBadge value={banco.estadoMandato} />}
+      />
       <Field label="Observaciones bancarias" value={banco.observaciones} wide />
     </FieldGrid>
-  );
+  )
 }
 
 function TabBancarios({ contacto }: { contacto: Contacto }) {
-  const [visible, setVisible] = useState(false);
-  const [actual, setActual] = useState<DatosBanco>({ ...contacto.banco, desde: contacto.creado });
-  const [historico, setHistorico] = useState<DatosBanco[]>([]);
-  const [verHistorico, setVerHistorico] = useState(false);
+  const [visible, setVisible] = useState(false)
+  const [actual, setActual] = useState<DatosBanco>({ ...contacto.banco, desde: contacto.creado })
+  const [historico, setHistorico] = useState<DatosBanco[]>([])
+  const [verHistorico, setVerHistorico] = useState(false)
   const [registro, setRegistro] = useState<{ fecha: string; usuario: string; cambio: string }[]>([
-    { fecha: contacto.modificado, usuario: contacto.modificadoPor, cambio: "Revisión de los datos bancarios" },
-    { fecha: contacto.creado, usuario: contacto.creadoPor, cambio: "Alta inicial de los datos bancarios" },
-  ]);
+    {
+      fecha: contacto.modificado,
+      usuario: contacto.modificadoPor,
+      cambio: 'Revisión de los datos bancarios',
+    },
+    {
+      fecha: contacto.creado,
+      usuario: contacto.creadoPor,
+      cambio: 'Alta inicial de los datos bancarios',
+    },
+  ])
 
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState({
-    titular: "",
-    nif: "",
-    iban: "",
-    entidad: "",
-    bic: "",
+    titular: '',
+    nif: '',
+    iban: '',
+    entidad: '',
+    bic: '',
     sepa: false,
-    fechaSepa: "",
-    estadoMandato: "Pendiente",
-    observaciones: "",
-  });
+    fechaSepa: '',
+    estadoMandato: 'Pendiente',
+    observaciones: '',
+  })
 
   const guardarNuevo = () => {
-    if (!form.iban.trim()) return;
-    setHistorico((prev) => [{ ...actual, hasta: hoy() }, ...prev]);
-    setActual({ ...form, desde: hoy() });
+    if (!form.iban.trim()) return
+    setHistorico((prev) => [{ ...actual, hasta: hoy() }, ...prev])
+    setActual({ ...form, desde: hoy() })
     setRegistro((prev) => [
-      { fecha: hoy(), usuario: AUTOR, cambio: "Nueva cuenta bancaria; la anterior pasa a histórico" },
+      {
+        fecha: hoy(),
+        usuario: AUTOR,
+        cambio: 'Nueva cuenta bancaria; la anterior pasa a histórico',
+      },
       ...prev,
-    ]);
-    setAbierto(false);
-    setVisible(false);
+    ])
+    setAbierto(false)
+    setVisible(false)
     setForm({
-      titular: "",
-      nif: "",
-      iban: "",
-      entidad: "",
-      bic: "",
+      titular: '',
+      nif: '',
+      iban: '',
+      entidad: '',
+      bic: '',
       sepa: false,
-      fechaSepa: "",
-      estadoMandato: "Pendiente",
-      observaciones: "",
-    });
-  };
+      fechaSepa: '',
+      estadoMandato: 'Pendiente',
+      observaciones: '',
+    })
+  }
 
-  const aviso = avisoBancario(contacto);
+  const aviso = avisoBancario(contacto)
 
   return (
     <>
@@ -752,7 +768,7 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Datos bancarios no obligatorios</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-muted-foreground text-sm">
             Solo los contactos con relación <strong>Cliente</strong> requieren cuenta bancaria y
             mandato SEPA. Puedes registrarlos igualmente, pero no se generará ningún aviso ni
             documentación pendiente.
@@ -763,14 +779,13 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
       ) : null}
 
       <Card className="border-warning/50 bg-warning/5">
-
         <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Lock className="h-4 w-4" />
               Datos bancarios vigentes
             </CardTitle>
-            <p className="mt-1 text-xs text-warning-foreground">
+            <p className="text-warning-foreground mt-1 text-xs">
               Información sensible. Solo se muestra la cuenta en vigor; las anteriores quedan en el
               histórico para evitar confusiones.
             </p>
@@ -800,7 +815,10 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                 </div>
                 <div className="space-y-1.5">
                   <Label>NIF del titular</Label>
-                  <Input value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} />
+                  <Input
+                    value={form.nif}
+                    onChange={(e) => setForm({ ...form, nif: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>IBAN</Label>
@@ -819,7 +837,10 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                 </div>
                 <div className="space-y-1.5">
                   <Label>BIC / SWIFT</Label>
-                  <Input value={form.bic} onChange={(e) => setForm({ ...form, bic: e.target.value })} />
+                  <Input
+                    value={form.bic}
+                    onChange={(e) => setForm({ ...form, bic: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Fecha del mandato SEPA</Label>
@@ -839,7 +860,7 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {["Vigente", "Pendiente", "Revocado", "No aplicable"].map((e) => (
+                      {['Vigente', 'Pendiente', 'Revocado', 'No aplicable'].map((e) => (
                         <SelectItem key={e} value={e}>
                           {e}
                         </SelectItem>
@@ -847,7 +868,7 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <label className="flex items-center gap-2 self-end text-sm text-foreground">
+                <label className="text-foreground flex items-center gap-2 self-end text-sm">
                   <Checkbox
                     checked={form.sepa}
                     onCheckedChange={(v) => setForm({ ...form, sepa: v === true })}
@@ -874,7 +895,7 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
         </CardHeader>
         <CardContent className="space-y-4">
           {actual.desde ? (
-            <p className="text-xs text-muted-foreground">En vigor desde {actual.desde}</p>
+            <p className="text-muted-foreground text-xs">En vigor desde {actual.desde}</p>
           ) : null}
           <BancoCampos banco={actual} visible={visible} onToggle={() => setVisible((v) => !v)} />
         </CardContent>
@@ -884,19 +905,19 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle className="text-base">Histórico de cuentas</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {historico.length} cuenta{historico.length === 1 ? "" : "s"} archivada
-              {historico.length === 1 ? "" : "s"}. Oculto por defecto.
+            <p className="text-muted-foreground mt-1 text-xs">
+              {historico.length} cuenta{historico.length === 1 ? '' : 's'} archivada
+              {historico.length === 1 ? '' : 's'}. Oculto por defecto.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setVerHistorico((v) => !v)}>
-            {verHistorico ? "Ocultar histórico" : "Mostrar histórico"}
+            {verHistorico ? 'Ocultar histórico' : 'Mostrar histórico'}
           </Button>
         </CardHeader>
         {verHistorico ? (
           <CardContent>
             {historico.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin cuentas anteriores registradas.</p>
+              <p className="text-muted-foreground text-sm">Sin cuentas anteriores registradas.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -911,11 +932,11 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                 <TableBody>
                   {historico.map((h, i) => (
                     <TableRow key={i} className="text-muted-foreground">
-                      <TableCell>{h.titular || "—"}</TableCell>
+                      <TableCell>{h.titular || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{maskIban(h.iban)}</TableCell>
-                      <TableCell>{h.entidad || "—"}</TableCell>
-                      <TableCell>{h.desde ?? "—"}</TableCell>
-                      <TableCell>{h.hasta ?? "—"}</TableCell>
+                      <TableCell>{h.entidad || '—'}</TableCell>
+                      <TableCell>{h.desde ?? '—'}</TableCell>
+                      <TableCell>{h.hasta ?? '—'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -956,69 +977,73 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
         description="No se implementan cobros, pagos, remesas ni plataformas de facturación."
       />
     </>
-  );
+  )
 }
 
-
-const ATENCIONES = ["Preferente", "Estándar", "Intencional *"] as const;
+const ATENCIONES = ['Preferente', 'Estándar', 'Intencional *'] as const
 
 function TabPerfil({ contacto }: { contacto: Contacto }) {
-  const [atencion, setAtencion] = useState<string>("Estándar");
+  const [atencion, setAtencion] = useState<string>('Estándar')
 
   // Nivel de satisfacción operativo
-  const [satisfaccion, setSatisfaccion] = useState<Satisfaccion>(contacto.satisfaccion);
-  const [historial, setHistorial] = useState<Valoracion[]>(contacto.historialSatisfaccion);
-  const [nuevaValoracion, setNuevaValoracion] = useState<Satisfaccion>(contacto.satisfaccion);
-  const [obsValoracion, setObsValoracion] = useState("");
+  const [satisfaccion, setSatisfaccion] = useState<Satisfaccion>(contacto.satisfaccion)
+  const [historial, setHistorial] = useState<Valoracion[]>(contacto.historialSatisfaccion)
+  const [nuevaValoracion, setNuevaValoracion] = useState<Satisfaccion>(contacto.satisfaccion)
+  const [obsValoracion, setObsValoracion] = useState('')
 
   const registrarValoracion = () => {
     setHistorial((prev) => [
-      { fecha: hoy(), nivel: nuevaValoracion, observacion: obsValoracion || "—", autor: AUTOR },
+      { fecha: hoy(), nivel: nuevaValoracion, observacion: obsValoracion || '—', autor: AUTOR },
       ...prev,
-    ]);
-    setSatisfaccion(nuevaValoracion);
-    setObsValoracion("");
-  };
+    ])
+    setSatisfaccion(nuevaValoracion)
+    setObsValoracion('')
+  }
 
   // Recomendaciones
-  const [recomendados, setRecomendados] = useState<Recomendacion[]>(contacto.haRecomendado);
-  const [recNombre, setRecNombre] = useState("");
-  const recResultado = "Pendiente de contacto";
-  const [recObs, setRecObs] = useState("");
+  const [recomendados, setRecomendados] = useState<Recomendacion[]>(contacto.haRecomendado)
+  const [recNombre, setRecNombre] = useState('')
+  const recResultado = 'Pendiente de contacto'
+  const [recObs, setRecObs] = useState('')
 
   const añadirRecomendado = () => {
-    if (!recNombre.trim()) return;
+    if (!recNombre.trim()) return
     setRecomendados((prev) => [
-      { nombre: recNombre.trim(), fecha: hoy(), resultado: recResultado, observaciones: recObs || "—" },
+      {
+        nombre: recNombre.trim(),
+        fecha: hoy(),
+        resultado: recResultado,
+        observaciones: recObs || '—',
+      },
       ...prev,
-    ]);
-    setRecNombre("");
-    setRecObs("");
-  };
+    ])
+    setRecNombre('')
+    setRecObs('')
+  }
 
   // Reclamaciones e incidencias
-  const [incidencias, setIncidencias] = useState<Incidencia[]>(contacto.incidencias);
-  const [incTipo, setIncTipo] = useState<string>(TIPOS_RECLAMACION[0] ?? "Otro");
-  const [incDesc, setIncDesc] = useState("");
+  const [incidencias, setIncidencias] = useState<Incidencia[]>(contacto.incidencias)
+  const [incTipo, setIncTipo] = useState<string>(TIPOS_RECLAMACION[0] ?? 'Otro')
+  const [incDesc, setIncDesc] = useState('')
 
   const añadirIncidencia = () => {
-    if (!incDesc.trim()) return;
+    if (!incDesc.trim()) return
     setIncidencias((prev) => [
       {
         fecha: hoy(),
         tipo: incTipo,
         descripcion: incDesc.trim(),
-        estado: "Abierta",
-        solucion: "—",
-        observaciones: "—",
+        estado: 'Abierta',
+        solucion: '—',
+        observaciones: '—',
       },
       ...prev,
-    ]);
-    setIncDesc("");
-  };
+    ])
+    setIncDesc('')
+  }
 
-  const cambiarEstadoIncidencia = (i: number, estado: Incidencia["estado"]) =>
-    setIncidencias((prev) => prev.map((inc, idx) => (idx === i ? { ...inc, estado } : inc)));
+  const cambiarEstadoIncidencia = (i: number, estado: Incidencia['estado']) =>
+    setIncidencias((prev) => prev.map((inc, idx) => (idx === i ? { ...inc, estado } : inc)))
 
   return (
     <>
@@ -1032,7 +1057,7 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
             <Field label="Fecha de alta" value={contacto.creado} />
             <Field label="Registrado por" value={contacto.creadoPor} />
           </FieldGrid>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             El listado de orígenes es editable desde Configuración → Contactos.
           </p>
         </CardContent>
@@ -1057,7 +1082,7 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
               </SelectContent>
             </Select>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             * Intencional: atención definida de forma deliberada según la estrategia del despacho.
           </p>
         </CardContent>
@@ -1068,15 +1093,18 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
           <CardTitle className="text-base">Nivel de satisfacción</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4 rounded-md border border-border px-3 py-3">
+          <div className="border-border flex flex-wrap items-center gap-4 rounded-md border px-3 py-3">
             <SatisfactionMeter value={satisfaccion} />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               Última valoración: {historial[0]?.fecha ?? contacto.fechaSatisfaccion}
             </span>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[200px_1fr_auto]">
-            <Select value={nuevaValoracion} onValueChange={(v) => setNuevaValoracion(v as Satisfaccion)}>
+            <Select
+              value={nuevaValoracion}
+              onValueChange={(v) => setNuevaValoracion(v as Satisfaccion)}
+            >
               <SelectTrigger aria-label="Nuevo nivel de satisfacción">
                 <SelectValue />
               </SelectTrigger>
@@ -1102,9 +1130,9 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
 
           <Separator />
           <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Historial de valoraciones</p>
+            <p className="text-foreground mb-2 text-sm font-medium">Historial de valoraciones</p>
             {historial.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin valoraciones registradas.</p>
+              <p className="text-muted-foreground text-sm">Sin valoraciones registradas.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -1139,7 +1167,7 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Recomendado por</p>
+            <p className="text-foreground mb-2 text-sm font-medium">Recomendado por</p>
             {contacto.recomendadoPor ? (
               <FieldGrid>
                 <Field
@@ -1164,12 +1192,14 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
                 <Field label="Observaciones" value={contacto.recomendadoPor.observaciones} wide />
               </FieldGrid>
             ) : (
-              <p className="text-sm text-muted-foreground">Sin recomendación de origen registrada.</p>
+              <p className="text-muted-foreground text-sm">
+                Sin recomendación de origen registrada.
+              </p>
             )}
           </div>
           <Separator />
           <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Personas recomendadas</p>
+            <p className="text-foreground mb-2 text-sm font-medium">Personas recomendadas</p>
             <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <Input
                 value={recNombre}
@@ -1190,7 +1220,7 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
               </Button>
             </div>
             {recomendados.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No ha recomendado a otros contactos.</p>
+              <p className="text-muted-foreground text-sm">No ha recomendado a otros contactos.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -1259,25 +1289,25 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
             </Button>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            ¿Existe reclamación o incidencia? {incidencias.length > 0 ? "Sí" : "No"}
+          <p className="text-muted-foreground text-sm">
+            ¿Existe reclamación o incidencia? {incidencias.length > 0 ? 'Sí' : 'No'}
           </p>
           {incidencias.map((inc, i) => (
-            <div key={i} className="rounded-md border border-border p-3">
+            <div key={i} className="border-border rounded-md border p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{inc.tipo}</span>
+                <span className="text-foreground text-sm font-medium">{inc.tipo}</span>
                 <DocStatusBadge value={inc.estado} />
-                <span className="text-xs text-muted-foreground">{inc.fecha}</span>
+                <span className="text-muted-foreground text-xs">{inc.fecha}</span>
                 <div className="ml-auto w-44">
                   <Select
                     value={inc.estado}
-                    onValueChange={(v) => cambiarEstadoIncidencia(i, v as Incidencia["estado"])}
+                    onValueChange={(v) => cambiarEstadoIncidencia(i, v as Incidencia['estado'])}
                   >
                     <SelectTrigger className="h-8" aria-label="Estado de la incidencia">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(["Abierta", "En revisión", "Resuelta", "Cerrada"] as const).map((e) => (
+                      {(['Abierta', 'En revisión', 'Resuelta', 'Cerrada'] as const).map((e) => (
                         <SelectItem key={e} value={e}>
                           {e}
                         </SelectItem>
@@ -1286,13 +1316,13 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
                   </Select>
                 </div>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">{inc.descripcion}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Solución: {inc.solucion}</p>
-              <p className="text-xs text-muted-foreground">Observaciones: {inc.observaciones}</p>
+              <p className="text-muted-foreground mt-2 text-sm">{inc.descripcion}</p>
+              <p className="text-muted-foreground mt-1 text-xs">Solución: {inc.solucion}</p>
+              <p className="text-muted-foreground text-xs">Observaciones: {inc.observaciones}</p>
               <div className="mt-3">
                 <NuevaTareaDialog
                   relacion={{
-                    tipo: "Contacto",
+                    tipo: 'Contacto',
                     id: contacto.id,
                     label: nombreCompleto(contacto),
                   }}
@@ -1306,31 +1336,31 @@ function TabPerfil({ contacto }: { contacto: Contacto }) {
                 />
               </div>
             </div>
-
           ))}
           {incidencias.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin incidencias registradas.</p>
+            <p className="text-muted-foreground text-sm">Sin incidencias registradas.</p>
           ) : null}
         </CardContent>
       </Card>
     </>
-  );
+  )
 }
-
 
 function TabArchivos({ contacto }: { contacto: Contacto }) {
   // Los documentos obligatorios solo se exigen a los clientes.
-  const obligatorio = esCliente(contacto);
-  const faltaIdentificacion = obligatorio && contacto.identificacion.length === 0;
-  const faltaRgpd = obligatorio && contacto.proteccionDatos.length === 0;
-
+  const obligatorio = esCliente(contacto)
+  const faltaIdentificacion = obligatorio && contacto.identificacion.length === 0
+  const faltaRgpd = obligatorio && contacto.proteccionDatos.length === 0
 
   return (
     <>
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 pt-6">
           <div className="relative min-w-[220px] flex-1">
-            <Input placeholder="Buscar por nombre, tipo o etiqueta" aria-label="Buscar documentos" />
+            <Input
+              placeholder="Buscar por nombre, tipo o etiqueta"
+              aria-label="Buscar documentos"
+            />
           </div>
           <Button variant="outline" disabled>
             <FileUp className="h-4 w-4" />
@@ -1341,12 +1371,11 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
       </Card>
 
       {!obligatorio ? (
-        <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <div className="border-border bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
           Este contacto no es cliente: puede archivarse documentación de forma opcional, pero no
           existe documentación obligatoria ni avisos por documentos faltantes.
         </div>
       ) : null}
-
 
       <Card>
         <CardHeader className="pb-2">
@@ -1372,22 +1401,22 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
               {contacto.identificacion.map((d, i) => (
                 <TableRow key={i}>
                   <TableCell className="font-medium">{d.tipo}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.numero ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.expedicion ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.caducidad ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.numero ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.expedicion ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.caducidad ?? '—'}</TableCell>
                   <TableCell>
                     <DocStatusBadge value={d.estado} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">{d.archivo}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {d.subidoPor ?? "—"}
-                    {d.version ? ` · v${d.version}` : ""}
+                    {d.subidoPor ?? '—'}
+                    {d.version ? ` · v${d.version}` : ''}
                   </TableCell>
                 </TableRow>
               ))}
               {contacto.identificacion.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={7} className="text-muted-foreground text-sm">
                     Sin documentos de identificación.
                   </TableCell>
                 </TableRow>
@@ -1419,17 +1448,17 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
               {contacto.proteccionDatos.map((d, i) => (
                 <TableRow key={i}>
                   <TableCell className="font-medium">{d.tipo}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.firma ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.firma ?? '—'}</TableCell>
                   <TableCell>
                     <DocStatusBadge value={d.estado} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">{d.archivo}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.observaciones ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.observaciones ?? '—'}</TableCell>
                 </TableRow>
               ))}
               {contacto.proteccionDatos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="text-muted-foreground text-sm">
                     Sin documentos de protección de datos.
                   </TableCell>
                 </TableRow>
@@ -1478,7 +1507,7 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
               ))}
               {contacto.poderes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={10} className="text-muted-foreground text-sm">
                     Sin poderes ni autorizaciones registrados.
                   </TableCell>
                 </TableRow>
@@ -1513,16 +1542,16 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
                   <TableCell className="font-medium">{d.nombre}</TableCell>
                   <TableCell className="text-muted-foreground">{d.categoria}</TableCell>
                   <TableCell className="text-muted-foreground">{d.fecha}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.caducidad ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {d.etiquetas.join(", ")}
+                  <TableCell className="text-muted-foreground">{d.caducidad ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {d.etiquetas.join(', ')}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{d.archivo}</TableCell>
                 </TableRow>
               ))}
               {contacto.otrosDocumentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-muted-foreground text-sm">
                     Sin documentos adicionales.
                   </TableCell>
                 </TableRow>
@@ -1537,17 +1566,18 @@ function TabArchivos({ contacto }: { contacto: Contacto }) {
         description="Previsualización, descarga, versionado, control de acceso por perfil y vinculación con expedientes. Sin firma electrónica, OCR ni almacenamiento externo en esta fase."
       />
     </>
-  );
+  )
 }
 
 function TabNotas({ contacto }: { contacto: Contacto }) {
-  const lista = useNotas((s) => notasDeContacto(s, contacto.id));
+  const lista = useNotas((s) => notasDeContacto(s, contacto.id))
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Notas internas</CardTitle>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Recopilador central: notas de la persona y de sus expedientes y oportunidades. {AVISO_INTERNO}
+        <p className="text-muted-foreground mt-1 text-sm">
+          Recopilador central: notas de la persona y de sus expedientes y oportunidades.{' '}
+          {AVISO_INTERNO}
         </p>
       </CardHeader>
       <CardContent>
@@ -1556,27 +1586,24 @@ function TabNotas({ contacto }: { contacto: Contacto }) {
           acciones={
             <NuevaNotaBoton
               inicial={{
-                ambito: "persona",
+                ambito: 'persona',
                 contactos: [contacto.id],
-                origen: { tipo: "persona", id: contacto.id, etiqueta: nombreCompleto(contacto) },
+                origen: { tipo: 'persona', id: contacto.id, etiqueta: nombreCompleto(contacto) },
               }}
             />
           }
         />
       </CardContent>
     </Card>
-  );
+  )
 }
-
-
-
 
 /**
  * Todas las comunicaciones del contacto, tengan o no un contexto concreto.
  * Es la misma comunicación registrada una única vez en LEX.
  */
 function ComunicacionesDelContacto({ contactoId }: { contactoId: string }) {
-  const lista = useOps((s) => comunicacionesDeContacto(s, contactoId));
+  const lista = useOps((s) => comunicacionesDeContacto(s, contactoId))
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
@@ -1615,5 +1642,5 @@ function ComunicacionesDelContacto({ contactoId }: { contactoId: string }) {
         />
       </CardContent>
     </Card>
-  );
+  )
 }

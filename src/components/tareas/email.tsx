@@ -4,9 +4,7 @@
 // destinatario y el módulo COMUNICACIONES para el registro. El destinatario
 // externo sólo recibe el texto redactado: nunca la tarea, la conversación
 // interna ni el histórico.
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { Link } from '@tanstack/react-router'
 import {
   AlertTriangle,
   ExternalLink,
@@ -17,46 +15,52 @@ import {
   Sparkles,
   UserPlus,
   X,
-} from "lucide-react";
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Field, ToneBadge } from "@/components/crm/ui";
-import { Vacio } from "@/components/expedientes/ui";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Vacio } from '@/components/expedientes/ui'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { CONTACTOS, nombreCompleto, type Contacto } from "@/data/contactos";
-import type { DestinatarioEmail } from "@/data/expedientes-model";
-import { comunicacionesDeTarea, getOps, ops, puedeRedactarEmail, useOps } from "@/lib/expedientes-store";
-import { enviarEmailTarea, redactarEmailIA } from "@/lib/email-tarea.functions";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Textarea } from '@/components/ui/textarea'
+import { CONTACTOS, nombreCompleto, type Contacto } from '@/data/contactos'
+import type { DestinatarioEmail } from '@/data/expedientes-model'
+import { Field, ToneBadge } from '@/features/crm'
+import { enviarEmailTarea, redactarEmailIA } from '@/lib/email-tarea.functions'
+import {
+  comunicacionesDeTarea,
+  getOps,
+  ops,
+  puedeRedactarEmail,
+  useOps,
+} from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const TONOS = ["Profesional", "Cordial", "Directo", "Formal"] as const;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const TONOS = ['Profesional', 'Cordial', 'Directo', 'Formal'] as const
 
-type Campo = "para" | "cc" | "cco";
+type Campo = 'para' | 'cc' | 'cco'
 
 const entidadDe = (c: Contacto) =>
-  c.tipoPersona === "Persona jurídica"
-    ? (c.razonSocial ?? "")
-    : c.relacion;
+  c.tipoPersona === 'Persona jurídica' ? (c.razonSocial ?? '') : c.relacion
 
-const direccionesDe = (c: Contacto) => [c.email, c.email2].filter((e): e is string => Boolean(e));
+const direccionesDe = (c: Contacto) => [c.email, c.email2].filter((e): e is string => Boolean(e))
 
 /* ------------------------------------------------------------------ */
 /* Selector de destinatarios (usa CONTACTOS, no duplica nada)          */
@@ -68,82 +72,75 @@ function SelectorDestinatarios({
   onChange,
   prioritarios,
 }: {
-  campo: Campo;
-  valores: DestinatarioEmail[];
-  onChange: (v: DestinatarioEmail[]) => void;
+  campo: Campo
+  valores: DestinatarioEmail[]
+  onChange: (v: DestinatarioEmail[]) => void
   /** Ids de contacto vinculados al expediente (se muestran primero). */
-  prioritarios: string[];
+  prioritarios: string[]
 }) {
-  const [q, setQ] = useState("");
-  const [sinEmail, setSinEmail] = useState<Contacto | null>(null);
-  const [multiple, setMultiple] = useState<Contacto | null>(null);
-  const [libre, setLibre] = useState<string | null>(null);
+  const [q, setQ] = useState('')
+  const [sinEmail, setSinEmail] = useState<Contacto | null>(null)
+  const [multiple, setMultiple] = useState<Contacto | null>(null)
+  const [libre, setLibre] = useState<string | null>(null)
 
   const resultados = useMemo(() => {
-    const texto = q.trim().toLowerCase();
-    if (!texto) return [];
+    const texto = q.trim().toLowerCase()
+    if (!texto) return []
     const coincide = (c: Contacto) =>
-      [
-        c.nombre,
-        c.apellidos ?? "",
-        c.razonSocial ?? "",
-        c.email,
-        c.email2 ?? "",
-        c.relacion,
-      ]
-        .join(" ")
+      [c.nombre, c.apellidos ?? '', c.razonSocial ?? '', c.email, c.email2 ?? '', c.relacion]
+        .join(' ')
         .toLowerCase()
-        .includes(texto);
+        .includes(texto)
     const peso = (c: Contacto) => {
-      if (prioritarios.includes(c.id)) return 0;
-      if (c.relacion === "Profesional / colaborador") return 1;
-      return 2;
-    };
+      if (prioritarios.includes(c.id)) return 0
+      if (c.relacion === 'Profesional / colaborador') return 1
+      return 2
+    }
     return CONTACTOS.filter(coincide)
       .sort((a, b) => peso(a) - peso(b) || nombreCompleto(a).localeCompare(nombreCompleto(b)))
-      .slice(0, 8);
-  }, [q, prioritarios]);
+      .slice(0, 8)
+  }, [q, prioritarios])
 
   const añadir = (d: DestinatarioEmail) => {
-    if (valores.some((v) => v.email.toLowerCase() === d.email.toLowerCase())) return;
-    onChange([...valores, d]);
-    setQ("");
-    setMultiple(null);
-    setSinEmail(null);
-  };
+    if (valores.some((v) => v.email.toLowerCase() === d.email.toLowerCase())) return
+    onChange([...valores, d])
+    setQ('')
+    setMultiple(null)
+    setSinEmail(null)
+  }
 
   const elegir = (c: Contacto) => {
-    const dirs = direccionesDe(c);
+    const dirs = direccionesDe(c)
     if (!dirs.length) {
-      setSinEmail(c);
-      return;
+      setSinEmail(c)
+      return
     }
     if (dirs.length > 1) {
-      setMultiple(c);
-      return;
+      setMultiple(c)
+      return
     }
     añadir({
       contactoId: c.id,
       nombre: nombreCompleto(c),
       email: dirs[0] as string,
       ...(entidadDe(c) ? { entidad: entidadDe(c) } : {}),
-    });
-  };
+    })
+  }
 
   const añadirLibre = () => {
-    const texto = q.trim();
+    const texto = q.trim()
     if (!EMAIL_RE.test(texto)) {
-      toast.error("Esa dirección de email no es válida.");
-      return;
+      toast.error('Esa dirección de email no es válida.')
+      return
     }
-    añadir({ nombre: texto, email: texto });
-    setLibre(texto);
-  };
+    añadir({ nombre: texto, email: texto })
+    setLibre(texto)
+  }
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        {campo === "para" ? "Para" : campo === "cc" ? "CC" : "CCO"}
+      <Label className="text-muted-foreground text-xs tracking-wide uppercase">
+        {campo === 'para' ? 'Para' : campo === 'cc' ? 'CC' : 'CCO'}
       </Label>
 
       {valores.length ? (
@@ -151,11 +148,11 @@ function SelectorDestinatarios({
           {valores.map((d) => (
             <span
               key={`${campo}-${d.email}`}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+              className="border-border bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs"
             >
               <span className="truncate">
                 {d.nombre}
-                {d.nombre !== d.email ? ` · ${d.email}` : ""}
+                {d.nombre !== d.email ? ` · ${d.email}` : ''}
               </span>
               <button
                 type="button"
@@ -173,9 +170,9 @@ function SelectorDestinatarios({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && q.includes("@")) {
-            e.preventDefault();
-            añadirLibre();
+          if (e.key === 'Enter' && q.includes('@')) {
+            e.preventDefault()
+            añadirLibre()
           }
         }}
         placeholder="Buscar en Contactos por nombre, entidad, notaría, profesión o email…"
@@ -183,38 +180,40 @@ function SelectorDestinatarios({
       />
 
       {q.trim() ? (
-        <div className="rounded-md border border-border bg-card">
+        <div className="border-border bg-card rounded-md border">
           {resultados.map((c) => {
-            const dirs = direccionesDe(c);
+            const dirs = direccionesDe(c)
             return (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => elegir(c)}
-                className="flex w-full items-start justify-between gap-2 border-b border-border/60 px-3 py-2 text-left last:border-0 hover:bg-accent"
+                className="border-border/60 hover:bg-accent flex w-full items-start justify-between gap-2 border-b px-3 py-2 text-left last:border-0"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-foreground">{nombreCompleto(c)}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {entidadDe(c) || "—"} · {dirs[0] ?? "sin email"}
+                  <span className="text-foreground block truncate text-sm">
+                    {nombreCompleto(c)}
+                  </span>
+                  <span className="text-muted-foreground block truncate text-[11px]">
+                    {entidadDe(c) || '—'} · {dirs[0] ?? 'sin email'}
                   </span>
                 </span>
                 {prioritarios.includes(c.id) ? (
                   <ToneBadge tono="info">Del expediente</ToneBadge>
                 ) : null}
               </button>
-            );
+            )
           })}
           {!resultados.length ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">
+            <p className="text-muted-foreground px-3 py-2 text-xs">
               Ningún contacto coincide con la búsqueda.
             </p>
           ) : null}
-          {q.includes("@") ? (
+          {q.includes('@') ? (
             <button
               type="button"
               onClick={añadirLibre}
-              className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs text-primary hover:bg-accent"
+              className="border-border text-primary hover:bg-accent flex w-full items-center gap-2 border-t px-3 py-2 text-left text-xs"
             >
               <UserPlus className="h-3.5 w-3.5" /> Usar la dirección «{q.trim()}» sin registrar
             </button>
@@ -223,7 +222,7 @@ function SelectorDestinatarios({
       ) : null}
 
       {multiple ? (
-        <div className="rounded-md border border-border bg-muted/40 p-2 text-xs">
+        <div className="border-border bg-muted/40 rounded-md border p-2 text-xs">
           <p className="text-foreground">
             {nombreCompleto(multiple)} tiene varias direcciones. Elige cuál utilizar:
           </p>
@@ -251,14 +250,14 @@ function SelectorDestinatarios({
       ) : null}
 
       {sinEmail ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-warning/50 bg-warning/10 p-2 text-xs text-warning-foreground">
+        <div className="border-warning/50 bg-warning/10 text-warning-foreground flex flex-wrap items-center gap-2 rounded-md border p-2 text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>Este contacto no tiene una dirección de email registrada.</span>
           <Link
             to="/contactos/$id"
             params={{ id: sinEmail.id }}
             target="_blank"
-            className="inline-flex items-center gap-1 font-medium text-primary underline"
+            className="text-primary inline-flex items-center gap-1 font-medium underline"
           >
             Abrir su ficha <ExternalLink className="h-3 w-3" />
           </Link>
@@ -270,12 +269,12 @@ function SelectorDestinatarios({
       ) : null}
 
       {libre ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
+        <div className="border-border text-muted-foreground flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 text-xs">
           <span>«{libre}» no está registrada en Contactos.</span>
           <Link
             to="/contactos/nuevo"
             target="_blank"
-            className="inline-flex items-center gap-1 font-medium text-primary underline"
+            className="text-primary inline-flex items-center gap-1 font-medium underline"
           >
             Guardar esta dirección en Contactos <ExternalLink className="h-3 w-3" />
           </Link>
@@ -285,7 +284,7 @@ function SelectorDestinatarios({
         </div>
       ) : null}
     </div>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -299,89 +298,89 @@ export function RedactarEmailSheet({
   onOpenChange,
   onEnviado,
 }: {
-  tareaId: string;
-  comunicacionId?: string | null;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+  tareaId: string
+  comunicacionId?: string | null
+  open: boolean
+  onOpenChange: (v: boolean) => void
   /** Envío real confirmado: la tarea decide después qué hacer. */
-  onEnviado?: (datos: { comunicacionId: string; destinatario: string; cuando: string }) => void;
+  onEnviado?: (datos: { comunicacionId: string; destinatario: string; cuando: string }) => void
 }) {
-  const tarea = useOps((s) => s.tareas.find((t) => t.id === tareaId));
-  const expediente = useOps((s) => s.expedientes.find((e) => e.id === tarea?.expedienteId));
-  const linea = useOps((s) => s.lineas.find((l) => l.id === tarea?.lineaId));
+  const tarea = useOps((s) => s.tareas.find((t) => t.id === tareaId))
+  const expediente = useOps((s) => s.expedientes.find((e) => e.id === tarea?.expedienteId))
+  const linea = useOps((s) => s.lineas.find((l) => l.id === tarea?.lineaId))
   const intervinientes = useOps((s) =>
     s.intervinientes.filter((i) => i.expedienteId === tarea?.expedienteId),
-  );
-  const usuario = useOps((s) => s.usuario);
-  const permitido = useOps((s) => (tarea ? puedeRedactarEmail(s, tarea) : false));
+  )
+  const usuario = useOps((s) => s.usuario)
+  const permitido = useOps((s) => (tarea ? puedeRedactarEmail(s, tarea) : false))
 
-  const [para, setPara] = useState<DestinatarioEmail[]>([]);
-  const [cc, setCc] = useState<DestinatarioEmail[]>([]);
-  const [cco, setCco] = useState<DestinatarioEmail[]>([]);
-  const [verCopias, setVerCopias] = useState(false);
-  const [asunto, setAsunto] = useState("");
-  const [cuerpo, setCuerpo] = useState("");
-  const [indicacion, setIndicacion] = useState("");
-  const [tono, setTono] = useState<string>("Profesional");
-  const [borradorId, setBorradorId] = useState<string | null>(comunicacionId ?? null);
-  const [ia, setIa] = useState<"" | "generar" | "mejorar" | "acortar" | "tono">("");
-  const [revision, setRevision] = useState(false);
-  const [enviando, setEnviando] = useState(false);
+  const [para, setPara] = useState<DestinatarioEmail[]>([])
+  const [cc, setCc] = useState<DestinatarioEmail[]>([])
+  const [cco, setCco] = useState<DestinatarioEmail[]>([])
+  const [verCopias, setVerCopias] = useState(false)
+  const [asunto, setAsunto] = useState('')
+  const [cuerpo, setCuerpo] = useState('')
+  const [indicacion, setIndicacion] = useState('')
+  const [tono, setTono] = useState<string>('Profesional')
+  const [borradorId, setBorradorId] = useState<string | null>(comunicacionId ?? null)
+  const [ia, setIa] = useState<'' | 'generar' | 'mejorar' | 'acortar' | 'tono'>('')
+  const [revision, setRevision] = useState(false)
+  const [enviando, setEnviando] = useState(false)
 
   const prioritarios = useMemo(
     () => intervinientes.map((i) => i.contactoId).filter((x): x is string => Boolean(x)),
     [intervinientes],
-  );
+  )
 
-  const firma = `\n\n—\n${usuario}\nLEX · Abogados patrimoniales`;
+  const firma = `\n\n—\n${usuario}\nLEX · Abogados patrimoniales`
 
   // Al abrir: se hereda el contexto de la tarea o se recupera el borrador.
   useEffect(() => {
-    if (!open || !tarea) return;
+    if (!open || !tarea) return
     const previo = comunicacionId
       ? comunicacionesDeTarea(getOps(), tareaId).find((c) => c.id === comunicacionId)
-      : undefined;
+      : undefined
     if (previo) {
-      setBorradorId(previo.id);
-      setPara(previo.para ?? []);
-      setCc(previo.copia ?? []);
-      setCco(previo.copiaOculta ?? []);
-      setAsunto(previo.asunto);
-      setCuerpo(previo.contenido);
-      setVerCopias(Boolean(previo.copia?.length || previo.copiaOculta?.length));
+      setBorradorId(previo.id)
+      setPara(previo.para ?? [])
+      setCc(previo.copia ?? [])
+      setCco(previo.copiaOculta ?? [])
+      setAsunto(previo.asunto)
+      setCuerpo(previo.contenido)
+      setVerCopias(Boolean(previo.copia?.length || previo.copiaOculta?.length))
     } else {
-      setBorradorId(null);
-      setPara([]);
-      setCc([]);
-      setCco([]);
-      setAsunto(
-        expediente ? `${tarea.titulo} – ${expediente.codigo}` : tarea.titulo,
-      );
-      setCuerpo("");
-      setVerCopias(false);
+      setBorradorId(null)
+      setPara([])
+      setCc([])
+      setCco([])
+      setAsunto(expediente ? `${tarea.titulo} – ${expediente.codigo}` : tarea.titulo)
+      setCuerpo('')
+      setVerCopias(false)
     }
-    setRevision(false);
-    setIndicacion("");
-  }, [open, comunicacionId, tareaId, tarea?.titulo, expediente?.codigo]);
+    setRevision(false)
+    setIndicacion('')
+  }, [open, comunicacionId, tareaId, tarea?.titulo, expediente?.codigo])
 
-  if (!tarea) return null;
+  if (!tarea) return null
 
   const problemas = [
-    !para.length ? "Falta al menos un destinatario." : "",
-    para.some((d) => !EMAIL_RE.test(d.email)) ? "Hay una dirección no válida." : "",
-    !asunto.trim() ? "Falta el asunto." : "",
-    !cuerpo.trim() ? "Falta el cuerpo del mensaje." : "",
-  ].filter(Boolean);
+    !para.length ? 'Falta al menos un destinatario.' : '',
+    para.some((d) => !EMAIL_RE.test(d.email)) ? 'Hay una dirección no válida.' : '',
+    !asunto.trim() ? 'Falta el asunto.' : '',
+    !cuerpo.trim() ? 'Falta el cuerpo del mensaje.' : '',
+  ].filter(Boolean)
 
-  const asistir = async (modo: "generar" | "mejorar" | "acortar" | "tono") => {
-    if (modo !== "generar" && !cuerpo.trim()) {
-      toast.error("Escribe primero un borrador que la IA pueda revisar.");
-      return;
+  const asistir = async (modo: 'generar' | 'mejorar' | 'acortar' | 'tono') => {
+    if (modo !== 'generar' && !cuerpo.trim()) {
+      toast.error('Escribe primero un borrador que la IA pueda revisar.')
+      return
     }
-    setIa(modo);
+    setIa(modo)
     try {
-      const destino = para[0];
-      const contacto = destino?.contactoId ? CONTACTOS.find((c) => c.id === destino.contactoId) : undefined;
+      const destino = para[0]
+      const contacto = destino?.contactoId
+        ? CONTACTOS.find((c) => c.id === destino.contactoId)
+        : undefined
       const r = await redactarEmailIA({
         data: {
           modo,
@@ -391,23 +390,25 @@ export function RedactarEmailSheet({
           tono,
           contexto: {
             tarea: tarea.titulo,
-            descripcion: tarea.descripcion ?? "",
-            expediente: expediente ? `${expediente.codigo} · ${expediente.nombre}` : "",
-            destinatario: destino ? `${destino.nombre}${destino.entidad ? ` (${destino.entidad})` : ""}` : "",
-            tratamiento: contacto?.tratamiento ?? "",
+            descripcion: tarea.descripcion ?? '',
+            expediente: expediente ? `${expediente.codigo} · ${expediente.nombre}` : '',
+            destinatario: destino
+              ? `${destino.nombre}${destino.entidad ? ` (${destino.entidad})` : ''}`
+              : '',
+            tratamiento: contacto?.tratamiento ?? '',
             remitente: usuario,
           },
         },
-      });
+      })
       // Sólo se conserva el texto vigente: las propuestas descartadas no se guardan.
-      setCuerpo(r.texto);
-      toast.success("Borrador propuesto. Revísalo antes de enviarlo.");
+      setCuerpo(r.texto)
+      toast.success('Borrador propuesto. Revísalo antes de enviarlo.')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No ha sido posible redactar el borrador.");
+      toast.error(err instanceof Error ? err.message : 'No ha sido posible redactar el borrador.')
     } finally {
-      setIa("");
+      setIa('')
     }
-  };
+  }
 
   const guardar = (silencioso = false) => {
     const r = ops.guardarBorradorEmail(tareaId, {
@@ -418,26 +419,27 @@ export function RedactarEmailSheet({
       asunto,
       cuerpo,
       remitente: usuario,
-    });
+    })
     if (!r.ok) {
-      toast.error(r.error);
-      return null;
+      toast.error(r.error)
+      return null
     }
-    setBorradorId(r.id);
-    if (!silencioso) toast.success("Borrador guardado", { description: `Disponible en Comunicaciones (${r.id}).` });
-    return r.id;
-  };
+    setBorradorId(r.id)
+    if (!silencioso)
+      toast.success('Borrador guardado', { description: `Disponible en Comunicaciones (${r.id}).` })
+    return r.id
+  }
 
   const enviar = async () => {
     if (problemas.length) {
-      toast.error("No se puede enviar todavía", { description: problemas.join(" ") });
-      return;
+      toast.error('No se puede enviar todavía', { description: problemas.join(' ') })
+      return
     }
-    setEnviando(true);
-    const id = guardar(true);
+    setEnviando(true)
+    const id = guardar(true)
     if (!id) {
-      setEnviando(false);
-      return;
+      setEnviando(false)
+      return
     }
     try {
       const r = await enviarEmailTarea({
@@ -449,84 +451,90 @@ export function RedactarEmailSheet({
           cuerpo: cuerpo + firma,
           remitente: usuario,
         },
-      });
+      })
       if (!r.disponible) {
         // No hay proveedor: nunca se presenta como enviado.
-        ops.registrarHistoricoTarea(tareaId, "Envío no disponible", r.motivo);
-        toast.warning("El email NO se ha enviado", { description: r.motivo });
-        onOpenChange(false);
-        return;
+        ops.registrarHistoricoTarea(tareaId, 'Envío no disponible', r.motivo)
+        toast.warning('El email NO se ha enviado', { description: r.motivo })
+        onOpenChange(false)
+        return
       }
-      ops.registrarEnvioEmail(id, { ok: true });
+      ops.registrarEnvioEmail(id, { ok: true })
       onEnviado?.({
         comunicacionId: id,
-        destinatario: para.map((d) => d.nombre).join(", "),
-        cuando: new Date().toLocaleString("es-ES"),
-      });
-      onOpenChange(false);
+        destinatario: para.map((d) => d.nombre).join(', '),
+        cuando: new Date().toLocaleString('es-ES'),
+      })
+      onOpenChange(false)
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : "Error desconocido del proveedor de correo.";
-      ops.registrarEnvioEmail(id, { ok: false, error: mensaje });
-      toast.error("Error de envío", { description: mensaje });
+      const mensaje =
+        err instanceof Error ? err.message : 'Error desconocido del proveedor de correo.'
+      ops.registrarEnvioEmail(id, { ok: false, error: mensaje })
+      toast.error('Error de envío', { description: mensaje })
     } finally {
-      setEnviando(false);
+      setEnviando(false)
     }
-  };
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-2xl">
-        <SheetHeader className="border-b border-border p-5">
+        <SheetHeader className="border-border border-b p-5">
           <SheetTitle className="flex items-center gap-2 text-left font-serif text-lg">
             <Mail className="h-4 w-4" /> Redactar email
           </SheetTitle>
           <SheetDescription className="text-left">
-            Relacionado con «{tarea.titulo}»
-            {expediente ? ` · ${expediente.codigo}` : ""}
-            {linea ? ` · ${linea.nombre}` : ""}. El destinatario sólo recibe el texto que escribas: no
-            accede a la tarea ni a la información interna.
+            Relacionado con «{tarea.titulo}»{expediente ? ` · ${expediente.codigo}` : ''}
+            {linea ? ` · ${linea.nombre}` : ''}. El destinatario sólo recibe el texto que escribas:
+            no accede a la tarea ni a la información interna.
           </SheetDescription>
         </SheetHeader>
 
         {!permitido ? (
           <div className="p-5">
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground">
+            <p className="border-destructive/40 bg-destructive/10 text-foreground rounded-md border p-3 text-sm">
               No tienes permiso para enviar comunicaciones relacionadas con este encargo.
             </p>
           </div>
         ) : revision ? (
           <div className="space-y-4 p-5">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">
               Revisión antes del envío
             </p>
-            <div className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-sm">
+            <div className="border-border bg-muted/30 space-y-1 rounded-md border p-3 text-sm">
               <p>
                 <span className="text-muted-foreground">De:</span> {usuario}
               </p>
               <p>
-                <span className="text-muted-foreground">Para:</span>{" "}
-                {para.map((d) => `${d.nombre} <${d.email}>`).join(", ")}
+                <span className="text-muted-foreground">Para:</span>{' '}
+                {para.map((d) => `${d.nombre} <${d.email}>`).join(', ')}
               </p>
               {cc.length ? (
                 <p>
-                  <span className="text-muted-foreground">CC:</span> {cc.map((d) => d.email).join(", ")}
+                  <span className="text-muted-foreground">CC:</span>{' '}
+                  {cc.map((d) => d.email).join(', ')}
                 </p>
               ) : null}
               {cco.length ? (
                 <p>
-                  <span className="text-muted-foreground">CCO:</span> {cco.map((d) => d.email).join(", ")}
+                  <span className="text-muted-foreground">CCO:</span>{' '}
+                  {cco.map((d) => d.email).join(', ')}
                 </p>
               ) : null}
               <p>
                 <span className="text-muted-foreground">Asunto:</span> {asunto}
               </p>
             </div>
-            <pre className="whitespace-pre-wrap rounded-md border border-border bg-card p-3 font-sans text-sm text-foreground">
+            <pre className="border-border bg-card text-foreground rounded-md border p-3 font-sans text-sm whitespace-pre-wrap">
               {cuerpo + firma}
             </pre>
             <div className="flex flex-wrap gap-2">
               <Button className="gap-1.5" onClick={enviar} disabled={enviando}>
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {enviando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
                 Enviar email
               </Button>
               <Button variant="outline" onClick={() => setRevision(false)} disabled={enviando}>
@@ -537,18 +545,38 @@ export function RedactarEmailSheet({
         ) : (
           <div className="space-y-4 p-5">
             <Field label="De">
-              <Input value={usuario} readOnly className="h-9 bg-muted/40" />
+              <Input value={usuario} readOnly className="bg-muted/40 h-9" />
             </Field>
 
-            <SelectorDestinatarios campo="para" valores={para} onChange={setPara} prioritarios={prioritarios} />
+            <SelectorDestinatarios
+              campo="para"
+              valores={para}
+              onChange={setPara}
+              prioritarios={prioritarios}
+            />
 
             {verCopias ? (
               <>
-                <SelectorDestinatarios campo="cc" valores={cc} onChange={setCc} prioritarios={prioritarios} />
-                <SelectorDestinatarios campo="cco" valores={cco} onChange={setCco} prioritarios={prioritarios} />
+                <SelectorDestinatarios
+                  campo="cc"
+                  valores={cc}
+                  onChange={setCc}
+                  prioritarios={prioritarios}
+                />
+                <SelectorDestinatarios
+                  campo="cco"
+                  valores={cco}
+                  onChange={setCco}
+                  prioritarios={prioritarios}
+                />
               </>
             ) : (
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setVerCopias(true)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={() => setVerCopias(true)}
+              >
                 Añadir CC / CCO
               </Button>
             )}
@@ -570,14 +598,14 @@ export function RedactarEmailSheet({
                 placeholder="Escribe el correo, o pide un borrador a la IA y revísalo."
               />
             </Field>
-            <p className="rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
-              Firma que se añadirá al enviar:{firma.replace(/\n/g, " ")}
+            <p className="border-border text-muted-foreground rounded-md border border-dashed p-2 text-xs">
+              Firma que se añadirá al enviar:{firma.replace(/\n/g, ' ')}
             </p>
 
             <Separator />
 
-            <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
-              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="border-border bg-muted/20 space-y-2 rounded-md border p-3">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
                 <Sparkles className="h-3.5 w-3.5" /> Asistencia de redacción (opcional)
               </p>
               <Input
@@ -587,14 +615,33 @@ export function RedactarEmailSheet({
                 className="h-9"
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="outline" className="gap-1.5" disabled={Boolean(ia)} onClick={() => asistir("generar")}>
-                  {ia === "generar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Generar borrador
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={Boolean(ia)}
+                  onClick={() => asistir('generar')}
+                >
+                  {ia === 'generar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
+                  Generar borrador
                 </Button>
-                <Button size="sm" variant="outline" disabled={Boolean(ia)} onClick={() => asistir("mejorar")}>
-                  {ia === "mejorar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Mejorar redacción
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={Boolean(ia)}
+                  onClick={() => asistir('mejorar')}
+                >
+                  {ia === 'mejorar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
+                  Mejorar redacción
                 </Button>
-                <Button size="sm" variant="outline" disabled={Boolean(ia)} onClick={() => asistir("acortar")}>
-                  {ia === "acortar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Acortar
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={Boolean(ia)}
+                  onClick={() => asistir('acortar')}
+                >
+                  {ia === 'acortar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
+                  Acortar
                 </Button>
                 <Select value={tono} onValueChange={setTono}>
                   <SelectTrigger className="h-8 w-36">
@@ -608,17 +655,22 @@ export function RedactarEmailSheet({
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="sm" variant="ghost" disabled={Boolean(ia)} onClick={() => asistir("tono")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={Boolean(ia)}
+                  onClick={() => asistir('tono')}
+                >
                   Cambiar tono
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 La IA sólo propone borradores: nada se envía sin que pulses «Enviar email».
               </p>
             </div>
 
             {problemas.length ? (
-              <p className="text-xs text-muted-foreground">{problemas.join(" ")}</p>
+              <p className="text-muted-foreground text-xs">{problemas.join(' ')}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
@@ -640,7 +692,7 @@ export function RedactarEmailSheet({
         )}
       </SheetContent>
     </Sheet>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -651,38 +703,42 @@ export function ComunicacionesRelacionadas({
   tareaId,
   onAbrir,
 }: {
-  tareaId: string;
-  onAbrir: (comunicacionId: string) => void;
+  tareaId: string
+  onAbrir: (comunicacionId: string) => void
 }) {
-  const comunicaciones = useOps((s) => comunicacionesDeTarea(s, tareaId));
-  const enviados = comunicaciones.filter((c) => c.estadoEnvio === "Enviado").length;
+  const comunicaciones = useOps((s) => comunicacionesDeTarea(s, tareaId))
+  const enviados = comunicaciones.filter((c) => c.estadoEnvio === 'Enviado').length
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
         Comunicaciones relacionadas
-        {enviados ? ` · ${enviados} ${enviados === 1 ? "email enviado" : "emails enviados"}` : ""}
+        {enviados ? ` · ${enviados} ${enviados === 1 ? 'email enviado' : 'emails enviados'}` : ''}
       </p>
       {comunicaciones.length ? (
         comunicaciones.map((c) => (
           <div
             key={c.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2 text-xs"
+            className="border-border flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-xs"
           >
             <span className="min-w-0">
-              <span className="block truncate text-foreground">{c.asunto}</span>
-              <span className="block truncate text-muted-foreground">
-                {c.canal} · {c.emisor} → {c.destinatarios.join(", ") || "—"} · {c.fecha} {c.hora}
+              <span className="text-foreground block truncate">{c.asunto}</span>
+              <span className="text-muted-foreground block truncate">
+                {c.canal} · {c.emisor} → {c.destinatarios.join(', ') || '—'} · {c.fecha} {c.hora}
               </span>
-              {c.errorEnvio ? <span className="block text-destructive">{c.errorEnvio}</span> : null}
+              {c.errorEnvio ? <span className="text-destructive block">{c.errorEnvio}</span> : null}
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
               <ToneBadge
                 tono={
-                  c.estadoEnvio === "Enviado" ? "exito" : c.estadoEnvio === "Error" ? "riesgo" : "neutro"
+                  c.estadoEnvio === 'Enviado'
+                    ? 'exito'
+                    : c.estadoEnvio === 'Error'
+                      ? 'riesgo'
+                      : 'neutro'
                 }
               >
-                {c.estadoEnvio ?? (c.enviada ? "Enviado" : "Borrador")}
+                {c.estadoEnvio ?? (c.enviada ? 'Enviado' : 'Borrador')}
               </ToneBadge>
               <Button
                 size="sm"
@@ -699,7 +755,7 @@ export function ComunicacionesRelacionadas({
         <Vacio texto="Sin comunicaciones relacionadas." />
       )}
     </div>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -714,18 +770,18 @@ export function TrasEnvioSheet({
   onRecordatorio,
   onSiguiente,
 }: {
-  tareaId: string;
-  datos: { comunicacionId: string; destinatario: string; cuando: string } | null;
-  onCerrar: () => void;
-  onCompletar: (sugerencia: string) => void;
-  onRecordatorio: () => void;
-  onSiguiente: () => void;
+  tareaId: string
+  datos: { comunicacionId: string; destinatario: string; cuando: string } | null
+  onCerrar: () => void
+  onCompletar: (sugerencia: string) => void
+  onRecordatorio: () => void
+  onSiguiente: () => void
 }) {
-  if (!datos) return null;
-  const sugerencia = `Email enviado a ${datos.destinatario} el ${datos.cuando}`;
+  if (!datos) return null
+  const sugerencia = `Email enviado a ${datos.destinatario} el ${datos.cuando}`
   return (
     <Sheet open onOpenChange={(v) => !v && onCerrar()}>
-      <SheetContent side="bottom" className={cn("mx-auto max-w-xl rounded-t-lg p-5")}>
+      <SheetContent side="bottom" className={cn('mx-auto max-w-xl rounded-t-lg p-5')}>
         <SheetHeader className="p-0">
           <SheetTitle className="text-left font-serif text-base">
             Email enviado correctamente. ¿Qué quieres hacer ahora?
@@ -740,9 +796,9 @@ export function TrasEnvioSheet({
             size="sm"
             variant="outline"
             onClick={() => {
-              ops.marcarEsperandoRespuesta(tareaId, true, datos.comunicacionId);
-              toast.success("Tarea en curso, esperando respuesta externa");
-              onCerrar();
+              ops.marcarEsperandoRespuesta(tareaId, true, datos.comunicacionId)
+              toast.success('Tarea en curso, esperando respuesta externa')
+              onCerrar()
             }}
           >
             Mantenerla abierta y esperar respuesta
@@ -756,5 +812,5 @@ export function TrasEnvioSheet({
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

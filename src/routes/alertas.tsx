@@ -1,51 +1,51 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { AlertTriangle, ShieldAlert } from 'lucide-react'
+import { useState } from 'react'
 
-import { SectionHeader, StatTile } from "@/components/common";
-import { ToneBadge } from "@/components/crm/ui";
-import { Vacio } from "@/components/expedientes/ui";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader, StatTile } from '@/components/common'
+import { Vacio } from '@/components/expedientes/ui'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { alertasGlobales, useOps } from "@/lib/expedientes-store";
+} from '@/components/ui/select'
+import { ToneBadge } from '@/features/crm'
+import { alertasGlobales, useOps } from '@/lib/expedientes-store'
 
-export const Route = createFileRoute("/alertas")({
+export const Route = createFileRoute('/alertas')({
   head: () => ({
     meta: [
-      { title: "Alertas y control — LEX" },
+      { title: 'Alertas y control — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Panel de control de riesgos operativos: plazos sin validar, documentos sin clasificar, tareas vencidas y expedientes sin movimiento.",
+          'Panel de control de riesgos operativos: plazos sin validar, documentos sin clasificar, tareas vencidas y expedientes sin movimiento.',
       },
-      { property: "og:title", content: "Alertas y control — LEX" },
+      { property: 'og:title', content: 'Alertas y control — LEX' },
       {
-        property: "og:description",
-        content: "Todo lo que exige atención inmediata en los expedientes del despacho.",
+        property: 'og:description',
+        content: 'Todo lo que exige atención inmediata en los expedientes del despacho.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: AlertasPage,
-});
+})
 
 function AlertasPage() {
-  const alertas = useOps((s) => alertasGlobales(s));
-  const expedientes = useOps((s) => s.expedientes);
-  const [nivel, setNivel] = useState("todos");
+  const alertas = useOps((s) => alertasGlobales(s))
+  const expedientes = useOps((s) => s.expedientes)
+  const [nivel, setNivel] = useState('todos')
 
-  const codigo = (id: string) => expedientes.find((e) => e.id === id)?.codigo ?? "Sin expediente";
-  const lista = alertas.filter((a) => nivel === "todos" || a.nivel === nivel);
-  const riesgos = alertas.filter((a) => a.nivel === "riesgo").length;
+  const codigo = (id: string) => expedientes.find((e) => e.id === id)?.codigo ?? 'Sin expediente'
+  const lista = alertas.filter((a) => nivel === 'todos' || a.nivel === nivel)
+  const riesgos = alertas.filter((a) => a.nivel === 'riesgo').length
 
-  const porEntidad = Array.from(new Set(lista.map((a) => a.entidad)));
+  const porEntidad = Array.from(new Set(lista.map((a) => a.entidad)))
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
@@ -75,42 +75,41 @@ function AlertasPage() {
         />
       </div>
 
-
       {lista.length ? (
         porEntidad.map((entidad) => (
           <Card key={entidad}>
             <CardContent className="p-4">
-              <h2 className="mb-2 text-sm font-semibold text-foreground">{entidad}</h2>
+              <h2 className="text-foreground mb-2 text-sm font-semibold">{entidad}</h2>
               <ul className="space-y-2">
                 {lista
                   .filter((a) => a.entidad === entidad)
                   .map((a) => (
                     <li
                       key={a.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3"
+                      className="border-border flex flex-wrap items-center justify-between gap-2 rounded-md border p-3"
                     >
-                      <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
-                        {a.nivel === "riesgo" ? (
-                          <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />
+                      <span className="text-foreground flex min-w-0 items-center gap-2 text-sm">
+                        {a.nivel === 'riesgo' ? (
+                          <ShieldAlert className="text-destructive h-4 w-4 shrink-0" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <AlertTriangle className="text-muted-foreground h-4 w-4 shrink-0" />
                         )}
                         <span className="truncate">{a.texto}</span>
                       </span>
                       <span className="flex items-center gap-2">
-                        <ToneBadge tono={a.nivel === "riesgo" ? "riesgo" : "aviso"}>
-                          {a.nivel === "riesgo" ? "Crítica" : "Aviso"}
+                        <ToneBadge tono={a.nivel === 'riesgo' ? 'riesgo' : 'aviso'}>
+                          {a.nivel === 'riesgo' ? 'Crítica' : 'Aviso'}
                         </ToneBadge>
                         {a.expedienteId ? (
                           <Link
                             to="/expedientes/$id"
                             params={{ id: a.expedienteId }}
-                            className="text-xs text-primary hover:underline"
+                            className="text-primary text-xs hover:underline"
                           >
                             {codigo(a.expedienteId)}
                           </Link>
                         ) : (
-                          <Link to="/documentos" className="text-xs text-primary hover:underline">
+                          <Link to="/documentos" className="text-primary text-xs hover:underline">
                             Ir a la bandeja
                           </Link>
                         )}
@@ -125,5 +124,5 @@ function AlertasPage() {
         <Vacio texto="Sin alertas activas." />
       )}
     </div>
-  );
+  )
 }

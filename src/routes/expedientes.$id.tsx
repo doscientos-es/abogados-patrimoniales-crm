@@ -1,16 +1,41 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { AlertTriangle, ArrowLeft, MoreHorizontal, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { PendingBadge } from '@/components/common'
 import {
   botonNuevoEmail,
   botonNuevoWhatsapp,
   botonRegistrarLlamada,
-} from "@/components/comunicaciones/acciones";
-import { BotonRegistrarFecha, ListaRegistros } from "@/components/fechas/panel";
-import { ordenCronologico } from "@/lib/fechas";
-import { ActuacionFormDialog, ActuacionesPanel } from "@/components/expedientes/actuaciones";
-import { useState } from "react";
-import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, MoreHorizontal, Plus } from "lucide-react";
-
+} from '@/components/comunicaciones/acciones'
+import { Cronologia } from '@/components/comunicaciones/cronologia'
+import {
+  NuevoEmailDialog,
+  NuevoWhatsappDialog,
+  RegistroLlamadaDialog,
+} from '@/components/comunicaciones/dialogos'
+import { ActuacionFormDialog, ActuacionesPanel } from '@/components/expedientes/actuaciones'
+import {
+  ActivarEjecucionDialog,
+  AsignarDocumentoDialog,
+  NuevaActuacionDialog,
+  NuevaComunicacionDialog,
+  NuevaVersionDialog,
+  NuevoDocumentoDialog,
+  NuevoIntervinienteDialog,
+  ValidarPlazoDialog,
+} from '@/components/expedientes/dialogs'
+import { LineasPanel, ResumenLineas } from '@/components/expedientes/lineas'
+import { MegafaseBadge } from '@/components/expedientes/megafase-kanban'
+import { ResumenIABloque } from '@/components/expedientes/resumen-ia'
+import { Bloque, DatoLinea, TipoDocBadges, Vacio, euros } from '@/components/expedientes/ui'
+import { BotonRegistrarFecha, ListaRegistros } from '@/components/fechas/panel'
+import { NotaAvisos } from '@/components/notas/nota-avisos'
+import { NuevaNotaBoton } from '@/components/notas/nota-form'
+import { NotaMuro } from '@/components/notas/nota-muro'
+import { SiguienteAccionBloque } from '@/components/tareas/siguiente-accion'
+import { TareasWorkspace } from '@/components/tareas/workspace'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,41 +45,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import { SiguienteAccionBloque } from "@/components/tareas/siguiente-accion";
-import { PendingBadge } from "@/components/common";
-import { PriorityBadge, ToneBadge } from "@/components/crm/ui";
-import {
-  ActivarEjecucionDialog,
-  AsignarDocumentoDialog,
-  NuevaActuacionDialog,
-  NuevaComunicacionDialog,
-  NuevaFechaDialog,
-  NuevaLineaDialog,
-  NuevaTareaOpDialog,
-  NuevaVersionDialog,
-  NuevoDocumentoDialog,
-  NuevoIntervinienteDialog,
-  ValidarPlazoDialog,
-} from "@/components/expedientes/dialogs";
-import { TareasWorkspace } from "@/components/tareas/workspace";
-import { Bloque, DatoLinea, TipoDocBadges, Vacio, euros } from "@/components/expedientes/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -62,41 +68,22 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { nombreContacto } from "@/data/crm";
-import { notasDeExpediente, useNotas } from "@/lib/notas-store";
-import { NotaMuro } from "@/components/notas/nota-muro";
-import { NuevaNotaBoton } from "@/components/notas/nota-form";
-import { NotaAvisos } from "@/components/notas/nota-avisos";
-import { MegafaseBadge } from "@/components/expedientes/megafase-kanban";
-import { LineasPanel, ResumenLineas } from "@/components/expedientes/lineas";
-import { ResumenIABloque } from "@/components/expedientes/resumen-ia";
-import { textoRelativo } from "@/lib/resumen-ia";
-
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { nombreContacto } from '@/data/crm'
 import {
   DEPENDENCIAS,
-  ESTADOS_ACTUACION,
   ESTADOS_DOC_ELABORADO,
   ESTADOS_DOC_RECIBIDO,
-  ESTADOS_TAREA_OP,
   columnasDe,
   esRecibido,
   faseVigente,
   megafaseDe,
   nombreFase,
   saldoEjecucion,
-  type EstadoActuacion,
-  type EstadoTareaOp,
-} from "@/data/expedientes-model";
-import { Cronologia } from "@/components/comunicaciones/cronologia";
-import {
-  NuevoEmailDialog,
-  NuevoWhatsappDialog,
-  RegistroLlamadaDialog,
-
-} from "@/components/comunicaciones/dialogos";
+} from '@/data/expedientes-model'
+import { PriorityBadge, ToneBadge } from '@/features/crm'
 import {
   agruparAlertas,
   alertasDeExpediente,
@@ -113,8 +100,10 @@ import {
   selLineas,
   selTareas,
   useOps,
-} from "@/lib/expedientes-store";
-
+} from '@/lib/expedientes-store'
+import { ordenCronologico } from '@/lib/fechas'
+import { notasDeExpediente, useNotas } from '@/lib/notas-store'
+import { textoRelativo } from '@/lib/resumen-ia'
 
 /** Rótulo de partes de la cabecera: cliente principal y contrario, con abreviatura si hay varios. */
 function rotuloPartes(
@@ -122,99 +111,103 @@ function rotuloPartes(
   contactoId: string,
 ): string {
   const abreviar = (lista: string[], respaldo?: string) => {
-    if (!lista.length) return respaldo ?? "";
-    const primero = lista[0] ?? "";
-    const resto = lista.length - 1;
-    if (resto <= 0) return primero;
-    return `${primero} Y ${resto === 1 ? "OTRO" : "OTROS"}`;
-  };
-  const clientes = intervinientes.filter((i) => i.rol === "Cliente").map((i) => i.nombre);
-  const contrarios = intervinientes.filter((i) => i.rol === "Contraparte").map((i) => i.nombre);
-  const cliente = abreviar(clientes, nombreContacto(contactoId)).toUpperCase();
-  const contrario = abreviar(contrarios).toUpperCase();
-  return contrario ? `${cliente} VS. ${contrario}` : cliente;
+    if (!lista.length) return respaldo ?? ''
+    const primero = lista[0] ?? ''
+    const resto = lista.length - 1
+    if (resto <= 0) return primero
+    return `${primero} Y ${resto === 1 ? 'OTRO' : 'OTROS'}`
+  }
+  const clientes = intervinientes.filter((i) => i.rol === 'Cliente').map((i) => i.nombre)
+  const contrarios = intervinientes.filter((i) => i.rol === 'Contraparte').map((i) => i.nombre)
+  const cliente = abreviar(clientes, nombreContacto(contactoId)).toUpperCase()
+  const contrario = abreviar(contrarios).toUpperCase()
+  return contrario ? `${cliente} VS. ${contrario}` : cliente
 }
 
-
-export const Route = createFileRoute("/expedientes/$id")({
+export const Route = createFileRoute('/expedientes/$id')({
   head: ({ params }) => ({
     meta: [
       { title: `Expediente ${params.id} — LEX` },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Ficha operativa del expediente: líneas de trabajo, actuaciones, documentos, plazos, ejecución y comunicaciones.",
+          'Ficha operativa del expediente: líneas de trabajo, actuaciones, documentos, plazos, ejecución y comunicaciones.',
       },
-      { property: "og:title", content: `Expediente ${params.id} — LEX` },
+      { property: 'og:title', content: `Expediente ${params.id} — LEX` },
       {
-        property: "og:description",
-        content: "Detalle operativo del expediente con su trazabilidad completa.",
+        property: 'og:description',
+        content: 'Detalle operativo del expediente con su trazabilidad completa.',
       },
-      { property: "og:type", content: "article" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'article' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: FichaExpediente,
   errorComponent: ({ error }) => (
-    <div role="alert" className="p-6 text-sm text-destructive">
+    <div role="alert" className="text-destructive p-6 text-sm">
       {error.message}
     </div>
   ),
-  notFoundComponent: () => <div className="p-6 text-sm text-muted-foreground">Expediente no encontrado.</div>,
-});
+  notFoundComponent: () => (
+    <div className="text-muted-foreground p-6 text-sm">Expediente no encontrado.</div>
+  ),
+})
 
 function FichaExpediente() {
-  const { id } = Route.useParams();
-  const e = useOps((s) => s.expedientes.find((x) => x.id === id));
-  const lineas = useOps((s) => selLineas(s, id));
-  const ejecuciones = useOps((s) => selEjecuciones(s, id));
-  const actuaciones = useOps((s) => selActuaciones(s, id));
-  const documentos = useOps((s) => selDocumentos(s, id));
-  const tareas = useOps((s) => selTareas(s, id));
-  const fechas = useOps((s) => selFechas(s, id));
-  const comunicaciones = useOps((s) => selComunicaciones(s, id));
-  const intervinientes = useOps((s) => selIntervinientes(s, id));
-  const auditoria = useOps((s) => selAuditoria(s, id));
-  const alertas = useOps((s) => (e ? alertasDeExpediente(s, e) : []));
-  const [reporte, setReporte] = useState("");
-  const [tab, setTab] = useState("resumen");
-  const [editandoDonde, setEditandoDonde] = useState(false);
-  const [borradorDonde, setBorradorDonde] = useState("");
+  const { id } = Route.useParams()
+  const e = useOps((s) => s.expedientes.find((x) => x.id === id))
+  const lineas = useOps((s) => selLineas(s, id))
+  const ejecuciones = useOps((s) => selEjecuciones(s, id))
+  const actuaciones = useOps((s) => selActuaciones(s, id))
+  const documentos = useOps((s) => selDocumentos(s, id))
+  const tareas = useOps((s) => selTareas(s, id))
+  const fechas = useOps((s) => selFechas(s, id))
+  const comunicaciones = useOps((s) => selComunicaciones(s, id))
+  const intervinientes = useOps((s) => selIntervinientes(s, id))
+  const auditoria = useOps((s) => selAuditoria(s, id))
+  const alertas = useOps((s) => (e ? alertasDeExpediente(s, e) : []))
+  const [reporte, setReporte] = useState('')
+  const [tab, setTab] = useState('resumen')
+  const [editandoDonde, setEditandoDonde] = useState(false)
+  const [borradorDonde, setBorradorDonde] = useState('')
 
-  if (!e) throw notFound();
+  if (!e) throw notFound()
 
-  const columnas = columnasDe(e.naturaleza);
-  const actuacionesFuturas = actuaciones.filter((a) => (diasHasta(a.fecha) ?? -1) >= 0);
-  const actuacionPrincipal = actuaciones.find((a) => a.id === e.proximaAccionActuacionId);
+  const columnas = columnasDe(e.naturaleza)
+  const actuacionesFuturas = actuaciones.filter((a) => (diasHasta(a.fecha) ?? -1) >= 0)
+  const actuacionPrincipal = actuaciones.find((a) => a.id === e.proximaAccionActuacionId)
   // Última actuación válida según la regla única del almacén (fecha y hora efectivas).
-  const ultimaActuacion = actuaciones.find(esActuacionValida);
-  const alertasAgrupadas = agruparAlertas(alertas);
+  const ultimaActuacion = actuaciones.find(esActuacionValida)
+  const alertasAgrupadas = agruparAlertas(alertas)
 
   // Derivados del panel de resumen.
-  const lineasActivas = lineas.filter((l) => l.estado !== "Cerrada");
-  const ORDEN_ROL = ["Cliente", "Contraparte"];
+  const lineasActivas = lineas.filter((l) => l.estado !== 'Cerrada')
+  const ORDEN_ROL = ['Cliente', 'Contraparte']
   const intervinientesPrincipales = intervinientes
     .slice()
     .sort((a, b) => {
-      const ia = ORDEN_ROL.indexOf(a.rol);
-      const ib = ORDEN_ROL.indexOf(b.rol);
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      const ia = ORDEN_ROL.indexOf(a.rol)
+      const ib = ORDEN_ROL.indexOf(b.rol)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
     })
-    .slice(0, 5);
+    .slice(0, 5)
   const documentosRecientes = documentos
     .slice()
-    .sort((a, b) => (diasHasta(b.fechaIncorporacion) ?? -9999) - (diasHasta(a.fechaIncorporacion) ?? -9999))
-    .slice(0, 5);
+    .sort(
+      (a, b) =>
+        (diasHasta(b.fechaIncorporacion) ?? -9999) - (diasHasta(a.fechaIncorporacion) ?? -9999),
+    )
+    .slice(0, 5)
   const tareasAbiertas = tareas
-    .filter((t) => t.estado !== "Completada" && t.estado !== "Cancelada")
-    .sort((a, b) => (diasHasta(a.vencimiento) ?? 9999) - (diasHasta(b.vencimiento) ?? 9999));
-  const horasFacturables = actuaciones.filter((a) => a.facturable).reduce((t, a) => t + a.tiempo, 0);
+    .filter((t) => t.estado !== 'Completada' && t.estado !== 'Cancelada')
+    .sort((a, b) => (diasHasta(a.vencimiento) ?? 9999) - (diasHasta(b.vencimiento) ?? 9999))
+  const horasFacturables = actuaciones.filter((a) => a.facturable).reduce((t, a) => t + a.tiempo, 0)
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
       <Link
         to="/expedientes"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Volver a expedientes
       </Link>
@@ -224,64 +217,71 @@ function FichaExpediente() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               {/* Nivel 1 — identificación dominante: código profesional y partes. */}
-              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
+              <h1 className="text-foreground truncate text-xl font-semibold tracking-tight">
                 <span className="font-mono">{e.codigo}</span>
-                <span className="mx-1.5 text-muted-foreground">·</span>
+                <span className="text-muted-foreground mx-1.5">·</span>
                 <span>{rotuloPartes(intervinientes, e.contactoId)}</span>
               </h1>
               {/* Nivel 2 — denominación del asunto, subordinada. */}
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              <p className="text-muted-foreground mt-0.5 truncate text-sm">
                 {e.nombre}
-                <span className="ml-1.5 text-[11px] uppercase tracking-wide">
+                <span className="ml-1.5 text-[11px] tracking-wide uppercase">
                   · {e.area}
-                  {e.tipoAsunto ? ` · ${e.tipoAsunto}` : ""}
+                  {e.tipoAsunto ? ` · ${e.tipoAsunto}` : ''}
                 </span>
               </p>
               {/* Nivel 3 — situación: siempre la última actuación válida. */}
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-0.5 text-xs">
                 {ultimaActuacion ? (
                   <button
                     type="button"
-                    className="text-left underline-offset-2 hover:text-foreground hover:underline"
-                    onClick={() => setTab("actuaciones")}
+                    className="hover:text-foreground text-left underline-offset-2 hover:underline"
+                    onClick={() => setTab('actuaciones')}
                   >
                     Situación: {ultimaActuacion.fecha}
-                    {ultimaActuacion.hora ? ` ${ultimaActuacion.hora}` : ""} · {ultimaActuacion.tipo} ·{" "}
-                    {ultimaActuacion.titulo}
+                    {ultimaActuacion.hora ? ` ${ultimaActuacion.hora}` : ''} ·{' '}
+                    {ultimaActuacion.tipo} · {ultimaActuacion.titulo}
                   </button>
                 ) : (
-                  "Situación: no consta ninguna actuación registrada"
+                  'Situación: no consta ninguna actuación registrada'
                 )}
               </p>
 
               {/* Distintivos que no se repiten en la franja operativa. */}
               <div className="mt-2 flex flex-wrap gap-1">
                 <MegafaseBadge megafaseId={megafaseDe(e.naturaleza, e.fase)} />
-                <ToneBadge tono={e.naturaleza === "Judicial" ? "info" : "neutro"}>{e.naturaleza}</ToneBadge>
+                <ToneBadge tono={e.naturaleza === 'Judicial' ? 'info' : 'neutro'}>
+                  {e.naturaleza}
+                </ToneBadge>
                 <PriorityBadge value={e.prioridad} />
                 {e.requiereAccion ? <ToneBadge tono="riesgo">Requiere acción</ToneBadge> : null}
                 {e.saldoPendiente ? (
                   <ToneBadge tono="aviso">
                     Saldo pendiente: {euros(e.saldoPendiente)}
-                    {e.deudaTraspasada ? " · trasladado a cobros" : ""}
+                    {e.deudaTraspasada ? ' · trasladado a cobros' : ''}
                   </ToneBadge>
                 ) : null}
               </div>
               {e.suspension ? (
-                <p className="mt-2 rounded-md border border-dashed border-border bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
-                  Suspendido desde {e.suspension.fecha} · procede de{" "}
-                  {nombreFase(e.naturaleza, e.suspension.faseOrigen)} ({e.suspension.megafaseOrigen.toUpperCase()}) ·{" "}
-                  {e.suspension.motivo}
-                  {e.suspension.revisionPrevista ? ` · revisión: ${e.suspension.revisionPrevista}` : ""}
+                <p className="border-border bg-muted/40 text-muted-foreground mt-2 rounded-md border border-dashed px-2 py-1 text-[11px]">
+                  Suspendido desde {e.suspension.fecha} · procede de{' '}
+                  {nombreFase(e.naturaleza, e.suspension.faseOrigen)} (
+                  {e.suspension.megafaseOrigen.toUpperCase()}) · {e.suspension.motivo}
+                  {e.suspension.revisionPrevista
+                    ? ` · revisión: ${e.suspension.revisionPrevista}`
+                    : ''}
                 </p>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={faseVigente(e.naturaleza, e.fase)} onValueChange={(v) => {
-                const r = ops.moverFase(e.id, v);
-                if (!r.ok) toast.error(r.motivo);
-                else toast.success("Fase actualizada");
-              }}>
+              <Select
+                value={faseVigente(e.naturaleza, e.fase)}
+                onValueChange={(v) => {
+                  const r = ops.moverFase(e.id, v)
+                  if (!r.ok) toast.error(r.motivo)
+                  else toast.success('Fase actualizada')
+                }}
+              >
                 <SelectTrigger className="h-9 w-56">
                   <SelectValue />
                 </SelectTrigger>
@@ -295,8 +295,10 @@ function FichaExpediente() {
               </Select>
               <Button
                 size="sm"
-                variant={e.requiereAccion ? "default" : "outline"}
-                onClick={() => ops.actualizarExpediente(e.id, { requiereAccion: !e.requiereAccion })}
+                variant={e.requiereAccion ? 'default' : 'outline'}
+                onClick={() =>
+                  ops.actualizarExpediente(e.id, { requiereAccion: !e.requiereAccion })
+                }
               >
                 Requiere acción
               </Button>
@@ -305,16 +307,19 @@ function FichaExpediente() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const r = ops.reanudarExpediente(e.id);
-                    if (!r.ok) toast.error(r.motivo);
-                    else toast.success("Expediente devuelto a su fase de procedencia");
+                    const r = ops.reanudarExpediente(e.id)
+                    if (!r.ok) toast.error(r.motivo)
+                    else toast.success('Expediente devuelto a su fase de procedencia')
                   }}
                 >
                   Reanudar
                 </Button>
               ) : null}
 
-              <Select value={e.dependencia} onValueChange={(v) => ops.actualizarExpediente(e.id, { dependencia: v as never })}>
+              <Select
+                value={e.dependencia}
+                onValueChange={(v) => ops.actualizarExpediente(e.id, { dependencia: v as never })}
+              >
                 <SelectTrigger className="h-9 w-56">
                   <SelectValue />
                 </SelectTrigger>
@@ -338,28 +343,39 @@ function FichaExpediente() {
           </div>
 
           {/* Franja operativa: tres líneas, sin repetir lo ya dicho arriba. */}
-          <div className="mt-3 space-y-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+          <div className="border-border bg-muted/40 text-muted-foreground mt-3 space-y-1 rounded-md border px-3 py-2 text-[11px]">
             <p>
-              Fase operativa: <span className="font-medium text-foreground">{nombreFase(e.naturaleza, e.fase)}</span>
+              Fase operativa:{' '}
+              <span className="text-foreground font-medium">
+                {nombreFase(e.naturaleza, e.fase)}
+              </span>
               <span className="mx-1.5">·</span>
-              Estado: <span className="font-medium text-foreground">{e.estadoOperativo}</span>
+              Estado: <span className="text-foreground font-medium">{e.estadoOperativo}</span>
               <span className="mx-1.5">·</span>
-              Depende de: <span className="font-medium text-foreground">{e.dependencia}</span>
+              Depende de: <span className="text-foreground font-medium">{e.dependencia}</span>
             </p>
             <p>
-              Responsable: <span className="font-medium text-foreground">{e.responsable}</span>
+              Responsable: <span className="text-foreground font-medium">{e.responsable}</span>
               {e.equipo.length ? <span className="mx-1.5">·</span> : null}
-              {e.equipo.length ? `Equipo: ${e.equipo.join(", ")}` : null}
+              {e.equipo.length ? `Equipo: ${e.equipo.join(', ')}` : null}
               <span className="mx-1.5">·</span>
-              Último movimiento: <span className="font-medium text-foreground">{textoRelativo(e.ultimoMovimiento)}</span>
+              Último movimiento:{' '}
+              <span className="text-foreground font-medium">
+                {textoRelativo(e.ultimoMovimiento)}
+              </span>
             </p>
             <p className="truncate">
-              Próxima acción: <span className="font-medium text-foreground">{e.proximaAccion || "Sin definir"}</span>
-              {actuacionPrincipal ? ` · ${actuacionPrincipal.fecha} · ${actuacionPrincipal.responsable}` : ""}
+              Próxima acción:{' '}
+              <span className="text-foreground font-medium">
+                {e.proximaAccion || 'Sin definir'}
+              </span>
+              {actuacionPrincipal
+                ? ` · ${actuacionPrincipal.fecha} · ${actuacionPrincipal.responsable}`
+                : ''}
             </p>
             <SiguienteAccionBloque
               className="mt-2 max-w-xl"
-              contexto={{ tipo: "Expediente", id: e.id, label: e.codigo }}
+              contexto={{ tipo: 'Expediente', id: e.id, label: e.codigo }}
               expedienteId={e.id}
             />
           </div>
@@ -370,12 +386,12 @@ function FichaExpediente() {
                 <button
                   key={a.clave}
                   type="button"
-                  title={a.items.map((x) => x.texto).join("\n")}
-                  onClick={() => setTab("resumen")}
+                  title={a.items.map((x) => x.texto).join('\n')}
+                  onClick={() => setTab('resumen')}
                   className={
-                    a.nivel === "riesgo"
-                      ? "inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] text-destructive"
-                      : "inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                    a.nivel === 'riesgo'
+                      ? 'border-destructive/30 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]'
+                      : 'border-border bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]'
                   }
                 >
                   <AlertTriangle className="h-3 w-3" /> {a.texto}
@@ -383,17 +399,15 @@ function FichaExpediente() {
               ))}
             </div>
           ) : null}
-
         </CardContent>
       </Card>
 
       <NotaAvisos
         expedienteId={e.id}
         contactoId={e.contactoId}
-        disparadores={["abrir-expediente"]}
+        disparadores={['abrir-expediente']}
         titulo="Notas internas del expediente a tener en cuenta"
       />
-
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex w-full justify-start overflow-x-auto whitespace-nowrap">
@@ -412,14 +426,13 @@ function FichaExpediente() {
           <TabsTrigger value="historial">Histórico</TabsTrigger>
         </TabsList>
 
-
         {/* Resumen ---------------------------------------------------- */}
         <TabsContent value="resumen" className="mt-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <Card>
               <CardContent className="p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                     Dónde estamos
                   </p>
                   {editandoDonde ? null : (
@@ -428,8 +441,8 @@ function FichaExpediente() {
                       variant="ghost"
                       className="h-6 px-2 text-[11px]"
                       onClick={() => {
-                        setBorradorDonde(e.dondeEstamos ?? "");
-                        setEditandoDonde(true);
+                        setBorradorDonde(e.dondeEstamos ?? '')
+                        setEditandoDonde(true)
                       }}
                     >
                       Editar
@@ -448,9 +461,9 @@ function FichaExpediente() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          ops.actualizarDondeEstamos(e.id, borradorDonde.trim());
-                          setEditandoDonde(false);
-                          toast.success("Síntesis actualizada");
+                          ops.actualizarDondeEstamos(e.id, borradorDonde.trim())
+                          setEditandoDonde(false)
+                          toast.success('Síntesis actualizada')
                         }}
                       >
                         Guardar
@@ -462,13 +475,13 @@ function FichaExpediente() {
                   </div>
                 ) : (
                   <>
-                    <p className="mt-1 whitespace-pre-line text-sm text-foreground">
-                      {e.dondeEstamos || "Sin síntesis redactada."}
+                    <p className="text-foreground mt-1 text-sm whitespace-pre-line">
+                      {e.dondeEstamos || 'Sin síntesis redactada.'}
                     </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="text-muted-foreground mt-1 text-[10px]">
                       {e.dondeEstamosMeta
                         ? `Última edición: ${e.dondeEstamosMeta.fecha} · ${e.dondeEstamosMeta.autor}`
-                        : "Redacción manual del despacho."}
+                        : 'Redacción manual del despacho.'}
                     </p>
                   </>
                 )}
@@ -477,25 +490,26 @@ function FichaExpediente() {
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                   Próxima acción
                 </p>
-                <p className="mt-1 text-sm text-foreground">{e.proximaAccion || "Sin definir"}</p>
+                <p className="text-foreground mt-1 text-sm">{e.proximaAccion || 'Sin definir'}</p>
                 {actuacionPrincipal ? (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {actuacionPrincipal.fecha} · {actuacionPrincipal.tipo} · responsable {actuacionPrincipal.responsable}
+                  <p className="text-muted-foreground mt-1 text-[11px]">
+                    {actuacionPrincipal.fecha} · {actuacionPrincipal.tipo} · responsable{' '}
+                    {actuacionPrincipal.responsable}
                   </p>
                 ) : (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground mt-1 text-[11px]">
                     Sin actuación futura vinculada como acción principal.
                   </p>
                 )}
                 <Select
-                  value={e.proximaAccionActuacionId ?? "ninguna"}
+                  value={e.proximaAccionActuacionId ?? 'ninguna'}
                   onValueChange={(v) =>
                     ops.fijarProximaAccionPrincipal(
                       e.id,
-                      v === "ninguna" ? { texto: "" } : { actuacionId: v },
+                      v === 'ninguna' ? { texto: '' } : { actuacionId: v },
                     )
                   }
                 >
@@ -516,12 +530,16 @@ function FichaExpediente() {
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                   Responsable
                 </p>
-                <p className="mt-1 text-sm text-foreground">{e.responsable}</p>
-                <p className="text-xs text-muted-foreground">Equipo: {e.equipo.join(", ") || "—"}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">Dependencia actual: {e.dependencia}</p>
+                <p className="text-foreground mt-1 text-sm">{e.responsable}</p>
+                <p className="text-muted-foreground text-xs">
+                  Equipo: {e.equipo.join(', ') || '—'}
+                </p>
+                <p className="text-muted-foreground mt-1 text-[11px]">
+                  Dependencia actual: {e.dependencia}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -537,9 +555,9 @@ function FichaExpediente() {
                 <DatoLinea label="Naturaleza" value={e.naturaleza} />
                 <DatoLinea label="Apertura" value={e.fechaApertura} />
                 <DatoLinea label="Último movimiento" value={e.ultimoMovimiento} />
-                <DatoLinea label="Código anterior" value={e.codigoAnterior ?? "—"} />
-                <DatoLinea label="Presupuesto vinculado" value={e.presupuestoId ?? "—"} />
-                <DatoLinea label="Oportunidad de origen" value={e.oportunidadId ?? "—"} />
+                <DatoLinea label="Código anterior" value={e.codigoAnterior ?? '—'} />
+                <DatoLinea label="Presupuesto vinculado" value={e.presupuestoId ?? '—'} />
+                <DatoLinea label="Oportunidad de origen" value={e.oportunidadId ?? '—'} />
               </dl>
             </Bloque>
             {e.procedimiento ? (
@@ -560,17 +578,22 @@ function FichaExpediente() {
             <Bloque
               titulo="Últimas actuaciones"
               acciones={
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setTab("actuaciones")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setTab('actuaciones')}
+                >
                   Ver todas
                 </Button>
               }
             >
               {actuaciones.slice(0, 5).map((a) => (
-                <div key={a.id} className="border-b border-border/60 py-2 last:border-0">
-                  <p className="text-sm text-foreground">{a.titulo}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div key={a.id} className="border-border/60 border-b py-2 last:border-0">
+                  <p className="text-foreground text-sm">{a.titulo}</p>
+                  <p className="text-muted-foreground text-xs">
                     {a.fecha}
-                    {a.hora ? ` ${a.hora}` : ""} · {a.tipo} · {a.estado}
+                    {a.hora ? ` ${a.hora}` : ''} · {a.tipo} · {a.estado}
                   </p>
                 </div>
               ))}
@@ -579,7 +602,12 @@ function FichaExpediente() {
             <Bloque
               titulo="Próximos vencimientos"
               acciones={
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setTab("fechas")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setTab('fechas')}
+                >
                   Ver todos
                 </Button>
               }
@@ -589,15 +617,18 @@ function FichaExpediente() {
                 .sort((a, b) => (diasHasta(a.fecha) ?? 0) - (diasHasta(b.fecha) ?? 0))
                 .slice(0, 5)
                 .map((f) => (
-                  <div key={f.id} className="flex items-center justify-between border-b border-border/60 py-2 last:border-0">
+                  <div
+                    key={f.id}
+                    className="border-border/60 flex items-center justify-between border-b py-2 last:border-0"
+                  >
                     <div>
-                      <p className="text-sm text-foreground">{f.titulo}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-foreground text-sm">{f.titulo}</p>
+                      <p className="text-muted-foreground text-xs">
                         {f.fecha} · {f.tipo} · {textoRelativo(f.fecha)}
                       </p>
                     </div>
-                    <ToneBadge tono={f.validada ? "exito" : "riesgo"}>
-                      {f.validada ? "Validada" : "Sin validar"}
+                    <ToneBadge tono={f.validada ? 'exito' : 'riesgo'}>
+                      {f.validada ? 'Validada' : 'Sin validar'}
                     </ToneBadge>
                   </div>
                 ))}
@@ -605,8 +636,7 @@ function FichaExpediente() {
             </Bloque>
 
             {/* Líneas de trabajo (bloque compacto) */}
-            <ResumenLineas expedienteId={e.id} onVerTodas={() => setTab("lineas")} />
-
+            <ResumenLineas expedienteId={e.id} onVerTodas={() => setTab('lineas')} />
 
             {/* Intervinientes principales */}
             <Bloque
@@ -616,7 +646,7 @@ function FichaExpediente() {
                   size="sm"
                   variant="ghost"
                   className="h-7 px-2 text-[11px]"
-                  onClick={() => setTab("intervinientes")}
+                  onClick={() => setTab('intervinientes')}
                 >
                   Ver todos
                 </Button>
@@ -624,12 +654,21 @@ function FichaExpediente() {
             >
               {intervinientesPrincipales.length ? (
                 intervinientesPrincipales.map((i) => (
-                  <div key={i.id} className="flex items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0">
+                  <div
+                    key={i.id}
+                    className="border-border/60 flex items-center justify-between gap-2 border-b py-2 last:border-0"
+                  >
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">{i.nombre}</p>
-                      <p className="truncate text-xs text-muted-foreground">{i.contacto || "Sin datos de contacto"}</p>
+                      <p className="text-foreground truncate text-sm">{i.nombre}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {i.contacto || 'Sin datos de contacto'}
+                      </p>
                     </div>
-                    <ToneBadge tono={i.rol === "Cliente" ? "info" : i.rol === "Contraparte" ? "riesgo" : "neutro"}>
+                    <ToneBadge
+                      tono={
+                        i.rol === 'Cliente' ? 'info' : i.rol === 'Contraparte' ? 'riesgo' : 'neutro'
+                      }
+                    >
                       {i.rol}
                     </ToneBadge>
                   </div>
@@ -643,26 +682,35 @@ function FichaExpediente() {
             <Bloque
               titulo="Documentos recientes"
               acciones={
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setTab("documentos")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setTab('documentos')}
+                >
                   Ver todos
                 </Button>
               }
             >
               {documentosRecientes.length ? (
                 documentosRecientes.map((d) => (
-                  <div key={d.id} className="flex items-start justify-between gap-2 border-b border-border/60 py-2 last:border-0">
+                  <div
+                    key={d.id}
+                    className="border-border/60 flex items-start justify-between gap-2 border-b py-2 last:border-0"
+                  >
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">{d.nombre}</p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="text-foreground truncate text-sm">{d.nombre}</p>
+                      <p className="text-muted-foreground truncate text-xs">
                         {d.fechaIncorporacion} · {d.tipoDocumental} · v{d.version} · {d.estado}
                       </p>
                     </div>
                     <TipoDocBadges
                       judicial={d.judicial}
                       entregable={d.entregable}
-                      {...(d.datosJudiciales?.estadoPlazo ? { plazo: d.datosJudiciales.estadoPlazo } : {})}
+                      {...(d.datosJudiciales?.estadoPlazo
+                        ? { plazo: d.datosJudiciales.estadoPlazo }
+                        : {})}
                     />
-
                   </div>
                 ))
               ) : (
@@ -674,27 +722,43 @@ function FichaExpediente() {
             <Bloque
               titulo="Tareas abiertas"
               acciones={
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setTab("tareas")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setTab('tareas')}
+                >
                   Ver todas
                 </Button>
               }
             >
               {tareasAbiertas.length ? (
                 tareasAbiertas.slice(0, 5).map((t) => {
-                  const dh = diasHasta(t.vencimiento);
+                  const dh = diasHasta(t.vencimiento)
                   return (
-                    <div key={t.id} className="flex items-start justify-between gap-2 border-b border-border/60 py-2 last:border-0">
+                    <div
+                      key={t.id}
+                      className="border-border/60 flex items-start justify-between gap-2 border-b py-2 last:border-0"
+                    >
                       <div className="min-w-0">
-                        <p className="truncate text-sm text-foreground">{t.titulo}</p>
-                        <p className="truncate text-xs text-muted-foreground">
+                        <p className="text-foreground truncate text-sm">{t.titulo}</p>
+                        <p className="text-muted-foreground truncate text-xs">
                           {t.responsable} · vence {t.vencimiento} · {textoRelativo(t.vencimiento)}
                         </p>
                       </div>
-                      <ToneBadge tono={dh !== null && dh < 0 ? "riesgo" : dh !== null && dh <= 3 ? "aviso" : "neutro"}>
+                      <ToneBadge
+                        tono={
+                          dh !== null && dh < 0
+                            ? 'riesgo'
+                            : dh !== null && dh <= 3
+                              ? 'aviso'
+                              : 'neutro'
+                        }
+                      >
                         {t.estado}
                       </ToneBadge>
                     </div>
-                  );
+                  )
                 })
               ) : (
                 <Vacio texto="Sin tareas abiertas." />
@@ -705,18 +769,26 @@ function FichaExpediente() {
             <Bloque
               titulo="Situación económica"
               acciones={
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setTab("economico")}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setTab('economico')}
+                >
                   Ver detalle
                 </Button>
               }
             >
               <dl>
-                <DatoLinea label="Presupuesto vinculado" value={e.presupuestoId ?? "Sin presupuesto vinculado"} />
+                <DatoLinea
+                  label="Presupuesto vinculado"
+                  value={e.presupuestoId ?? 'Sin presupuesto vinculado'}
+                />
                 <DatoLinea label="Tiempo registrado" value={`${e.tiempoRegistrado} h`} />
                 <DatoLinea label="Horas facturables" value={`${horasFacturables} h`} />
                 <DatoLinea
                   label="Saldo pendiente"
-                  value={e.saldoPendiente ? euros(e.saldoPendiente) : "Sin saldo pendiente"}
+                  value={e.saldoPendiente ? euros(e.saldoPendiente) : 'Sin saldo pendiente'}
                 />
                 <DatoLinea label="Ejecuciones activas" value={`${ejecuciones.length}`} />
               </dl>
@@ -726,8 +798,6 @@ function FichaExpediente() {
             </Bloque>
           </div>
         </TabsContent>
-
-
 
         {/* Líneas ----------------------------------------------------- */}
         <TabsContent value="lineas" className="mt-4">
@@ -752,11 +822,11 @@ function FichaExpediente() {
             {ejecuciones.length ? (
               <div className="space-y-3">
                 {ejecuciones.map((ej) => (
-                  <div key={ej.id} className="rounded-md border border-border p-3">
+                  <div key={ej.id} className="border-border rounded-md border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{ej.titulo}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-foreground text-sm font-medium">{ej.titulo}</p>
+                        <p className="text-muted-foreground text-xs">
                           {ej.modalidad} · {ej.tipo}
                         </p>
                       </div>
@@ -764,11 +834,11 @@ function FichaExpediente() {
                         <ToneBadge tono="info">{ej.estado}</ToneBadge>
                         <ToneBadge
                           tono={
-                            ej.situacionPresupuestaria === "Incluida"
-                              ? "exito"
-                              : ej.situacionPresupuestaria === "Pendiente de comprobar"
-                                ? "aviso"
-                                : "riesgo"
+                            ej.situacionPresupuestaria === 'Incluida'
+                              ? 'exito'
+                              : ej.situacionPresupuestaria === 'Pendiente de comprobar'
+                                ? 'aviso'
+                                : 'riesgo'
                           }
                         >
                           {ej.situacionPresupuestaria}
@@ -783,16 +853,19 @@ function FichaExpediente() {
                       <DatoLinea label="Recuperado" value={euros(ej.importeRecuperado)} />
                       <DatoLinea label="Saldo pendiente" value={euros(saldoEjecucion(ej))} />
                       <DatoLinea label="Dónde estamos" value={ej.dondeEstamos} />
-                      <DatoLinea label="Próximo control" value={ej.proximoControl || "Sin control fijado"} />
+                      <DatoLinea
+                        label="Próximo control"
+                        value={ej.proximoControl || 'Sin control fijado'}
+                      />
                     </dl>
-                    {ej.modalidad === "Ejecución extrajudicial" ? (
+                    {ej.modalidad === 'Ejecución extrajudicial' ? (
                       <Button
                         size="sm"
                         variant="outline"
                         className="mt-2"
                         onClick={() => {
-                          ops.derivarAJudicial(ej.id);
-                          toast.success("Ejecución derivada al ámbito judicial");
+                          ops.derivarAJudicial(ej.id)
+                          toast.success('Ejecución derivada al ámbito judicial')
                         }}
                       >
                         Derivar a ejecución judicial
@@ -844,11 +917,11 @@ function FichaExpediente() {
             {documentos.length ? (
               <div className="space-y-3">
                 {documentos.map((d) => (
-                  <div key={d.id} className="rounded-md border border-border p-3">
+                  <div key={d.id} className="border-border rounded-md border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{d.nombre}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-foreground truncate text-sm font-medium">{d.nombre}</p>
+                        <p className="text-muted-foreground text-xs">
                           {d.tipoDocumental} · {d.origen} · v{d.version} · {d.fechaDocumento}
                         </p>
                         <div className="mt-1">
@@ -863,19 +936,21 @@ function FichaExpediente() {
                         <Select
                           value={d.estado}
                           onValueChange={(v) => {
-                            const r = ops.cambiarEstadoDocumento(d.id, v);
-                            if (!r.ok) toast.error(r.motivo);
+                            const r = ops.cambiarEstadoDocumento(d.id, v)
+                            if (!r.ok) toast.error(r.motivo)
                           }}
                         >
                           <SelectTrigger className="h-8 w-64">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(esRecibido(d) ? ESTADOS_DOC_RECIBIDO : ESTADOS_DOC_ELABORADO).map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s}
-                              </SelectItem>
-                            ))}
+                            {(esRecibido(d) ? ESTADOS_DOC_RECIBIDO : ESTADOS_DOC_ELABORADO).map(
+                              (s) => (
+                                <SelectItem key={s} value={s}>
+                                  {s}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                         <NuevaVersionDialog
@@ -886,7 +961,7 @@ function FichaExpediente() {
                             </Button>
                           }
                         />
-                        {d.datosJudiciales?.estadoPlazo === "Posible plazo pendiente de validar" ? (
+                        {d.datosJudiciales?.estadoPlazo === 'Posible plazo pendiente de validar' ? (
                           <ValidarPlazoDialog
                             documentoId={d.id}
                             trigger={<Button size="sm">Validar plazo</Button>}
@@ -895,11 +970,12 @@ function FichaExpediente() {
                       </div>
                     </div>
                     {d.versiones.length ? (
-                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
                         {d.versiones.map((v) => (
                           <li key={v.numero}>
                             v{v.numero} · {v.tipo} · {v.autor} · {v.fecha}
-                            {v.definitiva ? " · definitiva" : ""} {v.comentarios ? `— ${v.comentarios}` : ""}
+                            {v.definitiva ? ' · definitiva' : ''}{' '}
+                            {v.comentarios ? `— ${v.comentarios}` : ''}
                           </li>
                         ))}
                       </ul>
@@ -926,7 +1002,7 @@ function FichaExpediente() {
               <BotonRegistrarFecha
                 contexto={{
                   expedienteId: e.id,
-                  origen: { tipo: "Expediente", id: e.id, label: e.codigo },
+                  origen: { tipo: 'Expediente', id: e.id, label: e.codigo },
                 }}
               />
             }
@@ -938,7 +1014,6 @@ function FichaExpediente() {
           </Bloque>
         </TabsContent>
 
-
         {/* Comunicaciones --------------------------------------------- */}
         <TabsContent value="comunicaciones" className="mt-4">
           <Bloque
@@ -946,10 +1021,7 @@ function FichaExpediente() {
             acciones={
               <div className="flex flex-wrap gap-2">
                 {/* Mismo registro único de COMUNICACIONES: no hay copia local. */}
-                <NuevoEmailDialog
-                  contexto={{ expedienteId: e.id }}
-                  trigger={botonNuevoEmail}
-                />
+                <NuevoEmailDialog contexto={{ expedienteId: e.id }} trigger={botonNuevoEmail} />
                 <NuevoWhatsappDialog
                   contexto={{ expedienteId: e.id }}
                   trigger={botonNuevoWhatsapp}
@@ -958,7 +1030,6 @@ function FichaExpediente() {
                   contexto={{ expedienteId: e.id }}
                   trigger={botonRegistrarLlamada}
                 />
-
               </div>
             }
           >
@@ -1001,11 +1072,10 @@ function FichaExpediente() {
                       <TableCell className="font-medium">{i.nombre}</TableCell>
                       <TableCell>{i.rol}</TableCell>
                       <TableCell>{i.contacto}</TableCell>
-                      <TableCell>{i.observaciones || "—"}</TableCell>
+                      <TableCell>{i.observaciones || '—'}</TableCell>
                       <TableCell className="text-right">
                         <AccionesInterviniente interviniente={i} />
                       </TableCell>
-
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1033,7 +1103,10 @@ function FichaExpediente() {
           </Bloque>
           <Bloque titulo="Cobertura presupuestaria">
             <dl>
-              <DatoLinea label="Presupuesto vinculado" value={e.presupuestoId ?? "Sin presupuesto vinculado"} />
+              <DatoLinea
+                label="Presupuesto vinculado"
+                value={e.presupuestoId ?? 'Sin presupuesto vinculado'}
+              />
               {lineas.map((l) => (
                 <DatoLinea key={l.id} label={l.nombre} value={l.presupuesto} />
               ))}
@@ -1052,16 +1125,19 @@ function FichaExpediente() {
                 {actuaciones
                   .filter((a) => a.visibleCliente && !a.clienteInformado)
                   .map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
-                      <span className="text-sm text-foreground">
+                    <li
+                      key={a.id}
+                      className="border-border flex items-center justify-between gap-2 rounded-md border p-2"
+                    >
+                      <span className="text-foreground text-sm">
                         {a.fecha} · {a.titulo}
                       </span>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          ops.actualizarActuacion(a.id, { clienteInformado: true });
-                          toast.success("Marcada como reportada");
+                          ops.actualizarActuacion(a.id, { clienteInformado: true })
+                          toast.success('Marcada como reportada')
                         }}
                       >
                         Marcar reportada
@@ -1137,23 +1213,28 @@ function FichaExpediente() {
       {/* Bandeja rápida: documentos sin asignar */}
       <BandejaRapida expedienteId={e.id} />
     </div>
-  );
+  )
 }
 
 function BandejaRapida({ expedienteId }: { expedienteId: string }) {
-  const sinAsignar = useOps((s) => s.documentos.filter((d) => !d.expedienteId));
-  if (!sinAsignar.length) return null;
+  const sinAsignar = useOps((s) => s.documentos.filter((d) => !d.expedienteId))
+  if (!sinAsignar.length) return null
   return (
     <Card>
       <CardContent className="p-4">
-        <h3 className="text-sm font-semibold text-foreground">Documentos pendientes de asignación</h3>
-        <p className="text-xs text-muted-foreground">
+        <h3 className="text-foreground text-sm font-semibold">
+          Documentos pendientes de asignación
+        </h3>
+        <p className="text-muted-foreground text-xs">
           Puedes asignarlos a este expediente ({expedienteId}) o a cualquier otro.
         </p>
         <ul className="mt-2 space-y-2">
           {sinAsignar.map((d) => (
-            <li key={d.id} className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
-              <span className="truncate text-sm text-foreground">{d.nombre}</span>
+            <li
+              key={d.id}
+              className="border-border flex items-center justify-between gap-2 rounded-md border p-2"
+            >
+              <span className="text-foreground truncate text-sm">{d.nombre}</span>
               <AsignarDocumentoDialog
                 documentoId={d.id}
                 trigger={
@@ -1167,7 +1248,7 @@ function BandejaRapida({ expedienteId }: { expedienteId: string }) {
         </ul>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 /** Notas internas del expediente, incluidas las del cliente vinculado. */
@@ -1176,27 +1257,27 @@ function NotasDelExpediente({
   etiqueta,
   contactoId,
 }: {
-  expedienteId: string;
-  etiqueta: string;
-  contactoId: string;
+  expedienteId: string
+  etiqueta: string
+  contactoId: string
 }) {
-  const lista = useNotas((s) => notasDeExpediente(s, expedienteId));
-  const propias = lista.filter((n) => n.ambito === "expediente").length;
-  const dePersona = lista.filter((n) => n.ambito === "persona").length;
-  const otras = lista.length - propias - dePersona;
+  const lista = useNotas((s) => notasDeExpediente(s, expedienteId))
+  const propias = lista.filter((n) => n.ambito === 'expediente').length
+  const dePersona = lista.filter((n) => n.ambito === 'persona').length
+  const otras = lista.length - propias - dePersona
   return (
     <div className="space-y-3">
       {/* Distinción explícita de procedencia: la nota no cambia de dueño. */}
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-muted-foreground text-[11px]">
         {lista.length ? (
           <>
-            {propias} nota{propias === 1 ? "" : "s"} propias del expediente · {dePersona} heredada
-            {dePersona === 1 ? "" : "s"} de la ficha del cliente
-            {otras ? ` · ${otras} de otros ámbitos vinculados` : ""}. Las notas heredadas se muestran aquí como
-            contexto, pero siguen perteneciendo a su ámbito de origen.
+            {propias} nota{propias === 1 ? '' : 's'} propias del expediente · {dePersona} heredada
+            {dePersona === 1 ? '' : 's'} de la ficha del cliente
+            {otras ? ` · ${otras} de otros ámbitos vinculados` : ''}. Las notas heredadas se
+            muestran aquí como contexto, pero siguen perteneciendo a su ámbito de origen.
           </>
         ) : (
-          "Aquí verás tanto las notas propias del expediente como las heredadas de la ficha del cliente, siempre identificadas por su ámbito de origen."
+          'Aquí verás tanto las notas propias del expediente como las heredadas de la ficha del cliente, siempre identificadas por su ámbito de origen.'
         )}
       </p>
       <NotaMuro
@@ -1206,16 +1287,16 @@ function NotasDelExpediente({
         acciones={
           <NuevaNotaBoton
             inicial={{
-              ambito: "expediente",
+              ambito: 'expediente',
               expedienteId,
               contactos: [contactoId],
-              origen: { tipo: "expediente", id: expedienteId, etiqueta },
+              origen: { tipo: 'expediente', id: expedienteId, etiqueta },
             }}
           />
         }
       />
     </div>
-  );
+  )
 }
 
 /**
@@ -1225,19 +1306,26 @@ function NotasDelExpediente({
 function AccionesInterviniente({
   interviniente,
 }: {
-  interviniente: { id: string; nombre: string; rol: string };
+  interviniente: { id: string; nombre: string; rol: string }
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(false)
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Acciones del interviniente">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            aria-label="Acciones del interviniente"
+          >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setAbierto(true)}>Desvincular del expediente…</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setAbierto(true)}>
+            Desvincular del expediente…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -1246,16 +1334,17 @@ function AccionesInterviniente({
           <AlertDialogHeader>
             <AlertDialogTitle>Desvincular a {interviniente.nombre}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará su relación con este expediente como {interviniente.rol.toLowerCase()}. La persona y su ficha
-              de contactos se conservan intactas y la desvinculación quedará registrada en el histórico.
+              Se eliminará su relación con este expediente como {interviniente.rol.toLowerCase()}.
+              La persona y su ficha de contactos se conservan intactas y la desvinculación quedará
+              registrada en el histórico.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                ops.desvincularInterviniente(interviniente.id);
-                toast.success("Interviniente desvinculado del expediente");
+                ops.desvincularInterviniente(interviniente.id)
+                toast.success('Interviniente desvinculado del expediente')
               }}
             >
               Desvincular
@@ -1264,6 +1353,5 @@ function AccionesInterviniente({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }
-

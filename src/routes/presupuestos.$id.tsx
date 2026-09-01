@@ -1,7 +1,41 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { Lock, Send, ShieldCheck } from "lucide-react";
+import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { Lock, Send, ShieldCheck } from 'lucide-react'
 
-import { PendingBadge } from "@/components/common";
+import { PendingBadge } from '@/components/common'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  antiguedadFase,
+  etiquetasPresupuesto,
+  faseDePresupuesto,
+  fasePresupuesto,
+  motivoCierrePresupuesto,
+  nombreContacto,
+  oportunidadPorId,
+  presupuestoPorId,
+  siguienteAccionPresupuesto,
+  situacionEconomica,
+  situacionPresupuesto,
+  type Presupuesto,
+} from '@/data/crm'
 import {
   EntityHeader,
   Field,
@@ -10,72 +44,46 @@ import {
   RelationList,
   TimelineFeed,
   ToneBadge,
-} from "@/components/crm/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  antiguedadFase,
-  etiquetasPresupuesto,
-  faseDePresupuesto,
-  fasePresupuesto,
-  motivoCierrePresupuesto,
-  nombreContacto,
-  siguienteAccionPresupuesto,
-  situacionEconomica,
-  situacionPresupuesto,
-  oportunidadPorId,
-  presupuestoPorId,
-  type Presupuesto,
-} from "@/data/crm";
+} from '@/features/crm'
 
-export const Route = createFileRoute("/presupuestos/$id")({
+export const Route = createFileRoute('/presupuestos/$id')({
   loader: ({ params }) => {
-    const presupuesto = presupuestoPorId(params.id);
-    if (!presupuesto) throw notFound();
-    return { presupuesto };
+    const presupuesto = presupuestoPorId(params.id)
+    if (!presupuesto) throw notFound()
+    return { presupuesto }
   },
   head: ({ loaderData }) => {
     if (!loaderData)
-      return { meta: [{ title: "Presupuesto no encontrado — LEX" }, { name: "robots", content: "noindex" }] };
-    const t = `${loaderData.presupuesto.codigo} — ${loaderData.presupuesto.titulo}`;
+      return {
+        meta: [
+          { title: 'Presupuesto no encontrado — LEX' },
+          { name: 'robots', content: 'noindex' },
+        ],
+      }
+    const t = `${loaderData.presupuesto.codigo} — ${loaderData.presupuesto.titulo}`
     return {
       meta: [
         { title: `${t} — LEX` },
-        { name: "description", content: `Ficha del presupuesto ${loaderData.presupuesto.codigo}.` },
-        { property: "og:title", content: `${t} — LEX` },
-        { property: "og:description", content: "Ficha del presupuesto: alcance, honorarios, validación y cobro." },
+        { name: 'description', content: `Ficha del presupuesto ${loaderData.presupuesto.codigo}.` },
+        { property: 'og:title', content: `${t} — LEX` },
+        {
+          property: 'og:description',
+          content: 'Ficha del presupuesto: alcance, honorarios, validación y cobro.',
+        },
       ],
-    };
+    }
   },
   component: PresupuestoPage,
-});
+})
 
 function PresupuestoPage() {
-  const { presupuesto: p } = Route.useLoaderData() as { presupuesto: Presupuesto };
-  const fase = fasePresupuesto(faseDePresupuesto(p));
-  const eco = situacionEconomica(p);
-  const etiquetas = etiquetasPresupuesto(p);
-  const dias = antiguedadFase(p);
-  const motivoCierre = motivoCierrePresupuesto(p);
-  const oportunidad = p.oportunidadId ? oportunidadPorId(p.oportunidadId) : undefined;
+  const { presupuesto: p } = Route.useLoaderData() as { presupuesto: Presupuesto }
+  const fase = fasePresupuesto(faseDePresupuesto(p))
+  const eco = situacionEconomica(p)
+  const etiquetas = etiquetasPresupuesto(p)
+  const dias = antiguedadFase(p)
+  const motivoCierre = motivoCierrePresupuesto(p)
+  const oportunidad = p.oportunidadId ? oportunidadPorId(p.oportunidadId) : undefined
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -85,32 +93,39 @@ function PresupuestoPage() {
         eyebrow={`Presupuesto ${p.codigo} · ${p.version}`}
         title={p.titulo}
         meta={[
-          { label: "Fase", value: <ToneBadge tono={fase.tono}>{fase.nombre}</ToneBadge> },
-          { label: "Situación interna", value: situacionPresupuesto(p) },
-          { label: "Antigüedad en la fase", value: dias !== undefined ? `${dias} días` : "—" },
-          { label: "Siguiente acción", value: siguienteAccionPresupuesto(p) },
-          { label: "Contacto", value: nombreContacto(p.contactoId) },
-          { label: "Tipo", value: p.tipo },
-          { label: "Responsable de elaboración", value: p.responsable },
-          { label: "Validador", value: p.validador },
+          { label: 'Fase', value: <ToneBadge tono={fase.tono}>{fase.nombre}</ToneBadge> },
+          { label: 'Situación interna', value: situacionPresupuesto(p) },
+          { label: 'Antigüedad en la fase', value: dias !== undefined ? `${dias} días` : '—' },
+          { label: 'Siguiente acción', value: siguienteAccionPresupuesto(p) },
+          { label: 'Contacto', value: nombreContacto(p.contactoId) },
+          { label: 'Tipo', value: p.tipo },
+          { label: 'Responsable de elaboración', value: p.responsable },
+          { label: 'Validador', value: p.validador },
           {
-            label: "Validación",
+            label: 'Validación',
             value: p.validado ? (
               <ToneBadge tono="exito">Validado por Igor</ToneBadge>
             ) : (
               <ToneBadge tono="aviso">Pendiente de validación</ToneBadge>
             ),
           },
-          { label: "Total", value: p.total },
-          { label: "Provisión inicial", value: p.provision },
-          { label: "Vigencia", value: p.vigencia },
-          { label: "Situación económica", value: <ToneBadge tono={eco.tono}>{eco.texto}</ToneBadge> },
-          ...(motivoCierre ? [{ label: "Motivo de cierre", value: motivoCierre }] : []),
+          { label: 'Total', value: p.total },
+          { label: 'Provisión inicial', value: p.provision },
+          { label: 'Vigencia', value: p.vigencia },
+          {
+            label: 'Situación económica',
+            value: <ToneBadge tono={eco.tono}>{eco.texto}</ToneBadge>,
+          },
+          ...(motivoCierre ? [{ label: 'Motivo de cierre', value: motivoCierre }] : []),
         ]}
         actions={
           <>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Asignar elaboración</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Asignar elaboración
+                </Button>
+              }
               title="Asignar elaboración"
               confirmLabel="Asignar"
             >
@@ -122,7 +137,11 @@ function PresupuestoPage() {
               </Field>
             </MockDialog>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Enviar a validación</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Enviar a validación
+                </Button>
+              }
               title="Enviar a validación de Igor"
               confirmLabel="Enviar a validación"
             >
@@ -149,7 +168,11 @@ function PresupuestoPage() {
               </div>
             </MockDialog>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Devolver para rectificación</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Devolver para rectificación
+                </Button>
+              }
               title="Devolver para rectificación"
               confirmLabel="Devolver"
             >
@@ -160,7 +183,11 @@ function PresupuestoPage() {
               </div>
             </MockDialog>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Crear nueva versión</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Crear nueva versión
+                </Button>
+              }
               title="Nueva versión del presupuesto"
               confirmLabel="Crear versión"
             >
@@ -206,7 +233,11 @@ function PresupuestoPage() {
               </Button>
             )}
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Registrar respuesta</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Registrar respuesta
+                </Button>
+              }
               title="Registrar respuesta del cliente"
               confirmLabel="Registrar"
             >
@@ -227,7 +258,11 @@ function PresupuestoPage() {
               </Field>
             </MockDialog>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Generar proforma</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Generar proforma
+                </Button>
+              }
               title="Generar proforma"
               confirmLabel="Generar"
             >
@@ -239,7 +274,11 @@ function PresupuestoPage() {
               </Field>
             </MockDialog>
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Registrar pago</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Registrar pago
+                </Button>
+              }
               title="Registrar pago"
               confirmLabel="Registrar pago"
             >
@@ -250,9 +289,19 @@ function PresupuestoPage() {
                 <Input placeholder="dd/mm/aaaa" />
               </Field>
             </MockDialog>
-            <QuickTaskDialog trigger={<Button size="sm" variant="outline">Crear tarea</Button>} />
+            <QuickTaskDialog
+              trigger={
+                <Button size="sm" variant="outline">
+                  Crear tarea
+                </Button>
+              }
+            />
             <MockDialog
-              trigger={<Button size="sm" variant="outline">Cerrar sin encargo</Button>}
+              trigger={
+                <Button size="sm" variant="outline">
+                  Cerrar sin encargo
+                </Button>
+              }
               title="Cerrar sin encargo"
               description="El motivo de cierre es obligatorio y queda visible en la tarjeta."
               confirmLabel="Cerrar sin encargo"
@@ -264,13 +313,13 @@ function PresupuestoPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {[
-                      "Rechazado por el cliente",
-                      "Sin respuesta",
-                      "Caducado",
-                      "Cancelado por el despacho",
-                      "Duplicado",
-                      "Sustituido por otro presupuesto",
-                      "Otro motivo",
+                      'Rechazado por el cliente',
+                      'Sin respuesta',
+                      'Caducado',
+                      'Cancelado por el despacho',
+                      'Duplicado',
+                      'Sustituido por otro presupuesto',
+                      'Otro motivo',
                     ].map((m) => (
                       <SelectItem key={m} value={m}>
                         {m}
@@ -302,19 +351,19 @@ function PresupuestoPage() {
         </div>
       ) : null}
 
-      {p.envio && faseDePresupuesto(p) === "cliente" ? (
+      {p.envio && faseDePresupuesto(p) === 'cliente' ? (
         <Card className="mb-4">
           <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              ["Enviado el", p.envio.fecha],
-              ["Destinatario", p.envio.destinatario],
-              ["Canal", p.envio.canal],
-              ["Caduca el", p.envio.caducidad],
-              ["Próximo seguimiento", p.envio.seguimiento ?? "—"],
+              ['Enviado el', p.envio.fecha],
+              ['Destinatario', p.envio.destinatario],
+              ['Canal', p.envio.canal],
+              ['Caduca el', p.envio.caducidad],
+              ['Próximo seguimiento', p.envio.seguimiento ?? '—'],
             ].map(([k, v]) => (
               <div key={k}>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
-                <p className="mt-0.5 text-sm text-foreground">{v}</p>
+                <p className="text-muted-foreground text-xs tracking-wide uppercase">{k}</p>
+                <p className="text-foreground mt-0.5 text-sm">{v}</p>
               </div>
             ))}
           </CardContent>
@@ -325,13 +374,13 @@ function PresupuestoPage() {
         <Card className="mb-4">
           <CardContent className="grid gap-4 p-4 sm:grid-cols-3">
             {[
-              ["Fecha de aceptación", p.aceptacion.fecha],
-              ["Versión aceptada", p.aceptacion.version],
-              ["Forma de aceptación", p.aceptacion.forma],
+              ['Fecha de aceptación', p.aceptacion.fecha],
+              ['Versión aceptada', p.aceptacion.version],
+              ['Forma de aceptación', p.aceptacion.forma],
             ].map(([k, v]) => (
               <div key={k}>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
-                <p className="mt-0.5 text-sm text-foreground">{v}</p>
+                <p className="text-muted-foreground text-xs tracking-wide uppercase">{k}</p>
+                <p className="text-foreground mt-0.5 text-sm">{v}</p>
               </div>
             ))}
           </CardContent>
@@ -339,7 +388,7 @@ function PresupuestoPage() {
       ) : null}
 
       {!p.validado ? (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-warning/50 bg-warning/10 px-4 py-3 text-sm text-warning-foreground">
+        <div className="border-warning/50 bg-warning/10 text-warning-foreground mb-4 flex flex-wrap items-center gap-3 rounded-md border px-4 py-3 text-sm">
           <Lock className="h-4 w-4" />
           Ningún presupuesto puede mostrarse como enviado sin la validación previa de Igor Belmonte.
           <PendingBadge label="Control de permisos pendiente de desarrollo" />
@@ -360,12 +409,12 @@ function PresupuestoPage() {
         <TabsContent value="condiciones" className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                 Alcance del encargo
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+              <ul className="text-foreground list-disc space-y-1 pl-5 text-sm">
                 {p.alcance.map((a) => (
                   <li key={a}>{a}</li>
                 ))}
@@ -374,22 +423,24 @@ function PresupuestoPage() {
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                 Exclusiones
               </CardTitle>
             </CardHeader>
             <CardContent>
               {p.exclusiones.length ? (
-                <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+                <ul className="text-foreground list-disc space-y-1 pl-5 text-sm">
                   {p.exclusiones.map((a) => (
                     <li key={a}>{a}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">Sin exclusiones.</p>
+                <p className="text-muted-foreground text-sm">Sin exclusiones.</p>
               )}
-              <p className="mt-4 text-xs uppercase tracking-wide text-muted-foreground">Observaciones</p>
-              <p className="mt-0.5 text-sm text-foreground">{p.observaciones}</p>
+              <p className="text-muted-foreground mt-4 text-xs tracking-wide uppercase">
+                Observaciones
+              </p>
+              <p className="text-foreground mt-0.5 text-sm">{p.observaciones}</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -421,14 +472,14 @@ function PresupuestoPage() {
           </Card>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             {[
-              ["Forma de pago", p.formaPago],
-              ["Provisión inicial", p.provision],
-              ["Vigencia", p.vigencia],
+              ['Forma de pago', p.formaPago],
+              ['Provisión inicial', p.provision],
+              ['Vigencia', p.vigencia],
             ].map(([k, v]) => (
               <Card key={k}>
                 <CardContent className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
-                  <p className="mt-1 text-sm text-foreground">{v}</p>
+                  <p className="text-muted-foreground text-xs tracking-wide uppercase">{k}</p>
+                  <p className="text-foreground mt-1 text-sm">{v}</p>
                 </CardContent>
               </Card>
             ))}
@@ -489,7 +540,7 @@ function PresupuestoPage() {
                         <TableCell>{v.fecha}</TableCell>
                         <TableCell>{v.validador}</TableCell>
                         <TableCell>
-                          <ToneBadge tono={v.resultado === "Validado" ? "exito" : "riesgo"}>
+                          <ToneBadge tono={v.resultado === 'Validado' ? 'exito' : 'riesgo'}>
                             {v.resultado}
                           </ToneBadge>
                         </TableCell>
@@ -514,22 +565,22 @@ function PresupuestoPage() {
             <Card>
               <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-5">
                 {[
-                  ["Número", p.proforma.numero],
-                  ["Fecha", p.proforma.fecha],
-                  ["Importe", p.proforma.importe],
-                  ["Estado", p.proforma.estado],
-                  ["Pagado", p.proforma.pagado],
+                  ['Número', p.proforma.numero],
+                  ['Fecha', p.proforma.fecha],
+                  ['Importe', p.proforma.importe],
+                  ['Estado', p.proforma.estado],
+                  ['Pagado', p.proforma.pagado],
                 ].map(([k, v]) => (
                   <div key={k}>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
-                    <p className="mt-0.5 text-sm text-foreground">{v}</p>
+                    <p className="text-muted-foreground text-xs tracking-wide uppercase">{k}</p>
+                    <p className="text-foreground mt-0.5 text-sm">{v}</p>
                   </div>
                 ))}
               </CardContent>
             </Card>
           ) : (
             <Card>
-              <CardContent className="p-6 text-sm text-muted-foreground">
+              <CardContent className="text-muted-foreground p-6 text-sm">
                 Sin proforma emitida. Genera la proforma tras la aceptación del cliente.
               </CardContent>
             </Card>
@@ -542,7 +593,7 @@ function PresupuestoPage() {
             items={[
               {
                 label: nombreContacto(p.contactoId),
-                to: "/contactos/$id",
+                to: '/contactos/$id',
                 params: { id: p.contactoId },
               },
             ]}
@@ -554,7 +605,7 @@ function PresupuestoPage() {
                 ? [
                     {
                       label: `${oportunidad.codigo} · ${oportunidad.titulo}`,
-                      to: "/oportunidades",
+                      to: '/oportunidades',
                       params: { id: oportunidad.id },
                     },
                   ]
@@ -566,7 +617,13 @@ function PresupuestoPage() {
             title="Expediente"
             items={
               p.expedienteId
-                ? [{ label: p.expedienteId, to: "/expedientes/$id", params: { id: p.expedienteId } }]
+                ? [
+                    {
+                      label: p.expedienteId,
+                      to: '/expedientes/$id',
+                      params: { id: p.expedienteId },
+                    },
+                  ]
                 : []
             }
             empty="Sin expediente vinculado."
@@ -582,12 +639,12 @@ function PresupuestoPage() {
         </TabsContent>
       </Tabs>
 
-      <p className="mt-6 text-xs text-muted-foreground">
-        Los documentos económicos y la pasarela de pago se desarrollarán en fases posteriores.{" "}
+      <p className="text-muted-foreground mt-6 text-xs">
+        Los documentos económicos y la pasarela de pago se desarrollarán en fases posteriores.{' '}
         <Link to="/facturacion" className="text-primary hover:underline">
           Ver facturación y cobros
         </Link>
       </p>
     </div>
-  );
+  )
 }

@@ -1,15 +1,15 @@
 // INBOX personal (GTD): captura rápida y etapas de procesamiento.
 // Las etapas NO son estados de tarea: el estado sigue siendo Pendiente /
 // En curso / En espera / Completada / Cancelada.
-import { useState } from "react";
-import { Inbox as InboxIcon, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { Inbox as InboxIcon, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Vacio } from "@/components/expedientes/ui";
-import { TareaFicha } from "@/components/tareas/ficha-modal";
-import { TareaCard } from "@/components/tareas/ui";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Vacio } from '@/components/expedientes/ui'
+import { TareaFicha } from '@/components/tareas/ficha-modal'
+import { TareaCard } from '@/components/tareas/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -18,32 +18,31 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field } from "@/components/crm/ui";
-import { ToneBadge } from "@/components/crm/ui";
-import { ETAPAS_INBOX, type EtapaInbox } from "@/data/expedientes-model";
-import { ops, selInbox, senalesTarea, useOps, type OpsState } from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { ETAPAS_INBOX, type EtapaInbox } from '@/data/expedientes-model'
+import { Field, ToneBadge } from '@/features/crm'
+import { ops, selInbox, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
+import { cn } from '@/lib/utils'
 
 /** Captura rápida: sólo el título es obligatorio. */
 export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
-  const [abierto, setAbierto] = useState(false);
-  const [titulo, setTitulo] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [abierto, setAbierto] = useState(false)
+  const [titulo, setTitulo] = useState('')
+  const [mensaje, setMensaje] = useState('')
 
   const guardar = () => {
-    const r = ops.capturarEnInbox(titulo, mensaje);
+    const r = ops.capturarEnInbox(titulo, mensaje)
     if (!r.ok) {
-      toast.error(r.error);
-      return;
+      toast.error(r.error)
+      return
     }
-    toast.success("Capturado en tu bandeja de entrada");
-    setTitulo("");
-    setMensaje("");
-    setAbierto(false);
-  };
+    toast.success('Capturado en tu bandeja de entrada')
+    setTitulo('')
+    setMensaje('')
+    setAbierto(false)
+  }
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
@@ -52,8 +51,8 @@ export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
         <DialogHeader>
           <DialogTitle>Captura rápida</DialogTitle>
           <DialogDescription>
-            Apunta ahora lo que no quieres olvidar. Podrás contextualizarlo después: seguirá siendo la
-            misma tarea.
+            Apunta ahora lo que no quieres olvidar. Podrás contextualizarlo después: seguirá siendo
+            la misma tarea.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-1">
@@ -62,7 +61,7 @@ export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
               autoFocus
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && guardar()}
+              onKeyDown={(e) => e.key === 'Enter' && guardar()}
               placeholder="Qué hay que hacer"
             />
           </Field>
@@ -78,44 +77,44 @@ export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 /** Vista personal por etapas, con arrastre entre etapas y orden manual. */
 export function InboxPersonal() {
-  const usuario = useOps((s) => s.usuario);
-  const estadoOps = useOps((s: OpsState) => s);
-  const grupos = selInbox(estadoOps, usuario);
-  const [sobre, setSobre] = useState<string | null>(null);
-  const [seleccionada, setSeleccionada] = useState<string | null>(null);
-  const total = grupos.reduce((n, g) => n + g.tareas.length, 0);
+  const usuario = useOps((s) => s.usuario)
+  const estadoOps = useOps((s: OpsState) => s)
+  const grupos = selInbox(estadoOps, usuario)
+  const [sobre, setSobre] = useState<string | null>(null)
+  const [seleccionada, setSeleccionada] = useState<string | null>(null)
+  const total = grupos.reduce((n, g) => n + g.tareas.length, 0)
 
   const soltar = (etapa: EtapaInbox, e: React.DragEvent, antesDe?: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSobre(null);
-    const id = e.dataTransfer.getData("text/plain");
-    if (!id) return;
-    const actual = grupos.find((g) => g.etapa === etapa)?.tareas ?? [];
-    const misma = actual.some((t) => t.id === id);
-    if (!misma) ops.moverEtapaInbox(id, etapa);
-    const orden = actual.filter((t) => t.id !== id).map((t) => t.id);
-    const pos = antesDe ? orden.indexOf(antesDe) : orden.length;
-    orden.splice(pos < 0 ? orden.length : pos, 0, id);
-    ops.reordenarInbox(etapa, orden);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setSobre(null)
+    const id = e.dataTransfer.getData('text/plain')
+    if (!id) return
+    const actual = grupos.find((g) => g.etapa === etapa)?.tareas ?? []
+    const misma = actual.some((t) => t.id === id)
+    if (!misma) ops.moverEtapaInbox(id, etapa)
+    const orden = actual.filter((t) => t.id !== id).map((t) => t.id)
+    const pos = antesDe ? orden.indexOf(antesDe) : orden.length
+    orden.splice(pos < 0 ? orden.length : pos, 0, id)
+    ops.reordenarInbox(etapa, orden)
+  }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase text-foreground">
+            <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold uppercase">
               <InboxIcon className="h-4 w-4" /> Inbox personal de {usuario}
             </h2>
-            <p className="text-xs text-muted-foreground">
-              {total} captura{total === 1 ? "" : "s"} en proceso. Las etapas son tuyas: no cambian el
-              estado de la tarea.
+            <p className="text-muted-foreground text-xs">
+              {total} captura{total === 1 ? '' : 's'} en proceso. Las etapas son tuyas: no cambian
+              el estado de la tarea.
             </p>
           </div>
           <CapturaInboxDialog
@@ -131,23 +130,23 @@ export function InboxPersonal() {
       <div className="-mx-1 overflow-x-auto pb-3">
         <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
           {ETAPAS_INBOX.map((etapa) => {
-            const lista = grupos.find((g) => g.etapa === etapa)?.tareas ?? [];
+            const lista = grupos.find((g) => g.etapa === etapa)?.tareas ?? []
             return (
               <section
                 key={etapa}
                 onDragOver={(e) => {
-                  e.preventDefault();
-                  setSobre(etapa);
+                  e.preventDefault()
+                  setSobre(etapa)
                 }}
                 onDragLeave={() => setSobre((s) => (s === etapa ? null : s))}
                 onDrop={(e) => soltar(etapa, e)}
                 className={cn(
-                  "shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-72",
-                  sobre === etapa && "bg-primary/10 ring-1 ring-primary/40",
+                  'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-72',
+                  sobre === etapa && 'bg-primary/10 ring-1 ring-primary/40',
                 )}
               >
                 <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-                  <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                  <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
                     {etapa}
                   </span>
                   <ToneBadge tono="neutro">{lista.length}</ToneBadge>
@@ -159,8 +158,8 @@ export function InboxPersonal() {
                         key={t.id}
                         draggable
                         onDragStart={(e) => {
-                          e.dataTransfer.setData("text/plain", t.id);
-                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData('text/plain', t.id)
+                          e.dataTransfer.effectAllowed = 'move'
                         }}
                         onDrop={(e) => soltar(etapa, e, t.id)}
                         className="cursor-grab active:cursor-grabbing"
@@ -173,10 +172,10 @@ export function InboxPersonal() {
                         <button
                           type="button"
                           onClick={() => {
-                            ops.sacarDeInbox(t.id);
-                            toast.success("Procesada: sale del Inbox");
+                            ops.sacarDeInbox(t.id)
+                            toast.success('Procesada: sale del Inbox')
                           }}
-                          className="mt-1 w-full text-right text-[11px] text-muted-foreground hover:underline"
+                          className="text-muted-foreground mt-1 w-full text-right text-[11px] hover:underline"
                         >
                           Marcar como procesada
                         </button>
@@ -187,12 +186,12 @@ export function InboxPersonal() {
                   )}
                 </div>
               </section>
-            );
+            )
           })}
         </div>
       </div>
 
       <TareaFicha tareaId={seleccionada} onOpenChange={(v) => !v && setSeleccionada(null)} />
     </div>
-  );
+  )
 }

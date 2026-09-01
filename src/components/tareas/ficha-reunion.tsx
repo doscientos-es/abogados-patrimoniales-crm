@@ -6,8 +6,8 @@
 // histórico) y reutiliza los módulos existentes de LEX: COMUNICACIONES,
 // FECHAS Y PLAZOS, DOCUMENTOS, TAREAS y SIGUIENTE ACCIÓN. No se crea ningún
 // sistema paralelo.
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
+import { es } from 'date-fns/locale'
 import {
   CalendarDays,
   CheckCircle2,
@@ -18,29 +18,27 @@ import {
   Plus,
   Square,
   Trash2,
-  UserPlus,
-} from "lucide-react";
-import { es } from "date-fns/locale";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Field, ToneBadge } from "@/components/crm/ui";
-import { Vacio } from "@/components/expedientes/ui";
-import { Cronologia } from "@/components/comunicaciones/cronologia";
-import {
-  NuevoEmailDialog,
-  NuevoWhatsappDialog,
-  RegistroLlamadaDialog,
-} from "@/components/comunicaciones/dialogos";
 import {
   botonNuevoEmail,
   botonNuevoWhatsapp,
   botonRegistrarLlamada,
-} from "@/components/comunicaciones/acciones";
-import { SelectorFecha, SelectorHora } from "@/components/fechas/datetime";
-import { ListaRegistros } from "@/components/fechas/panel";
-import { RegistroTemporalDialog } from "@/components/fechas/registro-dialog";
-import { NuevaTareaRapidaDialog, VincularDocumentoDialog } from "@/components/tareas/ui";
-import { ReunionInstruccionesDialog } from "@/components/tareas/reunion-dialog";
+} from '@/components/comunicaciones/acciones'
+import { Cronologia } from '@/components/comunicaciones/cronologia'
+import {
+  NuevoEmailDialog,
+  NuevoWhatsappDialog,
+  RegistroLlamadaDialog,
+} from '@/components/comunicaciones/dialogos'
+import { Vacio } from '@/components/expedientes/ui'
+import { SelectorFecha, SelectorHora } from '@/components/fechas/datetime'
+import { ListaRegistros } from '@/components/fechas/panel'
+import { RegistroTemporalDialog } from '@/components/fechas/registro-dialog'
+import { NuevaNotaBoton } from '@/components/notas/nota-form'
+import { NotaMuro } from '@/components/notas/nota-muro'
 import {
   SelectorDuracion,
   SelectorFranja,
@@ -48,151 +46,158 @@ import {
   SelectorParticipantes,
   SelectorPreferenciaFecha,
   type Participante,
-} from "@/components/tareas/reunion-campos";
-import { NuevaNotaBoton } from "@/components/notas/nota-form";
-import { NotaMuro } from "@/components/notas/nota-muro";
-import { notas as notasStore, useNotas } from "@/lib/notas-store";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/tareas/reunion-campos'
+import { ReunionInstruccionesDialog } from '@/components/tareas/reunion-dialog'
+import { NuevaTareaRapidaDialog, VincularDocumentoDialog } from '@/components/tareas/ui'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { USUARIOS } from "@/data/crm";
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { USUARIOS } from '@/data/crm'
 import {
   CLASES_PREPARACION,
   MODALIDADES_REUNION,
   TIPOS_REUNION,
   type ClasePreparacion,
-  type FranjaReunion,
   type EstadoReunion,
+  type FranjaReunion,
   type ModalidadReunion,
   type TareaOp,
-} from "@/data/expedientes-model";
-import { formatoFecha, parseFecha } from "@/data/pipeline";
-import { CALENDARIO_DESPACHO } from "@/lib/fechas";
-import { ops, useOps } from "@/lib/expedientes-store";
-import { cn } from "@/lib/utils";
+} from '@/data/expedientes-model'
+import { formatoFecha, parseFecha } from '@/data/pipeline'
+import { Field, ToneBadge } from '@/features/crm'
+import { ops, useOps } from '@/lib/expedientes-store'
+import { CALENDARIO_DESPACHO } from '@/lib/fechas'
+import { notas as notasStore, useNotas } from '@/lib/notas-store'
+import { cn } from '@/lib/utils'
 
-const ETAPAS: EstadoReunion[] = ["Preparación", "Agendada", "En reunión", "Finalizada"];
+const ETAPAS: EstadoReunion[] = ['Preparación', 'Agendada', 'En reunión', 'Finalizada']
 
 const tonoEstado = (e: EstadoReunion) =>
-  e === "En reunión" ? "aviso" : e === "Finalizada" ? "exito" : e === "Cancelada" || e === "No celebrada" ? "riesgo" : "info";
+  e === 'En reunión'
+    ? 'aviso'
+    : e === 'Finalizada'
+      ? 'exito'
+      : e === 'Cancelada' || e === 'No celebrada'
+        ? 'riesgo'
+        : 'info'
 
 function Bloque({
   titulo,
   accion,
   children,
 }: {
-  titulo: string;
-  accion?: React.ReactNode;
-  children: React.ReactNode;
+  titulo: string
+  accion?: React.ReactNode
+  children: React.ReactNode
 }) {
   return (
-    <section className="space-y-2 rounded-md border border-border p-3.5">
+    <section className="border-border space-y-2 rounded-md border p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
           {titulo}
         </h3>
         {accion}
       </div>
       {children}
     </section>
-  );
+  )
 }
 
 export function FichaTareaReunion({
   tarea,
   onOpenChange,
 }: {
-  tarea: TareaOp;
-  onOpenChange: (v: boolean) => void;
+  tarea: TareaOp
+  onOpenChange: (v: boolean) => void
 }) {
-  const r = tarea.reunion!;
-  const fechas = useOps((s) => s.fechas);
-  const todasLasNotas = useNotas((s) => s.notas);
-  const comunicaciones = useOps((s) => s.comunicaciones);
+  const r = tarea.reunion!
+  const fechas = useOps((s) => s.fechas)
+  const todasLasNotas = useNotas((s) => s.notas)
+  const comunicaciones = useOps((s) => s.comunicaciones)
 
-  const [nota, setNota] = useState("");
-  const [puntoTexto, setPuntoTexto] = useState("");
-  const [puntoClase, setPuntoClase] = useState<ClasePreparacion>(CLASES_PREPARACION[0]);
-  const [fechaDialog, setFechaDialog] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [nota, setNota] = useState('')
+  const [puntoTexto, setPuntoTexto] = useState('')
+  const [puntoClase, setPuntoClase] = useState<ClasePreparacion>(CLASES_PREPARACION[0])
+  const [fechaDialog, setFechaDialog] = useState(false)
+  const [tick, setTick] = useState(0)
 
   // Cronómetro de duración real: sólo mientras la reunión está en curso.
   useEffect(() => {
-    if (r.estado !== "En reunión") return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [r.estado]);
+    if (r.estado !== 'En reunión') return
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [r.estado])
 
   const vinculadas = useMemo(
     () => comunicaciones.filter((c) => (r.comunicacionesVinculadas ?? []).includes(c.id)),
     [comunicaciones, r.comunicacionesVinculadas],
-  );
+  )
 
-  const diaSeleccionado = parseFecha(r.fecha ?? "") ?? undefined;
+  const diaSeleccionado = parseFecha(r.fecha ?? '') ?? undefined
   const registrosDelDia = useMemo(
     () => (r.fecha ? fechas.filter((f) => f.fecha === r.fecha) : []),
     [fechas, r.fecha],
-  );
+  )
 
-  const contexto = tarea.expedienteId ? { expedienteId: tarea.expedienteId } : {};
+  const contexto = tarea.expedienteId ? { expedienteId: tarea.expedienteId } : {}
   const vincularComunicacion = (id: string) =>
     ops.actualizarReunion(tarea.id, {
       comunicacionesVinculadas: [...new Set([...(r.comunicacionesVinculadas ?? []), id])],
-    });
+    })
 
   // Cronómetro por reloj de pared: se mide desde la hora real de inicio.
   const transcurrido = (() => {
-    void tick;
-    if (!r.inicioReal) return "00:00:00";
-    const [h, m] = r.inicioReal.slice(-5).split(":");
-    const ahora = new Date();
-    const base = new Date();
-    base.setHours(Number(h), Number(m), 0, 0);
-    const seg = Math.max(0, Math.floor((ahora.getTime() - base.getTime()) / 1000));
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${p(Math.floor(seg / 3600))}:${p(Math.floor((seg % 3600) / 60))}:${p(seg % 60)}`;
-  })();
+    void tick
+    if (!r.inicioReal) return '00:00:00'
+    const [h, m] = r.inicioReal.slice(-5).split(':')
+    const ahora = new Date()
+    const base = new Date()
+    base.setHours(Number(h), Number(m), 0, 0)
+    const seg = Math.max(0, Math.floor((ahora.getTime() - base.getTime()) / 1000))
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${p(Math.floor(seg / 3600))}:${p(Math.floor((seg % 3600) / 60))}:${p(seg % 60)}`
+  })()
 
   const agendar = () => {
-    const res = ops.agendarReunion(tarea.id);
+    const res = ops.agendarReunion(tarea.id)
     if (!res.ok) {
-      toast.error("No se puede agendar todavía", { description: res.motivos.join(" ") });
-      return;
+      toast.error('No se puede agendar todavía', { description: res.motivos.join(' ') })
+      return
     }
-    toast.success("Reunión agendada", {
-      description: "Reflejada en Fechas y plazos y en el calendario del despacho.",
-    });
-  };
+    toast.success('Reunión agendada', {
+      description: 'Reflejada en Fechas y plazos y en el calendario del despacho.',
+    })
+  }
 
-  const notasVinculadas = todasLasNotas.filter((n) => (r.notasIds ?? []).includes(n.id));
+  const notasVinculadas = todasLasNotas.filter((n) => (r.notasIds ?? []).includes(n.id))
   const inicialNota = tarea.expedienteId
     ? {
-        ambito: "expediente" as const,
+        ambito: 'expediente' as const,
         origen: {
-          tipo: "expediente" as const,
+          tipo: 'expediente' as const,
           id: tarea.expedienteId,
           etiqueta: tarea.expedienteId,
         },
         contactos: r.asistentes.filter((a) => a.contactoId).map((a) => a.contactoId!),
         expedienteId: tarea.expedienteId,
       }
-    : undefined;
+    : undefined
 
   const bloqueNotas = (
     <Bloque
@@ -202,9 +207,9 @@ export function FichaTareaReunion({
           {...(inicialNota ? { inicial: inicialNota } : {})}
           modoRapido
           onCreate={(borrador) => {
-            const creada = notasStore.crear(borrador);
-            ops.vincularNotaReunion(tarea.id, creada.id);
-            toast.success("Nota interna añadida");
+            const creada = notasStore.crear(borrador)
+            ops.vincularNotaReunion(tarea.id, creada.id)
+            toast.success('Nota interna añadida')
           }}
           trigger={
             <Button size="sm" variant="outline">
@@ -219,14 +224,14 @@ export function FichaTareaReunion({
       ) : (
         <Vacio texto="Sin notas internas vinculadas a esta reunión." />
       )}
-      <p className="text-[11px] text-muted-foreground">
-        Las notas internas nunca forman parte del portal del cliente.{" "}
+      <p className="text-muted-foreground text-[11px]">
+        Las notas internas nunca forman parte del portal del cliente.{' '}
         <Link to="/notas" className="text-primary hover:underline">
           Ver todas las notas
         </Link>
       </p>
     </Bloque>
-  );
+  )
 
   const queNace = (
     <Bloque titulo="Qué nace de esta reunión">
@@ -277,12 +282,12 @@ export function FichaTareaReunion({
         />
       </div>
     </Bloque>
-  );
+  )
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[92vh] w-[96vw] max-w-3xl flex-col gap-0 overflow-y-auto p-0">
-        <DialogHeader className="border-b border-border p-5">
+        <DialogHeader className="border-border border-b p-5">
           <div className="flex flex-wrap items-center gap-1.5">
             <ToneBadge tono="neutro">{tarea.id}</ToneBadge>
             <ToneBadge tono="info">Tarea especial · Reunión</ToneBadge>
@@ -293,17 +298,17 @@ export function FichaTareaReunion({
             {r.objeto || tarea.titulo}
           </DialogTitle>
           <DialogDescription className="text-left">
-            Con {r.conQuien || "—"} · Preparación a cargo de {tarea.responsable}
+            Con {r.conQuien || '—'} · Preparación a cargo de {tarea.responsable}
           </DialogDescription>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {ETAPAS.map((e) => (
               <span
                 key={e}
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide",
+                  'rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide',
                   e === r.estado
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground",
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground',
                 )}
               >
                 {e}
@@ -314,13 +319,17 @@ export function FichaTareaReunion({
 
         <div className="space-y-4 p-5">
           {/* --------------------------- PREPARACIÓN --------------------------- */}
-          {(r.estado === "Preparación" || r.estado === "Reprogramada") && (
+          {(r.estado === 'Preparación' || r.estado === 'Reprogramada') && (
             <>
               <Bloque titulo="Qué reunión hay que organizar">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Tipo de reunión">
                     <Select
-                      value={(TIPOS_REUNION as readonly string[]).includes(r.tipo) ? r.tipo : TIPOS_REUNION[0]}
+                      value={
+                        (TIPOS_REUNION as readonly string[]).includes(r.tipo)
+                          ? r.tipo
+                          : TIPOS_REUNION[0]
+                      }
                       onValueChange={(v) => ops.actualizarReunion(tarea.id, { tipo: v })}
                     >
                       <SelectTrigger>
@@ -382,28 +391,28 @@ export function FichaTareaReunion({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Duración estimada">
                     <SelectorDuracion
-                      value={r.duracionEstimada ?? ""}
+                      value={r.duracionEstimada ?? ''}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { duracionEstimada: v })}
                     />
                   </Field>
                   <Field label="Preferencia de fecha">
                     <SelectorPreferenciaFecha
-                      value={r.preferenciasFecha ?? "Sin preferencia"}
-                      fecha={r.preferenciaFechaValor ?? ""}
+                      value={r.preferenciasFecha ?? 'Sin preferencia'}
+                      fecha={r.preferenciaFechaValor ?? ''}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { preferenciasFecha: v })}
                       onFecha={(v) => ops.actualizarReunion(tarea.id, { preferenciaFechaValor: v })}
                     />
                   </Field>
                   <Field label="Franja preferida">
                     <SelectorFranja
-                      value={(r.franja ?? "Indiferente") as FranjaReunion}
+                      value={(r.franja ?? 'Indiferente') as FranjaReunion}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { franja: v })}
                     />
                   </Field>
                   <Field label="Lugar / modalidad">
                     <SelectorLugar
-                      value={r.preferenciasLugar ?? ""}
-                      direccion={r.direccion ?? ""}
+                      value={r.preferenciasLugar ?? ''}
+                      direccion={r.direccion ?? ''}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { preferenciasLugar: v })}
                       onDireccion={(v) => ops.actualizarReunion(tarea.id, { direccion: v })}
                     />
@@ -412,8 +421,10 @@ export function FichaTareaReunion({
                     <Field label="Indicaciones internas">
                       <Textarea
                         rows={2}
-                        defaultValue={r.indicaciones ?? ""}
-                        onBlur={(e) => ops.actualizarReunion(tarea.id, { indicaciones: e.target.value })}
+                        defaultValue={r.indicaciones ?? ''}
+                        onBlur={(e) =>
+                          ops.actualizarReunion(tarea.id, { indicaciones: e.target.value })
+                        }
                         placeholder="Instrucciones prácticas para quien prepara la reunión."
                       />
                     </Field>
@@ -427,7 +438,7 @@ export function FichaTareaReunion({
                     {r.preparacion.map((p) => (
                       <li
                         key={p.id}
-                        className="flex items-start gap-2 rounded-md border border-border p-2.5"
+                        className="border-border flex items-start gap-2 rounded-md border p-2.5"
                       >
                         <Checkbox
                           checked={p.hecho}
@@ -437,13 +448,13 @@ export function FichaTareaReunion({
                         <span className="min-w-0 flex-1">
                           <span
                             className={cn(
-                              "block text-sm",
-                              p.hecho && "text-muted-foreground line-through",
+                              'block text-sm',
+                              p.hecho && 'text-muted-foreground line-through',
                             )}
                           >
                             {p.texto}
                           </span>
-                          <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <span className="text-muted-foreground block text-[10px] tracking-wide uppercase">
                             {p.clase} · {p.autor} · {p.fecha}
                           </span>
                         </span>
@@ -462,7 +473,10 @@ export function FichaTareaReunion({
                   <Vacio texto="Sin gestiones previas registradas." />
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <Select value={puntoClase} onValueChange={(v) => setPuntoClase(v as ClasePreparacion)}>
+                  <Select
+                    value={puntoClase}
+                    onValueChange={(v) => setPuntoClase(v as ClasePreparacion)}
+                  >
                     <SelectTrigger className="h-9 w-full sm:w-56">
                       <SelectValue />
                     </SelectTrigger>
@@ -484,9 +498,9 @@ export function FichaTareaReunion({
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      if (!puntoTexto.trim()) return;
-                      ops.añadirPuntoPreparacion(tarea.id, { clase: puntoClase, texto: puntoTexto });
-                      setPuntoTexto("");
+                      if (!puntoTexto.trim()) return
+                      ops.añadirPuntoPreparacion(tarea.id, { clase: puntoClase, texto: puntoTexto })
+                      setPuntoTexto('')
                     }}
                   >
                     <Plus className="mr-1.5 h-3.5 w-3.5" /> Añadir
@@ -512,11 +526,14 @@ export function FichaTareaReunion({
                     trigger={botonRegistrarLlamada}
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Plantillas de reunión disponibles en el selector: solicitar disponibilidad, proponer
-                  fecha o alternativas, confirmar, cambio de fecha y recordatorio.
+                <p className="text-muted-foreground text-[11px]">
+                  Plantillas de reunión disponibles en el selector: solicitar disponibilidad,
+                  proponer fecha o alternativas, confirmar, cambio de fecha y recordatorio.
                 </p>
-                <Cronologia comunicaciones={vinculadas} vacio="Sin comunicaciones de preparación." />
+                <Cronologia
+                  comunicaciones={vinculadas}
+                  vacio="Sin comunicaciones de preparación."
+                />
               </Bloque>
 
               <Bloque
@@ -526,7 +543,7 @@ export function FichaTareaReunion({
                     href={CALENDARIO_DESPACHO}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    className="text-primary inline-flex items-center gap-1 text-[11px] hover:underline"
                   >
                     Calendario del despacho <ExternalLink className="h-3 w-3" />
                   </a>
@@ -536,20 +553,24 @@ export function FichaTareaReunion({
                   <Calendar
                     mode="single"
                     locale={es}
-                    {...(diaSeleccionado ? { selected: diaSeleccionado, defaultMonth: diaSeleccionado } : {})}
-                    onSelect={(d) => d && ops.actualizarReunion(tarea.id, { fecha: formatoFecha(d) })}
-                    className="rounded-md border border-border p-3 pointer-events-auto"
+                    {...(diaSeleccionado
+                      ? { selected: diaSeleccionado, defaultMonth: diaSeleccionado }
+                      : {})}
+                    onSelect={(d) =>
+                      d && ops.actualizarReunion(tarea.id, { fecha: formatoFecha(d) })
+                    }
+                    className="border-border pointer-events-auto rounded-md border p-3"
                   />
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Agenda del día {r.fecha || "—"}
+                    <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                      Agenda del día {r.fecha || '—'}
                     </p>
                     <ListaRegistros
                       registros={registrosDelDia}
                       vacio="Sin compromisos ese día: hueco disponible."
                       compacto
                     />
-                    <Link to="/calendario" className="text-[11px] text-primary hover:underline">
+                    <Link to="/calendario" className="text-primary text-[11px] hover:underline">
                       Ver Fechas y plazos
                     </Link>
                   </div>
@@ -560,26 +581,30 @@ export function FichaTareaReunion({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Día">
                     <SelectorFecha
-                      value={r.fecha ?? ""}
+                      value={r.fecha ?? ''}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { fecha: v })}
                     />
                   </Field>
                   <Field label="Hora">
                     <SelectorHora
-                      value={r.hora ?? ""}
+                      value={r.hora ?? ''}
                       onChange={(v) => ops.actualizarReunion(tarea.id, { hora: v })}
                     />
                   </Field>
                   <Field label="Duración prevista">
                     <Input
-                      defaultValue={r.duracionPrevista ?? r.duracionEstimada ?? ""}
-                      onBlur={(e) => ops.actualizarReunion(tarea.id, { duracionPrevista: e.target.value })}
+                      defaultValue={r.duracionPrevista ?? r.duracionEstimada ?? ''}
+                      onBlur={(e) =>
+                        ops.actualizarReunion(tarea.id, { duracionPrevista: e.target.value })
+                      }
                     />
                   </Field>
                   <Field label="Modalidad">
                     <Select
-                      value={r.modalidad ?? "Presencial"}
-                      onValueChange={(v) => ops.actualizarReunion(tarea.id, { modalidad: v as ModalidadReunion })}
+                      value={r.modalidad ?? 'Presencial'}
+                      onValueChange={(v) =>
+                        ops.actualizarReunion(tarea.id, { modalidad: v as ModalidadReunion })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -595,14 +620,14 @@ export function FichaTareaReunion({
                   </Field>
                   <Field label="Lugar">
                     <Input
-                      defaultValue={r.lugar ?? ""}
+                      defaultValue={r.lugar ?? ''}
                       onBlur={(e) => ops.actualizarReunion(tarea.id, { lugar: e.target.value })}
                       placeholder="Despacho, notaría, juzgado…"
                     />
                   </Field>
                   <Field label="Enlace (si procede)">
                     <Input
-                      defaultValue={r.enlace ?? ""}
+                      defaultValue={r.enlace ?? ''}
                       onBlur={(e) => ops.actualizarReunion(tarea.id, { enlace: e.target.value })}
                       placeholder="https://"
                     />
@@ -616,7 +641,7 @@ export function FichaTareaReunion({
           )}
 
           {/* --------------------------- AGENDADA --------------------------- */}
-          {r.estado === "Agendada" && (
+          {r.estado === 'Agendada' && (
             <Bloque titulo="Reunión agendada">
               <div className="grid gap-2 sm:grid-cols-2">
                 <p className="text-sm">
@@ -625,15 +650,15 @@ export function FichaTareaReunion({
                 </p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">Duración programada: </span>
-                  {r.duracionPrevista || r.duracionEstimada || "—"}
+                  {r.duracionPrevista || r.duracionEstimada || '—'}
                 </p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">Modalidad: </span>
-                  {r.modalidad ?? "—"}
+                  {r.modalidad ?? '—'}
                 </p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">Lugar: </span>
-                  {r.lugar || r.enlace || "—"}
+                  {r.lugar || r.enlace || '—'}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -643,21 +668,21 @@ export function FichaTareaReunion({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => ops.reprogramarReunion(tarea.id, "Reprogramada desde la ficha.")}
+                  onClick={() => ops.reprogramarReunion(tarea.id, 'Reprogramada desde la ficha.')}
                 >
                   Reprogramar
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => ops.cancelarReunion(tarea.id, "Cancelada desde la ficha.")}
+                  onClick={() => ops.cancelarReunion(tarea.id, 'Cancelada desde la ficha.')}
                 >
                   Cancelar
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => ops.cancelarReunion(tarea.id, "No comparece.", true)}
+                  onClick={() => ops.cancelarReunion(tarea.id, 'No comparece.', true)}
                 >
                   No celebrada
                 </Button>
@@ -667,16 +692,16 @@ export function FichaTareaReunion({
           )}
 
           {/* --------------------------- EN REUNIÓN --------------------------- */}
-          {r.estado === "En reunión" && (
+          {r.estado === 'En reunión' && (
             <>
-              <section className="space-y-3 rounded-md border border-warning/50 bg-warning/5 p-5 text-center">
-                <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              <section className="border-warning/50 bg-warning/5 space-y-3 rounded-md border p-5 text-center">
+                <p className="text-muted-foreground text-[11px] tracking-widest uppercase">
                   Reunión en curso
                 </p>
-                <p className="font-mono text-4xl tabular-nums text-foreground">{transcurrido}</p>
-                <p className="text-xs text-muted-foreground">
-                  Duración programada: {r.duracionPrevista || r.duracionEstimada || "—"} · Inicio real:{" "}
-                  {r.inicioReal}
+                <p className="text-foreground font-mono text-4xl tabular-nums">{transcurrido}</p>
+                <p className="text-muted-foreground text-xs">
+                  Duración programada: {r.duracionPrevista || r.duracionEstimada || '—'} · Inicio
+                  real: {r.inicioReal}
                 </p>
               </section>
 
@@ -692,10 +717,10 @@ export function FichaTareaReunion({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (!nota.trim()) return;
-                  ops.añadirNotaReunion(tarea.id, nota);
-                  setNota("");
-                  toast.success("Nota interna guardada");
+                  if (!nota.trim()) return
+                  ops.añadirNotaReunion(tarea.id, nota)
+                  setNota('')
+                  toast.success('Nota interna guardada')
                 }}
               >
                 Guardar nota
@@ -730,7 +755,7 @@ export function FichaTareaReunion({
               </div>
 
               <Bloque titulo="PLAUD · registro de reunión">
-                <label className="flex items-center gap-2 text-xs text-foreground">
+                <label className="text-foreground flex items-center gap-2 text-xs">
                   <Checkbox
                     checked={Boolean(r.plaud?.grabando)}
                     onCheckedChange={(v) =>
@@ -741,7 +766,7 @@ export function FichaTareaReunion({
                   />
                   <Mic className="h-3.5 w-3.5" /> Esta reunión se está grabando con PLAUD
                 </label>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-muted-foreground text-[11px]">
                   PLAUD registra lo que se dijo; LEX registra qué significa profesionalmente y qué
                   hacemos después. Integración de importación pendiente de desarrollo.
                 </p>
@@ -750,9 +775,9 @@ export function FichaTareaReunion({
               <Button
                 className="w-full"
                 onClick={() => {
-                  if (nota.trim()) ops.añadirNotaReunion(tarea.id, nota);
-                  setNota("");
-                  ops.finalizarReunion(tarea.id);
+                  if (nota.trim()) ops.añadirNotaReunion(tarea.id, nota)
+                  setNota('')
+                  ops.finalizarReunion(tarea.id)
                 }}
               >
                 <Square className="mr-2 h-4 w-4" /> FIN DE REUNIÓN
@@ -761,11 +786,11 @@ export function FichaTareaReunion({
           )}
 
           {/* --------------------------- FINALIZADA --------------------------- */}
-          {r.estado === "Finalizada" && (
+          {r.estado === 'Finalizada' && (
             <>
               <Bloque titulo="Duración">
                 <p className="text-sm">
-                  Programada: {r.duracionPrevista || r.duracionEstimada || "—"} · Real:{" "}
+                  Programada: {r.duracionPrevista || r.duracionEstimada || '—'} · Real:{' '}
                   {r.duracionRealMin ?? 0} min ({r.inicioReal} → {r.finReal})
                 </p>
               </Bloque>
@@ -774,7 +799,7 @@ export function FichaTareaReunion({
                 <Field label="Transcripción">
                   <Textarea
                     rows={3}
-                    defaultValue={r.plaud?.transcripcion ?? ""}
+                    defaultValue={r.plaud?.transcripcion ?? ''}
                     onBlur={(e) =>
                       ops.actualizarReunion(tarea.id, {
                         plaud: { ...(r.plaud ?? {}), transcripcion: e.target.value },
@@ -786,7 +811,7 @@ export function FichaTareaReunion({
                 <Field label="Resumen">
                   <Textarea
                     rows={2}
-                    defaultValue={r.plaud?.resumen ?? ""}
+                    defaultValue={r.plaud?.resumen ?? ''}
                     onBlur={(e) =>
                       ops.actualizarReunion(tarea.id, {
                         plaud: { ...(r.plaud ?? {}), resumen: e.target.value },
@@ -809,27 +834,30 @@ export function FichaTareaReunion({
                 <Field label="Conclusiones internas">
                   <Textarea
                     rows={4}
-                    defaultValue={r.conclusiones ?? ""}
-                    onBlur={(e) => ops.actualizarReunion(tarea.id, { conclusiones: e.target.value })}
+                    defaultValue={r.conclusiones ?? ''}
+                    onBlur={(e) =>
+                      ops.actualizarReunion(tarea.id, { conclusiones: e.target.value })
+                    }
                     placeholder="Valoración profesional de lo tratado."
                   />
                 </Field>
                 <Field label="Decisiones / resultado">
                   <Textarea
                     rows={3}
-                    defaultValue={r.decisiones ?? ""}
+                    defaultValue={r.decisiones ?? ''}
                     onBlur={(e) => ops.actualizarReunion(tarea.id, { decisiones: e.target.value })}
                     placeholder="Decisiones adoptadas, en breve."
                   />
                 </Field>
-                {tarea.estado !== "Completada" ? (
+                {tarea.estado !== 'Completada' ? (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const res = ops.completarTarea(tarea.id, r.decisiones || "Reunión celebrada.");
-                      if (!res.ok) toast.error("No se puede cerrar", { description: res.motivos.join(" ") });
-                      else toast.success("Reunión cerrada");
+                      const res = ops.completarTarea(tarea.id, r.decisiones || 'Reunión celebrada.')
+                      if (!res.ok)
+                        toast.error('No se puede cerrar', { description: res.motivos.join(' ') })
+                      else toast.success('Reunión cerrada')
                     }}
                   >
                     <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Cerrar la tarea de reunión
@@ -842,9 +870,9 @@ export function FichaTareaReunion({
             </>
           )}
 
-          {(r.estado === "Cancelada" || r.estado === "No celebrada") && (
+          {(r.estado === 'Cancelada' || r.estado === 'No celebrada') && (
             <Bloque titulo={r.estado}>
-              <p className="text-sm text-muted-foreground">{r.motivo}</p>
+              <p className="text-muted-foreground text-sm">{r.motivo}</p>
             </Bloque>
           )}
 
@@ -855,23 +883,23 @@ export function FichaTareaReunion({
                 {r.asistentes.map((a) => (
                   <li
                     key={a.id}
-                    className="flex items-center justify-between gap-2 rounded-md border border-border p-2.5"
+                    className="border-border flex items-center justify-between gap-2 rounded-md border p-2.5"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm">{a.nombre}</span>
-                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <span className="text-muted-foreground block text-[10px] tracking-wide uppercase">
                         {a.clase}
-                        {a.rol ? ` · ${a.rol}` : ""}
-                        {a.calendar ? " · en su calendario" : ""}
+                        {a.rol ? ` · ${a.rol}` : ''}
+                        {a.calendar ? ' · en su calendario' : ''}
                       </span>
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Button
                         size="sm"
-                        variant={a.confirmado ? "default" : "outline"}
+                        variant={a.confirmado ? 'default' : 'outline'}
                         onClick={() => ops.confirmarAsistenteReunion(tarea.id, a.id)}
                       >
-                        {a.confirmado ? "Confirmado" : "Confirmar"}
+                        {a.confirmado ? 'Confirmado' : 'Confirmar'}
                       </Button>
                       <Button
                         size="icon"
@@ -901,7 +929,7 @@ export function FichaTareaReunion({
           </Bloque>
 
           {bloqueNotas}
-          {r.estado !== "Finalizada" ? queNace : null}
+          {r.estado !== 'Finalizada' ? queNace : null}
         </div>
 
         <RegistroTemporalDialog
@@ -909,11 +937,11 @@ export function FichaTareaReunion({
           onOpenChange={setFechaDialog}
           contexto={{
             ...(tarea.expedienteId ? { expedienteId: tarea.expedienteId } : {}),
-            origen: { tipo: "Tarea", id: tarea.id, label: tarea.titulo },
+            origen: { tipo: 'Tarea', id: tarea.id, label: tarea.titulo },
           }}
           tituloSugerido={`Tras la reunión · ${r.objeto}`}
         />
       </DialogContent>
     </Dialog>
-  );
+  )
 }
