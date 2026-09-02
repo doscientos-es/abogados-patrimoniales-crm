@@ -60,6 +60,10 @@ export type Database = {
       >
       crm_cases: Table<CaseReferenceRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
+      crm_note_contacts: Table<NoteContactRow, never, never>
+      crm_note_permissions: Table<NotePermissionRow, never, never>
+      crm_note_acknowledgements: Table<NoteAcknowledgementRow, never, never>
+      crm_note_events: Table<NoteEventRow, never, never>
       crm_invoices: Table<InvoiceRow, InvoiceInsert, Partial<InvoiceInsert> & { id?: string }>
       crm_invoice_payments: Table<InvoicePaymentRow, InvoicePaymentInsert, never>
       crm_procedures: Table<
@@ -210,11 +214,35 @@ export type NoteRow = {
   snoozed_until: string | null
   visibility: 'team' | 'restricted'
   details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  archived_by: string | null
+  archived_at: string | null
   created_at: string
   updated_at: string
 }
 
 export type NoteInsert = Omit<NoteRow, 'id' | 'created_at' | 'updated_at'>
+export type NoteContactRow = { note_id: string; firm_id: string; contact_id: string }
+export type NotePermissionRow = {
+  note_id: string
+  firm_id: string
+  user_id: string
+  created_at: string
+}
+export type NoteAcknowledgementRow = { note_id: string; user_id: string; acknowledged_at: string }
+export type NoteEventRow = {
+  id: string
+  note_id: string
+  firm_id: string
+  event_type: string
+  detail: string | null
+  actor_id: string | null
+  created_at: string
+}
 
 export type InvoiceStatus =
   | 'draft'

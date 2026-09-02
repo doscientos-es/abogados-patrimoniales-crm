@@ -535,7 +535,7 @@ function Tablero({
   }
 
   return (
-    <Kanban.Viewport>
+    <Kanban.Viewport className="[&>div]:gap-2">
       {COLUMNAS.map((c) => {
         const lista = ordenarColumna(tareas.filter((t) => t.estado === c.id))
         return (
@@ -548,10 +548,10 @@ function Tablero({
             onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
             onDrop={(e) => soltar(c.id, e)}
             className={cn(
-              'bg-muted/70 transition-colors',
+              'bg-muted/70 p-1.5 transition-colors',
               sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
             )}
-            size="wide"
+            size="compact"
           >
             <Kanban.Header>
               <Kanban.Title>{c.nombre}</Kanban.Title>
@@ -571,6 +571,7 @@ function Tablero({
                     onDrop={(e) => soltar(c.id, e, t.id)}
                   >
                     <TareaCard
+                      compact
                       tarea={t}
                       senales={senalesTarea(estadoOps, t)}
                       {...(contextoDe(t) ? { contexto: contextoDe(t) as string } : {})}
@@ -579,7 +580,7 @@ function Tablero({
                   </div>
                 ))
               ) : (
-                <Kanban.Empty>Sin tareas.</Kanban.Empty>
+                <Kanban.Empty compact>Sin tareas.</Kanban.Empty>
               )}
             </Kanban.Body>
           </Kanban.Column>

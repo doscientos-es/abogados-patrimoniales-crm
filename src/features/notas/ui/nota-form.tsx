@@ -594,7 +594,9 @@ export function NuevaNotaBoton({
     if (isValidElement<{ onClick?: (clickEvent: MouseEvent<HTMLElement>) => void }>(trigger))
       trigger.props.onClick?.(event)
   }
-  const control = isValidElement(trigger) ? (
+  const control = isValidElement<{
+    onClick?: (clickEvent: MouseEvent<HTMLElement>) => void
+  }>(trigger) ? (
     cloneElement(trigger, { onClick: abrir })
   ) : (
     <Button size="sm" variant="outline" className="gap-1.5" onClick={abrir}>

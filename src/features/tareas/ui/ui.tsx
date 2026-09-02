@@ -142,11 +142,13 @@ export function TareaCard({
   senales,
   contexto,
   onAbrir,
+  compact = false,
 }: {
   tarea: TareaOp
   senales: SenalesTarea
   contexto?: string
   onAbrir: () => void
+  compact?: boolean
 }) {
   // SEÑALES: se calculan solas y nunca son estados. En la tarjeta, máximo 3 + N.
   const chips = chipsDeTarea(tarea, senales)
@@ -160,7 +162,7 @@ export function TareaCard({
         tarea.esSiguienteAccion && 'border-primary/60 shadow-sm ring-1 ring-primary/30',
       )}
     >
-      <CardContent className="space-y-2 p-3">
+      <CardContent className={cn(compact ? 'space-y-1.5 p-2' : 'space-y-2 p-3')}>
         {tarea.esSiguienteAccion ? (
           <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
             <Target className="h-3 w-3" /> Siguiente acción
@@ -173,7 +175,7 @@ export function TareaCard({
           <PriorityBadge value={tarea.prioridad} />
         </div>
 
-        {contexto ? (
+        {contexto && !compact ? (
           <p className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px]">
             <Link2 className="h-3 w-3 shrink-0" /> {contexto}
           </p>
@@ -202,7 +204,7 @@ export function TareaCard({
           ) : null}
         </div>
 
-        {chips.length ? (
+        {chips.length && !compact ? (
           <div className="border-border/70 flex flex-wrap gap-1.5 border-t pt-2">
             {chips.slice(0, 3).map((c) => (
               <SenalChip key={c.texto} tono={c.tono} icon={c.icon} texto={c.texto} />
@@ -695,6 +697,9 @@ export function EsperaDialog({
   const [motivo, setMotivo] = useState<MotivoEspera>('Esperando a tercero')
   const [hasta, setHasta] = useState(sumarDias(7))
   const [detalle, setDetalle] = useState('')
+  // El modal es de React Aria y el Select de Radix usa un portal. Si éste se
+  // monta en document.body, el modal lo trata como una interacción externa.
+  const [contenedorSelector, setContenedorSelector] = useState<HTMLDivElement | null>(null)
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -706,13 +711,13 @@ export function EsperaDialog({
             llegue esa fecha.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-1">
+        <div ref={setContenedorSelector} className="grid gap-4 py-1">
           <Field label="Motivo">
             <Select value={motivo} onValueChange={(v) => setMotivo(v as MotivoEspera)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent portalContainer={contenedorSelector}>
                 {MOTIVOS_ESPERA.map((m) => (
                   <SelectItem key={m} value={m}>
                     {m}
