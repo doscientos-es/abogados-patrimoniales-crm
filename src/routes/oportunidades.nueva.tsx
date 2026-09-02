@@ -165,12 +165,15 @@ function BuscadorContacto({
   return (
     <div className="space-y-2">
       <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Search
+          aria-hidden
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+        />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={placeholder}
-          className="pl-9"
+          className="pl-10!"
           aria-label={placeholder}
         />
       </div>

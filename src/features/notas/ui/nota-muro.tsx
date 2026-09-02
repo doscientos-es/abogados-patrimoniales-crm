@@ -122,12 +122,12 @@ export function NotaMuro({
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative">
-          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+          <Search aria-hidden className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar en las notas…"
-            className="pl-8"
+            className="pl-9!"
             aria-label="Buscar notas internas"
           />
         </div>

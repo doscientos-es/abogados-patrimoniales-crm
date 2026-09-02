@@ -18,9 +18,8 @@ import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { Button } from '@/components/ui/button'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { AccessGate, SignOutButton } from '@/features/auth'
+import { AccessGate, AccountMenu } from '@/features/auth'
 import { NuevaTareaDialog } from '@/features/crm'
-import { useOps } from '@/lib/expedientes-store'
 
 import { reportLovableError } from '../lib/lovable-error-reporting'
 
@@ -142,22 +141,21 @@ function RootComponent() {
 }
 
 function AuthenticatedRoot() {
-  const usuario = useOps((s) => s.usuario)
   // Un aviso abre la tarea allá donde estés, sin cambiar de pantalla.
   const [tareaAvisada, setTareaAvisada] = useState<string | null>(null)
-  const iniciales = usuario
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <div className="bg-background flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="border-border bg-card/95 sticky top-0 z-10 flex h-14 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
-            <SidebarTrigger className="shrink-0" />
+            <SidebarTrigger
+              aria-label={sidebarOpen ? 'Cerrar navegación' : 'Abrir navegación'}
+              className="shrink-0"
+              title={sidebarOpen ? 'Cerrar navegación' : 'Abrir navegación'}
+            />
             <div className="border-border bg-muted/60 text-muted-foreground hidden h-9 max-w-md min-w-0 flex-1 items-center gap-2 rounded-md border px-3 text-sm md:flex">
               <Search className="h-4 w-4 shrink-0" />
               <span className="truncate">Buscar clientes, asuntos o documentos…</span>
@@ -180,14 +178,7 @@ function AuthenticatedRoot() {
                 }
               />
               <CampanaNotificaciones onAbrirTarea={setTareaAvisada} />
-              <SignOutButton />
-              <span className="hidden text-right text-xs leading-tight lg:block">
-                <span className="text-foreground block font-medium">{usuario}</span>
-                <span className="text-muted-foreground block">Sesión activa</span>
-              </span>
-              <span className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                {iniciales}
-              </span>
+              <AccountMenu />
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">

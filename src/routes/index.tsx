@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { SectionHeader } from '@/components/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,7 +40,6 @@ export const Route = createFileRoute('/')({
 function Tarjeta({
   label,
   value,
-  hint,
   tono = 'neutro',
   to,
   search,
@@ -57,18 +57,27 @@ function Tarjeta({
     <Link
       to={to}
       search={search}
-      className="group border-border bg-card hover:border-primary/40 hover:bg-accent/50 block rounded-lg border p-4 transition-colors"
+      className="group hover:bg-accent/50 flex min-h-10 items-center gap-3 py-2 transition-colors first:pt-0 last:pb-0"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      <span className="text-foreground min-w-0 text-sm leading-snug">{label}</span>
+      <span className="ml-auto flex shrink-0 items-center gap-2">
         <ToneBadge tono={tono}>{value}</ToneBadge>
-      </div>
-      <p className="text-foreground mt-3 font-serif text-3xl font-semibold">{value}</p>
-      <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-        {hint ?? 'Ver listado'}
-        <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-      </p>
+        <ArrowRight className="text-muted-foreground h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+      </span>
+      <span className="sr-only">Ver listado de {label}</span>
     </Link>
+  )
+}
+
+// oxlint-disable-next-line react/only-export-components -- helper local de esta ruta
+function MetricGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border-border bg-card rounded-lg border px-4 py-3" aria-label={title}>
+      <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+        {title}
+      </h2>
+      <div className="divide-border/60 mt-2 divide-y">{children}</div>
+    </section>
   )
 }
 
@@ -108,89 +117,87 @@ function InicioPage() {
         actions={<QuickTaskDialog />}
       />
 
-      <h2 className="text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase">
-        Trabajo del día
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tarjeta
-          label="Tareas pendientes"
-          value={tareasPendientes.length}
-          tono="aviso"
-          to="/tareas"
-        />
-        <Tarjeta label="Tareas vencidas" value={tareasVencidas.length} tono="riesgo" to="/tareas" />
-        <Tarjeta label="Actuaciones de hoy" value={hoy.length} tono="info" to="/actuaciones" />
-        <Tarjeta label="Próximas citas" value={citas.length} tono="info" to="/calendario" />
+      <div className="grid gap-4 xl:grid-cols-3">
+        <MetricGroup title="Trabajo del día">
+          <Tarjeta
+            label="Tareas pendientes"
+            value={tareasPendientes.length}
+            tono="aviso"
+            to="/tareas"
+          />
+          <Tarjeta
+            label="Tareas vencidas"
+            value={tareasVencidas.length}
+            tono="riesgo"
+            to="/tareas"
+          />
+          <Tarjeta label="Actuaciones de hoy" value={hoy.length} tono="info" to="/actuaciones" />
+          <Tarjeta label="Próximas citas" value={citas.length} tono="info" to="/calendario" />
+        </MetricGroup>
+
+        <MetricGroup title="Captación">
+          <Tarjeta label="Fechas críticas" value={criticas.length} tono="riesgo" to="/calendario" />
+          <Tarjeta
+            label="Leads nuevos"
+            value={nuevas.length}
+            tono="info"
+            to="/oportunidades"
+            search={{ vista: 'todas', abrir: '' }}
+          />
+          <Tarjeta
+            label="Sin seguimiento"
+            value={sinSeguimiento.length}
+            tono="aviso"
+            to="/oportunidades"
+            search={{ vista: 'sin-accion', abrir: '' }}
+          />
+          <Tarjeta
+            label="Expedientes activos"
+            value={activos.length}
+            tono="exito"
+            to="/expedientes"
+          />
+        </MetricGroup>
+
+        <MetricGroup title="Onboarding y cobros">
+          <Tarjeta
+            label="Pendientes de elaboración"
+            value={porElaborar.length}
+            tono="aviso"
+            to="/oportunidades"
+            search={{ vista: 'presupuestos', abrir: '' }}
+          />
+          <Tarjeta
+            label="Pendientes de validación"
+            value={porValidar.length}
+            tono="aviso"
+            to="/oportunidades"
+            search={{ vista: 'validacion', abrir: '' }}
+          />
+          <Tarjeta
+            label="Enviados sin respuesta"
+            value={enviados.length}
+            tono="info"
+            to="/oportunidades"
+            search={{ vista: 'todas', abrir: '' }}
+          />
+          <Tarjeta
+            label="Proformas pendientes"
+            value={proformas.length}
+            tono="aviso"
+            to="/onboarding"
+          />
+          <Tarjeta
+            label="Expedientes con actuación vencida"
+            value={vencidos.length}
+            tono="riesgo"
+            to="/expedientes"
+            search={{ filtro: 'vencidos' }}
+          />
+        </MetricGroup>
       </div>
 
-      <h2 className="text-muted-foreground mt-8 mb-3 text-sm font-semibold tracking-wide uppercase">
-        Captación
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tarjeta label="Fechas críticas" value={criticas.length} tono="riesgo" to="/calendario" />
-        <Tarjeta
-          label="Leads nuevos"
-          value={nuevas.length}
-          tono="info"
-          to="/oportunidades"
-          search={{ vista: 'todas', abrir: '' }}
-        />
-        <Tarjeta
-          label="Sin seguimiento"
-          value={sinSeguimiento.length}
-          tono="aviso"
-          to="/oportunidades"
-          search={{ vista: 'sin-accion', abrir: '' }}
-        />
-        <Tarjeta
-          label="Expedientes activos"
-          value={activos.length}
-          tono="exito"
-          to="/expedientes"
-        />
-      </div>
-
-      <h2 className="text-muted-foreground mt-8 mb-3 text-sm font-semibold tracking-wide uppercase">
-        Onboarding y cobros
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Tarjeta
-          label="Pendientes de elaboración"
-          value={porElaborar.length}
-          tono="aviso"
-          to="/oportunidades"
-          search={{ vista: 'presupuestos', abrir: '' }}
-        />
-        <Tarjeta
-          label="Pendientes de validación"
-          value={porValidar.length}
-          tono="aviso"
-          to="/oportunidades"
-          search={{ vista: 'validacion', abrir: '' }}
-        />
-        <Tarjeta
-          label="Enviados sin respuesta"
-          value={enviados.length}
-          tono="info"
-          to="/oportunidades"
-          search={{ vista: 'todas', abrir: '' }}
-        />
-        <Tarjeta
-          label="Proformas pendientes"
-          value={proformas.length}
-          tono="aviso"
-          to="/onboarding"
-        />
-        <Tarjeta
-          label="Expedientes con actuación vencida"
-          value={vencidos.length}
-          tono="riesgo"
-          to="/expedientes"
-          search={{ filtro: 'vencidos' }}
-        />
-      </div>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">

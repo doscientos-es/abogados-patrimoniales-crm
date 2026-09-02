@@ -152,12 +152,15 @@ function ContactosPage() {
         <CardContent className="pt-6">
           <div className="grid gap-3 lg:grid-cols-12">
             <div className="relative lg:col-span-4">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search
+                aria-hidden
+                className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Nombre, apellidos, razón social, NIF, teléfono o correo"
-                className="pl-9"
+                className="pl-10!"
                 aria-label="Buscar contactos"
               />
             </div>

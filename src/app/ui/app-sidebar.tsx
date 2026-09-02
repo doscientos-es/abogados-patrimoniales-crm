@@ -1,11 +1,11 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   BarChart3,
+  BookMarked,
   Briefcase,
   CalendarClock,
   CheckSquare,
   ClipboardList,
-  ShieldAlert,
   Contact,
   FileSignature,
   FileText,
@@ -14,10 +14,10 @@ import {
   MessagesSquare,
   Receipt,
   Settings,
+  ShieldAlert,
   Sparkles,
-  Target,
   StickyNote,
-  BookMarked,
+  Target,
 } from 'lucide-react'
 
 import {
@@ -78,7 +78,7 @@ export function AppSidebar() {
   ] as const
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-sidebar-border border-b">
         <Link to="/" className="flex items-center gap-2 px-2 py-1.5">
           <span className="bg-sidebar-primary text-sidebar-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">

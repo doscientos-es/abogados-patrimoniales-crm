@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 import { signInWithPassword, signOut, useAuthSession } from '../application/auth-session'
 import { bootstrapFirm, useActiveMembership } from '../application/membership'
@@ -37,23 +38,60 @@ export function AccessGate({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-export function SignOutButton() {
+export function AccountMenu() {
+  const session = useAuthSession()
   const [sending, setSending] = useState(false)
+
+  if (session.status !== 'signed-in') return null
+
+  const email = session.user.email ?? 'Cuenta sin correo'
+  const localPart = email.split('@')[0] ?? ''
+  const initials = localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2)
+
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={sending}
-      onClick={() => {
-        setSending(true)
-        void signOut()
-          .catch(() => toast.error('No se ha podido cerrar la sesión.'))
-          .finally(() => setSending(false))
-      }}
-    >
-      <LogOut className="h-4 w-4" />
-      <span className="hidden lg:inline">Salir</span>
-    </Button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          aria-label="Abrir menú de cuenta"
+          className="h-auto gap-2 px-1.5 py-1 text-left"
+          variant="ghost"
+        >
+          <span className="hidden min-w-0 text-right text-xs leading-tight lg:block">
+            <span className="text-foreground block truncate font-medium">{email}</span>
+            <span className="text-muted-foreground block">Sesión activa</span>
+          </span>
+          <span className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+            {initials || 'CU'}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="border-border border-b px-2 py-2.5">
+          <p className="text-foreground text-sm font-medium">{email}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">Sesión activa</p>
+        </div>
+        <Button
+          className="mt-1 w-full justify-start"
+          disabled={sending}
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setSending(true)
+            void signOut()
+              .catch(() => toast.error('No se ha podido cerrar la sesión.'))
+              .finally(() => setSending(false))
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+          {sending ? 'Cerrando sesión…' : 'Cerrar sesión'}
+        </Button>
+      </PopoverContent>
+    </Popover>
   )
 }
 
