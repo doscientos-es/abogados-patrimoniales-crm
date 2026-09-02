@@ -11,8 +11,20 @@ export type Database = {
   public: {
     Tables: {
       crm_firms: Table<
-        { id: string; name: string; created_at: string; updated_at: string },
-        { id?: string; name: string; created_at?: string; updated_at?: string }
+        {
+          id: string
+          name: string
+          invoice_sequence: number
+          created_at: string
+          updated_at: string
+        },
+        {
+          id?: string
+          name: string
+          invoice_sequence?: number
+          created_at?: string
+          updated_at?: string
+        }
       >
       crm_firm_settings: Table<
         FirmSettingsRow,
@@ -45,6 +57,14 @@ export type Database = {
         ContactRow,
         ContactInsert,
         Partial<ContactInsert> & { id?: string; status?: ContactStatus; version?: number }
+      >
+      crm_cases: Table<CaseReferenceRow, never, never>
+      crm_invoices: Table<InvoiceRow, InvoiceInsert, Partial<InvoiceInsert> & { id?: string }>
+      crm_invoice_payments: Table<InvoicePaymentRow, InvoicePaymentInsert, never>
+      crm_procedures: Table<
+        ProcedureRow,
+        ProcedureInsert,
+        Partial<ProcedureInsert> & { id?: string }
       >
       crm_opportunities: Table<
         OpportunityRow,
@@ -158,6 +178,115 @@ export type ContactInsert = {
   phone?: string | null
   source?: string | null
   details?: Json
+}
+
+export type CaseReferenceRow = {
+  id: string
+  firm_id: string
+  reference: string
+}
+
+export type InvoiceStatus =
+  | 'draft'
+  | 'issued'
+  | 'partially_paid'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled'
+  | 'written_off'
+
+export type InvoiceRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  contact_id: string
+  series: string
+  fiscal_year: number
+  invoice_number: number
+  reference: string
+  recipient_name: string
+  concept: string
+  currency: string
+  net_amount: number
+  tax_amount: number
+  total_amount: number
+  issued_on: string
+  due_on: string | null
+  paid_on: string | null
+  status: InvoiceStatus
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type InvoiceInsert = Omit<
+  InvoiceRow,
+  | 'id'
+  | 'reference'
+  | 'total_amount'
+  | 'version'
+  | 'created_by'
+  | 'updated_by'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  series?: string
+  fiscal_year?: number
+  recipient_name?: string
+  currency?: string
+  net_amount?: number
+  tax_amount?: number
+  issued_on?: string
+  status?: InvoiceStatus
+  details?: Json
+}
+
+export type InvoicePaymentRow = {
+  id: string
+  firm_id: string
+  invoice_id: string
+  amount: number
+  received_on: string
+  payment_method: 'transfer' | 'card' | 'cash' | 'direct_debit' | 'other'
+  external_reference: string
+  details: Json
+  created_by: string | null
+  created_at: string
+}
+
+export type InvoicePaymentInsert = Omit<InvoicePaymentRow, 'id' | 'created_by' | 'created_at'> & {
+  received_on?: string
+  payment_method?: InvoicePaymentRow['payment_method']
+  external_reference?: string
+  details?: Json
+}
+
+export type ProcedureRow = {
+  id: string
+  firm_id: string
+  slug: string
+  title: string
+  phase: string
+  description: string
+  sections: Json
+  status: 'draft' | 'active' | 'archived'
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ProcedureInsert = Omit<
+  ProcedureRow,
+  'id' | 'version' | 'created_by' | 'updated_by' | 'created_at' | 'updated_at'
+> & {
+  description?: string
+  sections?: Json
+  status?: ProcedureRow['status']
 }
 
 export type OpportunityRow = {

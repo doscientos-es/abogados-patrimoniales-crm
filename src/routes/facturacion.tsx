@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useMemo } from 'react'
 
-import { PendingPanel, SectionHeader, StatusBadge } from '@/components/common'
+import { SectionHeader, StatTile, StatusBadge } from '@/components/common'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -10,7 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { FACTURAS } from '@/data/mock'
+import { useAuthSession } from '@/features/auth/application/auth-session'
+import { useActiveMembership } from '@/features/auth/application/membership'
+import {
+  formatCurrency,
+  formatDate,
+  useFacturas,
+} from '@/features/facturacion/infrastructure/supabase-facturas'
 
 export const Route = createFileRoute('/facturacion')({
   head: () => ({
@@ -31,23 +38,43 @@ export const Route = createFileRoute('/facturacion')({
 })
 
 function FacturacionPage() {
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const facturasQuery = useFacturas(membership.data?.firmId)
+  const facturas = facturasQuery.data ?? []
+  const resumen = useMemo(
+    () =>
+      facturas.reduce(
+        (total, factura) => ({
+          emitido:
+            total.emitido +
+            (factura.ejercicio === new Date().getFullYear() &&
+            !['draft', 'cancelled'].includes(factura.estadoCodigo)
+              ? factura.importeTotal
+              : 0),
+          cobrado: total.cobrado + factura.importeCobrado,
+          pendiente:
+            total.pendiente +
+            (!['draft', 'cancelled', 'paid'].includes(factura.estadoCodigo)
+              ? factura.importePendiente
+              : 0),
+        }),
+        { emitido: 0, cobrado: 0, pendiente: 0 },
+      ),
+    [facturas],
+  )
+
   return (
     <div className="mx-auto max-w-[1400px]">
-      <SectionHeader
-        title="Facturación"
-        subtitle="Facturas y cobros por asunto. Datos ficticios."
-      />
+      <SectionHeader title="Facturación" subtitle="Facturas y cobros por expediente." />
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        {[
-          ['Emitido en el año', '312.400 €'],
-          ['Cobrado', '268.900 €'],
-          ['Pendiente de cobro', '14.000 €'],
-        ].map(([l, v]) => (
-          <div key={l} className="border-border bg-card rounded-lg border p-4">
-            <p className="text-muted-foreground text-xs tracking-wide uppercase">{l}</p>
-            <p className="mt-1 font-serif text-2xl font-semibold">{v}</p>
-          </div>
-        ))}
+        <StatTile label="Emitido en el año" value={formatCurrency(resumen.emitido, 'EUR')} />
+        <StatTile label="Cobrado" value={formatCurrency(resumen.cobrado, 'EUR')} tono="exito" />
+        <StatTile
+          label="Pendiente de cobro"
+          value={formatCurrency(resumen.pendiente, 'EUR')}
+          tono={resumen.pendiente ? 'aviso' : 'neutro'}
+        />
       </div>
       <Card>
         <CardContent className="pt-6">
@@ -64,37 +91,55 @@ function FacturacionPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {FACTURAS.map((f) => (
+              {facturas.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-medium">{f.id}</TableCell>
+                  <TableCell className="font-medium">{f.referencia}</TableCell>
                   <TableCell className="text-muted-foreground">{f.cliente}</TableCell>
                   <TableCell>
                     <Link
                       to="/expedientes/$id"
-                      params={{ id: f.asunto }}
+                      params={{ id: f.asuntoId }}
                       className="text-primary hover:underline"
                     >
-                      {f.asunto}
+                      {f.asuntoReferencia}
                     </Link>
                   </TableCell>
                   <TableCell>{f.concepto}</TableCell>
-                  <TableCell>{f.importe}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.emision}</TableCell>
+                  <TableCell>{formatCurrency(f.importeTotal, f.moneda)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(f.emision)}</TableCell>
                   <TableCell>
                     <StatusBadge value={f.estado} />
                   </TableCell>
                 </TableRow>
               ))}
+              {membership.isLoading || facturasQuery.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
+                    Cargando facturas…
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {facturasQuery.isError ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-destructive py-10 text-center">
+                    No se han podido cargar las facturas. Inténtalo de nuevo.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {!membership.isLoading &&
+              !facturasQuery.isLoading &&
+              !facturasQuery.isError &&
+              !facturas.length ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
+                    Todavía no hay facturas registradas para este despacho.
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-      <div className="mt-4">
-        <PendingPanel
-          title="Emisión, cobro y contabilidad"
-          description="Series de facturación, impuestos, remesas y conciliación bancaria."
-        />
-      </div>
     </div>
   )
 }

@@ -1,5 +1,8 @@
+import { useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -7,17 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Input,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
-} from '@doscientos/ui'
-import { useState, type ReactNode } from 'react'
-import { toast } from 'sonner'
-
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { USUARIOS, type Prioridad, type Relacion } from '@/data/crm'
 import { hoyTexto, sumarDias } from '@/data/pipeline'
 import { crm, useCrm } from '@/lib/crm-store'
@@ -54,7 +56,9 @@ export function NuevaTareaDialog({
   const [titulo, setTitulo] = useState(tituloPorDefecto ?? '')
   const [descripcion, setDescripcion] = useState('')
   const [notas, setNotas] = useState('')
-  const [responsable, setResponsable] = useState(responsablePorDefecto ?? USUARIOS[1]!.nombre)
+  const [responsable, setResponsable] = useState(
+    responsablePorDefecto ?? USUARIOS[1]?.nombre ?? USUARIOS[0]?.nombre ?? '',
+  )
   const [prioridad, setPrioridad] = useState<Prioridad>('Media')
   const [prevista, setPrevista] = useState(hoyTexto())
   const [limite, setLimite] = useState(sumarDias(3))
@@ -120,16 +124,13 @@ export function NuevaTareaDialog({
             </Field>
           </div>
           <Field label="Responsable">
-            <Select
-              selectedKey={responsable}
-              onSelectionChange={(key) => setResponsable(String(key))}
-            >
+            <Select value={responsable} onValueChange={setResponsable}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {USUARIOS.map((u) => (
-                  <SelectItem key={u.id} id={u.nombre}>
+                  <SelectItem key={u.id} value={u.nombre}>
                     {u.nombre}
                   </SelectItem>
                 ))}
@@ -137,17 +138,14 @@ export function NuevaTareaDialog({
             </Select>
           </Field>
           <Field label="Prioridad">
-            <Select
-              selectedKey={prioridad}
-              onSelectionChange={(key) => setPrioridad(String(key) as Prioridad)}
-            >
+            <Select value={prioridad} onValueChange={(value) => setPrioridad(value as Prioridad)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem id="Alta">Alta</SelectItem>
-                <SelectItem id="Media">Media</SelectItem>
-                <SelectItem id="Baja">Baja</SelectItem>
+                <SelectItem value="Alta">Alta</SelectItem>
+                <SelectItem value="Media">Media</SelectItem>
+                <SelectItem value="Baja">Baja</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -177,14 +175,14 @@ export function NuevaTareaDialog({
           ) : (
             <div className="sm:col-span-2">
               <Field label="Vincular a oportunidad">
-                <Select selectedKey={vinculo} onSelectionChange={(key) => setVinculo(String(key))}>
+                <Select value={vinculo} onValueChange={setVinculo}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem id="ninguno">Sin vincular</SelectItem>
+                    <SelectItem value="ninguno">Sin vincular</SelectItem>
                     {oportunidades.slice(0, 40).map((o) => (
-                      <SelectItem key={o.id} id={o.id}>
+                      <SelectItem key={o.id} value={o.id}>
                         {o.codigo} — {o.titulo}
                       </SelectItem>
                     ))}

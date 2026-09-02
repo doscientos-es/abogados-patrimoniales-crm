@@ -3,7 +3,7 @@ import { Check, Circle, Construction } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { type Prioridad } from '@/data/mock'
+import { type Prioridad } from '@/data/crm'
 import { cn } from '@/lib/utils'
 
 export function SectionHeader({
