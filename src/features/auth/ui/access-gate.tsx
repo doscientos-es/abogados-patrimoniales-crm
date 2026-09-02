@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-import { useActiveMembership, bootstrapFirm } from '../infrastructure/membership'
-import { signInWithPassword, signOut, useSupabaseSession } from '../infrastructure/session'
+import { signInWithPassword, signOut, useAuthSession } from '../application/auth-session'
+import { bootstrapFirm, useActiveMembership } from '../application/membership'
 
 export function AccessGate({ children }: { children: ReactNode }) {
-  const session = useSupabaseSession()
+  const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
 
   if (session.status === 'unconfigured') return <ConfigurationRequired />
@@ -154,8 +154,7 @@ function ConfigurationRequired() {
         <CardHeader>
           <CardTitle>Entorno pendiente de configurar</CardTitle>
           <CardDescription>
-            Define VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY para habilitar el acceso
-            seguro.
+            Configura el servicio de acceso para habilitar el acceso seguro.
           </CardDescription>
         </CardHeader>
       </Card>

@@ -1,58 +1,38 @@
-import type { User } from '@supabase/supabase-js'
-import { useEffect, useState } from 'react'
-
 import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/shared/infrastructure/supabase'
 
-export type SessionState =
-  | { status: 'loading'; user: null }
-  | { status: 'unconfigured'; user: null }
-  | { status: 'signed-out'; user: null }
-  | { status: 'signed-in'; user: User }
+import type { AuthenticatedUser } from '../application/auth-types'
 
-export function useSupabaseSession(): SessionState {
-  const [state, setState] = useState<SessionState>(() =>
-    isSupabaseConfigured
-      ? { status: 'loading', user: null }
-      : { status: 'unconfigured', user: null },
-  )
+export const isAuthProviderConfigured = isSupabaseConfigured
 
-  useEffect(() => {
-    const client = getSupabaseBrowserClient()
-    if (!client) return
-    let active = true
-    void client.auth.getSession().then(({ data }) => {
-      if (active)
-        setState(
-          data.session
-            ? { status: 'signed-in', user: data.session.user }
-            : { status: 'signed-out', user: null },
-        )
-    })
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      if (active)
-        setState(
-          session
-            ? { status: 'signed-in', user: session.user }
-            : { status: 'signed-out', user: null },
-        )
-    })
-    return () => {
-      active = false
-      data.subscription.unsubscribe()
-    }
-  }, [])
-
-  return state
+function toAuthenticatedUser(user: { id: string; email?: string | null }): AuthenticatedUser {
+  return { id: user.id, email: user.email ?? null }
 }
 
-export async function signInWithPassword(email: string, password: string) {
+export async function getCurrentAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+  const client = getSupabaseBrowserClient()
+  if (!client) return null
+  const { data, error } = await client.auth.getSession()
+  if (error) throw error
+  return data.session ? toAuthenticatedUser(data.session.user) : null
+}
+
+export function subscribeToAuthStateChanges(listener: (user: AuthenticatedUser | null) => void) {
+  const client = getSupabaseBrowserClient()
+  if (!client) return () => undefined
+  const { data } = client.auth.onAuthStateChange((_event, session) =>
+    listener(session ? toAuthenticatedUser(session.user) : null),
+  )
+  return () => data.subscription.unsubscribe()
+}
+
+export async function signInWithSupabasePassword(email: string, password: string) {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase no está configurado en este entorno.')
   const { error } = await client.auth.signInWithPassword({ email, password })
   if (error) throw error
 }
 
-export async function signOut() {
+export async function signOutOfSupabase() {
   const client = getSupabaseBrowserClient()
   if (!client) return
   const { error } = await client.auth.signOut()

@@ -59,7 +59,7 @@ import {
   SATISFACCIONES,
   type Contacto,
 } from '@/data/contactos'
-import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 
 export const Route = createFileRoute('/contactos/')({
@@ -89,7 +89,7 @@ const parseFecha = (f: string) => {
 }
 
 function ContactosPage() {
-  const session = useSupabaseSession()
+  const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const contactosQuery = useContactos(membership.data?.firmId)
   const [vista, setVista] = useState<'activos' | 'archivados'>('activos')

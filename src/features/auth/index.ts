@@ -1,3 +1,5 @@
-export { useActiveMembership, bootstrapFirm } from './infrastructure/membership'
-export { signInWithPassword, signOut, useSupabaseSession } from './infrastructure/session'
+export { signInWithPassword, signOut, useAuthSession } from './application/auth-session'
+export type { AuthenticatedUser, AuthSessionState } from './application/auth-session'
+export { bootstrapFirm, useActiveMembership } from './application/membership'
+export type { ActiveMembership } from './application/membership'
 export { AccessGate, SignOutButton } from './ui/access-gate'

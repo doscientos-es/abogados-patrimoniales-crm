@@ -28,7 +28,7 @@ import {
   type Naturaleza,
   type RelacionDespacho,
 } from '@/data/contactos'
-import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useCrearContacto } from '@/features/contactos'
 
 type NuevaNotaInput = { titulo?: string; contenido: string; destacada?: boolean; critica?: boolean }
@@ -67,7 +67,7 @@ function NuevoContactoPage() {
   const [borradores, setBorradores] = useState<NuevaNotaInput[]>([])
   const [errores, setErrores] = useState<{ naturaleza?: boolean; relacion?: boolean }>({})
   const navigate = useNavigate()
-  const session = useSupabaseSession()
+  const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const crearContactoReal = useCrearContacto(membership.data?.firmId)
   const esFisica = tipoPersona === 'Persona física'

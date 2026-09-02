@@ -42,7 +42,7 @@ import {
   type IntervinienteOportunidad,
   type OpcionUrgencia,
 } from '@/data/pipeline'
-import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useCrearOportunidad } from '@/features/crm'
 import { notasVisibles, useNotas } from '@/lib/notas-store'
@@ -210,7 +210,7 @@ function BuscadorContacto({
 function NuevaOportunidadPage() {
   const navigate = useNavigate()
   const inputFile = useRef<HTMLInputElement>(null)
-  const session = useSupabaseSession()
+  const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const contactosQuery = useContactos(membership.data?.firmId)
   const crearOportunidad = useCrearOportunidad(membership.data?.firmId)

@@ -33,7 +33,7 @@ import {
   type FaseId,
   type OportunidadCRM,
 } from '@/data/pipeline'
-import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import {
   OpportunityCard,
@@ -130,7 +130,7 @@ function NuevaOportunidadBoton() {
 
 function LeadsPage() {
   const { vista: vistaInicial, abrir } = Route.useSearch()
-  const session = useSupabaseSession()
+  const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const oportunidadesReales = useOportunidades(membership.data?.firmId)
   const contactosReales = useContactos(membership.data?.firmId)
