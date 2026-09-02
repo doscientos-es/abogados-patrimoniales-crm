@@ -20,7 +20,7 @@ import {
   SelectValue,
   Textarea,
 } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import { Link, type LinkProps } from '@tanstack/react-router'
 import { AlertTriangle, CalendarClock, Circle, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -253,8 +253,8 @@ export function RelationList({
     label: string
     sub?: string | undefined
     badge?: ReactNode
-    to?: unknown
-    params?: unknown
+    to?: LinkProps['to']
+    params?: LinkProps['params']
   }[]
   empty?: string
 }) {
@@ -286,8 +286,8 @@ export function RelationList({
                 <li key={i}>
                   {it.to ? (
                     <Link
-                      to={it.to as any}
-                      params={it.params as any}
+                      to={it.to}
+                      {...(it.params === undefined ? {} : { params: it.params })}
                       className="hover:bg-accent/60 block"
                     >
                       {body}

@@ -276,7 +276,11 @@ export function FichaComunicacion({
             {!especialAbierta ? (
               <TareaEspecialComunicacionDialog comunicacion={c} trigger={botonTareaComunicacion} />
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setTareaAbierta(especial!.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => especial && setTareaAbierta(especial.id)}
+              >
                 Ver tarea vinculada
               </Button>
             )}

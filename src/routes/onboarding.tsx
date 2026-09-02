@@ -912,13 +912,13 @@ function OnboardingPage() {
               ))}
             </SelectContent>
           </Select>
-          <label className="text-muted-foreground flex items-center gap-2 text-xs">
-            <Checkbox
-              checked={verCompletados}
-              onCheckedChange={(v) => setVerCompletados(Boolean(v))}
-            />
+          <Checkbox
+            className="text-muted-foreground text-xs"
+            checked={verCompletados}
+            onCheckedChange={(v) => setVerCompletados(Boolean(v))}
+          >
             Mostrar completados
-          </label>
+          </Checkbox>
           <span className="text-muted-foreground text-xs">
             {filtrados.length} Onboardings · {activos} activos
           </span>

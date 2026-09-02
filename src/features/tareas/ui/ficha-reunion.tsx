@@ -126,7 +126,8 @@ export function FichaTareaReunion({
   tarea: TareaOp
   onOpenChange: (v: boolean) => void
 }) {
-  const r = tarea.reunion!
+  const r = tarea.reunion
+  if (!r) throw new Error(`La tarea ${tarea.id} no contiene datos de reunión.`)
   const fechas = useOps((s) => s.fechas)
   const todasLasNotas = useNotas((s) => s.notas)
   const comunicaciones = useOps((s) => s.comunicaciones)
@@ -194,7 +195,7 @@ export function FichaTareaReunion({
           id: tarea.expedienteId,
           etiqueta: tarea.expedienteId,
         },
-        contactos: r.asistentes.filter((a) => a.contactoId).map((a) => a.contactoId!),
+        contactos: r.asistentes.flatMap((a) => (a.contactoId ? [a.contactoId] : [])),
         expedienteId: tarea.expedienteId,
       }
     : undefined
@@ -755,17 +756,17 @@ export function FichaTareaReunion({
               </div>
 
               <Bloque titulo="PLAUD · registro de reunión">
-                <label className="text-foreground flex items-center gap-2 text-xs">
-                  <Checkbox
-                    checked={Boolean(r.plaud?.grabando)}
-                    onCheckedChange={(v) =>
-                      ops.actualizarReunion(tarea.id, {
-                        plaud: { ...r.plaud, grabando: Boolean(v) },
-                      })
-                    }
-                  />
+                <Checkbox
+                  className="text-foreground text-xs"
+                  checked={Boolean(r.plaud?.grabando)}
+                  onCheckedChange={(v) =>
+                    ops.actualizarReunion(tarea.id, {
+                      plaud: { ...r.plaud, grabando: Boolean(v) },
+                    })
+                  }
+                >
                   <Mic className="h-3.5 w-3.5" /> Esta reunión se está grabando con PLAUD
-                </label>
+                </Checkbox>
                 <p className="text-muted-foreground text-[11px]">
                   PLAUD registra lo que se dijo; LEX registra qué significa profesionalmente y qué
                   hacemos después. Integración de importación pendiente de desarrollo.

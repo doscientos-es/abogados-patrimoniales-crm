@@ -214,7 +214,6 @@ function TextoEnLinea({
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1">
       <Input
-        
         value={v}
         onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => {
@@ -568,7 +567,6 @@ export function NuevaLineaRapidaDialog({
         <div className="grid gap-3 py-1">
           <Field label="Nombre de la línea *">
             <Input
-              
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Recuperación posesoria"
@@ -790,13 +788,13 @@ export function LineaFormDialog({
           </Field>
           <Field label="Responsable">
             <div className="space-y-2">
-              <label className="text-muted-foreground flex items-center gap-2 text-xs">
-                <Switch
-                  checked={f.responsableHeredado ?? false}
-                  onCheckedChange={(v) => set('responsableHeredado', v)}
-                />
+              <Switch
+                className="text-muted-foreground text-xs"
+                checked={f.responsableHeredado ?? false}
+                onCheckedChange={(v) => set('responsableHeredado', v)}
+              >
                 Heredar el responsable del expediente
-              </label>
+              </Switch>
               {f.responsableHeredado ? null : (
                 <Select value={f.responsable ?? ''} onValueChange={(v) => set('responsable', v)}>
                   <SelectTrigger>
@@ -1751,13 +1749,13 @@ function FichaLinea({ lineaId, onCerrar }: { lineaId: string; onCerrar: () => vo
             <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b py-1.5">
               <span className="text-muted-foreground text-xs">Responsable</span>
               <div className="flex flex-wrap items-center gap-2">
-                <label className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                  <Switch
-                    checked={linea.responsableHeredado ?? false}
-                    onCheckedChange={(v) => g({ responsableHeredado: v })}
-                  />
+                <Switch
+                  className="text-muted-foreground text-[11px]"
+                  checked={linea.responsableHeredado ?? false}
+                  onCheckedChange={(v) => g({ responsableHeredado: v })}
+                >
                   Heredar del expediente
-                </label>
+                </Switch>
                 {linea.responsableHeredado ? (
                   <span className="text-foreground text-sm">{respEfectivo.nombre}</span>
                 ) : (
@@ -2325,7 +2323,7 @@ export function LineasPanel({ expedienteId, titulo }: { expedienteId: string; ti
       responsable: (a, b) => a.responsable.localeCompare(b.responsable),
       estado: (a, b) => a.estado.localeCompare(b.estado),
     }
-    out = [...out].sort(clave[orden] ?? clave['manual']!)
+    out = [...out].sort(clave[orden] ?? ((a, b) => (a.orden ?? 0) - (b.orden ?? 0)))
     return out
   }, [
     lineas,
@@ -2345,7 +2343,9 @@ export function LineasPanel({ expedienteId, titulo }: { expedienteId: string; ti
     const j = i + delta
     if (i < 0 || j < 0 || j >= ids.length) return
     const copia = [...ids]
-    copia.splice(j, 0, copia.splice(i, 1)[0]!)
+    const [movida] = copia.splice(i, 1)
+    if (!movida) return
+    copia.splice(j, 0, movida)
     ops.reordenarLineas(expedienteId, copia)
   }
 

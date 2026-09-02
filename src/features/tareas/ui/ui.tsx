@@ -380,7 +380,6 @@ export function NuevaTareaRapidaDialog({
             <Field label="Título">
               <div className="flex gap-1.5">
                 <Input
-                  
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Qué hay que hacer"
@@ -544,7 +543,7 @@ export function SiguienteTareaDialog({
 
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre)
+  const [responsable, setResponsable] = useState(USUARIOS[3]?.nombre ?? USUARIOS[0]?.nombre ?? '')
   const [prioridad, setPrioridad] = useState<'Alta' | 'Media' | 'Baja'>('Media')
   const [plazoModo, setPlazoModo] = useState<'fija' | 'dias' | 'sin'>('dias')
   const [dias, setDias] = useState('7')
@@ -592,7 +591,7 @@ export function SiguienteTareaDialog({
         <div className="grid gap-4 py-1 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Field label="Título">
-              <Input  value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+              <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
             </Field>
           </div>
           <Field label="Asignada a">
@@ -944,7 +943,7 @@ export function GestionRechazoDialog({
     'reenviar' | 'reasignar' | 'mantener' | 'saltar' | 'cancelar'
   >('reenviar')
   const [mensaje, setMensaje] = useState('')
-  const [responsable, setResponsable] = useState(USUARIOS[3]!.nombre)
+  const [responsable, setResponsable] = useState(USUARIOS[3]?.nombre ?? USUARIOS[0]?.nombre ?? '')
   const [motivo, setMotivo] = useState('')
 
   return (

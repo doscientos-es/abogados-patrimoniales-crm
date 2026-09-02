@@ -58,7 +58,6 @@ export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
         <div className="grid gap-4 py-1">
           <Field label="Título">
             <Input
-              
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && guardar()}

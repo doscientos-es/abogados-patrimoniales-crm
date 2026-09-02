@@ -529,12 +529,20 @@ export function NuevoDocumentoDialog({
         <Input value={fecha} onChange={(e) => setFecha(e.target.value)} />
       </Field>
       <div className="flex items-end gap-4 pb-1">
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={judicial} onCheckedChange={setJudicial} /> Judicial
-        </label>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={entregable} onCheckedChange={setEntregable} /> Entregable
-        </label>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={judicial}
+          onCheckedChange={setJudicial}
+        >
+          Judicial
+        </Switch>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={entregable}
+          onCheckedChange={setEntregable}
+        >
+          Entregable
+        </Switch>
       </div>
       {judicial ? (
         <>
@@ -542,10 +550,13 @@ export function NuevoDocumentoDialog({
             <Selector value={canal} onChange={setCanal} items={CANALES_JUDICIALES} />
           </Field>
           <div className="flex items-end pb-1">
-            <label className="text-muted-foreground flex items-center gap-2 text-xs">
-              <Switch checked={posiblePlazo} onCheckedChange={setPosiblePlazo} /> Puede contener
-              plazo
-            </label>
+            <Switch
+              className="text-muted-foreground text-xs"
+              checked={posiblePlazo}
+              onCheckedChange={setPosiblePlazo}
+            >
+              Puede contener plazo
+            </Switch>
           </div>
         </>
       ) : null}
@@ -694,10 +705,13 @@ export function NuevaVersionDialog({
         />
       </Field>
       <div className="flex items-end pb-1">
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={definitiva} onCheckedChange={setDefinitiva} /> Marcar como versión
-          definitiva
-        </label>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={definitiva}
+          onCheckedChange={setDefinitiva}
+        >
+          Marcar como versión definitiva
+        </Switch>
       </div>
       <div className="sm:col-span-2">
         <Field label="Comentarios">
@@ -843,9 +857,13 @@ export function NuevaFechaDialog({
         <Input value={avisos} onChange={(e) => setAvisos(e.target.value)} />
       </Field>
       <div className="flex items-end pb-1">
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={validada} onCheckedChange={setValidada} /> Validar ahora
-        </label>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={validada}
+          onCheckedChange={setValidada}
+        >
+          Validar ahora
+        </Switch>
       </div>
     </Base>
   )

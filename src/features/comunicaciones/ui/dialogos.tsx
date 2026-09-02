@@ -427,13 +427,13 @@ export function ContactoContexto({
           </SelectTrigger>
           <SelectContent className="max-h-72">
             <SelectItem value="ninguno">Sin identificar / Sin registrar</SelectItem>
-            {intervinientes
-              .filter((i) => i.contactoId)
-              .map((i) => (
-                <SelectItem key={i.id} value={i.contactoId!}>
+            {intervinientes.map((i) =>
+              i.contactoId ? (
+                <SelectItem key={i.id} value={i.contactoId}>
                   {i.nombre} · {i.rol}
                 </SelectItem>
-              ))}
+              ) : null,
+            )}
           </SelectContent>
         </Select>
       </Field>
@@ -654,7 +654,7 @@ export function NuevoEmailDialog({
   const usuario = useOps((s) => s.usuario)
   const [abierto, setAbierto] = useState(false)
   const [ctx, setCtx] = useState<ContextoComunicacion>(contexto ?? {})
-  const [cuenta, setCuenta] = useState(CUENTAS_CORREO[0]!.direccion)
+  const [cuenta, setCuenta] = useState(CUENTAS_CORREO[0]?.direccion ?? '')
   const [para, setPara] = useState(destinatarioInicial ?? '')
   const [cc, setCc] = useState('')
   const [asunto, setAsunto] = useState(asuntoInicial ?? '')

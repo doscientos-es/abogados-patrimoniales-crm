@@ -1,4 +1,4 @@
-import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   Archive,
   ArrowLeft,
@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { PendingBadge, PendingPanel } from '@/components/common'
 import { Cronologia } from '@/components/comunicaciones/cronologia'
@@ -89,7 +90,6 @@ import {
   SATISFACCIONES,
   TIPOS_RECLAMACION,
   avisoBancario,
-  contactoPorId,
   esCliente,
   estadoDocumental,
   nombreCompleto,
@@ -100,6 +100,12 @@ import {
   type Valoracion,
 } from '@/data/contactos'
 import { AVISO_INTERNO } from '@/data/notas'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import {
+  useActualizarContacto,
+  useActualizarEstadoContacto,
+  useContacto,
+} from '@/features/contactos'
 import { NuevaTareaDialog } from '@/features/crm'
 import { comunicacionesDeContacto, useOps } from '@/lib/expedientes-store'
 import { notasDeContacto, useNotas } from '@/lib/notas-store'
@@ -109,33 +115,13 @@ const hoy = () =>
   new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export const Route = createFileRoute('/contactos/$id')({
-  loader: ({ params }) => {
-    const contacto = contactoPorId(params.id)
-    if (!contacto) throw notFound()
-    return { contacto }
-  },
-  head: ({ loaderData }) => {
-    if (!loaderData) {
-      return {
-        meta: [{ title: 'Ficha no disponible — LEX' }, { name: 'robots', content: 'noindex' }],
-      }
-    }
-    const nombre = nombreCompleto(loaderData.contacto)
-    return {
-      meta: [
-        { title: `${nombre} — Ficha personal | LEX` },
-        {
-          name: 'description',
-          content: `Ficha personal de ${nombre}: datos generales, bancarios, perfil, archivos y notas internas.`,
-        },
-        { property: 'og:title', content: `${nombre} — Ficha personal` },
-        {
-          property: 'og:description',
-          content: 'Ficha personal del módulo de contactos del despacho patrimonial.',
-        },
-      ],
-    }
-  },
+  head: () => ({
+    meta: [
+      { title: 'Ficha de contacto — LEX' },
+      { name: 'description', content: 'Ficha privada de contacto del despacho patrimonial.' },
+      { name: 'robots', content: 'noindex, nofollow, noarchive' },
+    ],
+  }),
   component: FichaPage,
 })
 
@@ -156,9 +142,77 @@ function useExpedientesDeContacto(contactoId: string) {
 }
 
 function FichaPage() {
-  const contacto = Route.useLoaderData().contacto as Contacto
+  const { id } = Route.useParams()
+  const session = useAuthSession()
+  const membership = useActiveMembership(
+    session.status === 'signed-in' ? session.user.id : undefined,
+  )
+  const contactoQuery = useContacto(membership.data?.firmId, id)
+  const actualizar = useActualizarContacto(membership.data?.firmId)
+  const actualizarEstado = useActualizarEstadoContacto(membership.data?.firmId)
   const [editando, setEditando] = useState(false)
-  const expedientes = useExpedientesDeContacto(contacto.id)
+  const [borrador, setBorrador] = useState<Contacto | null>(null)
+  const expedientes = useExpedientesDeContacto(id)
+
+  if (session.status === 'loading') {
+    return (
+      <PendingPanel
+        title="Cargando ficha de contacto"
+        description="Consultando datos del despacho…"
+      />
+    )
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel
+        title="Contacto no disponible"
+        description="Necesitas una sesión y una membresía activa en un despacho."
+      />
+    )
+  }
+  if (membership.isPending) {
+    return (
+      <PendingPanel
+        title="Cargando ficha de contacto"
+        description="Consultando datos del despacho…"
+      />
+    )
+  }
+  if (!membership.data) {
+    return (
+      <PendingPanel
+        title="Contacto no disponible"
+        description="Tu usuario no tiene una membresía activa en un despacho."
+      />
+    )
+  }
+  if (contactoQuery.isPending) {
+    return (
+      <PendingPanel
+        title="Cargando ficha de contacto"
+        description="Consultando datos del despacho…"
+      />
+    )
+  }
+  if (contactoQuery.isError) {
+    return (
+      <PendingPanel
+        title="No se pudo cargar el contacto"
+        description={contactoQuery.error.message}
+      />
+    )
+  }
+  if (!contactoQuery.data) {
+    return (
+      <PendingPanel
+        title="Contacto no encontrado"
+        description="No existe o no pertenece al despacho activo."
+      />
+    )
+  }
+
+  const contactoPersistido = contactoQuery.data
+  const contacto = borrador ?? contactoPersistido
   const incidenciaAbierta = contacto.incidencias.find(
     (i) => i.estado === 'Abierta' || i.estado === 'En revisión',
   )
@@ -177,9 +231,36 @@ function FichaPage() {
         <FichaHeader
           contacto={contacto}
           editando={editando}
-          onEditar={() => setEditando(true)}
-          onCancelar={() => setEditando(false)}
-          onGuardar={() => setEditando(false)}
+          onEditar={() => {
+            setBorrador(structuredClone(contactoPersistido))
+            setEditando(true)
+          }}
+          onCancelar={() => {
+            setBorrador(null)
+            setEditando(false)
+          }}
+          onGuardar={() => {
+            if (!borrador) return
+            void actualizar
+              .mutateAsync({ contacto: borrador, version: contactoPersistido.version })
+              .then(() => {
+                setBorrador(null)
+                setEditando(false)
+                toast.success('Contacto actualizado')
+              })
+              .catch((error: unknown) =>
+                toast.error(
+                  error instanceof Error ? error.message : 'No se pudo guardar el contacto.',
+                ),
+              )
+          }}
+          onArchivar={() => {
+            void actualizarEstado
+              .mutateAsync({ id: contacto.id, status: 'archived' })
+              .then(() => toast.success('Contacto archivado'))
+              .catch(() => toast.error('No se pudo archivar el contacto.'))
+          }}
+          guardando={actualizar.isPending || actualizarEstado.isPending}
           numExpedientes={expedientes.length}
         />
 
@@ -209,7 +290,12 @@ function FichaPage() {
             <TabResumen contacto={contacto} numExpedientes={expedientes.length} />
           </TabsContent>
           <TabsContent value="generales" className="space-y-4">
-            <TabGenerales contacto={contacto} />
+            <TabGenerales
+              contacto={contacto}
+              onChange={(cambios) =>
+                setBorrador((actual) => (actual ? { ...actual, ...cambios } : actual))
+              }
+            />
           </TabsContent>
           <TabsContent value="bancarios" className="space-y-4">
             <TabBancarios contacto={contacto} />
@@ -239,6 +325,8 @@ function FichaHeader({
   onEditar,
   onCancelar,
   onGuardar,
+  onArchivar,
+  guardando,
   numExpedientes,
 }: {
   contacto: Contacto
@@ -246,6 +334,8 @@ function FichaHeader({
   onEditar: () => void
   onCancelar: () => void
   onGuardar: () => void
+  onArchivar: () => void
+  guardando: boolean
   numExpedientes: number
 }) {
   const iniciales = nombreCompleto(contacto)
@@ -301,7 +391,7 @@ function FichaHeader({
           <div className="flex items-center gap-2">
             {editando ? (
               <>
-                <Button onClick={onGuardar}>
+                <Button onClick={onGuardar} disabled={guardando}>
                   <Save className="h-4 w-4" />
                   Guardar cambios
                 </Button>
@@ -316,7 +406,7 @@ function FichaHeader({
                   <Pencil className="h-4 w-4" />
                   Editar ficha
                 </Button>
-                <Button variant="outline" disabled>
+                <Button variant="outline" onClick={onArchivar} disabled={guardando}>
                   <Archive className="h-4 w-4" />
                   Archivar
                 </Button>
@@ -576,7 +666,13 @@ function NotasDelContacto({ contacto, resumen }: { contacto: Contacto; resumen?:
   )
 }
 
-function TabGenerales({ contacto }: { contacto: Contacto }) {
+function TabGenerales({
+  contacto,
+  onChange,
+}: {
+  contacto: Contacto
+  onChange: (cambios: Partial<Contacto>) => void
+}) {
   const editando = useFichaEdit()
   return (
     <>
@@ -589,7 +685,7 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <FieldGrid>
-            <Field label="Naturaleza" value={contacto.tipoPersona} />
+            <Field label="Naturaleza" value={contacto.tipoPersona} editable={false} />
             <Field
               label="Relación con el despacho"
               editable={false}
@@ -597,17 +693,45 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
             />
             {contacto.tipoPersona === 'Persona física' ? (
               <>
-                <Field label="Nombre" value={contacto.nombre} />
-                <Field label="Apellidos" value={contacto.apellidos} />
-                <Field label="NIF / NIE" value={contacto.nif} />
-                <Field label="Fecha de nacimiento" value={contacto.nacimiento} />
+                <Field
+                  label="Nombre"
+                  value={contacto.nombre}
+                  onChange={(nombre) => onChange({ nombre })}
+                />
+                <Field
+                  label="Apellidos"
+                  value={contacto.apellidos}
+                  onChange={(apellidos) => onChange({ apellidos })}
+                />
+                <Field
+                  label="NIF / NIE"
+                  value={contacto.nif}
+                  onChange={(nif) => onChange({ nif })}
+                />
+                <Field
+                  label="Fecha de nacimiento"
+                  value={contacto.nacimiento}
+                  onChange={(nacimiento) => onChange({ nacimiento })}
+                />
               </>
             ) : contacto.tipoPersona === 'Persona jurídica' ? (
               <>
-                <Field label="Razón social" value={contacto.razonSocial ?? contacto.nombre} />
-                <Field label="CIF" value={contacto.nif} />
-                <Field label="Persona de contacto" value={contacto.personaContacto} />
-                <Field label="Cargo" value={contacto.cargoContacto} />
+                <Field
+                  label="Razón social"
+                  value={contacto.razonSocial ?? contacto.nombre}
+                  onChange={(razonSocial) => onChange({ razonSocial, nombre: razonSocial })}
+                />
+                <Field label="CIF" value={contacto.nif} onChange={(nif) => onChange({ nif })} />
+                <Field
+                  label="Persona de contacto"
+                  value={contacto.personaContacto}
+                  onChange={(personaContacto) => onChange({ personaContacto })}
+                />
+                <Field
+                  label="Cargo"
+                  value={contacto.cargoContacto}
+                  onChange={(cargoContacto) => onChange({ cargoContacto })}
+                />
               </>
             ) : (
               <>
@@ -623,15 +747,43 @@ function TabGenerales({ contacto }: { contacto: Contacto }) {
                 <Field label="Cargo" value={contacto.cargoContacto} />
               </>
             )}
-            <Field label="Teléfono principal" value={contacto.telefono} />
-            <Field label="Teléfono secundario" value={contacto.telefono2} />
-            <Field label="Correo electrónico principal" value={contacto.email} />
-            <Field label="Correo electrónico secundario" value={contacto.email2} />
-            <Field label="Dirección" value={contacto.direccion} />
-            <Field label="Código postal" value={contacto.cp} />
-            <Field label="Municipio" value={contacto.municipio} />
-            <Field label="Provincia" value={contacto.provincia} />
-            <Field label="País" value={contacto.pais} />
+            <Field
+              label="Teléfono principal"
+              value={contacto.telefono}
+              onChange={(telefono) => onChange({ telefono })}
+            />
+            <Field
+              label="Teléfono secundario"
+              value={contacto.telefono2}
+              onChange={(telefono2) => onChange({ telefono2 })}
+            />
+            <Field
+              label="Correo electrónico principal"
+              value={contacto.email}
+              onChange={(email) => onChange({ email })}
+            />
+            <Field
+              label="Correo electrónico secundario"
+              value={contacto.email2}
+              onChange={(email2) => onChange({ email2 })}
+            />
+            <Field
+              label="Dirección"
+              value={contacto.direccion}
+              onChange={(direccion) => onChange({ direccion })}
+            />
+            <Field label="Código postal" value={contacto.cp} onChange={(cp) => onChange({ cp })} />
+            <Field
+              label="Municipio"
+              value={contacto.municipio}
+              onChange={(municipio) => onChange({ municipio })}
+            />
+            <Field
+              label="Provincia"
+              value={contacto.provincia}
+              onChange={(provincia) => onChange({ provincia })}
+            />
+            <Field label="País" value={contacto.pais} onChange={(pais) => onChange({ pais })} />
           </FieldGrid>
         </CardContent>
       </Card>
@@ -868,13 +1020,13 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <label className="text-foreground flex items-center gap-2 self-end text-sm">
-                  <Checkbox
-                    checked={form.sepa}
-                    onCheckedChange={(v) => setForm({ ...form, sepa: v === true })}
-                  />
+                <Checkbox
+                  className="text-foreground self-end text-sm"
+                  checked={form.sepa}
+                  onCheckedChange={(v) => setForm({ ...form, sepa: v === true })}
+                >
                   Mandato SEPA firmado
-                </label>
+                </Checkbox>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Observaciones</Label>
                   <Textarea

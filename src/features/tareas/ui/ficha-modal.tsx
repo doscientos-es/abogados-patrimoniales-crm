@@ -475,28 +475,29 @@ export function TareaFicha({
                       }}
                       className="hover:bg-muted/50 flex items-start justify-between gap-2 rounded-md px-1 py-0.5 text-sm"
                     >
-                      <label className="flex min-w-0 items-start gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
                         <GripVertical className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab" />
                         <Checkbox
                           checked={s.hecho}
                           onCheckedChange={() => ops.alternarSubtarea(tarea.id, s.id)}
-                        />
-                        <span className="min-w-0">
-                          <span
-                            className={cn(
-                              'block',
-                              s.hecho ? 'text-muted-foreground line-through' : 'text-foreground',
-                            )}
-                          >
-                            {s.texto}
+                        >
+                          <span className="min-w-0">
+                            <span
+                              className={cn(
+                                'block',
+                                s.hecho ? 'text-muted-foreground line-through' : 'text-foreground',
+                              )}
+                            >
+                              {s.texto}
+                            </span>
+                            <span className="text-muted-foreground block text-[10px]">
+                              {s.autor ? `${s.autor}` : ''}
+                              {s.fecha ? ` · ${s.fecha}` : ''}
+                              {s.convertidaEn ? ` · Convertida en tarea ${s.convertidaEn}` : ''}
+                            </span>
                           </span>
-                          <span className="text-muted-foreground block text-[10px]">
-                            {s.autor ? `${s.autor}` : ''}
-                            {s.fecha ? ` · ${s.fecha}` : ''}
-                            {s.convertidaEn ? ` · Convertida en tarea ${s.convertidaEn}` : ''}
-                          </span>
-                        </span>
-                      </label>
+                        </Checkbox>
+                      </div>
                       <span className="flex shrink-0 gap-1">
                         {!s.convertidaEn ? (
                           <Button

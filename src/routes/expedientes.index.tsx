@@ -4,7 +4,7 @@ import { AlertTriangle, Plus, SlidersHorizontal, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { SectionHeader } from '@/components/common'
+import { PendingPanel, SectionHeader } from '@/components/common'
 import { NuevoExpedienteOpDialog } from '@/components/expedientes/dialogs'
 import { MegafaseBadge, MegafaseKanban } from '@/components/expedientes/megafase-kanban'
 import { Button } from '@/components/ui/button'
@@ -40,7 +40,10 @@ import {
   type ExpedienteOp,
   type Naturaleza,
 } from '@/data/expedientes-model'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
 import { PriorityBadge, ToneBadge, ViewSwitch } from '@/features/crm'
+import { PersistentCasesPage, useExpedientesPersistentes } from '@/features/expedientes'
 import { alertasDeExpediente, diasDesde, ops, useOps } from '@/lib/expedientes-store'
 
 export const Route = createFileRoute('/expedientes/')({
@@ -62,7 +65,7 @@ export const Route = createFileRoute('/expedientes/')({
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
   }),
-  component: ExpedientesPage,
+  component: ExpedientesPersistentesRoute,
 })
 
 function TarjetaExpediente({ e }: { e: ExpedienteOp }) {
@@ -116,7 +119,54 @@ function TarjetaExpediente({ e }: { e: ExpedienteOp }) {
   )
 }
 
-function ExpedientesPage() {
+function ExpedientesPersistentesRoute() {
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const cases = useExpedientesPersistentes(firmId)
+  const contacts = useContactos(firmId)
+
+  if (session.status === 'loading') {
+    return <PendingPanel title="Cargando expedientes" description="Consultando tu sesión…" />
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel
+        title="Expedientes no disponibles"
+        description="Inicia sesión para continuar."
+      />
+    )
+  }
+  if (membership.isPending) {
+    return (
+      <PendingPanel title="Cargando expedientes" description="Consultando el despacho activo…" />
+    )
+  }
+  if (!firmId) {
+    return (
+      <PendingPanel
+        title="Expedientes no disponibles"
+        description="No tienes un despacho activo."
+      />
+    )
+  }
+  if (cases.isPending || contacts.isPending) {
+    return (
+      <PendingPanel title="Cargando expedientes" description="Consultando datos compartidos…" />
+    )
+  }
+  if (cases.isError || contacts.isError) {
+    return (
+      <PendingPanel
+        title="No se pudieron cargar los expedientes"
+        description="Reintenta en unos instantes."
+      />
+    )
+  }
+  return <PersistentCasesPage expedientes={cases.data ?? []} contactos={contacts.data ?? []} />
+}
+
+export function ExpedientesDemoPage() {
   const expedientes = useOps((s) => s.expedientes)
   const vistas = useOps((s) => s.vistas)
   const conAlertas = useOps((s) =>

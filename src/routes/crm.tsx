@@ -149,8 +149,8 @@ function CrmPage() {
   const proximas = oportunidades
     .filter((o) => saPorLead.has(o.id))
     .sort((a, b) => {
-      const da = parseFecha(saPorLead.get(a.id)!.vencimiento)?.getTime() ?? Infinity
-      const db = parseFecha(saPorLead.get(b.id)!.vencimiento)?.getTime() ?? Infinity
+      const da = parseFecha(saPorLead.get(a.id)?.vencimiento)?.getTime() ?? Infinity
+      const db = parseFecha(saPorLead.get(b.id)?.vencimiento)?.getTime() ?? Infinity
       return da - db
     })
     .slice(0, 8)
@@ -303,15 +303,15 @@ function CrmPage() {
                 <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <p className="text-foreground truncate text-sm font-medium">
-                      {saPorLead.get(o.id)!.titulo}
+                      {saPorLead.get(o.id)?.titulo ?? 'Sin siguiente acción'}
                     </p>
                     <p className="text-muted-foreground truncate text-xs">
                       {o.codigo} · {nombreContacto(o.contactoId)} · {faseDef(o.fase).nombre} ·{' '}
-                      {saPorLead.get(o.id)!.responsable}
+                      {saPorLead.get(o.id)?.responsable ?? 'Sin responsable'}
                     </p>
                   </div>
                   <ToneBadge tono={vencidas(o) ? 'riesgo' : 'neutro'}>
-                    {saPorLead.get(o.id)!.vencimiento || 'Sin fecha'}
+                    {saPorLead.get(o.id)?.vencimiento || 'Sin fecha'}
                   </ToneBadge>
                 </li>
               ))}

@@ -206,7 +206,9 @@ export function ReabrirDialog({ o, trigger }: { o: OportunidadCRM; trigger: Reac
   const [abierto, setAbierto] = useState(false)
   const [motivo, setMotivo] = useState('')
   const [destino, setDestino] = useState<FaseId>('cualificacion')
-  const [responsable, setResponsable] = useState(o.responsable || USUARIOS[1]!.nombre)
+  const [responsable, setResponsable] = useState(
+    o.responsable || USUARIOS[1]?.nombre || USUARIOS[0]?.nombre || '',
+  )
   const [accion, setAccion] = useState('Contactar de nuevo con el cliente')
   const permitido = rol === 'Administrador/Igor'
 
@@ -993,8 +995,10 @@ function CualificacionBloque({ o }: { o: OportunidadCRM }) {
     const j = i + delta
     if (j < 0 || j >= preguntas.length) return
     const lista = [...preguntas]
-    const a = lista[i]!
-    lista[i] = lista[j]!
+    const a = lista[i]
+    const b = lista[j]
+    if (!a || !b) return
+    lista[i] = b
     lista[j] = a
     guardar(lista)
   }
@@ -1398,13 +1402,13 @@ function CitaBloque({ o }: { o: OportunidadCRM }) {
             </Field>
           </div>
           <div className="flex items-end">
-            <label className="text-muted-foreground flex items-center gap-2 text-xs">
-              <Checkbox
-                checked={form.autorizadaPresupuesto}
-                onCheckedChange={(v) => set({ autorizadaPresupuesto: Boolean(v) })}
-              />
+            <Checkbox
+              className="text-muted-foreground text-xs"
+              checked={form.autorizadaPresupuesto}
+              onCheckedChange={(v) => set({ autorizadaPresupuesto: Boolean(v) })}
+            >
               Autorizada para solicitar presupuesto
-            </label>
+            </Checkbox>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -1750,7 +1754,7 @@ function ValidacionAceptacionBloque({ o, rol }: { o: OportunidadCRM; rol: string
   const [vigencia, setVigencia] = useState(p.vigencia ?? '')
   const [acFecha, setAcFecha] = useState(o.aceptacion?.fecha ?? '')
   const [acImporte, setAcImporte] = useState(o.aceptacion?.importe ?? p.importe)
-  const [acForma, setAcForma] = useState(o.aceptacion?.forma ?? FORMAS_ACEPTACION[0]!)
+  const [acForma, setAcForma] = useState(o.aceptacion?.forma ?? FORMAS_ACEPTACION[0] ?? '')
   const [acSoporte, setAcSoporte] = useState(o.aceptacion?.soporte ?? '')
 
   return (

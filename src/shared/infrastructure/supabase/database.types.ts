@@ -58,7 +58,9 @@ export type Database = {
         ContactInsert,
         Partial<ContactInsert> & { id?: string; status?: ContactStatus; version?: number }
       >
-      crm_cases: Table<CaseReferenceRow, never, never>
+      crm_cases: Table<CaseRow, CaseInsert, Partial<CaseInsert> & { id?: string; version?: number }>
+      crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
+      crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
@@ -81,6 +83,38 @@ export type Database = {
     Views: Record<never, never>
     Functions: {
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
+      crm_archive_opportunity: {
+        Args: {
+          target_opportunity_id: string
+          target_expected_version: number
+          archive_reason: string
+        }
+        Returns: OpportunityRow
+      }
+      crm_update_opportunity: {
+        Args: {
+          target_opportunity_id: string
+          target_expected_version: number
+          new_title: string
+          new_area: string
+          new_priority: OpportunityPriority
+          new_operational_status: string
+          new_source: string
+          new_description: string
+          new_assigned_to: string | null
+          new_estimated_amount: number | null
+        }
+        Returns: OpportunityRow
+      }
+      crm_transition_opportunity: {
+        Args: {
+          target_opportunity_id: string
+          target_stage: OpportunityStage
+          target_substage: string
+          transition_reason?: string | null
+        }
+        Returns: OpportunityRow
+      }
       crm_save_firm_settings: {
         Args: {
           target_firm_id: string
@@ -185,10 +219,142 @@ export type ContactInsert = {
   details?: Json
 }
 
-export type CaseReferenceRow = {
+export type CaseRow = {
   id: string
   firm_id: string
+  case_number: number
   reference: string
+  primary_contact_id: string
+  opportunity_id: string | null
+  title: string
+  area: string
+  matter_type: string
+  nature: 'judicial' | 'extrajudicial'
+  general_status: string
+  phase: string
+  operational_status: string
+  priority: OpportunityPriority
+  assigned_to: string | null
+  opened_on: string
+  closed_on: string | null
+  next_action: string
+  current_position: string
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CaseInsert = {
+  id?: string
+  firm_id: string
+  case_number?: number
+  primary_contact_id: string
+  opportunity_id?: string | null
+  title: string
+  area?: string
+  matter_type?: string
+  nature: CaseRow['nature']
+  general_status?: string
+  phase?: string
+  operational_status?: string
+  priority?: OpportunityPriority
+  assigned_to?: string | null
+  opened_on?: string
+  closed_on?: string | null
+  next_action?: string
+  current_position?: string
+  details?: Json
+}
+
+export type CaseWorkstreamRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  parent_id: string | null
+  title: string
+  work_type: string
+  description: string
+  status: string
+  priority: OpportunityPriority
+  assigned_to: string | null
+  starts_on: string | null
+  target_on: string | null
+  resolved_on: string | null
+  closed_on: string | null
+  sort_order: number
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CaseWorkstreamInsert = {
+  id?: string
+  firm_id: string
+  case_id: string
+  parent_id?: string | null
+  title: string
+  work_type?: string
+  description?: string
+  status?: string
+  priority?: OpportunityPriority
+  assigned_to?: string | null
+  starts_on?: string | null
+  target_on?: string | null
+  resolved_on?: string | null
+  closed_on?: string | null
+  sort_order?: number
+  details?: Json
+}
+
+export type CaseActivityRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  workstream_id: string | null
+  activity_type: string
+  title: string
+  description: string
+  occurred_at: string
+  assigned_to: string | null
+  status: string
+  result: string
+  next_action: string
+  time_spent_hours: number
+  billable: boolean
+  client_visible: boolean
+  client_informed: boolean
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CaseActivityInsert = {
+  id?: string
+  firm_id: string
+  case_id: string
+  workstream_id?: string | null
+  activity_type: string
+  title: string
+  description?: string
+  occurred_at?: string
+  assigned_to?: string | null
+  status?: string
+  result?: string
+  next_action?: string
+  time_spent_hours?: number
+  billable?: boolean
+  client_visible?: boolean
+  client_informed?: boolean
+  details?: Json
 }
 
 export type NoteRow = {
@@ -350,6 +516,9 @@ export type ProcedureInsert = Omit<
 export type OpportunityRow = {
   id: string
   firm_id: string
+  archived_at: string | null
+  archived_by: string | null
+  archive_reason: string | null
   reference: string
   contact_id: string
   title: string
@@ -372,6 +541,9 @@ export type OpportunityRow = {
 
 export type OpportunityInsert = {
   firm_id: string
+  archived_at?: string | null
+  archived_by?: string | null
+  archive_reason?: string | null
   contact_id: string
   title: string
   area?: string

@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowLeft, MoreHorizontal, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { PendingBadge } from '@/components/common'
+import { PendingBadge, PendingPanel } from '@/components/common'
 import {
   botonNuevoEmail,
   botonNuevoWhatsapp,
@@ -83,7 +83,14 @@ import {
   nombreFase,
   saldoEjecucion,
 } from '@/data/expedientes-model'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { PriorityBadge, ToneBadge } from '@/features/crm'
+import {
+  PersistentCaseDetail,
+  useActuacionesPersistentes,
+  useExpedientePersistente,
+  useLineasPersistentes,
+} from '@/features/expedientes'
 import {
   agruparAlertas,
   alertasDeExpediente,
@@ -142,7 +149,7 @@ export const Route = createFileRoute('/expedientes/$id')({
       { name: 'twitter:card', content: 'summary' },
     ],
   }),
-  component: FichaExpediente,
+  component: FichaExpedientePersistente,
   errorComponent: ({ error }) => (
     <div role="alert" className="text-destructive p-6 text-sm">
       {error.message}
@@ -153,7 +160,62 @@ export const Route = createFileRoute('/expedientes/$id')({
   ),
 })
 
-function FichaExpediente() {
+function FichaExpedientePersistente() {
+  const { id } = Route.useParams()
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const caseQuery = useExpedientePersistente(firmId, id)
+  const workstreams = useLineasPersistentes(firmId, id)
+  const activities = useActuacionesPersistentes(firmId, id)
+
+  if (session.status === 'loading') {
+    return <PendingPanel title="Cargando expediente" description="Consultando tu sesión…" />
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel title="Expediente no disponible" description="Inicia sesión para continuar." />
+    )
+  }
+  if (membership.isPending) {
+    return (
+      <PendingPanel title="Cargando expediente" description="Consultando el despacho activo…" />
+    )
+  }
+  if (!firmId) {
+    return (
+      <PendingPanel title="Expediente no disponible" description="No tienes un despacho activo." />
+    )
+  }
+  if (caseQuery.isPending || workstreams.isPending || activities.isPending) {
+    return <PendingPanel title="Cargando expediente" description="Consultando datos operativos…" />
+  }
+  if (caseQuery.isError || workstreams.isError || activities.isError) {
+    return (
+      <PendingPanel
+        title="No se pudo cargar el expediente"
+        description="Reintenta en unos instantes."
+      />
+    )
+  }
+  if (!caseQuery.data) {
+    return (
+      <PendingPanel
+        title="Expediente no encontrado"
+        description="No existe o no pertenece a tu despacho."
+      />
+    )
+  }
+  return (
+    <PersistentCaseDetail
+      expediente={caseQuery.data}
+      lineas={workstreams.data ?? []}
+      actuaciones={activities.data ?? []}
+    />
+  )
+}
+
+export function FichaExpedienteDemo() {
   const { id } = Route.useParams()
   const e = useOps((s) => s.expedientes.find((x) => x.id === id))
   const lineas = useOps((s) => selLineas(s, id))

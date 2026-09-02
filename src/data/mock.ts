@@ -39,4 +39,3 @@ export const FACTURAS: Factura[] = [
     estado: 'Emitida',
   },
 ]
-

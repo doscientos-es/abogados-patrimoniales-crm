@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, CalendarDays, Bell, Gavel } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, CalendarDays, Gavel } from 'lucide-react'
 // Alta unificada de los cuatro registros temporales de LEX.
 import { useMemo, useState } from 'react'
 
@@ -250,10 +250,9 @@ export function RegistroTemporalDialog({
 
           {tipo === 'Recordatorio' ? (
             <div className="border-border bg-muted/30 rounded-md border p-3">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={recurrente} onCheckedChange={(v) => setRecurrente(Boolean(v))} />
+              <Checkbox checked={recurrente} onCheckedChange={(v) => setRecurrente(Boolean(v))}>
                 Recordatorio recurrente
-              </label>
+              </Checkbox>
               {recurrente ? (
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <div className="space-y-1.5">
@@ -363,22 +362,16 @@ export function RegistroTemporalDialog({
                 </div>
               </div>
 
-              <label className="flex items-start gap-2 text-sm">
-                <Checkbox
-                  className="mt-0.5"
-                  checked={validado}
-                  onCheckedChange={(v) => setValidado(Boolean(v))}
-                />
+              <Checkbox checked={validado} onCheckedChange={(v) => setValidado(Boolean(v))}>
                 <span>
                   Confirmo como profesional la fecha de vencimiento. El cálculo del sistema es
                   orientativo y nunca sustituye esta validación.
                 </span>
-              </label>
+              </Checkbox>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={critico} onCheckedChange={(v) => setCritico(Boolean(v))} />
+              <Checkbox checked={critico} onCheckedChange={(v) => setCritico(Boolean(v))}>
                 Marcar como plazo CRÍTICO
-              </label>
+              </Checkbox>
             </div>
           ) : null}
 

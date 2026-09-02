@@ -27,7 +27,6 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text()
   if (!isH3SwallowedErrorBody(body)) return response
 
-  
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -87,7 +86,6 @@ export default {
       const response = await handler.fetch(request, env, ctx)
       return withPrivateAppHeaders(await normalizeCatastrophicSsrResponse(response), request)
     } catch (error) {
-      
       return withPrivateAppHeaders(
         new Response(renderErrorPage(), {
           status: 500,

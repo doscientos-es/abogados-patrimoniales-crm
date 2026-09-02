@@ -190,13 +190,13 @@ export function FechasWorkspace() {
                 {a.label}
               </button>
             ))}
-            <label className="ml-1 inline-flex items-center gap-2 text-xs font-medium">
-              <Checkbox
-                checked={filtro.soloCriticos}
-                onCheckedChange={(v) => setFiltro((f) => ({ ...f, soloCriticos: Boolean(v) }))}
-              />
+            <Checkbox
+              className="ml-1 text-xs font-medium"
+              checked={filtro.soloCriticos}
+              onCheckedChange={(v) => setFiltro((f) => ({ ...f, soloCriticos: Boolean(v) }))}
+            >
               Solo críticos
-            </label>
+            </Checkbox>
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">

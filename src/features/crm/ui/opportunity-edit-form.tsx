@@ -1,0 +1,192 @@
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import type {
+  ActualizarOportunidadInput,
+  MiembroDespacho,
+  OportunidadPersistida,
+} from '@/features/crm/application'
+
+const UNASSIGNED = 'unassigned'
+
+export function OpportunityEditForm({
+  oportunidad,
+  miembros,
+  miembrosCargando,
+  miembrosError,
+  guardando,
+  onSave,
+}: {
+  oportunidad: OportunidadPersistida
+  miembros: MiembroDespacho[]
+  miembrosCargando: boolean
+  miembrosError: boolean
+  guardando: boolean
+  onSave: (input: ActualizarOportunidadInput) => Promise<void>
+}) {
+  const [titulo, setTitulo] = useState(oportunidad.titulo)
+  const [area, setArea] = useState(oportunidad.area)
+  const [prioridad, setPrioridad] = useState(oportunidad.prioridad)
+  const [estadoOperativo, setEstadoOperativo] = useState(oportunidad.estadoOperativo)
+  const [origen, setOrigen] = useState(oportunidad.origen)
+  const [descripcion, setDescripcion] = useState(oportunidad.descripcion)
+  const [asignadoId, setAsignadoId] = useState(oportunidad.asignadoId ?? UNASSIGNED)
+  const [valorEstimado, setValorEstimado] = useState(
+    oportunidad.valorEstimado === null ? '' : String(oportunidad.valorEstimado),
+  )
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const amount = valorEstimado.trim() ? Number(valorEstimado) : null
+    if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+      toast.error('El valor estimado debe ser un importe positivo.')
+      return
+    }
+    try {
+      await onSave({
+        id: oportunidad.id,
+        versionEsperada: oportunidad.version,
+        titulo,
+        area,
+        prioridad,
+        estadoOperativo,
+        origen,
+        descripcion,
+        asignadoId: asignadoId === UNASSIGNED ? null : asignadoId,
+        valorEstimado: amount,
+      })
+      toast.success('Datos del Lead actualizados.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el Lead.')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Datos comerciales y asignación</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => void submit(event)}>
+          <FormField id="opportunity-title" label="Asunto">
+            <Input
+              id="opportunity-title"
+              value={titulo}
+              onChange={(event) => setTitulo(event.target.value)}
+              required
+              maxLength={300}
+            />
+          </FormField>
+          <FormField id="opportunity-area" label="Área">
+            <Input
+              id="opportunity-area"
+              value={area}
+              onChange={(event) => setArea(event.target.value)}
+              maxLength={160}
+            />
+          </FormField>
+          <FormField id="opportunity-priority" label="Prioridad">
+            <Select
+              value={prioridad}
+              onValueChange={(value) => setPrioridad(value as typeof prioridad)}
+            >
+              <SelectTrigger id="opportunity-priority">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Alta">Alta</SelectItem>
+                <SelectItem value="Media">Media</SelectItem>
+                <SelectItem value="Baja">Baja</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField id="opportunity-status" label="Estado operativo">
+            <Input
+              id="opportunity-status"
+              value={estadoOperativo}
+              onChange={(event) => setEstadoOperativo(event.target.value)}
+              required
+              maxLength={160}
+            />
+          </FormField>
+          <FormField id="opportunity-source" label="Origen">
+            <Input
+              id="opportunity-source"
+              value={origen}
+              onChange={(event) => setOrigen(event.target.value)}
+              maxLength={160}
+            />
+          </FormField>
+          <FormField id="opportunity-amount" label="Valor estimado">
+            <Input
+              id="opportunity-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={valorEstimado}
+              onChange={(event) => setValorEstimado(event.target.value)}
+            />
+          </FormField>
+          <FormField id="opportunity-assignee" label="Responsable">
+            <Select
+              value={asignadoId}
+              onValueChange={setAsignadoId}
+              disabled={miembrosCargando || miembrosError}
+            >
+              <SelectTrigger id="opportunity-assignee">
+                <SelectValue placeholder="Selecciona un responsable" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
+                {miembros.map((miembro) => (
+                  <SelectItem key={miembro.id} value={miembro.id}>
+                    {miembro.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {miembrosError ? (
+              <p className="text-destructive text-xs">No se ha podido cargar el equipo.</p>
+            ) : null}
+          </FormField>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="opportunity-description">Descripción</Label>
+            <Textarea
+              id="opportunity-description"
+              value={descripcion}
+              onChange={(event) => setDescripcion(event.target.value)}
+              maxLength={20_000}
+              rows={5}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Button type="submit" disabled={guardando || miembrosCargando || miembrosError}>
+              {guardando ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function FormField({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+    </div>
+  )
+}

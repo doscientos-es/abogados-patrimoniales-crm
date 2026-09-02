@@ -57,9 +57,9 @@ export function NotaMuro({
     () =>
       Array.from(
         new Map(
-          lista
-            .filter((n) => n.expedienteId)
-            .map((n) => [n.expedienteId!, n.origen.etiqueta] as const),
+          lista.flatMap((n) =>
+            n.expedienteId ? [[n.expedienteId, n.origen.etiqueta] as const] : [],
+          ),
         ),
       ),
     [lista],

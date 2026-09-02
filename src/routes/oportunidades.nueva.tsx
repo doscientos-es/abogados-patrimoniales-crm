@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { PendingPanel } from '@/components/common'
 import { NuevaNotaBoton } from '@/components/notas/nota-form'
 import { NotaMuro } from '@/components/notas/nota-muro'
 import { NuevaTareaRapidaDialog, type BorradorTareaRapida } from '@/components/tareas/ui'
@@ -325,6 +326,29 @@ function NuevaOportunidadPage() {
     } catch {
       toast.error('No se ha podido guardar el Lead.')
     }
+  }
+
+  if (session.status === 'loading') {
+    return <PendingPanel title="Preparando alta" description="Consultando el despacho activo…" />
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel
+        title="Alta no disponible"
+        description="Necesitas una sesión y una membresía activa para crear Leads persistentes."
+      />
+    )
+  }
+  if (membership.isPending) {
+    return <PendingPanel title="Preparando alta" description="Consultando el despacho activo…" />
+  }
+  if (!membership.data) {
+    return (
+      <PendingPanel
+        title="Alta no disponible"
+        description="Tu usuario no tiene una membresía activa para crear Leads."
+      />
+    )
   }
 
   return (

@@ -235,7 +235,7 @@ function estadoInicial(expedienteId: string, comoActuacion: boolean, base?: Actu
     titulo: base?.titulo ?? '',
     descripcion: base?.descripcion ?? '',
     observaciones: base?.observaciones ?? '',
-    responsable: base?.responsable ?? RESPONSABLES[3]!,
+    responsable: base?.responsable ?? RESPONSABLES[3] ?? RESPONSABLES[0] ?? '',
     lineaId: base?.lineaId ?? 'sin',
     lineasRelacionadas: base?.lineasRelacionadas ?? [],
     participantes: (base?.participantes ?? []).join(', '),

@@ -32,6 +32,7 @@ const inputSchema = z.object({
 })
 
 export type NuevoContactoInput = z.infer<typeof inputSchema>
+export type ContactoPersistido = Contacto & { version: number }
 
 const natureToDatabase: Record<Naturaleza, ContactNature> = {
   'Persona física': 'person',
@@ -83,10 +84,10 @@ function spanishDate(value: string) {
   }).format(new Date(value))
 }
 
-export function contactoFromRow(row: ContactRow): Contacto {
+export function contactoFromRow(row: ContactRow): ContactoPersistido {
   const details = asObject(row.details)
   const client = row.relationship === 'client'
-  const contacto: Contacto = {
+  const contacto: ContactoPersistido = {
     id: row.id,
     tipoPersona: natureFromDatabase[row.nature],
     relacion: relationshipFromDatabase[row.relationship],
@@ -147,8 +148,85 @@ export function contactoFromRow(row: ContactRow): Contacto {
     creadoPor: 'Usuario del despacho',
     modificado: spanishDate(row.updated_at),
     modificadoPor: 'Usuario del despacho',
+    version: row.version,
   }
   return contacto
+}
+
+export function useContacto(firmId: string | undefined, id: string) {
+  return useQuery({
+    queryKey: ['crm', 'contactos', firmId, id],
+    enabled: Boolean(firmId && id),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client
+        .from('crm_contacts')
+        .select('*')
+        .eq('id', id)
+        .eq('firm_id', firmId)
+        .maybeSingle()
+      if (error) throw error
+      return data ? contactoFromRow(data) : null
+    },
+  })
+}
+
+export function useActualizarContacto(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ contacto, version }: { contacto: Contacto; version: number }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const details = {
+        fechaNacimiento: contacto.nacimiento ?? '',
+        telefono2: contacto.telefono2 ?? '',
+        email2: contacto.email2 ?? '',
+        direccion: contacto.direccion,
+        codigoPostal: contacto.cp,
+        municipio: contacto.municipio,
+        provincia: contacto.provincia,
+        pais: contacto.pais,
+        personaContacto: contacto.personaContacto ?? '',
+        cargo: contacto.cargoContacto ?? '',
+      }
+      const { data: actual, error: actualError } = await client
+        .from('crm_contacts')
+        .select('details, version')
+        .eq('id', contacto.id)
+        .eq('firm_id', firmId)
+        .maybeSingle()
+      if (actualError) throw actualError
+      if (!actual || actual.version !== version) {
+        throw new Error('El contacto cambió en otra sesión. Recarga antes de guardar.')
+      }
+      const { data, error } = await client
+        .from('crm_contacts')
+        .update({
+          display_name: nombreCompleto(contacto),
+          first_name: contacto.nombre || null,
+          last_name: contacto.apellidos || null,
+          legal_name: contacto.razonSocial || null,
+          tax_id: contacto.nif || null,
+          email: contacto.email || null,
+          phone: contacto.telefono || null,
+          details: { ...asObject(actual.details), ...details } as Json,
+          version: version + 1,
+        })
+        .eq('id', contacto.id)
+        .eq('firm_id', firmId)
+        .eq('version', version)
+        .select()
+        .maybeSingle()
+      if (error) throw error
+      if (!data) throw new Error('El contacto cambió en otra sesión. Recarga antes de guardar.')
+      return contactoFromRow(data)
+    },
+    onSuccess: (contacto) => {
+      queryClient.setQueryData(['crm', 'contactos', firmId, contacto.id], contacto)
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'contactos', firmId] })
+    },
+  })
 }
 
 function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {

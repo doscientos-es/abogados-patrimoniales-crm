@@ -283,7 +283,6 @@ export function SelectorEtiquetas({
           <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
             <Search className="text-muted-foreground h-3.5 w-3.5" />
             <input
-              
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar etiqueta…"

@@ -30,7 +30,7 @@ function trocear(texto: string) {
   if (!indices.length) return [{ titulo: 'Resumen', cuerpo: texto }]
   indices.sort((a, b) => a.pos - b.pos)
   indices.forEach((s, i) => {
-    const fin = i + 1 < indices.length ? indices[i + 1]!.pos : texto.length
+    const fin = indices[i + 1]?.pos ?? texto.length
     bloques.push({ titulo: s.titulo, cuerpo: texto.slice(s.pos + s.clave.length, fin).trim() })
   })
   return bloques
@@ -172,7 +172,7 @@ export function ResumenIABloque({
               size="sm"
               variant={resumen ? 'outline' : 'default'}
               className="gap-1.5"
-              onClick={generar}
+              onClick={() => void generar()}
               disabled={cargando}
             >
               {cargando ? (

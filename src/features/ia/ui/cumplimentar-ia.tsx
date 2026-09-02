@@ -234,7 +234,7 @@ export function CumplimentarIA({
                 sesion={sesion}
                 procesando={procesando}
                 inputRef={inputRef}
-                onSubir={subir}
+                onSubir={(archivos) => void subir(archivos)}
                 onQuitar={(id) =>
                   setSesion((s) => ({
                     ...s,

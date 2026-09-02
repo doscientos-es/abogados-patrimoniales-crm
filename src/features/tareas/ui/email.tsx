@@ -529,7 +529,7 @@ export function RedactarEmailSheet({
               {cuerpo + firma}
             </pre>
             <div className="flex flex-wrap gap-2">
-              <Button className="gap-1.5" onClick={enviar} disabled={enviando}>
+              <Button className="gap-1.5" onClick={() => void enviar()} disabled={enviando}>
                 {enviando ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -620,7 +620,7 @@ export function RedactarEmailSheet({
                   variant="outline"
                   className="gap-1.5"
                   disabled={Boolean(ia)}
-                  onClick={() => asistir('generar')}
+                  onClick={() => void asistir('generar')}
                 >
                   {ia === 'generar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
                   Generar borrador
@@ -629,7 +629,7 @@ export function RedactarEmailSheet({
                   size="sm"
                   variant="outline"
                   disabled={Boolean(ia)}
-                  onClick={() => asistir('mejorar')}
+                  onClick={() => void asistir('mejorar')}
                 >
                   {ia === 'mejorar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
                   Mejorar redacción
@@ -638,7 +638,7 @@ export function RedactarEmailSheet({
                   size="sm"
                   variant="outline"
                   disabled={Boolean(ia)}
-                  onClick={() => asistir('acortar')}
+                  onClick={() => void asistir('acortar')}
                 >
                   {ia === 'acortar' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{' '}
                   Acortar
@@ -659,7 +659,7 @@ export function RedactarEmailSheet({
                   size="sm"
                   variant="ghost"
                   disabled={Boolean(ia)}
-                  onClick={() => asistir('tono')}
+                  onClick={() => void asistir('tono')}
                 >
                   Cambiar tono
                 </Button>

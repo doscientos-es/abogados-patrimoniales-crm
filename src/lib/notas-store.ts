@@ -148,7 +148,8 @@ function semilla(): NotasState {
     },
   ]
   expedientes.forEach((e, i) => {
-    const t = textos[i]!
+    const t = textos[i] ?? textos.at(-1)
+    if (!t) return
     seq += 1
     notas.push(
       base({

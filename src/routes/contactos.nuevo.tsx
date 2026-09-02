@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { SectionHeader } from '@/components/common'
+import { PendingPanel, SectionHeader } from '@/components/common'
 import { Postit } from '@/components/contactos/ui'
 import { CumplimentarIA } from '@/components/ia/cumplimentar-ia'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -123,6 +123,29 @@ function NuevoContactoPage() {
           : 'No se ha podido crear el contacto.',
       )
     }
+  }
+
+  if (session.status === 'loading') {
+    return <PendingPanel title="Preparando alta" description="Consultando el despacho activo…" />
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel
+        title="Alta no disponible"
+        description="Necesitas una sesión y una membresía activa para crear contactos persistentes."
+      />
+    )
+  }
+  if (membership.isPending) {
+    return <PendingPanel title="Preparando alta" description="Consultando el despacho activo…" />
+  }
+  if (!membership.data) {
+    return (
+      <PendingPanel
+        title="Alta no disponible"
+        description="Tu usuario no tiene una membresía activa para crear contactos."
+      />
+    )
   }
 
   return (
@@ -487,22 +510,20 @@ function BorradoresNotas({
           placeholder="Escribe aquí la anotación…"
           className="text-postit-foreground placeholder:text-postit-foreground/60 resize-none border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
         />
-        <label className="text-postit-foreground/80 mt-2 flex items-center gap-2 text-xs">
-          <Checkbox
-            checked={destacada}
-            onCheckedChange={(v) => setDestacada(v === true)}
-            className="border-postit-foreground/40"
-          />
+        <Checkbox
+          checked={destacada}
+          onCheckedChange={(v) => setDestacada(v === true)}
+          className="text-postit-foreground/80 border-postit-foreground/40 mt-2 text-xs"
+        >
           Destacada
-        </label>
-        <label className="text-postit-foreground/80 mt-1 flex items-center gap-2 text-xs">
-          <Checkbox
-            checked={critica}
-            onCheckedChange={(v) => setCritica(v === true)}
-            className="border-postit-foreground/40"
-          />
+        </Checkbox>
+        <Checkbox
+          checked={critica}
+          onCheckedChange={(v) => setCritica(v === true)}
+          className="text-postit-foreground/80 border-postit-foreground/40 mt-1 text-xs"
+        >
           Advertencia crítica
-        </label>
+        </Checkbox>
         <Button size="sm" type="button" className="mt-3 w-full" onClick={añadir}>
           Añadir nota
         </Button>

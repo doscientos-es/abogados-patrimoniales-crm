@@ -69,7 +69,6 @@ export function GestionTitulosTarea() {
                       value={borrador}
                       onChange={(e) => setBorrador(e.target.value)}
                       className="h-8"
-                      
                     />
                     <span className="flex shrink-0 gap-1">
                       <Button

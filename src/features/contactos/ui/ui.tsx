@@ -115,12 +115,14 @@ export function Field({
   value,
   wide,
   editable = true,
+  onChange,
 }: {
   label: string
   value?: ReactNode
   wide?: boolean
   /** Cuando es false el campo nunca se convierte en editable. */
   editable?: boolean
+  onChange?: (value: string) => void
 }) {
   const editing = useFichaEdit()
   const editableValue = typeof value === 'string' || value === undefined
@@ -131,7 +133,16 @@ export function Field({
         {label}
       </p>
       {editing && editable && editableValue ? (
-        <Input className="mt-1" defaultValue={value ?? ''} aria-label={label} />
+        <Input
+          className="mt-1"
+          {...(onChange
+            ? {
+                value: typeof value === 'string' ? value : '',
+                onChange: (event) => onChange(event.target.value),
+              }
+            : { defaultValue: typeof value === 'string' ? value : '' })}
+          aria-label={label}
+        />
       ) : (
         <div className="border-border bg-muted/30 text-foreground mt-1 rounded-md border px-3 py-2 text-sm">
           {value === undefined || value === '' ? (

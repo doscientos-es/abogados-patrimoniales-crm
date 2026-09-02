@@ -52,7 +52,9 @@ function isErrorLike(value: unknown): value is Error {
 // Wrap console.error so errors logged by any layer — including h3's internal
 // unhandled-error logging, which this file cannot hook directly — are both
 // recorded for consumeLastCapturedError and expanded before serialization.
+// oxlint-disable-next-line eslint/no-console -- this module intentionally intercepts runtime errors
 const originalConsoleError = console.error.bind(console)
+// oxlint-disable-next-line eslint/no-console -- preserve native logging after recording the error
 console.error = (...args: unknown[]) => {
   const expanded = args.map((arg) => {
     if (!isErrorLike(arg)) return arg

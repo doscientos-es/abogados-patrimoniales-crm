@@ -11,7 +11,7 @@ import {
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
-import { SectionHeader } from '@/components/common'
+import { PendingPanel, SectionHeader } from '@/components/common'
 import { EstadoBadge, RelacionBadge, SatisfactionMeter } from '@/components/contactos/ui'
 import {
   AlertDialog,
@@ -125,6 +125,29 @@ function ContactosPage() {
       return parseFecha(b.modificado) - parseFecha(a.modificado)
     })
   }, [contactosQuery.data, vista, q, relacion, naturaleza, estado, origen, satisfaccion, orden])
+
+  if (session.status === 'loading') {
+    return <PendingPanel title="Cargando contactos" description="Consultando el despacho activo…" />
+  }
+  if (session.status !== 'signed-in') {
+    return (
+      <PendingPanel
+        title="Contactos no disponibles"
+        description="Necesitas una sesión y una membresía activa en un despacho. No se cargarán datos demo."
+      />
+    )
+  }
+  if (membership.isPending) {
+    return <PendingPanel title="Cargando contactos" description="Consultando el despacho activo…" />
+  }
+  if (!membership.data) {
+    return (
+      <PendingPanel
+        title="Contactos no disponibles"
+        description="Tu usuario no tiene una membresía activa en un despacho."
+      />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-[1400px]">
