@@ -84,12 +84,21 @@ import {
   saldoEjecucion,
 } from '@/data/expedientes-model'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { PriorityBadge, ToneBadge } from '@/features/crm'
+import { useContactos } from '@/features/contactos'
+import { PriorityBadge, ToneBadge, useMiembrosDespacho } from '@/features/crm'
 import {
+  CaseEditForm,
+  CaseRelatedForms,
   PersistentCaseDetail,
   useActuacionesPersistentes,
+  useActualizarExpediente,
+  useCrearActuacion,
+  useCrearLinea,
+  useCrearParticipante,
+  useEventosExpediente,
   useExpedientePersistente,
   useLineasPersistentes,
+  useParticipantesPersistentes,
 } from '@/features/expedientes'
 import {
   agruparAlertas,
@@ -168,6 +177,14 @@ function FichaExpedientePersistente() {
   const caseQuery = useExpedientePersistente(firmId, id)
   const workstreams = useLineasPersistentes(firmId, id)
   const activities = useActuacionesPersistentes(firmId, id)
+  const participants = useParticipantesPersistentes(firmId, id)
+  const events = useEventosExpediente(firmId, id)
+  const contacts = useContactos(firmId)
+  const members = useMiembrosDespacho(firmId)
+  const updateCase = useActualizarExpediente(firmId)
+  const createParticipant = useCrearParticipante(firmId)
+  const createWorkstream = useCrearLinea(firmId)
+  const createActivity = useCrearActuacion(firmId)
 
   if (session.status === 'loading') {
     return <PendingPanel title="Cargando expediente" description="Consultando tu sesión…" />
@@ -187,10 +204,26 @@ function FichaExpedientePersistente() {
       <PendingPanel title="Expediente no disponible" description="No tienes un despacho activo." />
     )
   }
-  if (caseQuery.isPending || workstreams.isPending || activities.isPending) {
+  if (
+    caseQuery.isPending ||
+    workstreams.isPending ||
+    activities.isPending ||
+    participants.isPending ||
+    events.isPending ||
+    contacts.isPending ||
+    members.isPending
+  ) {
     return <PendingPanel title="Cargando expediente" description="Consultando datos operativos…" />
   }
-  if (caseQuery.isError || workstreams.isError || activities.isError) {
+  if (
+    caseQuery.isError ||
+    workstreams.isError ||
+    activities.isError ||
+    participants.isError ||
+    events.isError ||
+    contacts.isError ||
+    members.isError
+  ) {
     return (
       <PendingPanel
         title="No se pudo cargar el expediente"
@@ -211,6 +244,38 @@ function FichaExpedientePersistente() {
       expediente={caseQuery.data}
       lineas={workstreams.data ?? []}
       actuaciones={activities.data ?? []}
+      participantes={participants.data ?? []}
+      eventos={events.data ?? []}
+      editor={
+        <CaseEditForm
+          expediente={caseQuery.data}
+          miembros={members.data ?? []}
+          pending={updateCase.isPending}
+          onSave={async (input) => {
+            await updateCase.mutateAsync(input)
+          }}
+        />
+      }
+      relatedForms={
+        <CaseRelatedForms
+          expedienteId={caseQuery.data.id}
+          contactos={contacts.data ?? []}
+          miembros={members.data ?? []}
+          lineas={workstreams.data ?? []}
+          pending={
+            createParticipant.isPending || createWorkstream.isPending || createActivity.isPending
+          }
+          onParticipant={async (input) => {
+            await createParticipant.mutateAsync(input)
+          }}
+          onWorkstream={async (input) => {
+            await createWorkstream.mutateAsync(input)
+          }}
+          onActivity={async (input) => {
+            await createActivity.mutateAsync(input)
+          }}
+        />
+      }
     />
   )
 }

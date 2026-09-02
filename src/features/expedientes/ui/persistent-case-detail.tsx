@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
@@ -7,18 +8,28 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type {
   ActuacionPersistida,
+  EventoExpediente,
   ExpedientePersistido,
   LineaPersistida,
+  ParticipantePersistido,
 } from '@/features/expedientes/application/case-types'
 
 export function PersistentCaseDetail({
   expediente: item,
   lineas,
   actuaciones,
+  participantes,
+  eventos,
+  editor,
+  relatedForms,
 }: {
   expediente: ExpedientePersistido
   lineas: LineaPersistida[]
   actuaciones: ActuacionPersistida[]
+  participantes: ParticipantePersistido[]
+  eventos: EventoExpediente[]
+  editor: ReactNode
+  relatedForms: ReactNode
 }) {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
@@ -42,6 +53,8 @@ export function PersistentCaseDetail({
           </div>
         </CardContent>
       </Card>
+      {editor}
+      {relatedForms}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -85,6 +98,53 @@ export function PersistentCaseDetail({
             {!actuaciones.length ? (
               <p className="text-muted-foreground text-sm">Sin actuaciones registradas.</p>
             ) : null}
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Participantes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {participantes.map((participant) => (
+              <article
+                key={participant.id}
+                className="flex justify-between gap-2 rounded-md border p-3"
+              >
+                <div>
+                  <p className="font-medium">{participant.nombre}</p>
+                  <p className="text-muted-foreground text-sm">{participant.rol}</p>
+                </div>
+                <Badge variant="outline">{participant.confidencialidad}</Badge>
+              </article>
+            ))}
+            {!participantes.length ? (
+              <p className="text-muted-foreground text-sm">Sin participantes.</p>
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Trazabilidad</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {eventos.map((event) => (
+              <article key={event.id} className="rounded-md border p-3 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">
+                    {event.entidad} · {event.accion}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    {new Date(event.creadoEn).toLocaleString('es-ES')}
+                  </span>
+                </div>
+                {event.campos.length ? (
+                  <p className="text-muted-foreground mt-1 text-xs">{event.campos.join(', ')}</p>
+                ) : null}
+              </article>
+            ))}
+            {!eventos.length ? <p className="text-muted-foreground text-sm">Sin eventos.</p> : null}
           </CardContent>
         </Card>
       </div>

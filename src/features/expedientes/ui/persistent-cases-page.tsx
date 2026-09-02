@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
@@ -12,9 +12,11 @@ import type { ExpedientePersistido } from '@/features/expedientes/application/ca
 export function PersistentCasesPage({
   expedientes,
   contactos,
+  actions,
 }: {
   expedientes: ExpedientePersistido[]
   contactos: ContactoPersistido[]
+  actions?: ReactNode
 }) {
   const [query, setQuery] = useState('')
   const [nature, setNature] = useState<'all' | 'Judicial' | 'Extrajudicial'>('all')
@@ -35,6 +37,7 @@ export function PersistentCasesPage({
       <SectionHeader
         title="Control de expedientes"
         subtitle="Expedientes persistentes y compartidos por el despacho."
+        actions={actions}
       />
       <div className="mb-4 flex flex-wrap gap-2">
         <Input

@@ -2,13 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 
 import type {
   ActuacionPersistida,
+  EventoExpediente,
   ExpedientePersistido,
   LineaPersistida,
+  ParticipantePersistido,
   PrioridadExpediente,
 } from '@/features/expedientes/application/case-types'
 import {
   getSupabaseBrowserClient,
   type CaseActivityRow,
+  type CaseEventRow,
+  type CaseParticipantRow,
   type CaseRow,
   type CaseWorkstreamRow,
   type OpportunityPriority,
@@ -20,7 +24,7 @@ const priorityFromDatabase: Record<OpportunityPriority, PrioridadExpediente> = {
   high: 'Alta',
 }
 
-const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
+export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   id: row.id,
   referencia: row.reference,
   contactoPrincipalId: row.primary_contact_id,
@@ -77,6 +81,29 @@ const actuacionFromRow = (row: CaseActivityRow): ActuacionPersistida => ({
   visibleCliente: row.client_visible,
   clienteInformado: row.client_informed,
   version: row.version,
+})
+
+const participanteFromRow = (row: CaseParticipantRow): ParticipantePersistido => ({
+  id: row.id,
+  expedienteId: row.case_id,
+  contactoId: row.contact_id,
+  nombre: row.name,
+  rol: row.role,
+  confidencialidad:
+    row.confidentiality === 'confidential'
+      ? 'Confidencial'
+      : row.confidentiality === 'restricted'
+        ? 'Restringida'
+        : 'Normal',
+})
+
+const eventoFromRow = (row: CaseEventRow): EventoExpediente => ({
+  id: row.id,
+  entidad: row.entity_type,
+  accion: row.action,
+  campos: row.changed_fields,
+  actorId: row.actor_id,
+  creadoEn: row.created_at,
 })
 
 export function useExpedientesPersistentes(firmId: string | undefined) {
@@ -150,6 +177,44 @@ export function useActuacionesPersistentes(firmId: string | undefined, caseId: s
         .order('occurred_at', { ascending: false })
       if (error) throw error
       return data.map(actuacionFromRow)
+    },
+  })
+}
+
+export function useParticipantesPersistentes(firmId: string | undefined, caseId: string) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, caseId, 'participantes'],
+    enabled: Boolean(firmId && caseId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_participants')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('created_at')
+      if (error) throw error
+      return data.map(participanteFromRow)
+    },
+  })
+}
+
+export function useEventosExpediente(firmId: string | undefined, caseId: string) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, caseId, 'eventos'],
+    enabled: Boolean(firmId && caseId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_events')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data.map(eventoFromRow)
     },
   })
 }

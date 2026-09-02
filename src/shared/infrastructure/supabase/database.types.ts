@@ -61,6 +61,8 @@ export type Database = {
       crm_cases: Table<CaseRow, CaseInsert, Partial<CaseInsert> & { id?: string; version?: number }>
       crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
       crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
+      crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
+      crm_case_events: Table<CaseEventRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
@@ -90,6 +92,26 @@ export type Database = {
           archive_reason: string
         }
         Returns: OpportunityRow
+      }
+      crm_update_case: {
+        Args: {
+          target_case_id: string
+          target_expected_version: number
+          new_title: string
+          new_area: string
+          new_matter_type: string
+          new_nature: CaseNature
+          new_general_status: string
+          new_phase: string
+          new_operational_status: string
+          new_priority: OpportunityPriority
+          new_assigned_to: string | null
+          new_opened_on: string
+          new_closed_on: string | null
+          new_next_action: string
+          new_current_position: string
+        }
+        Returns: CaseRow
       }
       crm_update_opportunity: {
         Args: {
@@ -179,6 +201,7 @@ export type OpportunityStage =
   | 'won'
   | 'lost'
 export type OpportunityPriority = 'low' | 'medium' | 'high'
+export type CaseNature = 'judicial' | 'extrajudicial'
 
 export type ContactRow = {
   id: string
@@ -229,7 +252,7 @@ export type CaseRow = {
   title: string
   area: string
   matter_type: string
-  nature: 'judicial' | 'extrajudicial'
+  nature: CaseNature
   general_status: string
   phase: string
   operational_status: string
@@ -355,6 +378,41 @@ export type CaseActivityInsert = {
   client_visible?: boolean
   client_informed?: boolean
   details?: Json
+}
+
+export type CaseParticipantRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  contact_id: string | null
+  name: string
+  role: string
+  confidentiality: 'normal' | 'restricted' | 'confidential'
+  details: Json
+  created_at: string
+}
+
+export type CaseParticipantInsert = {
+  id?: string
+  firm_id: string
+  case_id: string
+  contact_id?: string | null
+  name: string
+  role: string
+  confidentiality?: CaseParticipantRow['confidentiality']
+  details?: Json
+}
+
+export type CaseEventRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  entity_type: 'case' | 'workstream' | 'activity' | 'participant'
+  entity_id: string
+  action: 'created' | 'updated' | 'deleted'
+  changed_fields: string[]
+  actor_id: string | null
+  created_at: string
 }
 
 export type NoteRow = {

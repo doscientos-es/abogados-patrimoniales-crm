@@ -42,8 +42,13 @@ import {
 } from '@/data/expedientes-model'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
-import { PriorityBadge, ToneBadge, ViewSwitch } from '@/features/crm'
-import { PersistentCasesPage, useExpedientesPersistentes } from '@/features/expedientes'
+import { PriorityBadge, ToneBadge, useMiembrosDespacho, ViewSwitch } from '@/features/crm'
+import {
+  CaseCreateDialog,
+  PersistentCasesPage,
+  useCrearExpediente,
+  useExpedientesPersistentes,
+} from '@/features/expedientes'
 import { alertasDeExpediente, diasDesde, ops, useOps } from '@/lib/expedientes-store'
 
 export const Route = createFileRoute('/expedientes/')({
@@ -125,6 +130,8 @@ function ExpedientesPersistentesRoute() {
   const firmId = membership.data?.firmId
   const cases = useExpedientesPersistentes(firmId)
   const contacts = useContactos(firmId)
+  const members = useMiembrosDespacho(firmId)
+  const createCase = useCrearExpediente(firmId)
 
   if (session.status === 'loading') {
     return <PendingPanel title="Cargando expedientes" description="Consultando tu sesión…" />
@@ -150,12 +157,12 @@ function ExpedientesPersistentesRoute() {
       />
     )
   }
-  if (cases.isPending || contacts.isPending) {
+  if (cases.isPending || contacts.isPending || members.isPending) {
     return (
       <PendingPanel title="Cargando expedientes" description="Consultando datos compartidos…" />
     )
   }
-  if (cases.isError || contacts.isError) {
+  if (cases.isError || contacts.isError || members.isError) {
     return (
       <PendingPanel
         title="No se pudieron cargar los expedientes"
@@ -163,7 +170,22 @@ function ExpedientesPersistentesRoute() {
       />
     )
   }
-  return <PersistentCasesPage expedientes={cases.data ?? []} contactos={contacts.data ?? []} />
+  return (
+    <PersistentCasesPage
+      expedientes={cases.data ?? []}
+      contactos={contacts.data ?? []}
+      actions={
+        <CaseCreateDialog
+          contactos={contacts.data ?? []}
+          miembros={members.data ?? []}
+          pending={createCase.isPending}
+          onCreate={async (input) => {
+            await createCase.mutateAsync(input)
+          }}
+        />
+      }
+    />
+  )
 }
 
 export function ExpedientesDemoPage() {
