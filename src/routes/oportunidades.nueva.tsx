@@ -19,7 +19,7 @@ import { NuevaNotaBoton } from '@/components/notas/nota-form'
 import { NotaMuro } from '@/components/notas/nota-muro'
 import { NuevaTareaRapidaDialog, type BorradorTareaRapida } from '@/components/tareas/ui'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -331,11 +331,17 @@ function NuevaOportunidadPage() {
     <div className="mx-auto max-w-280 pb-16">
       <div className="border-border/80 from-background to-muted/35 mb-6 rounded-xl border bg-linear-to-br px-5 py-5 shadow-sm sm:px-7">
         <div>
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2 gap-1.5" asChild>
-            <Link to="/oportunidades" search={{ vista: 'todas', abrir: '' }}>
-              <ArrowLeft className="h-4 w-4" /> Volver a Leads
-            </Link>
-          </Button>
+          <Link
+            to="/oportunidades"
+            search={{ vista: 'todas', abrir: '' }}
+            className={buttonVariants({
+              variant: 'ghost',
+              size: 'sm',
+              className: 'mb-2 -ml-2 gap-1.5',
+            })}
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver a Leads
+          </Link>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">Nuevo Lead</h1>
             <Badge variant="secondary" className="font-normal">
@@ -784,11 +790,13 @@ function NuevaOportunidadPage() {
           </Bloque>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="outline" asChild>
-              <Link to="/oportunidades" search={{ vista: 'todas', abrir: '' }}>
-                Cancelar
-              </Link>
-            </Button>
+            <Link
+              to="/oportunidades"
+              search={{ vista: 'todas', abrir: '' }}
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Cancelar
+            </Link>
             <Button disabled={crearOportunidad.isPending} onClick={() => void guardar()}>
               {crearOportunidad.isPending ? 'Guardando…' : 'Guardar Lead'}
             </Button>

@@ -1,4 +1,4 @@
-import { Button } from '@doscientos/ui'
+import { Button, buttonVariants } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
   AlertTriangle,
@@ -24,7 +24,6 @@ import { NotaMuro } from '@/components/notas/nota-muro'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { SiguienteAccionBloque } from '@/components/tareas/siguiente-accion'
 import { NuevaTareaRapidaDialog, TareaCard } from '@/components/tareas/ui'
-import { Button as AppButton } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -480,11 +479,12 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
               <Bloque title="Expediente">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-foreground text-sm font-medium">{o.expedienteId}</p>
-                  <AppButton size="sm" variant="outline" asChild>
-                    <Link to="/expedientes">
-                      Abrir expediente <ExternalLink className="ml-1.5 h-3 w-3" />
-                    </Link>
-                  </AppButton>
+                  <Link
+                    to="/expedientes"
+                    className={buttonVariants({ size: 'sm', variant: 'outline' })}
+                  >
+                    Abrir expediente <ExternalLink className="ml-1.5 h-3 w-3" />
+                  </Link>
                 </div>
               </Bloque>
             ) : null}
@@ -494,11 +494,13 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
             <Bloque
               title="Contacto principal"
               action={
-                <AppButton size="sm" variant="outline" asChild>
-                  <Link to="/contactos/$id" params={{ id: o.contactoId }}>
-                    Ver ficha del contacto <ExternalLink className="ml-1.5 h-3 w-3" />
-                  </Link>
-                </AppButton>
+                <Link
+                  to="/contactos/$id"
+                  params={{ id: o.contactoId }}
+                  className={buttonVariants({ size: 'sm', variant: 'outline' })}
+                >
+                  Ver ficha del contacto <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Link>
               }
             >
               <div className="grid gap-4 sm:grid-cols-2">

@@ -5,7 +5,6 @@ import { Inbox as InboxIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { Vacio } from '@/components/expedientes/ui'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { TareaCard } from '@/components/tareas/ui'
 import { Button } from '@/components/ui/button'
@@ -25,6 +24,7 @@ import { ETAPAS_INBOX, type EtapaInbox } from '@/data/expedientes-model'
 import { Field, ToneBadge } from '@/features/crm'
 import { ops, selInbox, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 /** Captura rápida: sólo el título es obligatorio. */
 export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
@@ -127,69 +127,65 @@ export function InboxPersonal() {
         </CardContent>
       </Card>
 
-      <div className="-mx-1 overflow-x-auto pb-3">
-        <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
-          {ETAPAS_INBOX.map((etapa) => {
-            const lista = grupos.find((g) => g.etapa === etapa)?.tareas ?? []
-            return (
-              <section
-                key={etapa}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setSobre(etapa)
-                }}
-                onDragLeave={() => setSobre((s) => (s === etapa ? null : s))}
-                onDrop={(e) => soltar(etapa, e)}
-                className={cn(
-                  'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-72',
-                  sobre === etapa && 'bg-primary/10 ring-1 ring-primary/40',
-                )}
-              >
-                <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-                  <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-                    {etapa}
-                  </span>
-                  <ToneBadge tono="neutro">{lista.length}</ToneBadge>
-                </header>
-                <div className="space-y-2">
-                  {lista.length ? (
-                    lista.map((t) => (
-                      <div
-                        key={t.id}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', t.id)
-                          e.dataTransfer.effectAllowed = 'move'
+      <Kanban.Viewport>
+        {ETAPAS_INBOX.map((etapa) => {
+          const lista = grupos.find((g) => g.etapa === etapa)?.tareas ?? []
+          return (
+            <Kanban.Column
+              key={etapa}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setSobre(etapa)
+              }}
+              onDragLeave={() => setSobre((s) => (s === etapa ? null : s))}
+              onDrop={(e) => soltar(etapa, e)}
+              className={cn(
+                'bg-muted/70 transition-colors',
+                sobre === etapa && 'bg-primary/10 ring-1 ring-primary/40',
+              )}
+            >
+              <Kanban.Header>
+                <Kanban.Title>{etapa}</Kanban.Title>
+                <ToneBadge tono="neutro">{lista.length}</ToneBadge>
+              </Kanban.Header>
+              <Kanban.Body>
+                {lista.length ? (
+                  lista.map((t) => (
+                    <div
+                      key={t.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', t.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                      }}
+                      onDrop={(e) => soltar(etapa, e, t.id)}
+                      className="cursor-grab active:cursor-grabbing"
+                    >
+                      <TareaCard
+                        tarea={t}
+                        senales={senalesTarea(estadoOps, t)}
+                        onAbrir={() => setSeleccionada(t.id)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          ops.sacarDeInbox(t.id)
+                          toast.success('Procesada: sale del Inbox')
                         }}
-                        onDrop={(e) => soltar(etapa, e, t.id)}
-                        className="cursor-grab active:cursor-grabbing"
+                        className="text-muted-foreground mt-1 w-full text-right text-[11px] hover:underline"
                       >
-                        <TareaCard
-                          tarea={t}
-                          senales={senalesTarea(estadoOps, t)}
-                          onAbrir={() => setSeleccionada(t.id)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            ops.sacarDeInbox(t.id)
-                            toast.success('Procesada: sale del Inbox')
-                          }}
-                          className="text-muted-foreground mt-1 w-full text-right text-[11px] hover:underline"
-                        >
-                          Marcar como procesada
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <Vacio texto="Vacío." />
-                  )}
-                </div>
-              </section>
-            )
-          })}
-        </div>
-      </div>
+                        Marcar como procesada
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <Kanban.Empty>Vacío.</Kanban.Empty>
+                )}
+              </Kanban.Body>
+            </Kanban.Column>
+          )
+        })}
+      </Kanban.Viewport>
 
       <TareaFicha tareaId={seleccionada} onOpenChange={(v) => !v && setSeleccionada(null)} />
     </div>

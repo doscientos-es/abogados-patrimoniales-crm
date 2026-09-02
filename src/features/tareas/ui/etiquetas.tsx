@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 // Etiquetas de tareas: catálogo propio (entidad) y relación muchos a muchos.
 // Aquí viven el chip, el selector múltiple, el filtro y la pantalla de gestión.
 import { Check, Merge, Plus, Search, Tag, X } from 'lucide-react'
@@ -15,7 +16,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -186,18 +186,16 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
         <span className="text-muted-foreground text-[11px]">Sin etiquetas</span>
       ) : null}
       {permitido ? (
-        <Popover open={abierto} onOpenChange={setAbierto}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Añadir etiqueta"
-              className="border-border text-muted-foreground hover:border-primary/50 hover:text-foreground inline-flex items-center gap-0.5 rounded-full border border-dashed px-1.5 py-0.5 text-[11px]"
-            >
-              <Tag className="h-3 w-3" />
-              <Plus className="h-3 w-3" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-56 p-1">
+        <PopoverTrigger isOpen={abierto} onOpenChange={setAbierto}>
+          <button
+            type="button"
+            aria-label="Añadir etiqueta"
+            className="border-border text-muted-foreground hover:border-primary/50 hover:text-foreground inline-flex items-center gap-0.5 rounded-full border border-dashed px-1.5 py-0.5 text-[11px]"
+          >
+            <Tag className="h-3 w-3" />
+            <Plus className="h-3 w-3" />
+          </button>
+          <PopoverContent placement="bottom start" className="w-56 p-1">
             <div className="max-h-64 space-y-0.5 overflow-y-auto">
               {catalogo.map((e) => (
                 <button
@@ -213,7 +211,7 @@ export function EtiquetasInline({ tarea, max = 3 }: { tarea: TareaOp; max?: numb
               ))}
             </div>
           </PopoverContent>
-        </Popover>
+        </PopoverTrigger>
       ) : null}
     </span>
   )
@@ -266,24 +264,22 @@ export function SelectorEtiquetas({
 
   return (
     <div className="space-y-1.5">
-      <Popover open={abierto} onOpenChange={setAbierto}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size={compacto ? 'sm' : 'default'}
-            disabled={disabled}
-            className="w-full justify-start gap-1.5 font-normal"
-          >
-            <Tag className="text-muted-foreground h-4 w-4 shrink-0" />
-            {seleccionadas.length ? (
-              <span className="truncate">{seleccionadas.map((e) => e.nombre).join(', ')}</span>
-            ) : (
-              <span className="text-muted-foreground">{etiqueta}</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 p-0">
+      <PopoverTrigger isOpen={abierto} onOpenChange={setAbierto}>
+        <Button
+          type="button"
+          variant="outline"
+          size={compacto ? 'sm' : 'default'}
+          disabled={disabled}
+          className="w-full justify-start gap-1.5 font-normal"
+        >
+          <Tag className="text-muted-foreground h-4 w-4 shrink-0" />
+          {seleccionadas.length ? (
+            <span className="truncate">{seleccionadas.map((e) => e.nombre).join(', ')}</span>
+          ) : (
+            <span className="text-muted-foreground">{etiqueta}</span>
+          )}
+        </Button>
+        <PopoverContent placement="bottom start" className="w-72 p-0">
           <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
             <Search className="text-muted-foreground h-3.5 w-3.5" />
             <input
@@ -336,7 +332,7 @@ export function SelectorEtiquetas({
             </div>
           ) : null}
         </PopoverContent>
-      </Popover>
+      </PopoverTrigger>
       {seleccionadas.length ? (
         <span className="flex flex-wrap gap-1">
           {seleccionadas.map((e) => (
@@ -385,14 +381,12 @@ export function FiltroEtiquetas({
   const [abierto, setAbierto] = useState(false)
 
   return (
-    <Popover open={abierto} onOpenChange={setAbierto}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
-          <Tag className="text-muted-foreground h-4 w-4" />
-          {valor.length ? `${valor.length} etiqueta${valor.length === 1 ? '' : 's'}` : 'Etiquetas'}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-2">
+    <PopoverTrigger isOpen={abierto} onOpenChange={setAbierto}>
+      <Button variant="outline" size="sm" className="h-9 gap-1.5 font-normal">
+        <Tag className="text-muted-foreground h-4 w-4" />
+        {valor.length ? `${valor.length} etiqueta${valor.length === 1 ? '' : 's'}` : 'Etiquetas'}
+      </Button>
+      <PopoverContent placement="bottom start" className="w-64 p-2">
         <div className="mb-2 flex items-center gap-2">
           <Select value={modo} onValueChange={(v) => onModo(v as typeof modo)}>
             <SelectTrigger className="h-8 text-xs">
@@ -426,7 +420,7 @@ export function FiltroEtiquetas({
           </Button>
         ) : null}
       </PopoverContent>
-    </Popover>
+    </PopoverTrigger>
   )
 }
 

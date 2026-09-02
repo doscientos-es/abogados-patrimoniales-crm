@@ -7,8 +7,9 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
 } from '@tanstack/react-router'
-import { PanelLeft, Plus, Search, StickyNote } from 'lucide-react'
+import { PanelLeft, Plus, StickyNote } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
@@ -24,6 +25,29 @@ import { NuevaTareaDialog } from '@/features/crm'
 import { reportLovableError } from '../lib/lovable-error-reporting'
 
 import appCss from '../styles.css?url'
+
+const SECTION_LABELS = [
+  ['/expedientes', 'Expedientes'],
+  ['/oportunidades', 'Leads'],
+  ['/contactos', 'Contactos'],
+  ['/presupuestos', 'Presupuestos'],
+  ['/onboarding', 'Onboarding'],
+  ['/actuaciones', 'Actuaciones'],
+  ['/ejecuciones', 'Ejecuciones'],
+  ['/alertas', 'Alertas y control'],
+  ['/tareas', 'Tareas'],
+  ['/calendario', 'Fechas y plazos'],
+  ['/documentos', 'Documentos'],
+  ['/notas', 'Notas internas'],
+  ['/comunicaciones', 'Comunicaciones'],
+  ['/facturacion', 'Facturación y cobros'],
+  ['/configuracion', 'Configuración'],
+  ['/crm', 'CRM'],
+] as const
+
+function sectionLabel(pathname: string) {
+  return SECTION_LABELS.find(([path]) => pathname.startsWith(path))?.[1] ?? 'Panel de inicio'
+}
 
 function NotFoundComponent() {
   return (
@@ -144,6 +168,7 @@ function AuthenticatedRoot() {
   // Un aviso abre la tarea allá donde estés, sin cambiar de pantalla.
   const [tareaAvisada, setTareaAvisada] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   return (
     <SidebarProvider className="h-svh min-h-0 overflow-hidden">
@@ -161,9 +186,14 @@ function AuthenticatedRoot() {
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
-            <div className="border-border bg-muted/60 text-muted-foreground hidden h-9 max-w-md min-w-0 flex-1 items-center gap-2 rounded-md border px-3 text-sm md:flex">
-              <Search className="h-4 w-4 shrink-0" />
-              <span className="truncate">Buscar clientes, asuntos o documentos…</span>
+            <div className="hidden min-w-0 flex-1 items-center gap-2 md:flex">
+              <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Área de trabajo
+              </span>
+              <span className="bg-border h-4 w-px" aria-hidden="true" />
+              <span className="text-foreground truncate text-sm font-medium" aria-live="polite">
+                {sectionLabel(pathname)}
+              </span>
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <NuevaNotaBoton

@@ -13,6 +13,7 @@ import {
 } from '@/data/expedientes-model'
 import { ToneBadge } from '@/features/crm'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 export function MegafaseBadge({
   naturaleza,
@@ -63,7 +64,7 @@ function Columna<T>({
 }) {
   const [sobre, setSobre] = useState(false)
   return (
-    <section
+    <Kanban.Column
       onDragOver={(e) => {
         e.preventDefault()
         setSobre(true)
@@ -76,18 +77,16 @@ function Columna<T>({
         if (id) onDrop(id, columna.id)
       }}
       className={cn(
-        'mf-columna shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors md:w-72',
+        'mf-columna bg-muted/70 transition-colors',
         clase,
         sobre && 'bg-primary/10 ring-1 ring-primary/40',
       )}
     >
-      <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-        <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-          {columna.nombre}
-        </span>
+      <Kanban.Header>
+        <Kanban.Title>{columna.nombre}</Kanban.Title>
         <ToneBadge tono={columna.tono}>{items.length}</ToneBadge>
-      </header>
-      <div className="space-y-2">
+      </Kanban.Header>
+      <Kanban.Body>
         {items.length ? (
           items.map((i) => (
             <div
@@ -103,12 +102,10 @@ function Columna<T>({
             </div>
           ))
         ) : (
-          <p className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
-            {vacio}
-          </p>
+          <Kanban.Empty>{vacio}</Kanban.Empty>
         )}
-      </div>
-    </section>
+      </Kanban.Body>
+    </Kanban.Column>
   )
 }
 
@@ -135,70 +132,68 @@ export function MegafaseKanban<T>({
     items.filter((i) => faseVigente(naturaleza, faseOf(i)) === columna.id)
 
   return (
-    <div className="-mx-1 overflow-x-auto pb-3">
-      <div className="flex flex-col gap-4 px-1 md:min-w-max md:flex-row md:items-start">
-        {bandas.map((b) => {
-          const m = megafase(b.megafase)
-          return (
-            <div key={b.megafase} className="shrink-0">
-              <div
-                className={cn(
-                  'mf-banda mb-2 flex items-center justify-between gap-3 rounded-md border px-3 py-1.5',
-                  m.clase,
-                )}
-              >
-                <span className="text-[11px] font-semibold tracking-wider uppercase">
-                  {m.codigo} · {m.nombre}
-                </span>
-                <span className="hidden text-[10px] opacity-80 lg:inline">{m.descripcion}</span>
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row">
-                {b.columnas.map((c) => (
-                  <Columna
-                    key={c.id}
-                    columna={c}
-                    clase={m.clase}
-                    items={de(c)}
-                    idOf={idOf}
-                    renderCard={renderCard}
-                    onDrop={onDrop}
-                    vacio={vacio}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        })}
-
-        {especiales.length ? (
-          <div className="md:border-border shrink-0 md:border-l md:border-dashed md:pl-4">
+    <Kanban.Viewport className="gap-4">
+      {bandas.map((b) => {
+        const m = megafase(b.megafase)
+        return (
+          <div key={b.megafase} className="shrink-0">
             <div
               className={cn(
-                'mf-banda mb-2 flex items-center justify-between gap-3 rounded-md border border-dashed px-3 py-1.5',
-                megafase('especial').clase,
+                'mf-banda mb-2 flex items-center justify-between gap-3 rounded-md border px-3 py-1.5',
+                m.clase,
               )}
             >
               <span className="text-[11px] font-semibold tracking-wider uppercase">
-                Situación especial
+                {m.codigo} · {m.nombre}
               </span>
+              <span className="hidden text-[10px] opacity-80 lg:inline">{m.descripcion}</span>
             </div>
-            <div className="flex flex-col gap-3 md:flex-row">
-              {especiales.map((c) => (
+            <div className="flex gap-3">
+              {b.columnas.map((c) => (
                 <Columna
                   key={c.id}
                   columna={c}
-                  clase={megafase('especial').clase}
+                  clase={m.clase}
                   items={de(c)}
                   idOf={idOf}
                   renderCard={renderCard}
                   onDrop={onDrop}
-                  vacio="Sin expedientes suspendidos."
+                  vacio={vacio}
                 />
               ))}
             </div>
           </div>
-        ) : null}
-      </div>
-    </div>
+        )
+      })}
+
+      {especiales.length ? (
+        <div className="border-border shrink-0 border-l border-dashed pl-4">
+          <div
+            className={cn(
+              'mf-banda mb-2 flex items-center justify-between gap-3 rounded-md border border-dashed px-3 py-1.5',
+              megafase('especial').clase,
+            )}
+          >
+            <span className="text-[11px] font-semibold tracking-wider uppercase">
+              Situación especial
+            </span>
+          </div>
+          <div className="flex gap-3">
+            {especiales.map((c) => (
+              <Columna
+                key={c.id}
+                columna={c}
+                clase={megafase('especial').clase}
+                items={de(c)}
+                idOf={idOf}
+                renderCard={renderCard}
+                onDrop={onDrop}
+                vacio="Sin expedientes suspendidos."
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </Kanban.Viewport>
   )
 }

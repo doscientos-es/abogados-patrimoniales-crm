@@ -113,7 +113,7 @@ function InicioPage() {
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader
         title="Panel de inicio"
-        subtitle="Situación del despacho a 5 de agosto de 2026. Todos los datos son de demostración."
+        subtitle="Visión diaria de prioridades, plazos y oportunidades del despacho."
         actions={<QuickTaskDialog />}
       />
 

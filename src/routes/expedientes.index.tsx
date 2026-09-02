@@ -1,5 +1,6 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertTriangle, Plus } from 'lucide-react'
+import { AlertTriangle, Plus, SlidersHorizontal, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -133,8 +134,34 @@ function ExpedientesPage() {
   const [soloAccion, setSoloAccion] = useState(false)
   const [soloLiquidacion, setSoloLiquidacion] = useState(false)
   const [agrupar, setAgrupar] = useState('ninguno')
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
 
   const responsables = Array.from(new Set(expedientes.map((e) => e.responsable)))
+
+  const limpiarFiltros = () => {
+    setQ('')
+    setResponsable('todos')
+    setEstado('todos')
+    setDependencia('todas')
+    setTipo('todos')
+    setMf('todas')
+    setFaseFiltro('todas')
+    setSoloAccion(false)
+    setSoloLiquidacion(false)
+    setAgrupar('ninguno')
+  }
+
+  const filtrosActivos =
+    Number(Boolean(q.trim())) +
+    Number(responsable !== 'todos') +
+    Number(estado !== 'todos') +
+    Number(dependencia !== 'todas') +
+    Number(tipo !== 'todos') +
+    Number(mf !== 'todas') +
+    Number(faseFiltro !== 'todas') +
+    Number(soloAccion) +
+    Number(soloLiquidacion) +
+    Number(agrupar !== 'ninguno')
 
   const aplicarVista = (id: string) => {
     const v = vistas.find((x) => x.id === id)
@@ -248,111 +275,145 @@ function ExpedientesPage() {
           placeholder="Buscar por código, cliente, área…"
           className="h-9 max-w-sm"
         />
-        <Select value={responsable} onValueChange={setResponsable}>
-          <SelectTrigger className="h-9 w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los responsables</SelectItem>
-            {responsables.map((r) => (
-              <SelectItem key={r} value={r}>
-                {r}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={estado} onValueChange={setEstado}>
-          <SelectTrigger className="h-9 w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Cualquier estado</SelectItem>
-            {ESTADOS_GENERALES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={dependencia} onValueChange={setDependencia}>
-          <SelectTrigger className="h-9 w-60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Cualquier dependencia</SelectItem>
-            {DEPENDENCIAS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {vista === 'tabla' ? (
-          <>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger className="h-9 w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Judicial y extrajudicial</SelectItem>
-                <SelectItem value="Extrajudicial">Extrajudicial</SelectItem>
-                <SelectItem value="Judicial">Judicial</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={mf} onValueChange={setMf}>
-              <SelectTrigger className="h-9 w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Cualquier megafase</SelectItem>
-                {MEGAFASES.filter(
-                  (m) => MEGAFASES_EXPEDIENTE.includes(m.id) || m.id === 'especial',
-                ).map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.codigo === '—' ? m.nombre : `${m.codigo} · ${m.nombre}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={faseFiltro} onValueChange={setFaseFiltro}>
-              <SelectTrigger className="h-9 w-60">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Cualquier fase operativa</SelectItem>
-                {fasesFiltro.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={agrupar} onValueChange={setAgrupar}>
-              <SelectTrigger className="h-9 w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ninguno">Sin agrupar</SelectItem>
-                <SelectItem value="megafase">Agrupar por megafase</SelectItem>
-                <SelectItem value="tipo">Agrupar por tipo</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant={soloAccion ? 'default' : 'outline'}
-              onClick={() => setSoloAccion((v) => !v)}
-            >
-              Requiere acción
-            </Button>
-            <Button
-              size="sm"
-              variant={soloLiquidacion ? 'default' : 'outline'}
-              onClick={() => setSoloLiquidacion((v) => !v)}
-            >
-              Pendiente de liquidación
-            </Button>
-          </>
-        ) : null}
+        <PopoverTrigger isOpen={filtrosAbiertos} onOpenChange={setFiltrosAbiertos}>
+          <Button size="sm" variant={filtrosActivos ? 'secondary' : 'outline'} className="gap-1.5">
+            <SlidersHorizontal className="h-4 w-4" /> Filtros
+            {filtrosActivos ? (
+              <span className="bg-primary/15 text-primary rounded-full px-1.5 text-[11px] tabular-nums">
+                {filtrosActivos}
+              </span>
+            ) : null}
+          </Button>
+          <PopoverContent
+            placement="bottom start"
+            className="w-[min(32rem,calc(100vw-2rem))] space-y-3 p-3"
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Select value={responsable} onValueChange={setResponsable}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los responsables</SelectItem>
+                  {responsables.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={estado} onValueChange={setEstado}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Cualquier estado</SelectItem>
+                  {ESTADOS_GENERALES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={dependencia} onValueChange={setDependencia}>
+                <SelectTrigger className="h-9 sm:col-span-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Cualquier dependencia</SelectItem>
+                  {DEPENDENCIAS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {vista === 'tabla' ? (
+              <div className="border-border grid gap-3 border-t pt-3 sm:grid-cols-2">
+                <Select value={tipo} onValueChange={setTipo}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Judicial y extrajudicial</SelectItem>
+                    <SelectItem value="Extrajudicial">Extrajudicial</SelectItem>
+                    <SelectItem value="Judicial">Judicial</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={mf} onValueChange={setMf}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Cualquier megafase</SelectItem>
+                    {MEGAFASES.filter(
+                      (m) => MEGAFASES_EXPEDIENTE.includes(m.id) || m.id === 'especial',
+                    ).map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.codigo === '—' ? m.nombre : `${m.codigo} · ${m.nombre}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={faseFiltro} onValueChange={setFaseFiltro}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Cualquier fase operativa</SelectItem>
+                    {fasesFiltro.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={agrupar} onValueChange={setAgrupar}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ninguno">Sin agrupar</SelectItem>
+                    <SelectItem value="megafase">Agrupar por megafase</SelectItem>
+                    <SelectItem value="tipo">Agrupar por tipo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant={soloAccion ? 'default' : 'outline'}
+                  onClick={() => setSoloAccion((v) => !v)}
+                >
+                  Requiere acción
+                </Button>
+                <Button
+                  size="sm"
+                  variant={soloLiquidacion ? 'default' : 'outline'}
+                  className="justify-start"
+                  onClick={() => setSoloLiquidacion((v) => !v)}
+                >
+                  Pendiente de liquidación
+                </Button>
+              </div>
+            ) : null}
+            <div className="border-border flex items-center justify-between gap-3 border-t pt-3">
+              <span className="text-muted-foreground text-xs">
+                {filtrosActivos
+                  ? `${filtrosActivos} filtro${filtrosActivos === 1 ? '' : 's'} activo${filtrosActivos === 1 ? '' : 's'}`
+                  : 'Sin filtros aplicados'}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!filtrosActivos}
+                className="gap-1.5"
+                onClick={limpiarFiltros}
+              >
+                <X className="h-3.5 w-3.5" /> Limpiar
+              </Button>
+            </div>
+          </PopoverContent>
+        </PopoverTrigger>
         <span className="text-muted-foreground text-xs">
           {vista === 'tabla' ? filtrados.length : deNaturaleza.length} expedientes
         </span>

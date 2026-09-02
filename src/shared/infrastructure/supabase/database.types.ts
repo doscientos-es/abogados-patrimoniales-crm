@@ -14,6 +14,11 @@ export type Database = {
         { id: string; name: string; created_at: string; updated_at: string },
         { id?: string; name: string; created_at?: string; updated_at?: string }
       >
+      crm_firm_settings: Table<
+        FirmSettingsRow,
+        FirmSettingsInsert,
+        Partial<FirmSettingsInsert> & { firm_id?: string; updated_at?: string }
+      >
       crm_profiles: Table<
         { id: string; display_name: string; created_at: string; updated_at: string },
         { id: string; display_name?: string; created_at?: string; updated_at?: string }
@@ -39,7 +44,7 @@ export type Database = {
       crm_contacts: Table<
         ContactRow,
         ContactInsert,
-        Partial<ContactInsert> & { id?: string; version?: number }
+        Partial<ContactInsert> & { id?: string; status?: ContactStatus; version?: number }
       >
       crm_opportunities: Table<
         OpportunityRow,
@@ -51,6 +56,17 @@ export type Database = {
     Views: Record<never, never>
     Functions: {
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
+      crm_save_firm_settings: {
+        Args: {
+          target_firm_id: string
+          new_firm_name: string
+          new_legal_name: string
+          new_tax_id: string
+          new_address: string
+          new_professional_registration: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       crm_member_role: MemberRole
@@ -67,6 +83,24 @@ export type Database = {
 
 export type MemberRole = 'owner' | 'admin' | 'lawyer' | 'paralegal'
 export type MemberStatus = 'invited' | 'active' | 'disabled'
+export type FirmSettingsRow = {
+  firm_id: string
+  legal_name: string
+  tax_id: string
+  address: string
+  professional_registration: string
+  created_at: string
+  updated_at: string
+}
+export type FirmSettingsInsert = {
+  firm_id: string
+  legal_name?: string
+  tax_id?: string
+  address?: string
+  professional_registration?: string
+  created_at?: string
+  updated_at?: string
+}
 export type ContactNature = 'person' | 'company' | 'court' | 'public_body'
 export type ContactRelationship =
   | 'lead'

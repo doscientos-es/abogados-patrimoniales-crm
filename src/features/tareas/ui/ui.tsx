@@ -1,8 +1,10 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 // Módulo general de tareas: tarjeta operativa y diálogos de acción.
 import {
   AlertTriangle,
   Ban,
   BellPlus,
+  CalendarClock,
   Clock,
   Eye,
   Link2,
@@ -15,7 +17,6 @@ import {
   ThumbsDown,
   UserCheck,
 } from 'lucide-react'
-import { CalendarClock } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
@@ -43,7 +44,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -387,19 +387,17 @@ export function NuevaTareaRapidaDialog({
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Qué hay que hacer"
                 />
-                <Popover open={catalogoAbierto} onOpenChange={setCatalogoAbierto}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                      aria-label="Tareas preestablecidas"
-                    >
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[22rem] p-0" align="end">
+                <PopoverTrigger isOpen={catalogoAbierto} onOpenChange={setCatalogoAbierto}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label="Tareas preestablecidas"
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </Button>
+                  <PopoverContent placement="bottom end" className="w-[22rem] p-0">
                     <Command>
                       <CommandInput placeholder="Buscar tarea…" />
                       <CommandList className="pointer-events-auto">
@@ -436,7 +434,7 @@ export function NuevaTareaRapidaDialog({
                       </CommandList>
                     </Command>
                   </PopoverContent>
-                </Popover>
+                </PopoverTrigger>
               </div>
             </Field>
           </div>

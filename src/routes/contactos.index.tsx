@@ -1,18 +1,17 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   Archive,
-  Copy,
+  ArchiveRestore,
   Eye,
   FilePlus2,
   MoreHorizontal,
   Pencil,
-  Save,
   Search,
-  Trash2,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
-import { PendingBadge, SectionHeader } from '@/components/common'
+import { SectionHeader } from '@/components/common'
 import { EstadoBadge, RelacionBadge, SatisfactionMeter } from '@/components/contactos/ui'
 import {
   AlertDialog,
@@ -24,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
@@ -60,7 +59,7 @@ import {
   type Contacto,
 } from '@/data/contactos'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useContactos } from '@/features/contactos'
+import { useActualizarEstadoContacto, useContactos } from '@/features/contactos'
 
 export const Route = createFileRoute('/contactos/')({
   head: () => ({
@@ -92,6 +91,7 @@ function ContactosPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const contactosQuery = useContactos(membership.data?.firmId)
+  const actualizarEstado = useActualizarEstadoContacto(membership.data?.firmId)
   const [vista, setVista] = useState<'activos' | 'archivados'>('activos')
   const [q, setQ] = useState('')
   const [relacion, setRelacion] = useState('todas')
@@ -100,7 +100,7 @@ function ContactosPage() {
   const [origen, setOrigen] = useState('todos')
   const [satisfaccion, setSatisfaccion] = useState('todas')
   const [orden, setOrden] = useState<Orden>('nombre')
-  const [aEliminar, setAEliminar] = useState<Contacto | null>(null)
+  const [aArchivar, setAArchivar] = useState<Contacto | null>(null)
 
   const filtrados = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -132,12 +132,10 @@ function ContactosPage() {
         title="Contactos"
         subtitle="Personas físicas y jurídicas relacionadas con el despacho. Cada contacto dispone de una ficha personal."
         actions={
-          <Button asChild>
-            <Link to="/contactos/nuevo">
-              <FilePlus2 className="h-4 w-4" />
-              Nuevo contacto
-            </Link>
-          </Button>
+          <Link to="/contactos/nuevo" className={buttonVariants()}>
+            <FilePlus2 className="h-4 w-4" />
+            Nuevo contacto
+          </Link>
         }
       />
 
@@ -368,32 +366,35 @@ function ContactosPage() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem disabled>
-                          <Save className="h-4 w-4" />
-                          Guardar como borrador
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
-                          <Copy className="h-4 w-4" />
-                          Duplicar ficha
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
-                          <Archive className="h-4 w-4" />
-                          Archivar contacto
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={(e) => {
-                            e.preventDefault()
-                            setAEliminar(c)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar contacto
-                        </DropdownMenuItem>
-                        <div className="px-2 py-1.5">
-                          <PendingBadge label="Acciones pendientes de desarrollo" />
-                        </div>
+                        {c.estado === 'Archivado' ? (
+                          <DropdownMenuItem
+                            disabled={actualizarEstado.isPending}
+                            onSelect={() => {
+                              actualizarEstado.mutate(
+                                { id: c.id, status: 'active' },
+                                {
+                                  onSuccess: () => toast.success('Contacto restaurado.'),
+                                  onError: () =>
+                                    toast.error('No se ha podido restaurar el contacto.'),
+                                },
+                              )
+                            }}
+                          >
+                            <ArchiveRestore className="h-4 w-4" />
+                            Restaurar contacto
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            disabled={actualizarEstado.isPending}
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              setAArchivar(c)
+                            }}
+                          >
+                            <Archive className="h-4 w-4" />
+                            Archivar contacto
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -414,19 +415,36 @@ function ContactosPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={aEliminar !== null} onOpenChange={(o) => !o && setAEliminar(null)}>
+      <AlertDialog open={aArchivar !== null} onOpenChange={(o) => !o && setAArchivar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar contacto</AlertDialogTitle>
+            <AlertDialogTitle>Archivar contacto</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminaría la ficha de {aEliminar ? nombreCompleto(aEliminar) : ''} y todos sus
-              datos asociados. Esta confirmación es una maqueta: la eliminación real está pendiente
-              de desarrollo.
+              La ficha de {aArchivar ? nombreCompleto(aArchivar) : ''} dejará de aparecer entre los
+              contactos activos. Se conservarán su información y relaciones, y podrás restaurarla
+              desde la pestaña Archivados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled>Eliminar</AlertDialogAction>
+            <AlertDialogAction
+              disabled={actualizarEstado.isPending}
+              onClick={() => {
+                if (!aArchivar) return
+                actualizarEstado.mutate(
+                  { id: aArchivar.id, status: 'archived' },
+                  {
+                    onSuccess: () => {
+                      toast.success('Contacto archivado.')
+                      setAArchivar(null)
+                    },
+                    onError: () => toast.error('No se ha podido archivar el contacto.'),
+                  },
+                )
+              }}
+            >
+              {actualizarEstado.isPending ? 'Archivando…' : 'Archivar contacto'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

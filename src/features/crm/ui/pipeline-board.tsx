@@ -38,6 +38,7 @@ import {
 import { crm, useCrm } from '@/lib/crm-store'
 import { siguienteAccionDe, useOps } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 import { GateDialog } from './opportunity-panel'
 import { Field, ToneBadge } from './ui'
@@ -238,83 +239,79 @@ export function PipelineBoard({
 
   return (
     <>
-      <div className="-mx-1 overflow-x-auto pb-3">
-        <div className="flex min-w-max gap-3 px-1">
-          {FASES.map((f) => {
-            const items = oportunidades.filter((o) => o.fase === f.id)
-            const plegada = f.tipo === 'terminal' && plegadas[f.id]
-            return (
-              <section
-                key={f.id}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setSobre(f.id)
-                }}
-                onDragLeave={() => setSobre((s) => (s === f.id ? null : s))}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  setSobre(null)
-                  soltar(f.id, e.dataTransfer.getData('text/plain'))
-                }}
+      <Kanban.Viewport>
+        {FASES.map((f) => {
+          const items = oportunidades.filter((o) => o.fase === f.id)
+          const plegada = f.tipo === 'terminal' && plegadas[f.id]
+          return (
+            <Kanban.Column
+              key={f.id}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setSobre(f.id)
+              }}
+              onDragLeave={() => setSobre((s) => (s === f.id ? null : s))}
+              onDrop={(e) => {
+                e.preventDefault()
+                setSobre(null)
+                soltar(f.id, e.dataTransfer.getData('text/plain'))
+              }}
+              className={cn(
+                'bg-muted/70 transition-colors',
+                claseColor(COLOR_FASE_LEAD[f.id]),
+                'fase-columna',
+                plegada && 'md:w-14',
+                sobre === f.id && 'bg-primary/10 ring-1 ring-primary/40',
+              )}
+            >
+              <Kanban.Header
                 className={cn(
-                  'w-72 shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors',
-                  claseColor(COLOR_FASE_LEAD[f.id]),
-                  'fase-columna',
-                  plegada && 'md:w-14',
-                  sobre === f.id && 'bg-primary/10 ring-1 ring-primary/40',
+                  'mb-2 flex items-center justify-between gap-2 px-1 py-1',
+                  plegada && 'md:flex-col md:gap-1 md:px-1',
                 )}
               >
-                <header
-                  className={cn(
-                    'mb-2 flex items-center justify-between gap-2 px-1 py-1',
-                    plegada && 'md:flex-col md:gap-1 md:px-1',
-                  )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    f.tipo === 'terminal'
+                      ? setPlegadas((p) => ({ ...p, [f.id]: !p[f.id] }))
+                      : undefined
+                  }
+                  className="flex min-w-0 items-center gap-1 text-left"
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      f.tipo === 'terminal'
-                        ? setPlegadas((p) => ({ ...p, [f.id]: !p[f.id] }))
-                        : undefined
-                    }
-                    className="flex min-w-0 items-center gap-1 text-left"
-                  >
-                    {f.tipo === 'terminal' ? (
-                      plegada ? (
-                        <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                      ) : (
-                        <ChevronDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                      )
-                    ) : null}
-                    <span
-                      className={cn(
-                        'truncate text-[11px] font-semibold uppercase tracking-wide text-foreground',
-
-                        plegada && 'md:[writing-mode:vertical-rl]',
-                      )}
-                    >
-                      {plegada ? f.corto : f.nombre}
-                    </span>
-                  </button>
-                  <ToneBadge tono={f.tono}>{items.length}</ToneBadge>
-                </header>
-
-                {!plegada ? (
-                  <div className="space-y-2">
-                    {items.length ? (
-                      items.map((o) => <OpportunityCard key={o.id} o={o} onSelect={onSelect} />)
+                  {f.tipo === 'terminal' ? (
+                    plegada ? (
+                      <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                     ) : (
-                      <p className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
-                        Sin Leads en esta fase. Arrastra una tarjeta aquí.
-                      </p>
+                      <ChevronDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                    )
+                  ) : null}
+                  <Kanban.Title
+                    className={cn(
+                      'truncate text-[11px] font-semibold uppercase tracking-wide text-foreground',
+
+                      plegada && 'md:[writing-mode:vertical-rl]',
                     )}
-                  </div>
-                ) : null}
-              </section>
-            )
-          })}
-        </div>
-      </div>
+                  >
+                    {plegada ? f.corto : f.nombre}
+                  </Kanban.Title>
+                </button>
+                <ToneBadge tono={f.tono}>{items.length}</ToneBadge>
+              </Kanban.Header>
+
+              {!plegada ? (
+                <Kanban.Body>
+                  {items.length ? (
+                    items.map((o) => <OpportunityCard key={o.id} o={o} onSelect={onSelect} />)
+                  ) : (
+                    <Kanban.Empty>Sin Leads en esta fase. Arrastra una tarjeta aquí.</Kanban.Empty>
+                  )}
+                </Kanban.Body>
+              ) : null}
+            </Kanban.Column>
+          )
+        })}
+      </Kanban.Viewport>
 
       <GateDialog
         abierto={Boolean(gate)}

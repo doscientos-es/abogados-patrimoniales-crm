@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { SectionHeader } from '@/components/common'
 import { NuevoEmailDialog, RegistroLlamadaDialog } from '@/components/comunicaciones/dialogos'
 import { SiguienteAccionBloque } from '@/components/tareas/siguiente-accion'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -57,6 +57,7 @@ import {
   useOnboarding,
 } from '@/lib/onboarding-store'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 export const Route = createFileRoute('/onboarding')({
   head: () => ({
@@ -630,11 +631,13 @@ function TarjetaOnboarding({ o }: { o: Onboarding }) {
           </>
         ) : null}
         {o.fase === 'completado' && o.expedienteId ? (
-          <Button size="sm" variant="outline" className="w-full" asChild>
-            <Link to="/expedientes/$id" params={{ id: o.expedienteId }}>
-              Abrir expediente {o.expedienteCodigo}
-            </Link>
-          </Button>
+          <Link
+            to="/expedientes/$id"
+            params={{ id: o.expedienteId }}
+            className={buttonVariants({ size: 'sm', variant: 'outline', className: 'w-full' })}
+          >
+            Abrir expediente {o.expedienteCodigo}
+          </Link>
         ) : null}
 
         <div className="flex flex-wrap gap-1.5 pt-0.5 text-[11px]">
@@ -923,52 +926,43 @@ function OnboardingPage() {
       ) : null}
 
       {vista === 'kanban' ? (
-        <div className="-mx-1 overflow-x-auto pb-3">
-          <div className="grid min-w-[900px] grid-cols-4 gap-3 px-1">
-            {FASES_ONBOARDING.map((f) => {
-              const items = filtrados.filter((o) => o.fase === f.id)
-              return (
-                <section
-                  key={f.id}
-                  className={cn(
-                    'rounded-lg border border-border/70 p-2',
-                    claseColor(f.color),
-                    'fase-columna',
-                  )}
-                >
-                  <header className="mb-2 flex items-center justify-between gap-1 px-0.5 py-1">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className={cn('h-2 w-2 shrink-0 rounded-full', 'fase-punto')} />
-                      <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-                        {f.nombre}
-                      </span>
-                    </span>
-                    <span
-                      className={cn(
-                        'rounded-full border px-2 py-0.5 text-[11px] font-semibold',
-                        'fase-chip',
-                      )}
-                    >
-                      {items.length}
-                    </span>
-                  </header>
-                  <p className="text-muted-foreground mb-2 px-0.5 text-[10px] tracking-wide uppercase">
-                    Ahora toca: {f.ahoraToca}
-                  </p>
-                  <div className="space-y-2">
-                    {items.length ? (
-                      items.map((o) => <TarjetaOnboarding key={o.id} o={o} />)
-                    ) : (
-                      <p className="border-border text-muted-foreground rounded-md border border-dashed px-2 py-6 text-center text-[11px]">
-                        Sin Onboardings
-                      </p>
+        <Kanban.Viewport>
+          {FASES_ONBOARDING.map((f) => {
+            const items = filtrados.filter((o) => o.fase === f.id)
+            return (
+              <Kanban.Column
+                key={f.id}
+                className={cn(claseColor(f.color), 'fase-columna')}
+                size="compact"
+              >
+                <Kanban.Header density="compact">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn('h-2 w-2 shrink-0 rounded-full', 'fase-punto')} />
+                    <Kanban.Title>{f.nombre}</Kanban.Title>
+                  </span>
+                  <span
+                    className={cn(
+                      'rounded-full border px-2 py-0.5 text-[11px] font-semibold',
+                      'fase-chip',
                     )}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
-        </div>
+                  >
+                    {items.length}
+                  </span>
+                </Kanban.Header>
+                <p className="text-muted-foreground mb-2 px-0.5 text-[10px] tracking-wide uppercase">
+                  Ahora toca: {f.ahoraToca}
+                </p>
+                <Kanban.Body>
+                  {items.length ? (
+                    items.map((o) => <TarjetaOnboarding key={o.id} o={o} />)
+                  ) : (
+                    <Kanban.Empty compact>Sin Onboardings</Kanban.Empty>
+                  )}
+                </Kanban.Body>
+              </Kanban.Column>
+            )
+          })}
+        </Kanban.Viewport>
       ) : null}
 
       {vista === 'lista' ? (

@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { es } from 'date-fns/locale'
 import { CalendarIcon, Clock } from 'lucide-react'
 // Regla transversal de UX de LEX: cualquier campo de fecha y/o hora usa un
@@ -8,8 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { parseFecha, formatoFecha } from '@/data/pipeline'
+import { formatoFecha, parseFecha } from '@/data/pipeline'
 import { cn } from '@/lib/utils'
 
 const HORAS_RAPIDAS = ['09:00', '10:00', '11:00', '12:00', '13:00', '16:00', '17:00', '18:00']
@@ -37,19 +37,17 @@ export function SelectorFecha({
         onChange={(e) => onChange(e.target.value)}
         className="h-9"
       />
-      <Popover open={abierto} onOpenChange={setAbierto}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            aria-label="Elegir fecha"
-          >
-            <CalendarIcon className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+      <PopoverTrigger isOpen={abierto} onOpenChange={setAbierto}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          aria-label="Elegir fecha"
+        >
+          <CalendarIcon className="h-4 w-4" />
+        </Button>
+        <PopoverContent placement="bottom start" className="w-auto p-0">
           <Calendar
             mode="single"
             locale={es}
@@ -62,7 +60,7 @@ export function SelectorFecha({
             className={cn('p-3 pointer-events-auto')}
           />
         </PopoverContent>
-      </Popover>
+      </PopoverTrigger>
     </div>
   )
 }
@@ -80,19 +78,17 @@ export function SelectorHora({
   return (
     <div className={cn('flex gap-1.5', className)}>
       <Input type="time" value={value} onChange={(e) => onChange(e.target.value)} className="h-9" />
-      <Popover open={abierto} onOpenChange={setAbierto}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            aria-label="Elegir hora"
-          >
-            <Clock className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-2" align="start">
+      <PopoverTrigger isOpen={abierto} onOpenChange={setAbierto}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          aria-label="Elegir hora"
+        >
+          <Clock className="h-4 w-4" />
+        </Button>
+        <PopoverContent placement="bottom start" className="w-48 p-2">
           <div className="grid grid-cols-2 gap-1">
             {HORAS_RAPIDAS.map((h) => (
               <Button
@@ -123,7 +119,7 @@ export function SelectorHora({
             Sin hora
           </Button>
         </PopoverContent>
-      </Popover>
+      </PopoverTrigger>
     </div>
   )
 }

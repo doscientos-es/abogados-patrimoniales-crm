@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import type { ColumnaKanban } from '@/data/expedientes-model'
 import { ToneBadge } from '@/features/crm'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 export function DndKanban<T>({
   columns,
@@ -28,61 +29,55 @@ export function DndKanban<T>({
   const [sobre, setSobre] = useState<string | null>(null)
 
   return (
-    <div className="-mx-1 overflow-x-auto pb-3">
-      <div className="flex flex-col gap-3 px-1 md:min-w-max md:flex-row">
-        {columns.map((c) => {
-          const lista = items.filter((i) => columnOf(i) === c.id)
-          return (
-            <section
-              key={c.id}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setSobre(c.id)
-              }}
-              onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
-              onDrop={(e) => {
-                e.preventDefault()
-                setSobre(null)
-                const id = e.dataTransfer.getData('text/plain')
-                if (id) onDrop(id, c.id)
-              }}
-              className={cn(
-                'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors md:w-72',
-                sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
+    <Kanban.Viewport>
+      {columns.map((c) => {
+        const lista = items.filter((i) => columnOf(i) === c.id)
+        return (
+          <Kanban.Column
+            key={c.id}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setSobre(c.id)
+            }}
+            onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
+            onDrop={(e) => {
+              e.preventDefault()
+              setSobre(null)
+              const id = e.dataTransfer.getData('text/plain')
+              if (id) onDrop(id, c.id)
+            }}
+            className={cn(
+              'bg-muted/70 transition-colors',
+              sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
+            )}
+          >
+            <Kanban.Header>
+              <Kanban.Title>{c.nombre}</Kanban.Title>
+              <ToneBadge tono={c.tono}>{lista.length}</ToneBadge>
+            </Kanban.Header>
+            <Kanban.Body>
+              {lista.length ? (
+                lista.map((i) => (
+                  <div
+                    key={idOf(i)}
+                    draggable
+                    className="cursor-grab transition-shadow active:cursor-grabbing active:shadow-lg"
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', idOf(i))
+                      e.dataTransfer.effectAllowed = 'move'
+                    }}
+                  >
+                    {renderCard(i)}
+                  </div>
+                ))
+              ) : (
+                <Kanban.Empty>{vacio}</Kanban.Empty>
               )}
-            >
-              <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-                <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-                  {c.nombre}
-                </span>
-                <ToneBadge tono={c.tono}>{lista.length}</ToneBadge>
-              </header>
-              <div className="space-y-2">
-                {lista.length ? (
-                  lista.map((i) => (
-                    <div
-                      key={idOf(i)}
-                      draggable
-                      className="cursor-grab transition-shadow active:cursor-grabbing active:shadow-lg"
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', idOf(i))
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                    >
-                      {renderCard(i)}
-                    </div>
-                  ))
-                ) : (
-                  <p className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
-                    {vacio}
-                  </p>
-                )}
-              </div>
-            </section>
-          )
-        })}
-      </div>
-    </div>
+            </Kanban.Body>
+          </Kanban.Column>
+        )
+      })}
+    </Kanban.Viewport>
   )
 }
 

@@ -19,7 +19,6 @@ import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as EjecucionesRouteImport } from './routes/ejecuciones'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
-import { Route as InformesRouteImport } from './routes/informes'
 import { Route as NotasRouteImport } from './routes/notas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as TareasRouteImport } from './routes/tareas'
@@ -84,11 +83,6 @@ const EjecucionesRoute = EjecucionesRouteImport.update({
 const FacturacionRoute = FacturacionRouteImport.update({
   id: '/facturacion',
   path: '/facturacion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InformesRoute = InformesRouteImport.update({
-  id: '/informes',
-  path: '/informes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotasRoute = NotasRouteImport.update({
@@ -178,7 +172,6 @@ export interface FileRoutesByFullPath {
   '/documentos': typeof DocumentosRoute
   '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
-  '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
@@ -206,7 +199,6 @@ export interface FileRoutesByTo {
   '/documentos': typeof DocumentosRoute
   '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
-  '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
@@ -235,7 +227,6 @@ export interface FileRoutesById {
   '/documentos': typeof DocumentosRoute
   '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
-  '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
@@ -265,7 +256,6 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/ejecuciones'
     | '/facturacion'
-    | '/informes'
     | '/notas'
     | '/onboarding'
     | '/tareas'
@@ -293,7 +283,6 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/ejecuciones'
     | '/facturacion'
-    | '/informes'
     | '/notas'
     | '/onboarding'
     | '/tareas'
@@ -321,7 +310,6 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/ejecuciones'
     | '/facturacion'
-    | '/informes'
     | '/notas'
     | '/onboarding'
     | '/tareas'
@@ -350,7 +338,6 @@ export interface RootRouteChildren {
   DocumentosRoute: typeof DocumentosRoute
   EjecucionesRoute: typeof EjecucionesRoute
   FacturacionRoute: typeof FacturacionRoute
-  InformesRoute: typeof InformesRoute
   NotasRoute: typeof NotasRoute
   OnboardingRoute: typeof OnboardingRoute
   TareasRoute: typeof TareasRoute
@@ -438,13 +425,6 @@ declare module '@tanstack/react-router' {
       path: '/facturacion'
       fullPath: '/facturacion'
       preLoaderRoute: typeof FacturacionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/informes': {
-      id: '/informes'
-      path: '/informes'
-      fullPath: '/informes'
-      preLoaderRoute: typeof InformesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notas': {
@@ -566,7 +546,6 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentosRoute: DocumentosRoute,
   EjecucionesRoute: EjecucionesRoute,
   FacturacionRoute: FacturacionRoute,
-  InformesRoute: InformesRoute,
   NotasRoute: NotasRoute,
   OnboardingRoute: OnboardingRoute,
   TareasRoute: TareasRoute,

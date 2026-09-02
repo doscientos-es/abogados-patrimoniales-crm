@@ -1,1 +1,5 @@
-export { useContactos, useCrearContacto } from './infrastructure/supabase-contactos'
+export {
+  useActualizarEstadoContacto,
+  useContactos,
+  useCrearContacto,
+} from './infrastructure/supabase-contactos'

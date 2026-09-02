@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { SectionHeader } from '@/components/common'
 import { Postit } from '@/components/contactos/ui'
 import { CumplimentarIA } from '@/components/ia/cumplimentar-ia'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -404,9 +404,9 @@ function NuevoContactoPage() {
         </Card>
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/contactos">Cancelar</Link>
-          </Button>
+          <Link to="/contactos" className={buttonVariants({ variant: 'outline' })}>
+            Cancelar
+          </Link>
           <Button variant="outline" disabled>
             Guardar como borrador
           </Button>

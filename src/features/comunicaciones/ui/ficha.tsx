@@ -26,7 +26,7 @@ import { EtiquetaContexto } from '@/components/comunicaciones/etiqueta-contexto'
 import { senalesComunicacion } from '@/components/comunicaciones/senales'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { NuevaTareaRapidaDialog } from '@/components/tareas/ui'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -167,11 +167,17 @@ export function FichaComunicacion({
                             Ver
                           </Button>
                           {doc ? (
-                            <Button asChild size="sm" variant="outline" className="h-6 text-[11px]">
-                              <Link to="/documentos" search={{ doc: doc.id }}>
-                                <FileText className="mr-1 h-3 w-3" /> Ver documento
-                              </Link>
-                            </Button>
+                            <Link
+                              to="/documentos"
+                              search={{ doc: doc.id }}
+                              className={buttonVariants({
+                                size: 'sm',
+                                variant: 'outline',
+                                className: 'h-6 text-[11px]',
+                              })}
+                            >
+                              <FileText className="mr-1 h-3 w-3" /> Ver documento
+                            </Link>
                           ) : (
                             <Button
                               size="sm"

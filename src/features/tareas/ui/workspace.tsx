@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 // Puesto de trabajo de tareas: cabecera limpia, tablero de trabajo vivo
 // (Pendiente / En curso / En espera), lista con histórico e INBOX personal.
 // Se usa tal cual en el módulo general y dentro de la ficha del expediente.
@@ -5,7 +6,6 @@ import { Inbox, Plus, SlidersHorizontal, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { StatTile } from '@/components/common'
-import { Vacio } from '@/components/expedientes/ui'
 import { EtiquetadoMasivo, EtiquetasTarea, FiltroEtiquetas } from '@/components/tareas/etiquetas'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { InboxPersonal } from '@/components/tareas/inbox'
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -35,6 +34,7 @@ import { type EstadoTareaOp, type TareaOp } from '@/data/expedientes-model'
 import { ToneBadge, ViewSwitch } from '@/features/crm'
 import { etiquetasDeTarea, ops, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 /** El tablero muestra sólo trabajo vivo; el cierre se consulta en Lista. */
 const COLUMNAS: { id: EstadoTareaOp; nombre: string; tono: 'info' | 'aviso' | 'neutro' }[] = [
@@ -225,18 +225,16 @@ export function TareasWorkspace({
           placeholder="Buscar…"
           className="h-9 max-w-xs"
         />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="gap-1.5">
-              <SlidersHorizontal className="h-4 w-4" /> Filtros
-              {filtrosActivos ? (
-                <span className="bg-primary/15 text-primary rounded-full px-1.5 text-[11px] tabular-nums">
-                  {filtrosActivos}
-                </span>
-              ) : null}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 space-y-3">
+        <PopoverTrigger>
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <SlidersHorizontal className="h-4 w-4" /> Filtros
+            {filtrosActivos ? (
+              <span className="bg-primary/15 text-primary rounded-full px-1.5 text-[11px] tabular-nums">
+                {filtrosActivos}
+              </span>
+            ) : null}
+          </Button>
+          <PopoverContent placement="bottom end" className="w-80 space-y-3">
             <Select value={responsable} onValueChange={setResponsable}>
               <SelectTrigger className="h-9">
                 <SelectValue />
@@ -307,7 +305,7 @@ export function TareasWorkspace({
               Limpiar filtros
             </Button>
           </PopoverContent>
-        </Popover>
+        </PopoverTrigger>
         <span className="text-muted-foreground text-xs">{filtradas.length} tareas</span>
       </div>
 
@@ -537,59 +535,56 @@ function Tablero({
   }
 
   return (
-    <div className="-mx-1 overflow-x-auto pb-3">
-      <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
-        {COLUMNAS.map((c) => {
-          const lista = ordenarColumna(tareas.filter((t) => t.estado === c.id))
-          return (
-            <section
-              key={c.id}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setSobre(c.id)
-              }}
-              onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
-              onDrop={(e) => soltar(c.id, e)}
-              className={cn(
-                'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors lg:w-80',
-                sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
+    <Kanban.Viewport>
+      {COLUMNAS.map((c) => {
+        const lista = ordenarColumna(tareas.filter((t) => t.estado === c.id))
+        return (
+          <Kanban.Column
+            key={c.id}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setSobre(c.id)
+            }}
+            onDragLeave={() => setSobre((s) => (s === c.id ? null : s))}
+            onDrop={(e) => soltar(c.id, e)}
+            className={cn(
+              'bg-muted/70 transition-colors',
+              sobre === c.id && 'bg-primary/10 ring-1 ring-primary/40',
+            )}
+            size="wide"
+          >
+            <Kanban.Header>
+              <Kanban.Title>{c.nombre}</Kanban.Title>
+              <ToneBadge tono={c.tono}>{lista.length}</ToneBadge>
+            </Kanban.Header>
+            <Kanban.Body>
+              {lista.length ? (
+                lista.map((t) => (
+                  <div
+                    key={t.id}
+                    draggable
+                    className="cursor-grab transition-shadow active:cursor-grabbing active:shadow-lg"
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', t.id)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }}
+                    onDrop={(e) => soltar(c.id, e, t.id)}
+                  >
+                    <TareaCard
+                      tarea={t}
+                      senales={senalesTarea(estadoOps, t)}
+                      {...(contextoDe(t) ? { contexto: contextoDe(t) as string } : {})}
+                      onAbrir={() => onAbrir(t.id)}
+                    />
+                  </div>
+                ))
+              ) : (
+                <Kanban.Empty>Sin tareas.</Kanban.Empty>
               )}
-            >
-              <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-                <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-                  {c.nombre}
-                </span>
-                <ToneBadge tono={c.tono}>{lista.length}</ToneBadge>
-              </header>
-              <div className="space-y-2">
-                {lista.length ? (
-                  lista.map((t) => (
-                    <div
-                      key={t.id}
-                      draggable
-                      className="cursor-grab transition-shadow active:cursor-grabbing active:shadow-lg"
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', t.id)
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      onDrop={(e) => soltar(c.id, e, t.id)}
-                    >
-                      <TareaCard
-                        tarea={t}
-                        senales={senalesTarea(estadoOps, t)}
-                        {...(contextoDe(t) ? { contexto: contextoDe(t) as string } : {})}
-                        onAbrir={() => onAbrir(t.id)}
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <Vacio texto="Sin tareas." />
-                )}
-              </div>
-            </section>
-          )
-        })}
-      </div>
-    </div>
+            </Kanban.Body>
+          </Kanban.Column>
+        )
+      })}
+    </Kanban.Viewport>
   )
 }

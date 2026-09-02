@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 // Campana de avisos internos: los eventos guardados se complementan con riesgos
 // operativos derivados de las entidades visibles para la sesión actual.
 import { useNavigate } from '@tanstack/react-router'
@@ -5,7 +6,6 @@ import { Bell } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Tono } from '@/data/crm'
 import type { ExpedienteOp, FechaCritica, TareaOp } from '@/data/expedientes-model'
@@ -203,19 +203,17 @@ export function CampanaNotificaciones({ onAbrirTarea }: { onAbrirTarea?: (id: st
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button size="sm" variant="ghost" className="relative h-9 w-9 p-0">
-          <Bell className="h-4 w-4" />
-          {pendientes ? (
-            <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
-              {pendientes > 9 ? '9+' : pendientes}
-            </span>
-          ) : null}
-          <span className="sr-only">Avisos</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 p-0">
+    <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
+      <Button size="sm" variant="ghost" className="relative h-9 w-9 p-0">
+        <Bell className="h-4 w-4" />
+        {pendientes ? (
+          <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
+            {pendientes > 9 ? '9+' : pendientes}
+          </span>
+        ) : null}
+        <span className="sr-only">Avisos</span>
+      </Button>
+      <PopoverContent placement="bottom end" className="w-96 p-0">
         <div className="border-border flex items-center justify-between border-b px-3 py-2">
           <p className="text-foreground text-sm font-medium">Avisos</p>
           <Button
@@ -288,6 +286,6 @@ export function CampanaNotificaciones({ onAbrirTarea }: { onAbrirTarea?: (id: st
           </div>
         </ScrollArea>
       </PopoverContent>
-    </Popover>
+    </PopoverTrigger>
   )
 }

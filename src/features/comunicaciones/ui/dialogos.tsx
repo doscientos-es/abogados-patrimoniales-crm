@@ -1,9 +1,7 @@
 // COMUNICACIONES — diálogos de preparación y registro.
 //
-// Fase 1: NO hay integración real con Gmail, WhatsApp Business ni telefonía.
-// Los botones PREPARAR EN GMAIL y ABRIR EN WHATSAPP BUSINESS quedan como
-// controles conceptuales deshabilitados; el contenido se guarda como
-// comunicación preparada dentro de LEX.
+// LEX permite preparar y registrar comunicaciones. Cuando no hay integración
+// de proveedor, las abre de forma explícita en el cliente del usuario.
 import { Link } from '@tanstack/react-router'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
@@ -179,6 +177,28 @@ export function SelectorPlantilla({
 
 const pareceEmail = (v: string) => v.includes('@')
 const pareceTelefono = (v: string) => /\d{6,}/.test(v.replace(/\s/g, ''))
+
+function abrirClienteCorreo({
+  para,
+  cc,
+  asunto,
+  cuerpo,
+}: Record<'para' | 'cc' | 'asunto' | 'cuerpo', string>) {
+  const parametros = new URLSearchParams({ subject: asunto, body: cuerpo })
+  if (cc.trim()) parametros.set('cc', cc.trim())
+  window.location.assign(`mailto:${encodeURIComponent(para.trim())}?${parametros.toString()}`)
+}
+
+function abrirWhatsapp(destinatario: string, texto: string) {
+  const telefono = destinatario.replace(/\D/g, '').replace(/^00/, '')
+  if (telefono.length < 8 || telefono.length > 15) return false
+  window.open(
+    `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`,
+    '_blank',
+    'noopener,noreferrer',
+  )
+  return true
+}
 
 /** Dato de contacto disponible de un interviniente para el canal indicado. */
 function datoDeInterviniente(
@@ -712,6 +732,18 @@ export function NuevoEmailDialog({
     setDocsExpediente([])
   }
 
+  const abrirEnClienteCorreo = () => {
+    if (!pareceEmail(para.trim())) {
+      toast.error('Indica una dirección de correo válida.')
+      return
+    }
+    if (!asunto.trim()) {
+      toast.error('Indica el asunto antes de abrir el cliente de correo.')
+      return
+    }
+    abrirClienteCorreo({ para, cc, asunto, cuerpo })
+  }
+
   return (
     <Dialog open={abierto} onOpenChange={abrir}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -721,8 +753,8 @@ export function NuevoEmailDialog({
             <Mail className="h-4 w-4" /> Nuevo email
           </DialogTitle>
           <DialogDescription>
-            Preparación del correo dentro de LEX. El envío real por Gmail está pendiente de
-            integración.
+            Prepara el correo y ábrelo en el cliente de correo instalado. LEX no lo envía ni marca
+            como enviado automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -820,16 +852,16 @@ export function NuevoEmailDialog({
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          <span className="mr-auto">
-            <PendingBadge label="PREPARAR EN GMAIL · pendiente de integración" />
-          </span>
+          <p className="text-muted-foreground mr-auto text-xs">
+            Los adjuntos se añaden en el cliente de correo.
+          </p>
           <Button variant="outline" onClick={() => setAbierto(false)}>
             Cancelar
           </Button>
-          <Button variant="outline" disabled title="Integración con Gmail pendiente">
-            Preparar en Gmail
+          <Button variant="outline" onClick={abrirEnClienteCorreo}>
+            Abrir cliente de correo
           </Button>
-          <Button onClick={guardar}>Guardar en comunicaciones</Button>
+          <Button onClick={guardar}>Guardar borrador</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -912,6 +944,16 @@ export function NuevoWhatsappDialog({
     setDocsExpediente([])
   }
 
+  const abrirEnWhatsapp = () => {
+    if (!texto.trim()) {
+      toast.error('Escribe el mensaje antes de abrir WhatsApp.')
+      return
+    }
+    if (!abrirWhatsapp(destinatario, texto)) {
+      toast.error('Indica un teléfono válido con prefijo internacional.')
+    }
+  }
+
   return (
     <Dialog open={abierto} onOpenChange={abrir}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -921,7 +963,8 @@ export function NuevoWhatsappDialog({
             <MessageCircle className="h-4 w-4" /> Nuevo WhatsApp
           </DialogTitle>
           <DialogDescription>
-            Preparación del mensaje. La conexión con WhatsApp Business está pendiente.
+            Prepara el mensaje y ábrelo en WhatsApp. LEX no lo envía ni marca como enviado
+            automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -988,16 +1031,16 @@ export function NuevoWhatsappDialog({
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          <span className="mr-auto">
-            <PendingBadge label="ABRIR EN WHATSAPP BUSINESS · pendiente de integración" />
-          </span>
+          <p className="text-muted-foreground mr-auto text-xs">
+            Los adjuntos se añaden directamente en WhatsApp.
+          </p>
           <Button variant="outline" onClick={() => setAbierto(false)}>
             Cancelar
           </Button>
-          <Button variant="outline" disabled title="Integración con WhatsApp Business pendiente">
-            Abrir en WhatsApp Business
+          <Button variant="outline" onClick={abrirEnWhatsapp}>
+            Abrir WhatsApp
           </Button>
-          <Button onClick={guardar}>Guardar en comunicaciones</Button>
+          <Button onClick={guardar}>Guardar borrador</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

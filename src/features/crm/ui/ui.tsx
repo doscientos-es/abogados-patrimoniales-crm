@@ -27,6 +27,7 @@ import type { ReactNode } from 'react'
 import { PendingBadge } from '@/components/common'
 import type { HistorialItem, Prioridad, Tono } from '@/data/crm'
 import { cn } from '@/lib/utils'
+import * as Kanban from '@/shared/ui/kanban'
 
 export const toneClass: Record<Tono, string> = {
   neutro: 'border-border bg-muted text-muted-foreground',
@@ -148,32 +149,23 @@ export function KanbanBoard<T>({
   renderCard: (item: T) => ReactNode
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto pb-3">
-      <div className="flex min-w-max gap-3 px-1">
-        {columns.map((col) => (
-          <section
-            key={col.id}
-            className="border-border/70 bg-muted/70 w-72 shrink-0 rounded-lg border p-2"
-          >
-            <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
-              <span className="text-foreground truncate text-[11px] font-semibold tracking-wide uppercase">
-                {col.nombre}
-              </span>
-              <ToneBadge tono={col.tono}>{col.items.length}</ToneBadge>
-            </header>
-            <div className="space-y-2">
-              {col.items.length ? (
-                col.items.map((item, i) => <div key={i}>{renderCard(item)}</div>)
-              ) : (
-                <p className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
-                  Sin registros
-                </p>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
+    <Kanban.Viewport>
+      {columns.map((col) => (
+        <Kanban.Column key={col.id} className="bg-muted/70">
+          <Kanban.Header>
+            <Kanban.Title>{col.nombre}</Kanban.Title>
+            <ToneBadge tono={col.tono}>{col.items.length}</ToneBadge>
+          </Kanban.Header>
+          <Kanban.Body>
+            {col.items.length ? (
+              col.items.map((item, i) => <div key={i}>{renderCard(item)}</div>)
+            ) : (
+              <Kanban.Empty>Sin registros</Kanban.Empty>
+            )}
+          </Kanban.Body>
+        </Kanban.Column>
+      ))}
+    </Kanban.Viewport>
   )
 }
 

@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react'
 import { SelectorFecha } from '@/components/fechas/datetime'
 import { ListaRegistros, RegistroCard } from '@/components/fechas/panel'
 import { RegistroTemporalDialog } from '@/components/fechas/registro-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -120,11 +120,14 @@ export function FechasWorkspace() {
           ]}
         />
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <a href={CALENDARIO_DESPACHO} target="_blank" rel="noreferrer">
-              <ExternalLink className="mr-2 h-4 w-4" /> Calendario del despacho
-            </a>
-          </Button>
+          <a
+            href={CALENDARIO_DESPACHO}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ size: 'sm', variant: 'outline' })}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" /> Calendario del despacho
+          </a>
           <Button size="sm" onClick={() => setAlta(true)}>
             <CalendarPlus className="mr-2 h-4 w-4" /> Registrar fecha
           </Button>

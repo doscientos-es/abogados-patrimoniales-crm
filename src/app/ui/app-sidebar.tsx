@@ -1,7 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
-  BarChart3,
-  BookMarked,
   Briefcase,
   CalendarClock,
   CheckSquare,
@@ -57,13 +55,9 @@ const gestion = [
   { title: 'Notas internas', url: '/notas', icon: StickyNote },
   { title: 'Comunicaciones', url: '/comunicaciones', icon: MessagesSquare },
   { title: 'Facturación y cobros', url: '/facturacion', icon: Receipt },
-  { title: 'Informes', url: '/informes', icon: BarChart3 },
 ] as const
 
-const sistema = [
-  { title: 'SOPs', url: '/sops', icon: BookMarked },
-  { title: 'Configuración', url: '/configuracion', icon: Settings },
-] as const
+const sistema = [{ title: 'Configuración', url: '/configuracion', icon: Settings }] as const
 
 export function AppSidebar({ open }: { open: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })

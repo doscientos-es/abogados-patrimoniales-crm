@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 // Módulo "Líneas de trabajo": capa estratégica del expediente.
 // Una línea agrupa y relaciona trabajo (actuaciones, tareas, documentos,
 // fechas, comunicaciones); nunca duplica esos registros, que siguen viviendo
@@ -57,7 +58,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -274,16 +274,12 @@ function SelectorPersonas({
     onCambiar(seleccion.includes(id) ? seleccion.filter((x) => x !== id) : [...seleccion, id])
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 justify-start gap-1.5 text-xs">
-          <Users className="h-3.5 w-3.5" />
-          {seleccion.length
-            ? `${etiqueta}: ${seleccion.length}`
-            : `Añadir ${etiqueta.toLowerCase()}`}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-2">
+    <PopoverTrigger>
+      <Button variant="outline" size="sm" className="h-8 justify-start gap-1.5 text-xs">
+        <Users className="h-3.5 w-3.5" />
+        {seleccion.length ? `${etiqueta}: ${seleccion.length}` : `Añadir ${etiqueta.toLowerCase()}`}
+      </Button>
+      <PopoverContent placement="bottom start" className="w-72 p-2">
         <Input
           placeholder="Buscar persona o contacto…"
           value={busqueda}
@@ -312,7 +308,7 @@ function SelectorPersonas({
           )}
         </div>
       </PopoverContent>
-    </Popover>
+    </PopoverTrigger>
   )
 }
 

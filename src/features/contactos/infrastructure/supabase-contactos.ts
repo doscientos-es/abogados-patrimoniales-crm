@@ -13,6 +13,7 @@ import {
   type ContactNature,
   type ContactRelationship,
   type ContactRow,
+  type ContactStatus,
   type Json,
 } from '@/shared/infrastructure/supabase'
 
@@ -205,6 +206,23 @@ export function useCrearContacto(firmId: string | undefined) {
         .single()
       if (error) throw error
       return contactoFromRow(data)
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'contactos', firmId] }),
+  })
+}
+
+export function useActualizarEstadoContacto(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: ContactStatus }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client
+        .from('crm_contacts')
+        .update({ status })
+        .eq('id', id)
+        .eq('firm_id', firmId)
+      if (error) throw error
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'contactos', firmId] }),
   })

@@ -1,3 +1,4 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import { Building2, UserPlus, Users, X } from 'lucide-react'
 // Campos compartidos de la TAREA ESPECIAL «REUNIÓN».
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -134,13 +134,11 @@ export function SelectorParticipantes({
       ) : null}
 
       <div className="flex flex-wrap gap-1.5">
-        <Popover open={abiertoContacto} onOpenChange={setAbiertoContacto}>
-          <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="outline">
-              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Añadir contacto
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[22rem] p-0" align="start">
+        <PopoverTrigger isOpen={abiertoContacto} onOpenChange={setAbiertoContacto}>
+          <Button type="button" size="sm" variant="outline">
+            <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Añadir contacto
+          </Button>
+          <PopoverContent placement="bottom start" className="w-[22rem] p-0">
             <Command>
               <CommandInput placeholder="Buscar en contactos…" />
               <CommandList className="pointer-events-auto">
@@ -176,15 +174,13 @@ export function SelectorParticipantes({
               </CommandList>
             </Command>
           </PopoverContent>
-        </Popover>
+        </PopoverTrigger>
 
-        <Popover open={abiertoCompanero} onOpenChange={setAbiertoCompanero}>
-          <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="outline">
-              <Users className="mr-1.5 h-3.5 w-3.5" /> Añadir compañero
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[20rem] p-0" align="start">
+        <PopoverTrigger isOpen={abiertoCompanero} onOpenChange={setAbiertoCompanero}>
+          <Button type="button" size="sm" variant="outline">
+            <Users className="mr-1.5 h-3.5 w-3.5" /> Añadir compañero
+          </Button>
+          <PopoverContent placement="bottom start" className="w-[20rem] p-0">
             <Command>
               <CommandInput placeholder="Buscar compañero…" />
               <CommandList className="pointer-events-auto">
@@ -209,7 +205,7 @@ export function SelectorParticipantes({
               </CommandList>
             </Command>
           </PopoverContent>
-        </Popover>
+        </PopoverTrigger>
       </div>
 
       {valor.length ? (
