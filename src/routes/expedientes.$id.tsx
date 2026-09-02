@@ -243,7 +243,6 @@ export function FichaExpedienteDemo() {
   const alertasAgrupadas = agruparAlertas(alertas)
 
   // Derivados del panel de resumen.
-  const lineasActivas = lineas.filter((l) => l.estado !== 'Cerrada')
   const ORDEN_ROL = ['Cliente', 'Contraparte']
   const intervinientesPrincipales = intervinientes
     .slice()
