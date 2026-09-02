@@ -7,7 +7,15 @@ import { useSyncExternalStore } from 'react'
 import { COMUNICACIONES_DEMO, TAREAS_COMUNICACIONES_DEMO } from '@/data/comunicaciones'
 import { USUARIOS, type Prioridad } from '@/data/crm'
 import {
+  ESTADOS_TAREA_VIVOS,
+  ESTADO_DOC_LEGADO,
+  ESTADO_LINEA_LEGADO,
+  ESTADO_TAREA_LEGADO,
+  ETAPAS_INBOX,
+  ETIQUETAS_INICIALES,
   SEMILLA_OPERATIVA,
+  TITULOS_TAREA_INICIALES,
+  claveEtiqueta,
   columnasDe,
   esRecibido,
   faseVigente,
@@ -15,55 +23,46 @@ import {
   requiereAccionLegado,
   tieneDefinitiva,
   type Actuacion,
-  type AuditoriaItem,
-  type Comunicacion,
   type AdjuntoComunicacion,
-  type DestinatarioEmail,
+  type AsistenteReunion,
+  type AuditoriaItem,
+  type ColorEtiqueta,
+  type Comunicacion,
+  type DatosReunion,
   type Dependencia,
+  type DestinatarioEmail,
   type Documento,
   type Ejecucion,
   type EstadoActuacion,
+  type EstadoDocSimple,
   type EstadoGeneral,
+  type EstadoLinea,
+  type EstadoRecordatorio,
   type EstadoTareaOp,
+  type EtapaInbox,
   type EtiquetaTarea,
-  type ColorEtiqueta,
-  ETIQUETAS_INICIALES,
-  claveEtiqueta,
+  type EvidenciaTarea,
   type ExpedienteOp,
   type FechaCritica,
-  type RegistroTemporal,
+  type FranjaReunion,
   type FuenteIA,
-  type ResumenIA,
   type IntervinienteOp,
   type LineaTrabajo,
-  ESTADO_LINEA_LEGADO,
-  ESTADO_TAREA_LEGADO,
-  type EstadoLinea,
-  type PrioridadLinea,
-  type SituacionLinea,
-  type Naturaleza,
-  type Recordatorio,
-  type EstadoRecordatorio,
-  type SemillaOperativa,
-  type TareaOp,
-  type OrigenRelacion,
-  type DatosReunion,
-  type EstadoReunion,
-  type AsistenteReunion,
-  type FranjaReunion,
-  type PuntoPreparacion,
   type MensajeTarea,
-  type Notificacion,
-  type MotivoRechazo,
   type MotivoEspera,
+  type MotivoRechazo,
+  type Naturaleza,
+  type Notificacion,
+  type OrigenRelacion,
+  type PrioridadLinea,
+  type PuntoPreparacion,
+  type Recordatorio,
+  type RegistroTemporal,
+  type ResumenIA,
+  type SemillaOperativa,
+  type SituacionLinea,
   type Subtarea,
-  ESTADO_DOC_LEGADO,
-  type EstadoDocSimple,
-  ESTADOS_TAREA_VIVOS,
-  TITULOS_TAREA_INICIALES,
-  ETAPAS_INBOX,
-  type EtapaInbox,
-  type EvidenciaTarea,
+  type TareaOp,
   type VersionDocumento,
 } from '@/data/expedientes-model'
 import { HOY, hoyTexto, parseFecha, sumarDias } from '@/data/pipeline'
@@ -91,6 +90,7 @@ export type OpsState = SemillaOperativa & {
 
 const STORAGE_KEY = 'patrimonial-suite-ops'
 const VERSION = 6
+const isBrowser = typeof document !== 'undefined'
 
 const VISTAS_BASE: VistaGuardada[] = [
   {
@@ -158,7 +158,7 @@ export function migrarCodigos(s: OpsState): OpsState {
   if (!asignados.size) return s
   return {
     ...s,
-    expedientes: s.expedientes.map((e) => ({ ...e, ...(asignados.get(e.id) ?? {}) })),
+    expedientes: s.expedientes.map((e) => ({ ...e, ...asignados.get(e.id) })),
     secuencias: { ...s.secuencias, AP: Math.max(siguiente, ...usados) },
   }
 }
@@ -197,13 +197,34 @@ function semilla(): OpsState {
 /* Store                                                               */
 /* ------------------------------------------------------------------ */
 
-const semillaBase = semilla()
+const semillaBase: OpsState = isBrowser
+  ? semilla()
+  : {
+      version: VERSION,
+      usuario: '',
+      etiquetas: [],
+      titulosTarea: [],
+      vistas: [],
+      secuencias: {},
+      expedientes: [],
+      lineas: [],
+      ejecuciones: [],
+      actuaciones: [],
+      documentos: [],
+      tareas: [],
+      fechas: [],
+      comunicaciones: [],
+      intervinientes: [],
+      recordatorios: [],
+      notificaciones: [],
+      auditoria: [],
+    }
 let estado: OpsState = semillaBase
 let hidratado = false
 const listeners = new Set<() => void>()
 
 function leerAlmacen(): OpsState {
-  if (typeof window === 'undefined') return semillaBase
+  if (!isBrowser) return semillaBase
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return semilla()
@@ -221,7 +242,7 @@ function leerAlmacen(): OpsState {
 }
 
 function persistir() {
-  if (typeof window === 'undefined') return
+  if (!isBrowser) return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
   } catch {
@@ -600,7 +621,7 @@ function unificarTareas(s: OpsState): OpsState {
   return { ...s, tareas, documentos }
 }
 
-if (typeof window !== 'undefined' && !hidratado) {
+if (isBrowser && !hidratado) {
   hidratado = true
   estado = sembrarComunicaciones(
     unificarTareas(
@@ -965,7 +986,7 @@ export const siguienteAccionDe = (s: OpsState, contexto: ContextoSA): TareaOp | 
   s.tareas.find((t) => {
     if (!t.esSiguienteAccion || !tareaViva(t)) return false
     const c = contextoDeTarea(t)
-    return Boolean(c) && claveContexto(c!) === claveContexto(contexto)
+    return c ? claveContexto(c) === claveContexto(contexto) : false
   })
 
 /** Un contexto activo sin Siguiente acción está en situación crítica. */
@@ -1753,7 +1774,8 @@ export const ops = {
     if (i < 0 || j < 0 || j >= orden.length) return
     const copia = [...orden]
     const [x] = copia.splice(i, 1)
-    copia.splice(j, 0, x!)
+    if (!x) return
+    copia.splice(j, 0, x)
     ops.reordenarLineas(expedienteId, copia)
   },
 
@@ -3686,15 +3708,18 @@ export const ops = {
     const j = i + direccion
     if (i < 0 || j < 0 || j >= cadena.length)
       return { ok: false as const, error: 'Movimiento no posible.' }
+    const actual = cadena[i]
+    const destino = cadena[j]
+    if (!actual || !destino) return { ok: false as const, error: 'Movimiento no posible.' }
     const bloqueada = (x: TareaOp) => x.estado === 'Pendiente' && Boolean(x.bloqueadaPor)
-    if (!bloqueada(cadena[i]!) || !bloqueada(cadena[j]!))
+    if (!bloqueada(actual) || !bloqueada(destino))
       return {
         ok: false as const,
         error: 'Sólo pueden reordenarse fases futuras todavía no activadas.',
       }
     const orden = [...cadena]
-    orden[i] = cadena[j]!
-    orden[j] = cadena[i]!
+    orden[i] = destino
+    orden[j] = actual
     ops.recablearCadena(orden)
     ops.registrarHistoricoTarea(id, 'Cadena', 'Reordenación de fases futuras.')
     return { ok: true as const }
@@ -4445,7 +4470,7 @@ export const ops = {
           (a) => (p.contactoId && a.contactoId === p.contactoId) || a.nombre === p.nombre,
         )
         return {
-          ...(anterior ?? {}),
+          ...anterior,
           id: anterior?.id ?? `AS-${Date.now()}-${i}`,
           nombre: p.nombre,
           clase: p.clase,
@@ -4486,12 +4511,14 @@ export const ops = {
     if (!r.hora) motivos.push('Falta la hora.')
     if (!r.lugar && !r.enlace) motivos.push('Falta el lugar o el enlace.')
     if (motivos.length) return { ok: false as const, motivos }
+    const { fecha, hora } = r
+    if (!fecha || !hora) return { ok: false as const, motivos: ['Falta fecha u hora.'] }
 
     const fechaId = ops.crearRegistroTemporal({
       registro: 'Evento',
       titulo: `Reunión · ${r.objeto || r.conQuien}`,
-      fecha: r.fecha!,
-      hora: r.hora!,
+      fecha,
+      hora,
       responsable: t.responsable,
       ...(t.expedienteId ? { expedienteId: t.expedienteId } : {}),
       origen: { tipo: 'Tarea', id: tareaId, label: t.titulo },
@@ -4511,7 +4538,7 @@ export const ops = {
       fechaCriticaId: fechaId,
       asistentes: r.asistentes.map((a) => ({ ...a, calendar: true })),
     })
-    ops.actualizarTarea(tareaId, { vencimiento: r.fecha!, horaLimite: r.hora! })
+    ops.actualizarTarea(tareaId, { vencimiento: fecha, horaLimite: hora })
     ops.registrarHistoricoTarea(
       tareaId,
       'Reunión',

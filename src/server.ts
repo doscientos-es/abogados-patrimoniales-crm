@@ -27,10 +27,47 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text()
   if (!isH3SwallowedErrorBody(body)) return response
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`))
+  
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { 'content-type': 'text/html; charset=utf-8' },
+  })
+}
+
+function withPrivateAppHeaders(response: Response, request: Request): Response {
+  const headers = new Headers(response.headers)
+  headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      'upgrade-insecure-requests',
+    ].join('; '),
+  )
+  headers.set('Permissions-Policy', 'camera=(), geolocation=(), microphone=(), payment=()')
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  headers.set('X-Content-Type-Options', 'nosniff')
+  headers.set('X-Frame-Options', 'DENY')
+  headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+
+  if (new URL(request.url).protocol === 'https:') {
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   })
 }
 
@@ -48,13 +85,16 @@ export default {
     try {
       const handler = await getServerEntry()
       const response = await handler.fetch(request, env, ctx)
-      return await normalizeCatastrophicSsrResponse(response)
+      return withPrivateAppHeaders(await normalizeCatastrophicSsrResponse(response), request)
     } catch (error) {
-      console.error(error)
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { 'content-type': 'text/html; charset=utf-8' },
-      })
+      
+      return withPrivateAppHeaders(
+        new Response(renderErrorPage(), {
+          status: 500,
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+        request,
+      )
     }
   },
 }

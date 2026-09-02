@@ -5,8 +5,13 @@
 // contactos que no estén vinculadas expresamente a este expediente.
 
 import { nombreContacto } from '@/data/crm'
-import type { FuenteIA } from '@/data/expedientes-model'
-import { megafaseDe, nombreFase, saldoEjecucion, megafase } from '@/data/expedientes-model'
+import {
+  megafase,
+  megafaseDe,
+  nombreFase,
+  saldoEjecucion,
+  type FuenteIA,
+} from '@/data/expedientes-model'
 import {
   diasHasta,
   selActuaciones,
@@ -199,16 +204,14 @@ export function construirContextoIA(
           )
           .join('\n'),
     )
-    comunicaciones
-      .slice(0, 10)
-      .forEach((c) =>
-        fuentes.push({
-          tipo: 'Comunicación',
-          id: c.id,
-          label: `${c.fecha} · ${c.asunto}`,
-          pestana: 'comunicaciones',
-        }),
-      )
+    comunicaciones.slice(0, 10).forEach((c) =>
+      fuentes.push({
+        tipo: 'Comunicación',
+        id: c.id,
+        label: `${c.fecha} · ${c.asunto}`,
+        pestana: 'comunicaciones',
+      }),
+    )
   }
 
   if (ejecuciones.length || e.saldoPendiente || e.presupuestoId) {

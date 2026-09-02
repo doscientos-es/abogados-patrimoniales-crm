@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { FechaCritica, OrigenRelacion, RegistroTemporal } from '@/data/expedientes-model'
-import { ToneBadge } from '@/features/crm'
+import { ToneBadge } from '@/features/crm/ui/ui'
 import { ops } from '@/lib/expedientes-store'
 import { esCritico, registroDe, situacionDe, tonoSituacion, urlGoogleCalendar } from '@/lib/fechas'
 import { cn } from '@/lib/utils'

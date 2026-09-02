@@ -79,7 +79,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { USUARIOS } from '@/data/crm'
 import { ESTADOS_TAREA_OP, type TareaOp } from '@/data/expedientes-model'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import {
   contextoDeTarea,
   getOps,

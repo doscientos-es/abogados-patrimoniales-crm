@@ -67,8 +67,11 @@ export const FASES_ONBOARDING: FaseOnboarding[] = [
   },
 ]
 
-export const faseOnboarding = (id: FaseOnboardingId) =>
-  FASES_ONBOARDING.find((f) => f.id === id) ?? FASES_ONBOARDING[0]!
+export const faseOnboarding = (id: FaseOnboardingId) => {
+  const encontrada = FASES_ONBOARDING.find((f) => f.id === id) ?? FASES_ONBOARDING[0]
+  if (!encontrada) throw new Error('El catálogo de fases de onboarding no puede estar vacío.')
+  return encontrada
+}
 
 /** Colores permanentes de las fases del Lead (no modifica su workflow). */
 export const COLOR_FASE_LEAD: Record<FaseId, ColorFase> = {

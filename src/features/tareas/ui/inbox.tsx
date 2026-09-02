@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ETAPAS_INBOX, type EtapaInbox } from '@/data/expedientes-model'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { ops, selInbox, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
 import * as Kanban from '@/shared/ui/kanban'
@@ -58,7 +58,7 @@ export function CapturaInboxDialog({ trigger }: { trigger: React.ReactNode }) {
         <div className="grid gap-4 py-1">
           <Field label="Título">
             <Input
-              autoFocus
+              
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && guardar()}

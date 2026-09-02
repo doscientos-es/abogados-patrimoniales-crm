@@ -23,7 +23,7 @@ import {
   type ClasePlazo,
   type RegistroTemporal,
 } from '@/data/expedientes-model'
-import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { ToneBadge, ViewSwitch } from '@/features/crm/ui/ui'
 import { selRegistrosTemporales, useOps } from '@/lib/expedientes-store'
 import {
   ATAJOS,

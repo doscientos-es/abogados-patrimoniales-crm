@@ -16,8 +16,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { nombreContacto } from '@/data/crm'
-import type { OportunidadCRM } from '@/data/pipeline'
-import { hoyTexto } from '@/data/pipeline'
+import { hoyTexto, type OportunidadCRM } from '@/data/pipeline'
 import { onboarding, useOnboarding } from '@/lib/onboarding-store'
 
 import { Field } from './ui'

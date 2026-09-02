@@ -38,7 +38,7 @@ import {
   type EtiquetaTarea,
   type TareaOp,
 } from '@/data/expedientes-model'
-import { Field } from '@/features/crm'
+import { Field } from '@/features/crm/ui/ui'
 import {
   etiquetasActivas,
   etiquetasDeTarea,
@@ -283,7 +283,7 @@ export function SelectorEtiquetas({
           <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
             <Search className="text-muted-foreground h-3.5 w-3.5" />
             <input
-              autoFocus
+              
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar etiqueta…"
@@ -443,9 +443,10 @@ export function EtiquetadoMasivo({
       return
     }
     const r = ops.etiquetarTareas(tareaIds, añadir, quitar)
-    toast.success(`Etiquetas aplicadas a ${r.aplicadas} tareas`, {
-      ...(r.omitidas ? { description: `${r.omitidas} omitidas por falta de permiso.` } : {}),
-    })
+    toast.success(
+      `Etiquetas aplicadas a ${r.aplicadas} tareas`,
+      r.omitidas ? { description: `${r.omitidas} omitidas por falta de permiso.` } : {},
+    )
     setAñadir([])
     setQuitar([])
     setAbierto(false)

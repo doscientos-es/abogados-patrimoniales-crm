@@ -30,6 +30,7 @@ export type NotasState = {
 
 const STORAGE_KEY = 'patrimonial-suite-notas'
 const VERSION = 1
+const isBrowser = typeof document !== 'undefined'
 
 /* ------------------------------------------------------------------ */
 /* Utilidades de fecha                                                 */
@@ -175,13 +176,18 @@ function semilla(): NotasState {
 /* Store                                                               */
 /* ------------------------------------------------------------------ */
 
-const semillaBase = semilla()
+// SSR must not eagerly build the demo seed: its cross-domain data imports can
+// be split into circular server chunks. Browser hydration still receives the
+// same local demo seed until this store is replaced by Supabase.
+const semillaBase: NotasState = !isBrowser
+  ? { version: VERSION, usuario: '', secuencia: 100, notas: [] }
+  : semilla()
 let estado: NotasState = semillaBase
 let hidratado = false
 const listeners = new Set<() => void>()
 
 function leerAlmacen(): NotasState {
-  if (typeof window === 'undefined') return semillaBase
+  if (!isBrowser) return semillaBase
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return semilla()
@@ -194,7 +200,7 @@ function leerAlmacen(): NotasState {
 }
 
 function persistir() {
-  if (typeof window === 'undefined') return
+  if (!isBrowser) return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
   } catch {
@@ -293,7 +299,7 @@ export function aplicarAutomatismos() {
   if (cambios) set((s) => ({ ...s, notas }))
 }
 
-if (typeof window !== 'undefined' && !hidratado) {
+if (isBrowser && !hidratado) {
   hidratado = true
   estado = leerAlmacen()
   aplicarAutomatismos()

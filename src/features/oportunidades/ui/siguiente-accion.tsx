@@ -21,8 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { USUARIOS } from '@/data/crm'
-import type { Prioridad } from '@/data/crm'
+import { type Prioridad, USUARIOS } from '@/data/crm'
 import { ops } from '@/lib/expedientes-store'
 
 /** Plantillas de tareas ordinarias ofrecidas tras guardar la oportunidad. */
@@ -77,15 +76,20 @@ export function SiguienteAccionDialog({
   responsableSugerido: string
 }) {
   const navigate = useNavigate()
-  const [plantilla, setPlantilla] = useState(PLANTILLAS_SIGUIENTE_ACCION[0]!.id)
-  const [titulo, setTitulo] = useState(PLANTILLAS_SIGUIENTE_ACCION[0]!.titulo)
-  const [descripcion, setDescripcion] = useState(PLANTILLAS_SIGUIENTE_ACCION[0]!.descripcion)
-  const [responsable, setResponsable] = useState(responsableSugerido || USUARIOS[0]!.nombre)
+  const plantillaInicial = PLANTILLAS_SIGUIENTE_ACCION[0]
+  const responsableInicial = USUARIOS[0]
+  if (!plantillaInicial || !responsableInicial)
+    throw new Error('Faltan plantillas o usuarios iniciales.')
+  const [plantilla, setPlantilla] = useState(plantillaInicial.id)
+  const [titulo, setTitulo] = useState(plantillaInicial.titulo)
+  const [descripcion, setDescripcion] = useState(plantillaInicial.descripcion)
+  const [responsable, setResponsable] = useState(responsableSugerido || responsableInicial.nombre)
   const [vencimiento, setVencimiento] = useState('')
   const [prioridad, setPrioridad] = useState<Prioridad>('Media')
 
   const elegir = (id: string) => {
-    const p = PLANTILLAS_SIGUIENTE_ACCION.find((x) => x.id === id)!
+    const p = PLANTILLAS_SIGUIENTE_ACCION.find((x) => x.id === id)
+    if (!p) return
     setPlantilla(id)
     setTitulo(p.id === 'libre' ? '' : p.titulo)
     setDescripcion(p.descripcion)

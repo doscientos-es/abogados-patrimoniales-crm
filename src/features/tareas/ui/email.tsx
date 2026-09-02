@@ -41,7 +41,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { CONTACTOS, nombreCompleto, type Contacto } from '@/data/contactos'
 import type { DestinatarioEmail } from '@/data/expedientes-model'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { enviarEmailTarea, redactarEmailIA } from '@/lib/email-tarea.functions'
 import {
   comunicacionesDeTarea,

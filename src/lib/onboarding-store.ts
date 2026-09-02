@@ -24,6 +24,13 @@ export type OnboardingState = {
 
 const STORAGE_KEY = 'lex-onboarding'
 const VERSION = 1
+const isBrowser = typeof document !== 'undefined'
+const semillaServidor: OnboardingState = {
+  version: VERSION,
+  usuario: '',
+  secuencia: 0,
+  onboardings: [],
+}
 
 export const diasDesdeFecha = (v: string | undefined) => {
   const d = parseFecha(v)
@@ -119,7 +126,7 @@ const semilla = (): OnboardingState => {
 /* ------------------------------------------------------------------ */
 
 const leerAlmacen = (): OnboardingState => {
-  if (typeof window === 'undefined') return semilla()
+  if (!isBrowser) return semillaServidor
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return semilla()
@@ -135,7 +142,7 @@ let estado: OnboardingState = leerAlmacen()
 const oyentes = new Set<() => void>()
 
 const persistir = () => {
-  if (typeof window === 'undefined') return
+  if (!isBrowser) return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
   } catch {
@@ -155,7 +162,6 @@ const subscribe = (fn: () => void) => {
 }
 
 const getSnapshot = () => estado
-const semillaServidor = semilla()
 const getServerSnapshot = () => semillaServidor
 
 export function useOnboarding<T>(sel: (s: OnboardingState) => T): T {

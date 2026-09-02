@@ -5,7 +5,6 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  cn,
 } from '@doscientos/ui'
 import * as React from 'react'
 

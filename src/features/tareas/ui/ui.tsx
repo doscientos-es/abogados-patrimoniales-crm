@@ -56,19 +56,15 @@ import { USUARIOS } from '@/data/crm'
 import {
   MOTIVOS_ESPERA,
   MOTIVOS_RECHAZO,
-  TITULOS_TAREA_INICIALES,
   type MotivoEspera,
   type MotivoRechazo,
   type OrigenRelacion,
   type TareaOp,
 } from '@/data/expedientes-model'
 import { sumarDias } from '@/data/pipeline'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { ops, useOps, type SenalesTarea } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
-
-/** Catálogo de títulos frecuentes para el autocompletado (texto libre). */
-export const TITULOS_SUGERIDOS = [...TITULOS_TAREA_INICIALES]
 
 /* ------------------------------ Señales ---------------------------- */
 
@@ -384,7 +380,7 @@ export function NuevaTareaRapidaDialog({
             <Field label="Título">
               <div className="flex gap-1.5">
                 <Input
-                  autoFocus
+                  
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Qué hay que hacer"
@@ -596,7 +592,7 @@ export function SiguienteTareaDialog({
         <div className="grid gap-4 py-1 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Field label="Título">
-              <Input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+              <Input  value={titulo} onChange={(e) => setTitulo(e.target.value)} />
             </Field>
           </div>
           <Field label="Asignada a">

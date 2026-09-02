@@ -8,15 +8,14 @@
 // La fila es COMPACTA y sólo señala algo cuando queda algo concreto por
 // hacer. Al abrirla se usa siempre la ficha central de detalle.
 import { ArrowDownLeft, ArrowUpRight, Mail, MessageCircle, Paperclip, Phone } from 'lucide-react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 
 import { nombreContactoPorId } from '@/components/comunicaciones/contexto'
 import { EtiquetaContexto } from '@/components/comunicaciones/etiqueta-contexto'
-import { FichaComunicacion } from '@/components/comunicaciones/ficha'
 import { senalesComunicacion } from '@/components/comunicaciones/senales'
 import { canalDe } from '@/data/comunicaciones'
 import type { Comunicacion } from '@/data/expedientes-model'
-import { ToneBadge } from '@/features/crm'
+import { ToneBadge } from '@/features/crm/ui/ui'
 import { useOps } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +24,11 @@ const IconoCanal = ({ c }: { c: Comunicacion }) => {
   const Icon = canal === 'WhatsApp' ? MessageCircle : canal === 'Llamada' ? Phone : Mail
   return <Icon className="text-muted-foreground h-3.5 w-3.5" />
 }
+
+const FichaComunicacion = lazy(async () => {
+  const module = await import('@/components/comunicaciones/ficha')
+  return { default: module.FichaComunicacion }
+})
 
 const primeraLinea = (c: Comunicacion) =>
   (c.asunto || c.contenido || c.notasInternas || '').split('\n')[0] ?? ''
@@ -112,7 +116,9 @@ export function Cronologia({
         })}
       </ul>
 
-      <FichaComunicacion comunicacion={seleccionada} onClose={() => setAbierta(null)} />
+      <Suspense fallback={null}>
+        <FichaComunicacion comunicacion={seleccionada} onClose={() => setAbierta(null)} />
+      </Suspense>
     </>
   )
 }

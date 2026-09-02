@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table'
 import { USUARIOS } from '@/data/crm'
 import { type EstadoTareaOp, type TareaOp } from '@/data/expedientes-model'
-import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { ToneBadge, ViewSwitch } from '@/features/crm/ui/ui'
 import { etiquetasDeTarea, ops, senalesTarea, useOps, type OpsState } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
 import * as Kanban from '@/shared/ui/kanban'

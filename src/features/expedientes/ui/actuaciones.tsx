@@ -82,7 +82,7 @@ import {
   type EstadoRegistro,
 } from '@/data/expedientes-model'
 import { hoyTexto, parseFecha } from '@/data/pipeline'
-import { Field, ToneBadge, ViewSwitch } from '@/features/crm'
+import { Field, ToneBadge, ViewSwitch } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
 

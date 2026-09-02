@@ -69,7 +69,6 @@ function Tarjeta({
   )
 }
 
-// oxlint-disable-next-line react/only-export-components -- helper local de esta ruta
 function MetricGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="border-border bg-card rounded-lg border px-4 py-3" aria-label={title}>

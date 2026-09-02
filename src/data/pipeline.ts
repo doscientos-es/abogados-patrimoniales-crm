@@ -166,7 +166,11 @@ export const FASES: Fase[] = [
 ]
 
 export const FASES_ACTIVAS = FASES.filter((f) => f.tipo === 'activa')
-export const fase = (id: FaseId): Fase => FASES.find((f) => f.id === id) ?? FASES[0]!
+export const fase = (id: FaseId): Fase => {
+  const encontrada = FASES.find((f) => f.id === id) ?? FASES[0]
+  if (!encontrada) throw new Error('El catálogo de fases no puede estar vacío.')
+  return encontrada
+}
 export const ORDEN_FASE: FaseId[] = FASES.map((f) => f.id)
 
 /* ------------------------------------------------------------------ */
@@ -654,8 +658,10 @@ export type UrgenciaInicial = {
 }
 
 /** La información preliminar no constituye un plazo jurídico validado. */
-export const posibleUrgencia = (u?: UrgenciaInicial | null) =>
-  Boolean(u?.opcion) && u!.opcion !== OPCIONES_URGENCIA[0]
+export const posibleUrgencia = (u?: UrgenciaInicial | null) => {
+  const opcion = u?.opcion
+  return Boolean(opcion) && opcion !== OPCIONES_URGENCIA[0]
+}
 
 export const AVISO_URGENCIA = 'POSIBLE URGENCIA — PENDIENTE DE REVISIÓN'
 
@@ -858,7 +864,7 @@ export function migrarFaseLegacy(
         return { fase: 'primera-cita', subestado: 'Celebrada' }
       return {
         fase: 'primera-cita',
-        subestado: FASES[2]!.subestados.includes(subestado) ? subestado : 'Programada',
+        subestado: fase('primera-cita').subestados.includes(subestado) ? subestado : 'Programada',
       }
     case 'entrada':
       if (subestado === 'Duplicado detectado')
@@ -867,7 +873,7 @@ export function migrarFaseLegacy(
         return { fase: 'entrada', subestado: 'Datos mínimos completos' }
       return {
         fase: 'entrada',
-        subestado: FASES[0]!.subestados.includes(subestado) ? subestado : 'Sin revisar',
+        subestado: fase('entrada').subestados.includes(subestado) ? subestado : 'Sin revisar',
       }
     case 'ganada':
       return { fase: 'ganada', subestado: 'Presupuesto aceptado' }

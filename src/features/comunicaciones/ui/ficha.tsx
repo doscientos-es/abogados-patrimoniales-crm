@@ -37,7 +37,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { canalDe } from '@/data/comunicaciones'
 import type { Comunicacion } from '@/data/expedientes-model'
-import { ToneBadge } from '@/features/crm'
+import { ToneBadge } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 
 export function FichaComunicacion({

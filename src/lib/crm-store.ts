@@ -5,8 +5,6 @@ import { useSyncExternalStore } from 'react'
 
 import { ACTIVIDADES, TAREAS, nombreContacto, type Prioridad, type Relacion } from '@/data/crm'
 import {
-  CHECKLIST_APERTURA,
-  informacionInicialVacia,
   OPORTUNIDADES_MIGRADAS,
   UMBRALES_DEFECTO,
   citaVacia,
@@ -14,30 +12,37 @@ import {
   fase as faseDef,
   gateOk,
   hoyTexto,
+  informacionInicialVacia,
+  migrarFaseLegacy,
   presupuestoVacio,
   requisitosGate,
   sumarDias,
+  type AceptacionLead,
   type Cierre,
   type DocumentoInicial,
-  type InformacionInicial,
-  type IntervinienteOportunidad,
-  type MensajeOportunidad,
-  type RolEnOportunidad,
-  type UrgenciaInicial,
   type EstadoOperativo,
   type EstadoPresupuestoEspejo,
   type EstadoTarea,
   type Excepcion,
   type FaseId,
+  type InformacionInicial,
+  type IntervinienteOportunidad,
+  type MensajeOportunidad,
   type OportunidadCRM,
   type ProximaAccion,
   type Requisito,
   type RolCRM,
+  type RolEnOportunidad,
   type TipoActividadCRM,
   type Umbrales,
-  migrarFaseLegacy,
-  type AceptacionLead,
+  type UrgenciaInicial,
 } from '@/data/pipeline'
+
+const primerSubestado = (fase: FaseId) => {
+  const subestado = faseDef(fase).subestados[0]
+  if (!subestado) throw new Error(`La fase ${fase} no tiene subestados configurados.`)
+  return subestado
+}
 
 export type TareaCRM = {
   id: string
@@ -106,6 +111,7 @@ export type CrmState = {
 
 const STORAGE_KEY = 'patrimonial-suite-crm'
 const VERSION = 4
+const isBrowser = typeof document !== 'undefined'
 
 /* ------------------------------------------------------------------ */
 /* Semilla de datos demo                                               */
@@ -1003,7 +1009,19 @@ function semilla(): CrmState {
 /* Store                                                               */
 /* ------------------------------------------------------------------ */
 
-const semillaBase = semilla()
+const semillaBase: CrmState = isBrowser
+  ? semilla()
+  : {
+      version: VERSION,
+      oportunidades: [],
+      tareas: [],
+      actividades: [],
+      expedientes: [],
+      umbrales: { ...UMBRALES_DEFECTO },
+      rol: 'Administrador/Igor',
+      usuario: '',
+      secuenciaExpediente: 0,
+    }
 let estado: CrmState = semillaBase
 let hidratado = false
 const listeners = new Set<() => void>()
@@ -1037,7 +1055,7 @@ function migrarEstadoV4(parsed: CrmState): CrmState {
 }
 
 function leerAlmacen(): CrmState {
-  if (typeof window === 'undefined') return semillaBase
+  if (!isBrowser) return semillaBase
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return semilla()
@@ -1051,7 +1069,7 @@ function leerAlmacen(): CrmState {
 }
 
 function persistir() {
-  if (typeof window === 'undefined') return
+  if (!isBrowser) return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
   } catch {
@@ -1074,7 +1092,7 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l)
 }
 
-if (typeof window !== 'undefined' && !hidratado) {
+if (isBrowser && !hidratado) {
   hidratado = true
   estado = leerAlmacen()
   persistir()
@@ -1191,7 +1209,8 @@ export const crm = {
 
     const anterior = faseDef(o.fase).nombre
     mapOp(id, (op) => {
-      const sub = opciones?.subestado ?? faseDef(destino).subestados[0]!
+      const sub = opciones?.subestado ?? faseDef(destino).subestados[0]
+      if (!sub) throw new Error(`La fase ${destino} no tiene subestados configurados.`)
       const actualizado: OportunidadCRM = {
         ...op,
         fase: destino,
@@ -1904,7 +1923,7 @@ export const crm = {
         {
           ...op,
           fase: datos.faseDestino,
-          subestado: faseDef(datos.faseDestino).subestados[0]!,
+          subestado: primerSubestado(datos.faseDestino),
           responsable: datos.responsable,
           cierre: null,
           estadoOperativo: 'Debemos trabajo',

@@ -54,7 +54,7 @@ import {
   type TipoFecha,
 } from '@/data/expedientes-model'
 import { hoyTexto, sumarDias } from '@/data/pipeline'
-import { Field } from '@/features/crm'
+import { Field } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 
 const RESPONSABLES = [
@@ -334,23 +334,37 @@ export function NuevaActuacionDialog({
         <Input value={tiempo} onChange={(e) => setTiempo(e.target.value)} />
       </Field>
       <div className="flex items-end gap-4 pb-1">
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={facturable} onCheckedChange={setFacturable} /> Facturable
-        </label>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Switch checked={visible} onCheckedChange={setVisible} /> Visible para cliente
-        </label>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={facturable}
+          onCheckedChange={setFacturable}
+        >
+          Facturable
+        </Switch>
+        <Switch
+          className="text-muted-foreground text-xs"
+          checked={visible}
+          onCheckedChange={setVisible}
+        >
+          Visible para cliente
+        </Switch>
       </div>
       <div className="border-border bg-muted/40 space-y-2 rounded-md border p-3 sm:col-span-2">
         <p className="text-foreground text-xs font-medium">Acciones derivadas</p>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Checkbox checked={crearTarea} onCheckedChange={(v) => setCrearTarea(Boolean(v))} /> Crear
-          tarea con la próxima acción
-        </label>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          <Checkbox checked={crearFecha} onCheckedChange={(v) => setCrearFecha(Boolean(v))} /> Crear
-          fecha de control (pendiente de validar)
-        </label>
+        <Checkbox
+          className="text-muted-foreground text-xs"
+          checked={crearTarea}
+          onCheckedChange={(v) => setCrearTarea(Boolean(v))}
+        >
+          Crear tarea con la próxima acción
+        </Checkbox>
+        <Checkbox
+          className="text-muted-foreground text-xs"
+          checked={crearFecha}
+          onCheckedChange={(v) => setCrearFecha(Boolean(v))}
+        >
+          Crear fecha de control (pendiente de validar)
+        </Checkbox>
       </div>
     </Base>
   )

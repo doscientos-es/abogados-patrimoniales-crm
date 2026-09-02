@@ -99,8 +99,7 @@ export const TELEFONO_DESPACHO = '944 029 988'
  * teléfono general. No depende de personas ni de responsables.
  */
 export const CUENTAS_DESPACHO: string[] = [
-  CUENTAS_CORREO.find((c) => c.id === 'CU-INFO')!.direccion,
-  CUENTAS_CORREO.find((c) => c.id === 'CU-WA')!.direccion,
+  ...CUENTAS_CORREO.filter((c) => c.id === 'CU-INFO' || c.id === 'CU-WA').map((c) => c.direccion),
   TELEFONO_DESPACHO,
   '+34 944 029 988',
 ]

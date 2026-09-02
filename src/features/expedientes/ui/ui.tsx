@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import type { ColumnaKanban } from '@/data/expedientes-model'
-import { ToneBadge } from '@/features/crm'
+import { ToneBadge } from '@/features/crm/ui/ui'
 import { cn } from '@/lib/utils'
 import * as Kanban from '@/shared/ui/kanban'
 

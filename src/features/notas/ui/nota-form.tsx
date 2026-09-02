@@ -243,7 +243,6 @@ export function NotaDialog({
               Contenido (obligatorio)
             </Label>
             <Textarea
-              autoFocus
               rows={5}
               value={f.contenido}
               onChange={(e) => set('contenido', e.target.value)}
@@ -365,25 +364,28 @@ export function NotaDialog({
           )}
 
           <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={f.destacada}
-                onCheckedChange={(v) => set('destacada', Boolean(v))}
-              />
+            <Checkbox
+              className="flex items-center gap-2 text-sm"
+              checked={f.destacada}
+              onCheckedChange={(v) => set('destacada', Boolean(v))}
+            >
               Destacada
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={f.critica} onCheckedChange={(v) => set('critica', Boolean(v))} />
+            </Checkbox>
+            <Checkbox
+              className="flex items-center gap-2 text-sm"
+              checked={f.critica}
+              onCheckedChange={(v) => set('critica', Boolean(v))}
+            >
               Advertencia crítica
-            </label>
+            </Checkbox>
             {modoRapido ? null : (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={f.requiereConfirmacion}
-                  onCheckedChange={(v) => set('requiereConfirmacion', Boolean(v))}
-                />
+              <Checkbox
+                className="flex items-center gap-2 text-sm"
+                checked={f.requiereConfirmacion}
+                onCheckedChange={(v) => set('requiereConfirmacion', Boolean(v))}
+              >
                 Requerir confirmación de lectura
-              </label>
+              </Checkbox>
             )}
           </div>
 

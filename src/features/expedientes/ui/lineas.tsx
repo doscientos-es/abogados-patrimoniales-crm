@@ -83,7 +83,7 @@ import {
   type SituacionLinea,
 } from '@/data/expedientes-model'
 import { hoyTexto, sumarDias } from '@/data/pipeline'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import {
   alertasDeLinea,
   diasDesde,
@@ -214,7 +214,7 @@ function TextoEnLinea({
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1">
       <Input
-        autoFocus
+        
         value={v}
         onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => {
@@ -568,7 +568,7 @@ export function NuevaLineaRapidaDialog({
         <div className="grid gap-3 py-1">
           <Field label="Nombre de la línea *">
             <Input
-              autoFocus
+              
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Recuperación posesoria"

@@ -1755,8 +1755,11 @@ export const FASES_PRESUPUESTO: {
   },
 ]
 
-export const fasePresupuesto = (id: FasePresupuestoId) =>
-  FASES_PRESUPUESTO.find((f) => f.id === id) ?? FASES_PRESUPUESTO[0]!
+export const fasePresupuesto = (id: FasePresupuestoId) => {
+  const encontrada = FASES_PRESUPUESTO.find((f) => f.id === id) ?? FASES_PRESUPUESTO[0]
+  if (!encontrada) throw new Error('El catálogo de fases de presupuesto no puede estar vacío.')
+  return encontrada
+}
 
 /** Migración automática del microestado histórico a la fase operativa. */
 export const MIGRACION_PRESUPUESTO: Record<
@@ -1856,8 +1859,9 @@ export const etiquetasPresupuesto = (p: Presupuesto): { texto: string; tono: Ton
   if (fase === 'revision') out.push({ texto: 'Nueva versión', tono: 'aviso' })
   if (fase === 'cliente') {
     const caducidad = diasDesde(p.envio?.caducidad)
-    const restantes = p.envio?.caducidad
-      ? Math.round((parseFecha(p.envio.caducidad)!.getTime() - HOY.getTime()) / 86_400_000)
+    const fechaCaducidad = parseFecha(p.envio?.caducidad)
+    const restantes = fechaCaducidad
+      ? Math.round((fechaCaducidad.getTime() - HOY.getTime()) / 86_400_000)
       : undefined
     if (restantes !== undefined && restantes <= 7 && restantes >= 0) {
       out.push({ texto: 'Próximo a caducar', tono: 'riesgo' })

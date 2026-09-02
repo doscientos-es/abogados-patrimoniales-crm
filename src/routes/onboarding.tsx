@@ -495,7 +495,7 @@ function CompletarDialog({ o }: { o: Onboarding }) {
                 description: `${r.expedienteCodigo} creado en F3 · CASEWORK`,
               })
               if (r.expedienteId)
-                navigate({ to: '/expedientes/$id', params: { id: r.expedienteId } })
+                void navigate({ to: '/expedientes/$id', params: { id: r.expedienteId } })
             }}
           >
             Completar e iniciar F3 · CASEWORK

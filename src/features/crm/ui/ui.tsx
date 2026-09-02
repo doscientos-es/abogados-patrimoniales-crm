@@ -285,7 +285,6 @@ export function RelationList({
               return (
                 <li key={i}>
                   {it.to ? (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     <Link
                       to={it.to as any}
                       params={it.params as any}

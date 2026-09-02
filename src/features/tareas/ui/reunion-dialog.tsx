@@ -29,7 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { USUARIOS } from '@/data/crm'
 import { TIPOS_REUNION, type FranjaReunion, type OrigenRelacion } from '@/data/expedientes-model'
-import { Field } from '@/features/crm'
+import { Field } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 
 import {

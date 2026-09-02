@@ -32,7 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { USUARIOS } from '@/data/crm'
 import type { TareaOp } from '@/data/expedientes-model'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 import { cn } from '@/lib/utils'
 

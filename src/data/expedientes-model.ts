@@ -6,8 +6,7 @@
 // demostración. La persistencia vive en `src/lib/expedientes-store.ts` y podrá
 // sustituirse por Lovable Cloud sin tocar las pantallas.
 
-import type { Prioridad } from '@/data/crm'
-import { EXPEDIENTES as EXPEDIENTES_CRM, nombreContacto } from '@/data/crm'
+import { EXPEDIENTES as EXPEDIENTES_CRM, nombreContacto, type Prioridad } from '@/data/crm'
 import { hoyTexto, sumarDias } from '@/data/pipeline'
 
 /* ------------------------------------------------------------------ */
@@ -110,8 +109,11 @@ export const MEGAFASES: Megafase[] = [
   },
 ]
 
-export const megafase = (id: MegafaseId): Megafase =>
-  MEGAFASES.find((m) => m.id === id) ?? MEGAFASES[MEGAFASES.length - 1]!
+export const megafase = (id: MegafaseId): Megafase => {
+  const encontrada = MEGAFASES.find((m) => m.id === id) ?? MEGAFASES.at(-1)
+  if (!encontrada) throw new Error('El catálogo de megafases no puede estar vacío.')
+  return encontrada
+}
 
 /** Megafases aplicables al módulo Control de expedientes. */
 export const MEGAFASES_EXPEDIENTE: MegafaseId[] = ['f3', 'f4', 'f5', 'f6']
@@ -238,8 +240,11 @@ export const faseVigente = (n: Naturaleza, id: string) => {
   const cols = columnasDe(n)
   if (cols.some((c) => c.id === id)) return id
   const mapa = n === 'Judicial' ? EQUIVALENCIAS_JUDICIAL : EQUIVALENCIAS_EXTRAJUDICIAL
-  if (mapa[id]) return mapa[id]!
-  return cols[0]!.id
+  const equivalente = mapa[id]
+  if (equivalente) return equivalente
+  const primeraColumna = cols[0]
+  if (!primeraColumna) throw new Error(`No hay fases configuradas para ${n}.`)
+  return primeraColumna.id
 }
 
 export const columnaDe = (n: Naturaleza, id: string) =>

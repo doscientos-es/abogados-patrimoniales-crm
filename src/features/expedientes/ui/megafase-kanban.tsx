@@ -11,7 +11,7 @@ import {
   type ColumnaKanban,
   type Naturaleza,
 } from '@/data/expedientes-model'
-import { ToneBadge } from '@/features/crm'
+import { ToneBadge } from '@/features/crm/ui/ui'
 import { cn } from '@/lib/utils'
 import * as Kanban from '@/shared/ui/kanban'
 

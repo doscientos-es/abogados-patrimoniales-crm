@@ -47,7 +47,7 @@ import {
   type FaseLex,
   type PlantillaLex,
 } from '@/data/plantillas'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { useCrm } from '@/lib/crm-store'
 import { getOps, ops, propuestaVinculacion, useOps } from '@/lib/expedientes-store'
 import { useOnboarding } from '@/lib/onboarding-store'

@@ -1,4 +1,3 @@
-import { ListChecks, Mail, MessageCircle, Phone } from 'lucide-react'
 // PANEL GENERAL DE COMUNICACIONES.
 //
 // Es un panel de CONSULTA Y CONTROL del despacho: no es una bandeja de correo

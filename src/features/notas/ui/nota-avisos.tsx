@@ -2,8 +2,7 @@ import { ChevronDown, ChevronUp, ShieldAlert, StickyNote } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { AMBITO_META, type DisparadorNota } from '@/data/notas'
-import type { NotaInterna } from '@/data/notas'
+import { AMBITO_META, type DisparadorNota, type NotaInterna } from '@/data/notas'
 import { avisosContextuales, notas, useNotas } from '@/lib/notas-store'
 import { cn } from '@/lib/utils'
 

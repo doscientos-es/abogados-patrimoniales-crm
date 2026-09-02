@@ -1,7 +1,6 @@
 // Convención visual única para las acciones de COMUNICACIONES.
 // Un mismo botón debe verse igual en el panel general y dentro de un expediente.
-import type { LucideIcon } from 'lucide-react'
-import { ListChecks, Mail, MessageCircle, Phone } from 'lucide-react'
+import { ListChecks, type LucideIcon, Mail, MessageCircle, Phone } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 

@@ -80,7 +80,7 @@ import {
   type TareaOp,
 } from '@/data/expedientes-model'
 import { formatoFecha, parseFecha } from '@/data/pipeline'
-import { Field, ToneBadge } from '@/features/crm'
+import { Field, ToneBadge } from '@/features/crm/ui/ui'
 import { ops, useOps } from '@/lib/expedientes-store'
 import { CALENDARIO_DESPACHO } from '@/lib/fechas'
 import { notas as notasStore, useNotas } from '@/lib/notas-store'
@@ -760,7 +760,7 @@ export function FichaTareaReunion({
                     checked={Boolean(r.plaud?.grabando)}
                     onCheckedChange={(v) =>
                       ops.actualizarReunion(tarea.id, {
-                        plaud: { ...(r.plaud ?? {}), grabando: Boolean(v) },
+                        plaud: { ...r.plaud, grabando: Boolean(v) },
                       })
                     }
                   />
@@ -802,7 +802,7 @@ export function FichaTareaReunion({
                     defaultValue={r.plaud?.transcripcion ?? ''}
                     onBlur={(e) =>
                       ops.actualizarReunion(tarea.id, {
-                        plaud: { ...(r.plaud ?? {}), transcripcion: e.target.value },
+                        plaud: { ...r.plaud, transcripcion: e.target.value },
                       })
                     }
                     placeholder="Pegar o importar la transcripción de PLAUD (integración pendiente de desarrollo)."
@@ -814,7 +814,7 @@ export function FichaTareaReunion({
                     defaultValue={r.plaud?.resumen ?? ''}
                     onBlur={(e) =>
                       ops.actualizarReunion(tarea.id, {
-                        plaud: { ...(r.plaud ?? {}), resumen: e.target.value },
+                        plaud: { ...r.plaud, resumen: e.target.value },
                       })
                     }
                   />
