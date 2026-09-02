@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { nombreCompleto, type Contacto } from '@/data/contactos'
 import { nombreContacto } from '@/data/crm'
 import type { TareaOp } from '@/data/expedientes-model'
 import {
@@ -32,7 +33,16 @@ import {
   type FaseId,
   type OportunidadCRM,
 } from '@/data/pipeline'
-import { OpportunityCard, PipelineBoard, ToneBadge, ViewSwitch } from '@/features/crm'
+import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
+import {
+  OpportunityCard,
+  PipelineBoard,
+  ToneBadge,
+  ViewSwitch,
+  useOportunidades,
+  type OportunidadResumen,
+} from '@/features/crm'
 import { useCrm } from '@/lib/crm-store'
 import { useOps } from '@/lib/expedientes-store'
 
@@ -120,6 +130,10 @@ function NuevaOportunidadBoton() {
 
 function LeadsPage() {
   const { vista: vistaInicial, abrir } = Route.useSearch()
+  const session = useSupabaseSession()
+  const membership = useActiveMembership(session.user?.id)
+  const oportunidadesReales = useOportunidades(membership.data?.firmId)
+  const contactosReales = useContactos(membership.data?.firmId)
   const oportunidades = useCrm((s) => s.oportunidades)
   const [modo, setModo] = useState('kanban')
   const [vista, setVista] = useState(vistaInicial)
@@ -173,6 +187,17 @@ function LeadsPage() {
 
   const responsables = Array.from(new Set(oportunidades.map((o) => o.responsable)))
   const origenes = Array.from(new Set(oportunidades.map((o) => o.origen)))
+
+  if (membership.data) {
+    return (
+      <LeadsPersistidos
+        oportunidades={oportunidadesReales.data ?? []}
+        contactos={contactosReales.data ?? []}
+        cargando={oportunidadesReales.isLoading || contactosReales.isLoading}
+        error={oportunidadesReales.isError || contactosReales.isError}
+      />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -347,6 +372,110 @@ function LeadsPage() {
       {!filtradas.length ? (
         <p className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
           No hay Leads que cumplan estos criterios. Cambia de vista o crea uno nuevo.
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+const NOMBRES_FASE: Record<string, string> = {
+  entry: 'Entrada',
+  qualification: 'Cualificación',
+  first_meeting: 'Primera cita',
+  quote: 'Solicitud de presupuesto',
+  validation: 'Validación',
+  engagement: 'Enviado al cliente',
+  won: 'Aceptado',
+  lost: 'Cerrado / Perdido',
+}
+
+function LeadsPersistidos({
+  oportunidades,
+  contactos,
+  cargando,
+  error,
+}: {
+  oportunidades: OportunidadResumen[]
+  contactos: Contacto[]
+  cargando: boolean
+  error: boolean
+}) {
+  const [query, setQuery] = useState('')
+  const contactosPorId = useMemo(
+    () => new Map(contactos.map((contacto) => [contacto.id, nombreCompleto(contacto)])),
+    [contactos],
+  )
+  const filtradas = oportunidades.filter((oportunidad) => {
+    const texto = `${oportunidad.referencia} ${oportunidad.titulo} ${contactosPorId.get(oportunidad.contactoId) ?? ''}`
+    return texto.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+  })
+
+  return (
+    <div className="mx-auto max-w-[1400px]">
+      <SectionHeader
+        title="Leads"
+        subtitle="Registros persistentes del despacho. La ficha y el flujo de fases se activarán progresivamente."
+        actions={<NuevaOportunidadBoton />}
+      />
+      <div className="mb-4 flex items-center gap-3">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Buscar por código, contacto o asunto…"
+          className="max-w-md"
+        />
+        <span className="text-muted-foreground text-xs">{filtradas.length} Leads</span>
+      </div>
+      {error ? (
+        <p className="text-destructive mb-4 text-sm">No se han podido cargar los Leads.</p>
+      ) : null}
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead>Asunto</TableHead>
+                <TableHead>Fase</TableHead>
+                <TableHead>Subestado</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Actualizado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cargando ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-muted-foreground py-10 text-center text-sm"
+                  >
+                    Cargando Leads…
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {filtradas.map((oportunidad) => (
+                <TableRow key={oportunidad.id}>
+                  <TableCell className="font-medium">{oportunidad.referencia}</TableCell>
+                  <TableCell>
+                    {contactosPorId.get(oportunidad.contactoId) ?? 'Contacto eliminado'}
+                  </TableCell>
+                  <TableCell className="max-w-[360px] truncate">{oportunidad.titulo}</TableCell>
+                  <TableCell>{NOMBRES_FASE[oportunidad.fase] ?? oportunidad.fase}</TableCell>
+                  <TableCell>{oportunidad.subestado}</TableCell>
+                  <TableCell>{oportunidad.origen || '—'}</TableCell>
+                  <TableCell>
+                    {new Intl.DateTimeFormat('es-ES').format(new Date(oportunidad.actualizada))}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      {!cargando && !filtradas.length ? (
+        <p className="border-border text-muted-foreground mt-4 rounded-lg border border-dashed p-10 text-center text-sm">
+          No hay Leads que cumplan estos criterios. Crea el primero para empezar el pipeline.
         </p>
       ) : null}
     </div>

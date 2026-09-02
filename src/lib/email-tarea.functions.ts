@@ -50,7 +50,7 @@ const instruccion = (d: z.infer<typeof Entrada>) => {
 }
 
 export const redactarEmailIA = createServerFn({ method: 'POST' })
-  .inputValidator((data: unknown) => Entrada.parse(data))
+  .validator((data: unknown) => Entrada.parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env['LOVABLE_API_KEY']
     if (!apiKey) throw new Error('No hay clave de IA configurada en el entorno.')
@@ -128,7 +128,7 @@ const Envio = z.object({
  * se presenta como enviado.
  */
 export const enviarEmailTarea = createServerFn({ method: 'POST' })
-  .inputValidator((data: unknown) => Envio.parse(data))
+  .validator((data: unknown) => Envio.parse(data))
   .handler(async () => {
     const proveedor = process.env['EMAIL_PROVEEDOR_URL']
     const clave = process.env['EMAIL_PROVEEDOR_API_KEY']

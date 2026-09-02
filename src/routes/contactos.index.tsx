@@ -51,15 +51,16 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  CONTACTOS,
+  estadoDocumental,
   NATURALEZAS,
+  nombreCompleto,
   ORIGENES,
   RELACIONES,
   SATISFACCIONES,
-  estadoDocumental,
-  nombreCompleto,
   type Contacto,
 } from '@/data/contactos'
+import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
 
 export const Route = createFileRoute('/contactos/')({
   head: () => ({
@@ -88,6 +89,9 @@ const parseFecha = (f: string) => {
 }
 
 function ContactosPage() {
+  const session = useSupabaseSession()
+  const membership = useActiveMembership(session.user?.id)
+  const contactosQuery = useContactos(membership.data?.firmId)
   const [vista, setVista] = useState<'activos' | 'archivados'>('activos')
   const [q, setQ] = useState('')
   const [relacion, setRelacion] = useState('todas')
@@ -100,9 +104,8 @@ function ContactosPage() {
 
   const filtrados = useMemo(() => {
     const term = q.trim().toLowerCase()
-    const lista = CONTACTOS.filter((c) =>
-      vista === 'archivados' ? c.estado === 'Archivado' : c.estado !== 'Archivado',
-    )
+    const lista = (contactosQuery.data ?? [])
+      .filter((c) => (vista === 'archivados' ? c.estado === 'Archivado' : c.estado !== 'Archivado'))
       .filter((c) => {
         if (!term) return true
         return [c.nombre, c.apellidos, c.razonSocial, c.nif, c.telefono, c.email]
@@ -121,7 +124,7 @@ function ContactosPage() {
       if (orden === 'creacion') return parseFecha(b.creado) - parseFecha(a.creado)
       return parseFecha(b.modificado) - parseFecha(a.modificado)
     })
-  }, [vista, q, relacion, naturaleza, estado, origen, satisfaccion, orden])
+  }, [contactosQuery.data, vista, q, relacion, naturaleza, estado, origen, satisfaccion, orden])
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -256,6 +259,9 @@ function ContactosPage() {
 
       <Card>
         <CardContent className="overflow-x-auto pt-6">
+          {contactosQuery.isError ? (
+            <p className="text-destructive pb-4 text-sm">No se han podido cargar los contactos.</p>
+          ) : null}
           <Table>
             <TableHeader>
               <TableRow>
@@ -273,6 +279,16 @@ function ContactosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {contactosQuery.isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={12}
+                    className="text-muted-foreground py-10 text-center text-sm"
+                  >
+                    Cargando contactos…
+                  </TableCell>
+                </TableRow>
+              ) : null}
               {filtrados.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell>

@@ -1,5 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
+import type { Database } from './database.types'
+
+let browserClient: ReturnType<typeof createClient<Database>> | null = null
+
+export const isSupabaseConfigured = Boolean(
+  import.meta.env['VITE_SUPABASE_URL'] && import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'],
+)
+
 function requirePublicEnvironment(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_PUBLISHABLE_KEY') {
   const value = import.meta.env[name]
   if (!value) throw new Error(`${name} must be configured before using Supabase.`)
@@ -7,9 +15,15 @@ function requirePublicEnvironment(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_PUB
 }
 
 export function createSupabaseBrowserClient() {
-  return createClient(
+  return createClient<Database>(
     requirePublicEnvironment('VITE_SUPABASE_URL'),
     requirePublicEnvironment('VITE_SUPABASE_PUBLISHABLE_KEY'),
     { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
   )
+}
+
+export function getSupabaseBrowserClient() {
+  if (!isSupabaseConfigured) return null
+  browserClient ??= createSupabaseBrowserClient()
+  return browserClient
 }

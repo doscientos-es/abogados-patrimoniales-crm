@@ -1,3 +1,4 @@
+import { Button } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
   AlertTriangle,
@@ -23,7 +24,7 @@ import { NotaMuro } from '@/components/notas/nota-muro'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { SiguienteAccionBloque } from '@/components/tareas/siguiente-accion'
 import { NuevaTareaRapidaDialog, TareaCard } from '@/components/tareas/ui'
-import { Button } from '@/components/ui/button'
+import { Button as AppButton } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -479,11 +480,11 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
               <Bloque title="Expediente">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-foreground text-sm font-medium">{o.expedienteId}</p>
-                  <Button size="sm" variant="outline" asChild>
+                  <AppButton size="sm" variant="outline" asChild>
                     <Link to="/expedientes">
                       Abrir expediente <ExternalLink className="ml-1.5 h-3 w-3" />
                     </Link>
-                  </Button>
+                  </AppButton>
                 </div>
               </Bloque>
             ) : null}
@@ -493,11 +494,11 @@ export function OportunidadFicha({ oportunidadId }: { oportunidadId: string }) {
             <Bloque
               title="Contacto principal"
               action={
-                <Button size="sm" variant="outline" asChild>
+                <AppButton size="sm" variant="outline" asChild>
                   <Link to="/contactos/$id" params={{ id: o.contactoId }}>
                     Ver ficha del contacto <ExternalLink className="ml-1.5 h-3 w-3" />
                   </Link>
-                </Button>
+                </AppButton>
               }
             >
               <div className="grid gap-4 sm:grid-cols-2">

@@ -1,3 +1,4 @@
+export * from './infrastructure/supabase-oportunidades'
 export * from './ui/onboarding-lead-action'
 export * from './ui/opportunity-panel'
 export * from './ui/pipeline-board'

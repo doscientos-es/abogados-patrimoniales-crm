@@ -28,7 +28,10 @@ import {
   type Naturaleza,
   type RelacionDespacho,
 } from '@/data/contactos'
-import { notas, type NuevaNotaInput } from '@/lib/notas-store'
+import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useCrearContacto } from '@/features/contactos'
+
+type NuevaNotaInput = { titulo?: string; contenido: string; destacada?: boolean; critica?: boolean }
 
 export const Route = createFileRoute('/contactos/nuevo')({
   head: () => ({
@@ -64,6 +67,9 @@ function NuevoContactoPage() {
   const [borradores, setBorradores] = useState<NuevaNotaInput[]>([])
   const [errores, setErrores] = useState<{ naturaleza?: boolean; relacion?: boolean }>({})
   const navigate = useNavigate()
+  const session = useSupabaseSession()
+  const membership = useActiveMembership(session.user?.id)
+  const crearContactoReal = useCrearContacto(membership.data?.firmId)
   const esFisica = tipoPersona === 'Persona física'
   const esJuridica = tipoPersona === 'Persona jurídica'
   const esJudicial = tipoPersona === 'Órgano judicial'
@@ -89,7 +95,7 @@ function NuevoContactoPage() {
     setValores((v) => ({ ...v, ...resto }))
   }
 
-  const crearContacto = () => {
+  const crearContacto = async () => {
     const faltan = { naturaleza: !tipoPersona, relacion: !relacion }
     setErrores(faltan)
     if (faltan.naturaleza || faltan.relacion) {
@@ -100,15 +106,23 @@ function NuevoContactoPage() {
       toast.error('Indica al menos la denominación del contacto. No se ha guardado ninguna nota.')
       return
     }
-    const id = `CT-${Date.now()}`
-    const creadas = notas.guardarBorradores(id, nombre.trim(), borradores)
-    toast.success(
-      creadas.length
-        ? `Datos verificados y ${creadas.length} nota(s) interna(s) guardadas.`
-        : 'Datos verificados. El alta definitiva del contacto aún no está disponible.',
-    )
-    setBorradores([])
-    if (creadas.length) navigate({ to: '/notas' })
+    try {
+      await crearContactoReal.mutateAsync({
+        tipoPersona: tipoPersona as Naturaleza,
+        relacion: relacion as RelacionDespacho,
+        valores,
+        borradores,
+      })
+      toast.success('Contacto creado correctamente.')
+      setBorradores([])
+      void navigate({ to: '/contactos' })
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message.includes('duplicate')
+          ? 'Ya existe un contacto con ese NIF o NIE.'
+          : 'No se ha podido crear el contacto.',
+      )
+    }
   }
 
   return (
@@ -397,7 +411,9 @@ function NuevoContactoPage() {
             Guardar como borrador
           </Button>
 
-          <Button onClick={crearContacto}>Crear contacto</Button>
+          <Button disabled={crearContactoReal.isPending} onClick={() => void crearContacto()}>
+            {crearContactoReal.isPending ? 'Creando…' : 'Crear contacto'}
+          </Button>
         </div>
       </div>
     </div>

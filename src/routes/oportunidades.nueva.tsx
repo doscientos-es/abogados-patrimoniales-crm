@@ -15,7 +15,6 @@ import { toast } from 'sonner'
 
 import { NuevaNotaBoton } from '@/components/notas/nota-form'
 import { NotaMuro } from '@/components/notas/nota-muro'
-import { SiguienteAccionDialog } from '@/components/oportunidades/siguiente-accion'
 import { NuevaTareaRapidaDialog, type BorradorTareaRapida } from '@/components/tareas/ui'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,8 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { CONTACTOS, nombreCompleto, type Contacto } from '@/data/contactos'
-import type { OrigenRelacion } from '@/data/expedientes-model'
+import { nombreCompleto, type Contacto } from '@/data/contactos'
 import {
   AVISO_URGENCIA,
   OPCIONES_URGENCIA,
@@ -44,9 +42,10 @@ import {
   type IntervinienteOportunidad,
   type OpcionUrgencia,
 } from '@/data/pipeline'
-import { crm } from '@/lib/crm-store'
-import { ops } from '@/lib/expedientes-store'
-import { notas, notasVisibles, useNotas } from '@/lib/notas-store'
+import { useActiveMembership, useSupabaseSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
+import { useCrearOportunidad } from '@/features/crm'
+import { notasVisibles, useNotas } from '@/lib/notas-store'
 
 export const Route = createFileRoute('/oportunidades/nueva')({
   head: () => ({
@@ -96,12 +95,14 @@ const borradorVacio = (): Borrador => ({
 })
 
 /** Búsqueda simple sobre la agenda de contactos. */
-const buscarContactos = (q: string) => {
+const buscarContactos = (q: string, contactos: Contacto[]) => {
   const t = q.trim().toLowerCase()
   if (!t) return [] as Contacto[]
-  return CONTACTOS.filter((c) =>
-    `${nombreCompleto(c)} ${c.nif} ${c.email} ${c.telefono}`.toLowerCase().includes(t),
-  ).slice(0, 6)
+  return contactos
+    .filter((c) =>
+      `${nombreCompleto(c)} ${c.nif} ${c.email} ${c.telefono}`.toLowerCase().includes(t),
+    )
+    .slice(0, 6)
 }
 
 function Bloque({
@@ -150,15 +151,17 @@ function Campo({
 /** Buscador reutilizable de contactos existentes. */
 function BuscadorContacto({
   placeholder,
+  contactos,
   onSelect,
   vacio,
 }: {
   placeholder: string
+  contactos: Contacto[]
   onSelect: (c: Contacto) => void
   vacio?: React.ReactNode
 }) {
   const [q, setQ] = useState('')
-  const resultados = useMemo(() => buscarContactos(q), [q])
+  const resultados = useMemo(() => buscarContactos(q, contactos), [q, contactos])
   return (
     <div className="space-y-2">
       <div className="relative">
@@ -207,14 +210,17 @@ function BuscadorContacto({
 function NuevaOportunidadPage() {
   const navigate = useNavigate()
   const inputFile = useRef<HTMLInputElement>(null)
+  const session = useSupabaseSession()
+  const membership = useActiveMembership(session.user?.id)
+  const contactosQuery = useContactos(membership.data?.firmId)
+  const crearOportunidad = useCrearOportunidad(membership.data?.firmId)
+  const contactos = contactosQuery.data ?? []
 
   const [d, setD] = useState<Borrador>(borradorVacio)
   const [documentos, setDocumentos] = useState<DocumentoInicial[]>([])
   const [tareas, setTareas] = useState<BorradorTareaRapida[]>([])
   const [altaId] = useState(() => `ALTA-OP-${Date.now()}`)
   const notasAlta = useNotas((s) => notasVisibles(s).filter((n) => n.origen.id === altaId))
-
-  const [creada, setCreada] = useState<{ id: string; label: string } | null>(null)
 
   // Recupera el borrador si se ha salido a crear un contacto nuevo.
   useEffect(() => {
@@ -234,7 +240,7 @@ function NuevaOportunidadPage() {
   const setInfo = <K extends keyof InformacionInicial>(k: K, v: InformacionInicial[K]) =>
     setD((prev) => ({ ...prev, info: { ...prev.info, [k]: v } }))
 
-  const contacto: Contacto | undefined = CONTACTOS.find((c) => c.id === d.contactoId)
+  const contacto: Contacto | undefined = contactos.find((c) => c.id === d.contactoId)
 
   const tituloAutomatico = contacto ? `Asunto de ${nombreCompleto(contacto)}` : 'Lead sin título'
 
@@ -276,50 +282,42 @@ function NuevaOportunidadPage() {
       d.otros.map((x, n) => (n === idx ? { ...x, ...patch } : x)),
     )
 
-  const guardar = () => {
+  const guardar = async () => {
+    if (!d.contactoId) {
+      toast.error('Selecciona un contacto principal antes de guardar el Lead.')
+      return
+    }
     const opcionUrgencia: OpcionUrgencia | '' = d.hayUrgencia
       ? OPCIONES_URGENCIA[1]
       : OPCIONES_URGENCIA[0]
-    const id = crm.crearOportunidad({
-      titulo: tituloAutomatico,
-      contactoId: d.contactoId,
-      origen: d.origen,
-      recomendadoPor: d.recomendadoPor,
-      prioridad: 'Media',
-      descripcion: d.info.queHaOcurrido,
-      informacionInicial: d.info,
-      rolContacto: { rol: d.rol, aclaracion: '' },
-      otrosIntervinientes: d.otros,
-      urgencia: { opcion: opcionUrgencia, detalle: d.urgenciaDetalle },
-      documentosIniciales: documentos,
-      mensajes: [],
-    })
-    // Las tareas del alta se crean en el módulo transversal TAREAS (ops),
-    // vinculadas al Lead recién creado mediante su origen.
-    const origenLead = { tipo: 'Oportunidad', id, label: tituloAutomatico } as OrigenRelacion
-    tareas.forEach((t) =>
-      ops.crearTareaRapida({
-        titulo: t.titulo,
-        responsable: t.responsable,
-        ...(t.vencimiento ? { vencimiento: t.vencimiento } : {}),
-        ...(t.horaLimite ? { horaLimite: t.horaLimite } : {}),
-        prioridad: t.prioridad,
-        etiquetas: t.etiquetas,
-        descripcion: t.descripcion,
-        origen: origenLead,
-      }),
-    )
-    notasAlta.forEach((n) =>
-      notas.actualizar(n.id, {
-        origen: { tipo: 'oportunidad', id, etiqueta: tituloAutomatico },
-        oportunidadId: id,
-        contactos: n.contactos.length ? n.contactos : d.contactoId ? [d.contactoId] : [],
-      }),
-    )
-
-    sessionStorage.removeItem(BORRADOR)
-    toast.success('Lead guardado en la fase Entrada.')
-    setCreada({ id, label: tituloAutomatico })
+    try {
+      await crearOportunidad.mutateAsync({
+        contactId: d.contactoId,
+        title: tituloAutomatico,
+        source: d.origen,
+        description: d.info.queHaOcurrido,
+        details: {
+          rolContacto: { rol: d.rol, aclaracion: '' },
+          otrosIntervinientes: d.otros,
+          informacionInicial: d.info,
+          urgencia: { opcion: opcionUrgencia, detalle: d.urgenciaDetalle },
+          documentosIniciales: documentos,
+          pendingTasks: tareas,
+          pendingNotes: notasAlta,
+          recomendadoPor: d.recomendadoPor,
+          recomendadoPorId: d.recomendadoPorId,
+        },
+      })
+      sessionStorage.removeItem(BORRADOR)
+      toast.success(
+        documentos.length
+          ? 'Lead guardado. Los archivos se incorporarán desde el módulo de documentos.'
+          : 'Lead guardado en la fase Entrada.',
+      )
+      void navigate({ to: '/oportunidades', search: { vista: 'todas', abrir: '' } })
+    } catch {
+      toast.error('No se ha podido guardar el Lead.')
+    }
   }
 
   return (
@@ -350,6 +348,7 @@ function NuevaOportunidadPage() {
             <div className="space-y-3">
               <BuscadorContacto
                 placeholder="Buscar por nombre, NIF, teléfono o correo…"
+                contactos={contactos}
                 onSelect={(c) => set('contactoId', c.id)}
               />
               <Button
@@ -449,6 +448,7 @@ function NuevaOportunidadPage() {
                   <div className="space-y-2">
                     <BuscadorContacto
                       placeholder="Buscar contacto que recomienda…"
+                      contactos={contactos}
                       onSelect={(c) => {
                         set('recomendadoPorId', c.id)
                         set('recomendadoPor', nombreCompleto(c))
@@ -473,6 +473,7 @@ function NuevaOportunidadPage() {
             </p>
             <BuscadorContacto
               placeholder="Buscar interviniente en Contactos…"
+              contactos={contactos}
               onSelect={(c) =>
                 añadirInterviniente({
                   contactoId: c.id,
@@ -771,21 +772,11 @@ function NuevaOportunidadPage() {
               Cancelar
             </Link>
           </Button>
-          <Button onClick={guardar}>Guardar Lead</Button>
+          <Button disabled={crearOportunidad.isPending} onClick={() => void guardar()}>
+            {crearOportunidad.isPending ? 'Guardando…' : 'Guardar Lead'}
+          </Button>
         </div>
       </div>
-
-      {creada ? (
-        <SiguienteAccionDialog
-          open
-          onOpenChange={(v) => {
-            if (!v) setCreada(null)
-          }}
-          oportunidadId={creada.id}
-          oportunidadLabel={creada.label}
-          responsableSugerido=""
-        />
-      ) : null}
     </div>
   )
 }

@@ -239,7 +239,7 @@ export function PipelineBoard({
   return (
     <>
       <div className="-mx-1 overflow-x-auto pb-3">
-        <div className="flex flex-col gap-3 px-1 md:min-w-max md:flex-row">
+        <div className="flex min-w-max gap-3 px-1">
           {FASES.map((f) => {
             const items = oportunidades.filter((o) => o.fase === f.id)
             const plegada = f.tipo === 'terminal' && plegadas[f.id]
@@ -257,7 +257,7 @@ export function PipelineBoard({
                   soltar(f.id, e.dataTransfer.getData('text/plain'))
                 }}
                 className={cn(
-                  'shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors md:w-72',
+                  'w-72 shrink-0 rounded-lg border border-border/70 bg-muted/70 p-2 transition-colors',
                   claseColor(COLOR_FASE_LEAD[f.id]),
                   'fase-columna',
                   plegada && 'md:w-14',
