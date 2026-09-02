@@ -1,5 +1,12 @@
-import { ChevronDown, Plus, StickyNote } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown, StickyNote } from 'lucide-react'
+import {
+  cloneElement,
+  isValidElement,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -583,17 +589,23 @@ export function NuevaNotaBoton({
   const contexto = useContextoNota()
   const [open, setOpen] = useState(false)
   const base = inicial ?? contexto ?? undefined
+  const abrir = (event: MouseEvent<HTMLElement>) => {
+    setOpen(true)
+    if (isValidElement<{ onClick?: (clickEvent: MouseEvent<HTMLElement>) => void }>(trigger))
+      trigger.props.onClick?.(event)
+  }
+  const control = isValidElement(trigger) ? (
+    cloneElement(trigger, { onClick: abrir })
+  ) : (
+    <Button size="sm" variant="outline" className="gap-1.5" onClick={abrir}>
+      <StickyNote className="h-4 w-4" />
+      <span>Nueva nota</span>
+    </Button>
+  )
 
   return (
     <>
-      <span onClick={() => setOpen(true)} className="contents">
-        {trigger ?? (
-          <Button size="sm" variant="outline" className="gap-1.5">
-            <StickyNote className="h-4 w-4" />
-            <span className="hidden sm:inline">Nueva nota</span>
-          </Button>
-        )}
-      </span>
+      {control}
       {open ? (
         <NotaDialog
           key={JSON.stringify(base ?? {})}

@@ -59,6 +59,7 @@ export type Database = {
         Partial<ContactInsert> & { id?: string; status?: ContactStatus; version?: number }
       >
       crm_cases: Table<CaseReferenceRow, never, never>
+      crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_invoices: Table<InvoiceRow, InvoiceInsert, Partial<InvoiceInsert> & { id?: string }>
       crm_invoice_payments: Table<InvoicePaymentRow, InvoicePaymentInsert, never>
       crm_procedures: Table<
@@ -185,6 +186,35 @@ export type CaseReferenceRow = {
   firm_id: string
   reference: string
 }
+
+export type NoteRow = {
+  id: string
+  firm_id: string
+  scope: 'person' | 'case' | 'opportunity' | 'execution' | 'quote'
+  origin_id: string
+  origin_label: string
+  title: string | null
+  content: string
+  case_id: string | null
+  opportunity_id: string | null
+  status: 'active' | 'resolved' | 'archived'
+  highlighted: boolean
+  critical: boolean
+  requires_acknowledgement: boolean
+  validity: 'permanent' | 'temporary'
+  starts_on: string | null
+  review_on: string | null
+  expires_on: string | null
+  expiry_action: 'archive' | 'confirm'
+  review_pending: boolean
+  snoozed_until: string | null
+  visibility: 'team' | 'restricted'
+  details: Json
+  created_at: string
+  updated_at: string
+}
+
+export type NoteInsert = Omit<NoteRow, 'id' | 'created_at' | 'updated_at'>
 
 export type InvoiceStatus =
   | 'draft'
