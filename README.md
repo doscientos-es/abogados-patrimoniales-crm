@@ -1,30 +1,19 @@
-# Remix of Patrimonial Compass
+# LEX CRM · Abogados Patrimoniales
 
-Crea únicamente la estructura visual y navegable de un futuro software integral para ABOGADOS PATRIMONIALES.
+Aplicación web operativa para la gestión comercial y operativa de despachos de abogados patrimoniales. El producto evoluciona por fases, pero no es una maqueta ni un prototipo solo navegable.
 
-Objetivo
+## Alcance actual
 
-Diseñar el esqueleto general del programa para poder desarrollar posteriormente cada fase, módulo y función de manera progresiva.
+- Autenticación, usuarios y pertenencia a despacho mediante Supabase.
+- Gestión persistente de contactos, Leads, oportunidades y tareas.
+- Pipeline comercial con trazabilidad de creación y cambios de fase.
+- Módulos de expedientes, comunicaciones, documentos, calendario, facturación, informes y SOPs en evolución.
 
-Límites
+Las migraciones de base de datos residen en `supabase/migrations`. La aplicación cliente utiliza exclusivamente `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`; no incorpores claves de servicio, contraseñas ni datos reales al repositorio o a entornos de prueba.
 
-En esta versión:
+Los datos de demostración deben identificarse de forma inequívoca y mantenerse separados de los datos reales del despacho.
 
-No desarrolles funcionalidades reales.
-
-No conectes bases de datos, Supabase, APIs ni servicios externos.
-
-No configures automatizaciones, autenticación, firma, facturación ni generación documental.
-
-Utiliza únicamente datos ficticios.
-
-Los botones solo deben servir para navegar.
-
-Los formularios, tablas e indicadores serán maquetas visuales.
-
-Todo elemento que requiera programación debe aparecer como “Pendiente de desarrollo”.
-
-Estructura principal
+## Modelo funcional
 
 El ciclo de vida de cada asunto se divide en seis fases:
 
@@ -124,9 +113,9 @@ Satisfacción.
 
 Reactivación o cierre definitivo.
 
-Menú principal
+## Navegación principal
 
-Crea un menú lateral con:
+El menú lateral incluye:
 
 Inicio.
 
@@ -178,9 +167,9 @@ Facturación pendiente.
 
 Últimas actuaciones.
 
-Ficha del asunto
+## Ficha del asunto
 
-Crea una ficha común con:
+La ficha común reúne:
 
 Cliente y asunto.
 
@@ -212,9 +201,9 @@ Presupuesto y facturación.
 
 Incluye un indicador visual del recorrido por las seis fases.
 
-Biblioteca de SOPs
+## Biblioteca de SOPs
 
-Crea únicamente una sección visual para futuros procedimientos:
+La biblioteca de SOPs incorpora procedimientos como:
 
 Primera cita.
 
@@ -232,7 +221,7 @@ Archivo.
 
 Información periódica en ejecuciones.
 
-No desarrolles todavía su contenido.
+El contenido y la automatización de cada SOP se desarrollan de forma progresiva y requieren validación funcional antes de su activación.
 
 Diseño
 
@@ -250,23 +239,9 @@ Con tarjetas, tablas, pestañas, checklists y cronologías.
 
 Sin imágenes decorativas innecesarias.
 
-Resultado
+## Dirección de producto
 
-Entrega un prototipo navegable que permita:
-
-Entender la arquitectura completa.
-
-Recorrer las seis fases.
-
-Abrir fichas ficticias de clientes y asuntos.
-
-Visualizar los módulos principales.
-
-Identificar las partes pendientes de desarrollo.
-
-Ampliar posteriormente cada módulo sin reconstruir la estructura general.
-
-No construyas el software definitivo. Crea solamente su arquitectura visual, sus pantallas principales y la navegación básica.
+La plataforma debe conservar una interfaz profesional, sobria y ampliable, con especial atención a la privacidad, la trazabilidad y el control de acceso por despacho. Cada ampliación debe integrarse con el modelo de datos y las reglas de seguridad existentes.
 
 This project was built with [Lovable](https://lovable.dev).
 
@@ -280,11 +255,9 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Para trabajar en local necesitas Node.js y pnpm.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+pnpm install
+pnpm dev
 ```

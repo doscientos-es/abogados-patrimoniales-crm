@@ -2,12 +2,14 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   FileUp,
   ListChecks,
   Search,
   StickyNote,
   Trash2,
   UserPlus,
+  UserRound,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -117,15 +119,17 @@ function Bloque({
   children: React.ReactNode
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-baseline gap-2 text-base">
-          <span className="text-muted-foreground text-sm font-normal">{numero}.</span>
+    <Card className="border-border/80 overflow-hidden shadow-sm">
+      <CardHeader className="border-border/70 bg-muted/20 gap-1 border-b pb-4">
+        <CardTitle className="flex items-center gap-2.5 text-base">
+          <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+            {numero}
+          </span>
           {titulo}
         </CardTitle>
-        {descripcion ? <p className="text-muted-foreground text-sm">{descripcion}</p> : null}
+        {descripcion ? <p className="text-muted-foreground pl-8.5 text-sm">{descripcion}</p> : null}
       </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
+      <CardContent className="space-y-4 pt-5">{children}</CardContent>
     </Card>
   )
 }
@@ -324,461 +328,528 @@ function NuevaOportunidadPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[900px] pb-16">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-280 pb-16">
+      <div className="border-border/80 from-background to-muted/35 mb-6 rounded-xl border bg-linear-to-br px-5 py-5 shadow-sm sm:px-7">
         <div>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2 gap-1.5" asChild>
             <Link to="/oportunidades" search={{ vista: 'todas', abrir: '' }}>
               <ArrowLeft className="h-4 w-4" /> Volver a Leads
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Nuevo Lead</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Registra la información tal y como ha llegado al despacho. Ningún dato es obligatorio:
-            el Lead puede completarse más adelante.
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Nuevo Lead</h1>
+            <Badge variant="secondary" className="font-normal">
+              Fase de entrada
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+            Registra fielmente la información recibida. El Lead podrá completarse y revisarse más
+            adelante, sin añadir valoraciones jurídicas en esta fase.
           </p>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* 1 · Contacto principal */}
-        <Bloque
-          numero={1}
-          titulo="Contacto principal"
-          descripcion="Persona que traslada el asunto al despacho, su rol en este Lead y cómo ha llegado."
-        >
-          {!contacto ? (
-            <div className="space-y-3">
-              <BuscadorContacto
-                placeholder="Buscar por nombre, NIF, teléfono o correo…"
-                contactos={contactos}
-                onSelect={(c) => set('contactoId', c.id)}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={guardarBorradorYSalir}
-              >
-                <UserPlus className="h-4 w-4" /> Crear contacto nuevo
-              </Button>
-              <p className="text-muted-foreground text-xs">
-                Al crear un contacto nuevo se conserva lo ya escrito en esta pantalla.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-muted/40 flex items-start justify-between gap-4 rounded-md border p-3">
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">{nombreCompleto(contacto)}</p>
-                <p className="text-muted-foreground">
-                  {contacto.nif || 'Sin identificación'} · {contacto.telefono || 'Sin teléfono'} ·{' '}
-                  {contacto.email || 'Sin correo'}
-                </p>
-                <p className="text-muted-foreground">Relación: {contacto.relacion}</p>
-                <Link
-                  to="/contactos/$id"
-                  params={{ id: contacto.id }}
-                  className="text-primary text-xs hover:underline"
-                >
-                  Ver ficha del contacto
-                </Link>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Cambiar contacto"
-                onClick={() => set('contactoId', '')}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          <Campo
-            label="Rol en el Lead"
-            ayuda="Cómo interviene en este asunto concreto. Al abrir expediente, el rol definitivo se gestiona en EXPEDIENTE › INTERVINIENTES."
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="space-y-6">
+          {/* 1 · Contacto principal */}
+          <Bloque
+            numero={1}
+            titulo="Contacto principal"
+            descripcion="Persona que traslada el asunto al despacho, su rol en este Lead y cómo ha llegado."
           >
-            <Select value={d.rol} onValueChange={(v) => set('rol', v)}>
-              <SelectTrigger aria-label="Rol en el Lead">
-                <SelectValue placeholder="Selecciona el rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES_OPORTUNIDAD.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Campo>
+            {!contacto ? (
+              <div className="space-y-3">
+                <BuscadorContacto
+                  placeholder="Buscar por nombre, NIF, teléfono o correo…"
+                  contactos={contactos}
+                  onSelect={(c) => set('contactoId', c.id)}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={guardarBorradorYSalir}
+                >
+                  <UserPlus className="h-4 w-4" /> Crear contacto nuevo
+                </Button>
+                <p className="text-muted-foreground text-xs">
+                  Al crear un contacto nuevo se conserva lo ya escrito en esta pantalla.
+                </p>
+              </div>
+            ) : (
+              <div className="border-primary/20 bg-primary/4 flex items-start justify-between gap-4 rounded-lg border p-3.5">
+                <div className="space-y-1 text-sm">
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="text-primary h-4 w-4" /> {nombreCompleto(contacto)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {contacto.nif || 'Sin identificación'} · {contacto.telefono || 'Sin teléfono'} ·{' '}
+                    {contacto.email || 'Sin correo'}
+                  </p>
+                  <p className="text-muted-foreground">Relación: {contacto.relacion}</p>
+                  <Link
+                    to="/contactos/$id"
+                    params={{ id: contacto.id }}
+                    className="text-primary text-xs hover:underline"
+                  >
+                    Ver ficha del contacto
+                  </Link>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Cambiar contacto"
+                  onClick={() => set('contactoId', '')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Campo label="Origen del contacto" ayuda="Cómo ha llegado el contacto al despacho.">
-              <Select value={d.origen} onValueChange={(v) => set('origen', v)}>
-                <SelectTrigger aria-label="Origen del contacto">
-                  <SelectValue placeholder="Selecciona el origen" />
+            <Campo
+              label="Rol en el Lead"
+              ayuda="Cómo interviene en este asunto concreto. Al abrir expediente, el rol definitivo se gestiona en EXPEDIENTE › INTERVINIENTES."
+            >
+              <Select value={d.rol} onValueChange={(v) => set('rol', v)}>
+                <SelectTrigger aria-label="Rol en el Lead">
+                  <SelectValue placeholder="Selecciona el rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ORIGENES_OPORTUNIDAD.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
+                  {ROLES_OPORTUNIDAD.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Campo>
-            {ORIGENES_CON_RECOMENDANTE.includes(d.origen) ? (
-              <Campo
-                label="Recomendado por"
-                ayuda="Vincula un contacto existente o anota el nombre provisionalmente."
-              >
-                {d.recomendadoPorId ? (
-                  <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
-                    <span className="truncate">{d.recomendadoPor}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Quitar recomendante"
-                      onClick={() => {
-                        set('recomendadoPorId', '')
-                        set('recomendadoPor', '')
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <BuscadorContacto
-                      placeholder="Buscar contacto que recomienda…"
-                      contactos={contactos}
-                      onSelect={(c) => {
-                        set('recomendadoPorId', c.id)
-                        set('recomendadoPor', nombreCompleto(c))
-                      }}
-                    />
-                    <Input
-                      value={d.recomendadoPor}
-                      onChange={(e) => set('recomendadoPor', e.target.value)}
-                      placeholder="O anota el nombre provisionalmente"
-                    />
-                  </div>
-                )}
-              </Campo>
-            ) : null}
-          </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Otros intervinientes</Label>
-            <p className="text-muted-foreground text-xs">
-              Busca primero en Contactos. Si no existe, puedes crear el contacto o anotarlo
-              provisionalmente sin ficha completa.
-            </p>
-            <BuscadorContacto
-              placeholder="Buscar interviniente en Contactos…"
-              contactos={contactos}
-              onSelect={(c) =>
-                añadirInterviniente({
-                  contactoId: c.id,
-                  nombre: nombreCompleto(c),
-                  identificacion: c.nif,
-                })
-              }
-              vacio={
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={guardarBorradorYSalir}>
-                    <UserPlus className="mr-1.5 h-4 w-4" /> Crear contacto
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => añadirInterviniente({})}>
-                    Anotar provisionalmente
-                  </Button>
-                </div>
-              }
-            />
-            <Button variant="outline" size="sm" onClick={() => añadirInterviniente({})}>
-              + Añadir interviniente
-            </Button>
-
-            {d.otros.map((i, idx) => (
-              <div
-                key={i.id}
-                className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto]"
-              >
-                <Input
-                  value={i.nombre}
-                  placeholder="Nombre o denominación"
-                  onChange={(e) => actualizarInterviniente(idx, { nombre: e.target.value })}
-                />
-                <Select
-                  value={i.rol}
-                  onValueChange={(v) => actualizarInterviniente(idx, { rol: v })}
-                >
-                  <SelectTrigger aria-label="Rol del interviniente">
-                    <SelectValue placeholder="Rol en el Lead" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo label="Origen del contacto" ayuda="Cómo ha llegado el contacto al despacho.">
+                <Select value={d.origen} onValueChange={(v) => set('origen', v)}>
+                  <SelectTrigger aria-label="Origen del contacto">
+                    <SelectValue placeholder="Selecciona el origen" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES_OPORTUNIDAD.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
+                    {ORIGENES_OPORTUNIDAD.map((o) => (
+                      <SelectItem key={o} value={o}>
+                        {o}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Quitar interviniente"
-                  onClick={() =>
-                    set(
-                      'otros',
-                      d.otros.filter((_, n) => n !== idx),
-                    )
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Input
-                  className="sm:col-span-3"
-                  value={i.identificacion}
-                  placeholder="Identificación o dato conocido (opcional)"
-                  onChange={(e) => actualizarInterviniente(idx, { identificacion: e.target.value })}
-                />
-                {i.contactoId ? (
-                  <p className="text-muted-foreground text-xs sm:col-span-3">
-                    Vinculado a la ficha de Contactos.
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-xs sm:col-span-3">
-                    Anotado provisionalmente, sin ficha de contacto.
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Bloque>
-
-        {/* 2 · Información inicial */}
-        <Bloque
-          numero={2}
-          titulo="Información inicial"
-          descripcion="Solo lo comunicado por el contacto, sin valoración jurídica."
-        >
-          <Campo
-            label="¿Qué ha ocurrido?"
-            ayuda="Relato inicial del contacto, sin valoración jurídica."
-          >
-            <Textarea
-              rows={8}
-              value={d.info.queHaOcurrido}
-              onChange={(e) => setInfo('queHaOcurrido', e.target.value)}
-            />
-          </Campo>
-          <Campo label="¿Qué solicita el contacto?">
-            <Textarea
-              rows={3}
-              value={d.info.queSolicita}
-              onChange={(e) => setInfo('queSolicita', e.target.value)}
-            />
-          </Campo>
-          <Campo
-            label="¿Existe algún procedimiento ya iniciado?"
-            ayuda="Procedimiento judicial, demanda, requerimiento, expediente administrativo, ejecución…"
-          >
-            <Textarea
-              rows={2}
-              value={d.info.procedimientoIniciado}
-              onChange={(e) => setInfo('procedimientoIniciado', e.target.value)}
-            />
-          </Campo>
-          <Campo
-            label="¿Qué documentación manifiesta tener?"
-            ayuda="Solo lo que el contacto afirma tener; los archivos se incorporan en DOCUMENTOS."
-          >
-            <Textarea
-              rows={2}
-              value={d.info.documentacionManifestada}
-              onChange={(e) => setInfo('documentacionManifestada', e.target.value)}
-            />
-          </Campo>
-
-          <Campo label="¿Existe alguna urgencia o fecha relevante?">
-            <div className="flex flex-wrap gap-2">
-              <label className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                <input
-                  type="radio"
-                  name="urgencia"
-                  checked={!d.hayUrgencia}
-                  onChange={() => {
-                    set('hayUrgencia', false)
-                    set('urgenciaDetalle', '')
-                  }}
-                />
-                No consta
-              </label>
-              <label className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                <input
-                  type="radio"
-                  name="urgencia"
-                  checked={d.hayUrgencia}
-                  onChange={() => set('hayUrgencia', true)}
-                />
-                Sí
-              </label>
-            </div>
-          </Campo>
-          {d.hayUrgencia ? (
-            <>
-              <Campo label="Fecha / plazo / motivo de urgencia">
-                <Input
-                  value={d.urgenciaDetalle}
-                  onChange={(e) => set('urgenciaDetalle', e.target.value)}
-                  placeholder="Ej.: vencimiento del contrato el 30/09/2026"
-                />
               </Campo>
-              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div>
-                  <p className="font-semibold">{AVISO_URGENCIA}</p>
-                  <p className="text-xs">
-                    Información comunicada por el contacto. No constituye un plazo jurídico validado
-                    ni genera plazos automáticos.
-                  </p>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </Bloque>
-
-        {/* 3 · Notas internas */}
-        <Bloque numero={3} titulo="Notas internas">
-          <div>
-            <NuevaNotaBoton
-              origenFijo={{
-                id: altaId,
-                etiqueta: `Lead en alta · ${tituloAutomatico}`,
-                contactos: d.contactoId ? [d.contactoId] : [],
-              }}
-              inicial={{ ambito: 'oportunidad' }}
-              modoRapido
-              trigger={
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <StickyNote className="h-4 w-4" /> Nueva nota
-                </Button>
-              }
-            />
-          </div>
-          {notasAlta.length > 0 ? (
-            <NotaMuro notas={notasAlta} columnas={2} mostrarOrigen={false} />
-          ) : null}
-        </Bloque>
-
-        {/* 4 · Tareas */}
-        <Bloque numero={4} titulo="Tareas">
-          <div>
-            <NuevaTareaRapidaDialog
-              trigger={
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <ListChecks className="h-4 w-4" /> Nueva tarea
-                </Button>
-              }
-              contextoLabel={`Lead en alta · ${tituloAutomatico}`}
-              onCreate={(t) => setTareas((prev) => [...prev, t])}
-            />
-          </div>
-          {tareas.length > 0 ? (
-            <ul className="space-y-2">
-              {tareas.map((t, idx) => (
-                <li
-                  key={`${t.titulo}-${idx}`}
-                  className="flex items-start justify-between gap-3 rounded-md border p-3"
+              {ORIGENES_CON_RECOMENDANTE.includes(d.origen) ? (
+                <Campo
+                  label="Recomendado por"
+                  ayuda="Vincula un contacto existente o anota el nombre provisionalmente."
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{t.titulo}</p>
-                    <p className="text-muted-foreground text-xs">
-                      Asignada a {t.responsable} · Prioridad {t.prioridad}
-                      {t.vencimiento ? ` · Vence ${t.vencimiento}` : ''}
-                      {t.horaLimite ? ` ${t.horaLimite}` : ''}
-                      {t.etiquetas.length ? ` · ${t.etiquetas.length} etiqueta(s)` : ''}
-                    </p>
+                  {d.recomendadoPorId ? (
+                    <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <span className="truncate">{d.recomendadoPor}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Quitar recomendante"
+                        onClick={() => {
+                          set('recomendadoPorId', '')
+                          set('recomendadoPor', '')
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <BuscadorContacto
+                        placeholder="Buscar contacto que recomienda…"
+                        contactos={contactos}
+                        onSelect={(c) => {
+                          set('recomendadoPorId', c.id)
+                          set('recomendadoPor', nombreCompleto(c))
+                        }}
+                      />
+                      <Input
+                        value={d.recomendadoPor}
+                        onChange={(e) => set('recomendadoPor', e.target.value)}
+                        placeholder="O anota el nombre provisionalmente"
+                      />
+                    </div>
+                  )}
+                </Campo>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Otros intervinientes</Label>
+              <p className="text-muted-foreground text-xs">
+                Busca primero en Contactos. Si no existe, puedes crear el contacto o anotarlo
+                provisionalmente sin ficha completa.
+              </p>
+              <BuscadorContacto
+                placeholder="Buscar interviniente en Contactos…"
+                contactos={contactos}
+                onSelect={(c) =>
+                  añadirInterviniente({
+                    contactoId: c.id,
+                    nombre: nombreCompleto(c),
+                    identificacion: c.nif,
+                  })
+                }
+                vacio={
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={guardarBorradorYSalir}>
+                      <UserPlus className="mr-1.5 h-4 w-4" /> Crear contacto
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => añadirInterviniente({})}>
+                      Anotar provisionalmente
+                    </Button>
                   </div>
+                }
+              />
+              <Button variant="outline" size="sm" onClick={() => añadirInterviniente({})}>
+                + Añadir interviniente
+              </Button>
+
+              {d.otros.map((i, idx) => (
+                <div
+                  key={i.id}
+                  className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto]"
+                >
+                  <Input
+                    value={i.nombre}
+                    placeholder="Nombre o denominación"
+                    onChange={(e) => actualizarInterviniente(idx, { nombre: e.target.value })}
+                  />
+                  <Select
+                    value={i.rol}
+                    onValueChange={(v) => actualizarInterviniente(idx, { rol: v })}
+                  >
+                    <SelectTrigger aria-label="Rol del interviniente">
+                      <SelectValue placeholder="Rol en el Lead" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES_OPORTUNIDAD.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Quitar tarea"
-                    onClick={() => setTareas((prev) => prev.filter((_, n) => n !== idx))}
+                    aria-label="Quitar interviniente"
+                    onClick={() =>
+                      set(
+                        'otros',
+                        d.otros.filter((_, n) => n !== idx),
+                      )
+                    }
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </li>
+                  <Input
+                    className="sm:col-span-3"
+                    value={i.identificacion}
+                    placeholder="Identificación o dato conocido (opcional)"
+                    onChange={(e) =>
+                      actualizarInterviniente(idx, { identificacion: e.target.value })
+                    }
+                  />
+                  {i.contactoId ? (
+                    <p className="text-muted-foreground text-xs sm:col-span-3">
+                      Vinculado a la ficha de Contactos.
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs sm:col-span-3">
+                      Anotado provisionalmente, sin ficha de contacto.
+                    </p>
+                  )}
+                </div>
               ))}
-            </ul>
-          ) : null}
-        </Bloque>
+            </div>
+          </Bloque>
 
-        {/* 5 · Documentos */}
-        <Bloque numero={5} titulo="Documentos">
-          <input
-            ref={inputFile}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => subir(e.target.files)}
-          />
-          <div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => inputFile.current?.click()}
+          {/* 2 · Información inicial */}
+          <Bloque
+            numero={2}
+            titulo="Información inicial"
+            descripcion="Solo lo comunicado por el contacto, sin valoración jurídica."
+          >
+            <Campo
+              label="¿Qué ha ocurrido?"
+              ayuda="Relato inicial del contacto, sin valoración jurídica."
             >
-              <FileUp className="h-4 w-4" /> Añadir documentos
-            </Button>
-          </div>
-          {documentos.length > 0 ? (
-            <ul className="divide-y rounded-md border">
-              {documentos.map((doc, idx) => (
-                <li key={doc.id} className="space-y-2 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 text-sm">
-                      <p className="truncate font-medium">{doc.nombre}</p>
-                      <p className="text-muted-foreground text-xs">{doc.fecha}</p>
+              <Textarea
+                rows={8}
+                value={d.info.queHaOcurrido}
+                onChange={(e) => setInfo('queHaOcurrido', e.target.value)}
+              />
+            </Campo>
+            <Campo label="¿Qué solicita el contacto?">
+              <Textarea
+                rows={3}
+                value={d.info.queSolicita}
+                onChange={(e) => setInfo('queSolicita', e.target.value)}
+              />
+            </Campo>
+            <Campo
+              label="¿Existe algún procedimiento ya iniciado?"
+              ayuda="Procedimiento judicial, demanda, requerimiento, expediente administrativo, ejecución…"
+            >
+              <Textarea
+                rows={2}
+                value={d.info.procedimientoIniciado}
+                onChange={(e) => setInfo('procedimientoIniciado', e.target.value)}
+              />
+            </Campo>
+            <Campo
+              label="¿Qué documentación manifiesta tener?"
+              ayuda="Solo lo que el contacto afirma tener; los archivos se incorporan en DOCUMENTOS."
+            >
+              <Textarea
+                rows={2}
+                value={d.info.documentacionManifestada}
+                onChange={(e) => setInfo('documentacionManifestada', e.target.value)}
+              />
+            </Campo>
+
+            <Campo label="¿Existe alguna urgencia o fecha relevante?">
+              <div className="flex flex-wrap gap-2">
+                <label className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                  <input
+                    type="radio"
+                    name="urgencia"
+                    checked={!d.hayUrgencia}
+                    onChange={() => {
+                      set('hayUrgencia', false)
+                      set('urgenciaDetalle', '')
+                    }}
+                  />
+                  No consta
+                </label>
+                <label className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                  <input
+                    type="radio"
+                    name="urgencia"
+                    checked={d.hayUrgencia}
+                    onChange={() => set('hayUrgencia', true)}
+                  />
+                  Sí
+                </label>
+              </div>
+            </Campo>
+            {d.hayUrgencia ? (
+              <>
+                <Campo label="Fecha / plazo / motivo de urgencia">
+                  <Input
+                    value={d.urgenciaDetalle}
+                    onChange={(e) => set('urgenciaDetalle', e.target.value)}
+                    placeholder="Ej.: vencimiento del contrato el 30/09/2026"
+                  />
+                </Campo>
+                <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">{AVISO_URGENCIA}</p>
+                    <p className="text-xs">
+                      Información comunicada por el contacto. No constituye un plazo jurídico
+                      validado ni genera plazos automáticos.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </Bloque>
+
+          {/* 3 · Notas internas */}
+          <Bloque numero={3} titulo="Notas internas">
+            <div>
+              <NuevaNotaBoton
+                origenFijo={{
+                  id: altaId,
+                  etiqueta: `Lead en alta · ${tituloAutomatico}`,
+                  contactos: d.contactoId ? [d.contactoId] : [],
+                }}
+                inicial={{ ambito: 'oportunidad' }}
+                modoRapido
+                trigger={
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <StickyNote className="h-4 w-4" /> Nueva nota
+                  </Button>
+                }
+              />
+            </div>
+            {notasAlta.length > 0 ? (
+              <NotaMuro notas={notasAlta} columnas={2} mostrarOrigen={false} />
+            ) : null}
+          </Bloque>
+
+          {/* 4 · Tareas */}
+          <Bloque numero={4} titulo="Tareas">
+            <div>
+              <NuevaTareaRapidaDialog
+                trigger={
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <ListChecks className="h-4 w-4" /> Nueva tarea
+                  </Button>
+                }
+                contextoLabel={`Lead en alta · ${tituloAutomatico}`}
+                onCreate={(t) => setTareas((prev) => [...prev, t])}
+              />
+            </div>
+            {tareas.length > 0 ? (
+              <ul className="space-y-2">
+                {tareas.map((t, idx) => (
+                  <li
+                    key={`${t.titulo}-${idx}`}
+                    className="flex items-start justify-between gap-3 rounded-md border p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{t.titulo}</p>
+                      <p className="text-muted-foreground text-xs">
+                        Asignada a {t.responsable} · Prioridad {t.prioridad}
+                        {t.vencimiento ? ` · Vence ${t.vencimiento}` : ''}
+                        {t.horaLimite ? ` ${t.horaLimite}` : ''}
+                        {t.etiquetas.length ? ` · ${t.etiquetas.length} etiqueta(s)` : ''}
+                      </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="Quitar documento"
-                      onClick={() => setDocumentos(documentos.filter((_, n) => n !== idx))}
+                      aria-label="Quitar tarea"
+                      onClick={() => setTareas((prev) => prev.filter((_, n) => n !== idx))}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                  <Input
-                    value={doc.descripcion}
-                    placeholder="Descripción breve (opcional)"
-                    onChange={(e) =>
-                      setDocumentos(
-                        documentos.map((x, n) =>
-                          n === idx ? { ...x, descripcion: e.target.value } : x,
-                        ),
-                      )
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </Bloque>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </Bloque>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/oportunidades" search={{ vista: 'todas', abrir: '' }}>
-              Cancelar
-            </Link>
-          </Button>
-          <Button disabled={crearOportunidad.isPending} onClick={() => void guardar()}>
-            {crearOportunidad.isPending ? 'Guardando…' : 'Guardar Lead'}
-          </Button>
+          {/* 5 · Documentos */}
+          <Bloque numero={5} titulo="Documentos">
+            <input
+              ref={inputFile}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => subir(e.target.files)}
+            />
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => inputFile.current?.click()}
+              >
+                <FileUp className="h-4 w-4" /> Añadir documentos
+              </Button>
+            </div>
+            {documentos.length > 0 ? (
+              <ul className="divide-y rounded-md border">
+                {documentos.map((doc, idx) => (
+                  <li key={doc.id} className="space-y-2 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 text-sm">
+                        <p className="truncate font-medium">{doc.nombre}</p>
+                        <p className="text-muted-foreground text-xs">{doc.fecha}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Quitar documento"
+                        onClick={() => setDocumentos(documentos.filter((_, n) => n !== idx))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={doc.descripcion}
+                      placeholder="Descripción breve (opcional)"
+                      onChange={(e) =>
+                        setDocumentos(
+                          documentos.map((x, n) =>
+                            n === idx ? { ...x, descripcion: e.target.value } : x,
+                          ),
+                        )
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </Bloque>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/oportunidades" search={{ vista: 'todas', abrir: '' }}>
+                Cancelar
+              </Link>
+            </Button>
+            <Button disabled={crearOportunidad.isPending} onClick={() => void guardar()}>
+              {crearOportunidad.isPending ? 'Guardando…' : 'Guardar Lead'}
+            </Button>
+          </div>
         </div>
+
+        <aside className="sticky top-6 hidden space-y-4 lg:block">
+          <Card className="border-border/80 bg-muted/25 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-xs font-semibold tracking-wider uppercase">Guía de alta</p>
+              <ol className="mt-4 space-y-4">
+                <li className="flex gap-2.5 text-sm">
+                  <span className="bg-background flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium">
+                    1
+                  </span>
+                  <span>
+                    <strong className="block font-medium">Vincula el contacto</strong>
+                    <span className="text-muted-foreground text-xs leading-5">
+                      Búscalo en la agenda o crea su ficha conservando este borrador.
+                    </span>
+                  </span>
+                </li>
+                <li className="flex gap-2.5 text-sm">
+                  <span className="bg-background flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium">
+                    2
+                  </span>
+                  <span>
+                    <strong className="block font-medium">Recoge lo comunicado</strong>
+                    <span className="text-muted-foreground text-xs leading-5">
+                      Anota hechos, solicitud, procedimiento y documentación conocida.
+                    </span>
+                  </span>
+                </li>
+                <li className="flex gap-2.5 text-sm">
+                  <span className="bg-background flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium">
+                    3
+                  </span>
+                  <span>
+                    <strong className="block font-medium">Deja seguimiento</strong>
+                    <span className="text-muted-foreground text-xs leading-5">
+                      Añade, si procede, notas, tareas y documentos de partida.
+                    </span>
+                  </span>
+                </li>
+              </ol>
+            </CardContent>
+          </Card>
+
+          <div className="border-primary/20 bg-primary/5 rounded-lg border p-3.5">
+            <div className="flex gap-2">
+              <UserRound className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Tras guardar</p>
+                <p className="text-muted-foreground mt-1 text-xs leading-5">
+                  El Lead quedará registrado en <strong>Entrada · Sin revisar</strong> para su
+                  revisión posterior.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )

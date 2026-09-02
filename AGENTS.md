@@ -10,3 +10,5 @@
 > the editor, so keep the branch in a working state.
 
 <!-- LOVABLE:END -->
+
+The mcp for supabase is: supabase-polbackup03@gmail.com

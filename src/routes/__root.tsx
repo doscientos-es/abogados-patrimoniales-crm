@@ -8,7 +8,7 @@ import {
   createRootRouteWithContext,
   useRouter,
 } from '@tanstack/react-router'
-import { Plus, Search, StickyNote } from 'lucide-react'
+import { PanelLeft, Plus, Search, StickyNote } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
@@ -16,7 +16,7 @@ import { NuevaNotaBoton } from '@/components/notas/nota-form'
 import { CampanaNotificaciones } from '@/components/notificaciones'
 import { TareaFicha } from '@/components/tareas/ficha-modal'
 import { Button } from '@/components/ui/button'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
 import { NuevaTareaDialog } from '@/features/crm'
@@ -91,7 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: 'description',
         content:
-          'Prototipo navegable de un software integral para despachos de abogados patrimoniales.',
+          'CRM para la gestión comercial y operativa de despachos de abogados patrimoniales.',
       },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:card', content: 'summary_large_image' },
@@ -143,19 +143,24 @@ function RootComponent() {
 function AuthenticatedRoot() {
   // Un aviso abre la tarea allá donde estés, sin cambiar de pantalla.
   const [tareaAvisada, setTareaAvisada] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
-    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
-      <div className="bg-background flex min-h-screen w-full">
-        <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-border bg-card/95 sticky top-0 z-10 flex h-14 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
-            <SidebarTrigger
-              aria-label={sidebarOpen ? 'Cerrar navegación' : 'Abrir navegación'}
+    <SidebarProvider className="h-svh min-h-0 overflow-hidden">
+      <div className="bg-background flex h-full min-h-0 w-full overflow-hidden">
+        <AppSidebar open={sidebarOpen} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="border-border bg-card/95 z-10 flex h-14 shrink-0 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
+            <Button
+              aria-label={sidebarOpen ? 'Ocultar navegación' : 'Mostrar navegación'}
               className="shrink-0"
-              title={sidebarOpen ? 'Cerrar navegación' : 'Abrir navegación'}
-            />
+              size="icon"
+              title={sidebarOpen ? 'Ocultar navegación' : 'Mostrar navegación'}
+              variant="ghost"
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <div className="border-border bg-muted/60 text-muted-foreground hidden h-9 max-w-md min-w-0 flex-1 items-center gap-2 rounded-md border px-3 text-sm md:flex">
               <Search className="h-4 w-4 shrink-0" />
               <span className="truncate">Buscar clientes, asuntos o documentos…</span>
@@ -181,7 +186,7 @@ function AuthenticatedRoot() {
               <AccountMenu />
             </div>
           </header>
-          <main className="flex-1 p-4 sm:p-6">
+          <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {/* Required: nested routes render here. */}
             <Outlet />
           </main>
