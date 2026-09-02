@@ -109,3 +109,12 @@ export function KanbanEmpty({
     </p>
   )
 }
+
+export {
+  KanbanColumnBody as Body,
+  KanbanColumn as Column,
+  KanbanEmpty as Empty,
+  KanbanColumnHeader as Header,
+  KanbanColumnTitle as Title,
+  KanbanViewport as Viewport,
+}

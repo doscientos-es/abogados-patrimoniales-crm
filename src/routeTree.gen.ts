@@ -32,8 +32,6 @@ import { Route as OportunidadesIdRouteImport } from './routes/oportunidades.$id'
 import { Route as OportunidadesNuevaRouteImport } from './routes/oportunidades.nueva'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosIdRouteImport } from './routes/presupuestos.$id'
-import { Route as SopsIndexRouteImport } from './routes/sops.index'
-import { Route as SopsIdRouteImport } from './routes/sops.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -150,16 +148,6 @@ const PresupuestosIdRoute = PresupuestosIdRouteImport.update({
   path: '/presupuestos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SopsIndexRoute = SopsIndexRouteImport.update({
-  id: '/sops/',
-  path: '/sops/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SopsIdRoute = SopsIdRouteImport.update({
-  id: '/sops/$id',
-  path: '/sops/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -181,12 +169,10 @@ export interface FileRoutesByFullPath {
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
   '/presupuestos/$id': typeof PresupuestosIdRoute
-  '/sops/$id': typeof SopsIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
-  '/sops/': typeof SopsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -208,12 +194,10 @@ export interface FileRoutesByTo {
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
   '/presupuestos/$id': typeof PresupuestosIdRoute
-  '/sops/$id': typeof SopsIdRoute
   '/contactos': typeof ContactosIndexRoute
   '/expedientes': typeof ExpedientesIndexRoute
   '/oportunidades': typeof OportunidadesIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
-  '/sops': typeof SopsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -236,12 +220,10 @@ export interface FileRoutesById {
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
   '/presupuestos/$id': typeof PresupuestosIdRoute
-  '/sops/$id': typeof SopsIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
-  '/sops/': typeof SopsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -265,12 +247,10 @@ export interface FileRouteTypes {
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
     | '/presupuestos/$id'
-    | '/sops/$id'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
     | '/presupuestos/'
-    | '/sops/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -292,12 +272,10 @@ export interface FileRouteTypes {
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
     | '/presupuestos/$id'
-    | '/sops/$id'
     | '/contactos'
     | '/expedientes'
     | '/oportunidades'
     | '/presupuestos'
-    | '/sops'
   id:
     | '__root__'
     | '/'
@@ -319,12 +297,10 @@ export interface FileRouteTypes {
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
     | '/presupuestos/$id'
-    | '/sops/$id'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
     | '/presupuestos/'
-    | '/sops/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -347,12 +323,10 @@ export interface RootRouteChildren {
   OportunidadesIdRoute: typeof OportunidadesIdRoute
   OportunidadesNuevaRoute: typeof OportunidadesNuevaRoute
   PresupuestosIdRoute: typeof PresupuestosIdRoute
-  SopsIdRoute: typeof SopsIdRoute
   ContactosIndexRoute: typeof ContactosIndexRoute
   ExpedientesIndexRoute: typeof ExpedientesIndexRoute
   OportunidadesIndexRoute: typeof OportunidadesIndexRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
-  SopsIndexRoute: typeof SopsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -518,20 +492,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sops/': {
-      id: '/sops/'
-      path: '/sops'
-      fullPath: '/sops/'
-      preLoaderRoute: typeof SopsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sops/$id': {
-      id: '/sops/$id'
-      path: '/sops/$id'
-      fullPath: '/sops/$id'
-      preLoaderRoute: typeof SopsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -555,12 +515,10 @@ const rootRouteChildren: RootRouteChildren = {
   OportunidadesIdRoute: OportunidadesIdRoute,
   OportunidadesNuevaRoute: OportunidadesNuevaRoute,
   PresupuestosIdRoute: PresupuestosIdRoute,
-  SopsIdRoute: SopsIdRoute,
   ContactosIndexRoute: ContactosIndexRoute,
   ExpedientesIndexRoute: ExpedientesIndexRoute,
   OportunidadesIndexRoute: OportunidadesIndexRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
-  SopsIndexRoute: SopsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
