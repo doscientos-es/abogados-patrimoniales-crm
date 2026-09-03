@@ -19,6 +19,9 @@ const ALLOWED = new Set([
   'image/jpeg',
   'image/png',
 ])
+const MAX_FILE_SIZE = 26214400
+type DocumentConfidentiality = CaseDocumentRow['confidentiality']
+
 export function PersistentDocuments() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -26,6 +29,7 @@ export function PersistentDocuments() {
   const cases = useExpedientesPersistentes(firmId)
   const qc = useQueryClient()
   const [caseId, setCaseId] = useState('')
+  const [confidentiality, setConfidentiality] = useState<DocumentConfidentiality>('normal')
   const [uploading, setUploading] = useState(false)
   const docs = useQuery({
     queryKey: ['documents', firmId],
@@ -60,34 +64,49 @@ export function PersistentDocuments() {
         description="Reintenta en unos instantes."
       />
     )
-  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!caseId) {
-      toast.error('Selecciona un expediente.')
+  const uploadDocument = async (
+    file: File,
+    input: HTMLInputElement,
+    currentDocument?: CaseDocumentRow,
+  ) => {
+    if (!ALLOWED.has(file.type) || file.size > MAX_FILE_SIZE) {
+      toast.error('Tipo no permitido o archivo superior a 25 MB.')
+      input.value = ''
       return
     }
-    if (!ALLOWED.has(file.type) || file.size > 26214400) {
-      toast.error('Tipo no permitido o archivo superior a 25 MB.')
+    if (!currentDocument && !caseId) {
+      toast.error('Selecciona un expediente.')
+      input.value = ''
       return
     }
     const c = getSupabaseBrowserClient()
     if (!c) return
     setUploading(true)
     let id = ''
+    let storagePath = ''
     try {
-      const { data, error } = await c.rpc('crm_create_case_document', {
-        target_firm_id: firmId,
-        target_case_id: caseId,
-        target_workstream_id: null,
-        document_category: 'General',
-        original_file_name: file.name,
-        content_mime_type: file.type,
-        content_size_bytes: file.size,
-        document_confidentiality: 'normal',
-      })
+      const { data, error } = currentDocument
+        ? await c.rpc('crm_create_document_version', {
+            target_document_id: currentDocument.id,
+            target_expected_version: currentDocument.version,
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+          })
+        : await c.rpc('crm_create_case_document', {
+            target_firm_id: firmId,
+            target_case_id: caseId,
+            target_workstream_id: null,
+            document_category: 'General',
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+            document_confidentiality: confidentiality,
+          })
       if (error) throw error
+      if (!data) throw new Error('No se pudo preparar el documento.')
       id = data.id
+      storagePath = data.storage_path
       const up = await c.storage
         .from('case-documents')
         .upload(data.storage_path, file, { contentType: file.type, upsert: false })
@@ -99,14 +118,34 @@ export function PersistentDocuments() {
       })
       if (done.error) throw done.error
       await qc.invalidateQueries({ queryKey: ['documents', firmId] })
-      toast.success('Documento validado y guardado.')
+      toast.success(
+        currentDocument ? 'Nueva versión validada y guardada.' : 'Documento validado y guardado.',
+      )
     } catch (error) {
+      let cleanupFailed = false
+      if (storagePath) {
+        const { error: removeError } = await c.storage.from('case-documents').remove([storagePath])
+        cleanupFailed = Boolean(removeError)
+      }
       if (id) await c.rpc('crm_abort_document_version', { target_document_id: id })
-      toast.error(error instanceof Error ? error.message : 'No se pudo subir el documento.')
+      const message = error instanceof Error ? error.message : 'No se pudo subir el documento.'
+      toast.error(
+        cleanupFailed
+          ? `${message} No se pudo eliminar el archivo; contacta con soporte.`
+          : message,
+      )
     } finally {
       setUploading(false)
-      e.target.value = ''
+      input.value = ''
     }
+  }
+  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) await uploadDocument(file, e.target)
+  }
+  const uploadVersion = async (doc: CaseDocumentRow, e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) await uploadDocument(file, e.target, doc)
   }
   const download = async (doc: CaseDocumentRow) => {
     const c = getSupabaseBrowserClient()
@@ -114,7 +153,7 @@ export function PersistentDocuments() {
     const { data, error } = await c.storage
       .from('case-documents')
       .createSignedUrl(doc.storage_path, 60)
-    if (error) {
+    if (error || !data?.signedUrl) {
       toast.error('No autorizado para descargar.')
       return
     }
@@ -138,6 +177,19 @@ export function PersistentDocuments() {
                   {x.referencia} · {x.titulo}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="document-confidentiality">Confidencialidad</Label>
+            <select
+              id="document-confidentiality"
+              value={confidentiality}
+              onChange={(e) => setConfidentiality(e.target.value as DocumentConfidentiality)}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="normal">Normal</option>
+              <option value="restricted">Restringido</option>
+              <option value="confidential">Confidencial</option>
             </select>
           </div>
           <label className="bg-primary text-primary-foreground inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium disabled:pointer-events-none">
@@ -165,6 +217,16 @@ export function PersistentDocuments() {
               </div>
               <div className="flex gap-2">
                 <Badge>{doc.confidentiality}</Badge>
+                <label className="border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium disabled:pointer-events-none">
+                  <Upload className="h-4 w-4" /> Nueva versión
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                    onChange={(e) => void uploadVersion(doc, e)}
+                    disabled={uploading || doc.content_status !== 'validated'}
+                  />
+                </label>
                 <Button
                   size="sm"
                   variant="outline"
