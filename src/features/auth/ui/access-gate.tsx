@@ -1,5 +1,5 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { LoaderCircle, LogIn, LogOut, Scale } from 'lucide-react'
+import { KeyRound, LoaderCircle, LogIn, LogOut, Scale } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -7,8 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-import { signInWithPassword, signOut, useAuthSession } from '../application/auth-session'
-import { bootstrapFirm, useActiveMembership } from '../application/membership'
+import {
+  signInWithPassword,
+  signOut,
+  updatePassword,
+  useAuthSession,
+} from '../application/auth-session'
+import { useActiveMembership } from '../application/membership'
 
 export function AccessGate({ children }: { children: ReactNode }) {
   const session = useAuthSession()
@@ -34,13 +39,15 @@ export function AccessGate({ children }: { children: ReactNode }) {
         <p>No se ha podido comprobar tu acceso. Inténtalo de nuevo.</p>
       </Centered>
     )
-  if (!membership.data) return <BootstrapFirm />
+  if (!membership.data) return <InvitationRequired />
   return <>{children}</>
 }
 
 export function AccountMenu() {
   const session = useAuthSession()
   const [sending, setSending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [password, setPassword] = useState('')
 
   if (session.status !== 'signed-in') return null
 
@@ -73,6 +80,46 @@ export function AccountMenu() {
           <p className="text-foreground text-sm font-medium">{email}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">Sesión activa</p>
         </div>
+        <Button
+          className="mt-1 w-full justify-start"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowPassword((open) => !open)}
+        >
+          <KeyRound className="h-4 w-4" /> Establecer contraseña
+        </Button>
+        {showPassword ? (
+          <form
+            className="space-y-2 px-2 py-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (password.length < 8)
+                return toast.error('La contraseña debe tener al menos ocho caracteres.')
+              setSending(true)
+              void updatePassword(password)
+                .then(() => {
+                  setPassword('')
+                  setShowPassword(false)
+                  toast.success('Contraseña actualizada.')
+                })
+                .catch(() => toast.error('No se ha podido actualizar la contraseña.'))
+                .finally(() => setSending(false))
+            }}
+          >
+            <Input
+              autoComplete="new-password"
+              minLength={8}
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Nueva contraseña"
+            />
+            <Button className="w-full" disabled={sending} size="sm" type="submit">
+              Guardar contraseña
+            </Button>
+          </form>
+        ) : null}
         <Button
           className="mt-1 w-full justify-start"
           disabled={sending}
@@ -143,41 +190,16 @@ function SignInForm() {
   )
 }
 
-function BootstrapFirm() {
-  const [name, setName] = useState('')
-  const [sending, setSending] = useState(false)
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setSending(true)
-    void bootstrapFirm(name.trim())
-      .then(() => toast.success('Despacho creado.'))
-      .catch(() => toast.error('No se ha podido crear el despacho.'))
-      .finally(() => setSending(false))
-  }
+function InvitationRequired() {
   return (
     <Centered>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Configura tu despacho</CardTitle>
+          <CardTitle>Acceso pendiente de invitación</CardTitle>
           <CardDescription>
-            Este paso solo está disponible para el primer usuario autorizado.
+            Tu cuenta no tiene acceso a ningún despacho. Solicita una invitación a un administrador.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={submit}>
-            <Input
-              required
-              minLength={2}
-              maxLength={160}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nombre del despacho"
-            />
-            <Button className="w-full" disabled={sending} type="submit">
-              {sending ? 'Creando…' : 'Crear despacho'}
-            </Button>
-          </form>
-        </CardContent>
       </Card>
     </Centered>
   )

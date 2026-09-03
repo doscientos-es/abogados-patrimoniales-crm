@@ -1,27 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Building2,
-  CheckCircle2,
-  LoaderCircle,
-  Save,
-  ShieldCheck,
-  UserRound,
-  Users,
-} from 'lucide-react'
+import { Building2, CheckCircle2, LoaderCircle, Save, UserRound } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { MfaTotpCard, useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   getSupabaseBrowserClient,
   type FirmSettingsRow,
   type MemberRole,
 } from '@/shared/infrastructure/supabase'
+
+import { TeamAccess } from './team-access'
 
 type FirmForm = Pick<
   FirmSettingsRow,
@@ -45,13 +38,6 @@ const EMPTY_SETTINGS: Omit<FirmSettingsRow, 'firm_id' | 'created_at' | 'updated_
   tax_id: '',
   address: '',
   professional_registration: '',
-}
-
-const ROLE_LABELS: Record<MemberRole, string> = {
-  owner: 'Propietario',
-  admin: 'Administrador',
-  lawyer: 'Abogado/a',
-  paralegal: 'Paralegal',
 }
 
 function useConfigurationData(firmId: string | undefined, userId: string | undefined) {
@@ -329,42 +315,15 @@ export function FirmSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
-                <Users className="h-4 w-4" />
-              </span>
-              <div>
-                <CardTitle className="text-base">Equipo activo</CardTitle>
-                <CardDescription className="mt-1">
-                  Miembros con acceso al despacho y su rol actual.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {configuration.data.members.map((member) => (
-              <div
-                className="border-border flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-                key={member.userId}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{member.displayName}</p>
-                  <p className="text-muted-foreground text-xs">
-                    Acceso {member.status === 'active' ? 'activo' : member.status}
-                  </p>
-                </div>
-                <Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
-              </div>
-            ))}
-            <div className="text-muted-foreground flex gap-2 border-t pt-3 text-xs leading-5">
-              <ShieldCheck className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-              Los permisos se aplican según el rol registrado para cada miembro.
-            </div>
-          </CardContent>
-        </Card>
+        <MfaTotpCard />
       </div>
+
+      <TeamAccess
+        actorRole={membership.data?.role ?? 'paralegal'}
+        firmId={firmId ?? ''}
+        members={configuration.data.members}
+        onChanged={() => void invalidate()}
+      />
 
       <div className="border-primary/20 bg-primary/5 flex gap-2 rounded-lg border p-3.5 text-sm">
         <CheckCircle2 className="text-primary mt-0.5 h-4 w-4 shrink-0" />

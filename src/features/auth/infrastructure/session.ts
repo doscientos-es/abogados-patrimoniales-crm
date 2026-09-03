@@ -38,3 +38,10 @@ export async function signOutOfSupabase() {
   const { error } = await client.auth.signOut()
   if (error) throw error
 }
+
+export async function updateSupabasePassword(password: string) {
+  const client = getSupabaseBrowserClient()
+  if (!client) throw new Error('Supabase no está configurado en este entorno.')
+  const { error } = await client.auth.updateUser({ password })
+  if (error) throw error
+}

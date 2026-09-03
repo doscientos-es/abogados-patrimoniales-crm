@@ -6,6 +6,7 @@ import {
   signInWithSupabasePassword,
   signOutOfSupabase,
   subscribeToAuthStateChanges,
+  updateSupabasePassword,
 } from '../infrastructure/session'
 import type { AuthSessionState } from './auth-types'
 
@@ -49,4 +50,8 @@ export async function signInWithPassword(email: string, password: string) {
 
 export async function signOut() {
   await signOutOfSupabase()
+}
+
+export async function updatePassword(password: string) {
+  await updateSupabasePassword(password)
 }

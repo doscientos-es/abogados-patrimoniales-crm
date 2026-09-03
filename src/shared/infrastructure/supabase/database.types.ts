@@ -169,6 +169,15 @@ export type Database = {
         Returns: CaseDocumentRow
       }
       crm_abort_document_version: { Args: { target_document_id: string }; Returns: undefined }
+      crm_update_firm_member: {
+        Args: {
+          target_firm_id: string
+          target_user_id: string
+          new_role: MemberRole
+          new_status: 'active' | 'disabled'
+        }
+        Returns: undefined
+      }
       crm_update_opportunity: {
         Args: {
           target_opportunity_id: string
