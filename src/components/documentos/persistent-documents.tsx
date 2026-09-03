@@ -124,10 +124,25 @@ export function PersistentDocuments() {
     } catch (error) {
       let cleanupFailed = false
       if (storagePath) {
-        const { error: removeError } = await c.storage.from('case-documents').remove([storagePath])
-        cleanupFailed = Boolean(removeError)
+        try {
+          const { error: removeError } = await c.storage
+            .from('case-documents')
+            .remove([storagePath])
+          cleanupFailed = Boolean(removeError)
+        } catch {
+          cleanupFailed = true
+        }
       }
-      if (id) await c.rpc('crm_abort_document_version', { target_document_id: id })
+      if (id) {
+        try {
+          const { error: abortError } = await c.rpc('crm_abort_document_version', {
+            target_document_id: id,
+          })
+          cleanupFailed ||= Boolean(abortError)
+        } catch {
+          cleanupFailed = true
+        }
+      }
       const message = error instanceof Error ? error.message : 'No se pudo subir el documento.'
       toast.error(
         cleanupFailed
@@ -192,7 +207,9 @@ export function PersistentDocuments() {
               <option value="confidential">Confidencial</option>
             </select>
           </div>
-          <label className="bg-primary text-primary-foreground inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium disabled:pointer-events-none">
+          <label
+            className={`bg-primary text-primary-foreground inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium ${uploading ? 'pointer-events-none opacity-50' : ''}`}
+          >
             <Upload className="h-4 w-4" />
             {uploading ? 'Subiendo…' : 'Subir archivo'}
             <input
@@ -217,7 +234,9 @@ export function PersistentDocuments() {
               </div>
               <div className="flex gap-2">
                 <Badge>{doc.confidentiality}</Badge>
-                <label className="border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium disabled:pointer-events-none">
+                <label
+                  className={`border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium ${uploading || doc.content_status !== 'validated' ? 'pointer-events-none opacity-50' : ''}`}
+                >
                   <Upload className="h-4 w-4" /> Nueva versión
                   <input
                     className="sr-only"
@@ -232,6 +251,7 @@ export function PersistentDocuments() {
                   variant="outline"
                   disabled={doc.content_status !== 'validated'}
                   onClick={() => void download(doc)}
+                  aria-label={`Descargar ${doc.original_name}`}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
