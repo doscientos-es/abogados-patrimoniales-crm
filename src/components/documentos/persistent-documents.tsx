@@ -216,7 +216,7 @@ export function PersistentDocuments() {
               className="sr-only"
               type="file"
               accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-              onChange={upload}
+              onChange={(e) => void upload(e)}
               disabled={uploading}
             />
           </label>
