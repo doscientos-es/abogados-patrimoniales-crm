@@ -1,0 +1,37 @@
+-- Run with a database-administrator connection. Every fixture is rolled back.
+begin;
+insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values ('00000000-0000-4000-8000-0000000000c1', 'authenticated', 'authenticated', 'document-rpc@example.invalid', '{}'::jsonb, '{}'::jsonb, now(), now());
+insert into public.crm_firms (id, name) values ('10000000-0000-4000-8000-0000000000c1', 'Document RPC Audit Firm');
+insert into public.crm_firm_members (firm_id, user_id, role, status)
+values ('10000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000c1', 'owner', 'active');
+insert into public.crm_contacts (id, firm_id, nature, relationship, display_name)
+values ('20000000-0000-4000-8000-0000000000c1', '10000000-0000-4000-8000-0000000000c1', 'person', 'client', 'Document RPC Contact');
+insert into public.crm_cases (id, firm_id, case_number, primary_contact_id, title, nature)
+values ('30000000-0000-4000-8000-0000000000c1', '10000000-0000-4000-8000-0000000000c1', 900001, '20000000-0000-4000-8000-0000000000c1', 'Document RPC Case', 'judicial');
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+do $$
+declare first_document public.crm_case_documents; second_document public.crm_case_documents;
+begin
+  select * into first_document from public.crm_create_case_document(
+    '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c1', null,
+    'General', 'contrato.pdf', 'application/pdf', 1, 'normal');
+  perform public.crm_finalize_document_version(first_document.id, repeat('a', 64));
+  select * into second_document from public.crm_create_document_version(
+    first_document.id, 1, 'contrato-v2.pdf', 'application/pdf', 1);
+  perform public.crm_finalize_document_version(second_document.id, repeat('b', 64));
+  if first_document.category <> 'General' or first_document.original_name <> 'contrato.pdf' then
+    raise exception 'Document metadata contract was not preserved';
+  end if;
+  if second_document.version <> 2 or not public.crm_can_read_case_document(second_document.storage_path) then
+    raise exception 'Document version contract failed';
+  end if;
+  if not exists (select 1 from public.crm_case_documents where id = second_document.id and is_current and content_status = 'validated') then
+    raise exception 'Validated document version was not current';
+  end if;
+end;
+$$;
+rollback;
