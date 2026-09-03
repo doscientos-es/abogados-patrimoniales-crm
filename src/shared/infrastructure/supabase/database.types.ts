@@ -63,6 +63,7 @@ export type Database = {
       crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_events: Table<CaseEventRow, never, never>
+      crm_case_documents: Table<CaseDocumentRow, never, never>
       crm_tasks: Table<TaskRow, TaskInsert, never>
       crm_task_events: Table<TaskEventRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
@@ -140,6 +141,34 @@ export type Database = {
         }
         Returns: TaskRow
       }
+      crm_create_case_document: {
+        Args: {
+          target_firm_id: string
+          target_case_id: string
+          target_workstream_id: string | null
+          document_category: string
+          original_file_name: string
+          content_mime_type: string
+          content_size_bytes: number
+          document_confidentiality: CaseDocumentRow['confidentiality']
+        }
+        Returns: CaseDocumentRow
+      }
+      crm_create_document_version: {
+        Args: {
+          target_document_id: string
+          target_expected_version: number
+          original_file_name: string
+          content_mime_type: string
+          content_size_bytes: number
+        }
+        Returns: CaseDocumentRow
+      }
+      crm_finalize_document_version: {
+        Args: { target_document_id: string; content_checksum: string }
+        Returns: CaseDocumentRow
+      }
+      crm_abort_document_version: { Args: { target_document_id: string }; Returns: undefined }
       crm_update_opportunity: {
         Args: {
           target_opportunity_id: string
@@ -441,6 +470,30 @@ export type CaseEventRow = {
   changed_fields: string[]
   actor_id: string | null
   created_at: string
+}
+
+export type CaseDocumentRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  workstream_id: string | null
+  logical_document_id: string
+  previous_version_id: string | null
+  version: number
+  category: string
+  original_name: string
+  storage_path: string
+  mime_type: string
+  size_bytes: number
+  confidentiality: 'normal' | 'restricted' | 'confidential'
+  checksum_sha256: string | null
+  content_status: 'pending' | 'validated' | 'rejected'
+  is_current: boolean
+  archived_at: string | null
+  archived_by: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type TaskRow = {

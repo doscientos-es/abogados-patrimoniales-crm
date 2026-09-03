@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { SectionHeader } from '@/components/common'
+import { PersistentDocuments } from '@/components/documentos/persistent-documents'
 import {
   AsignarDocumentoDialog,
   NuevaVersionDialog,
@@ -59,7 +60,7 @@ export const Route = createFileRoute('/documentos')({
       { name: 'twitter:card', content: 'summary' },
     ],
   }),
-  component: DocumentosPage,
+  component: PersistentDocuments,
 })
 
 /** Columnas del flujo documental mínimo acordado. */
@@ -326,7 +327,7 @@ function FichaDocumento({
   )
 }
 
-function DocumentosPage() {
+export function DocumentosDemoPage() {
   const { doc: docBuscado } = Route.useSearch()
   const navigate = useNavigate()
   const documentos = useOps((s) => s.documentos)
