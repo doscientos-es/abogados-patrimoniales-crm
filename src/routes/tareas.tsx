@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from '@/components/common'
-import { TareasWorkspace } from '@/components/tareas/workspace'
+import { PersistentTaskWorkspace } from '../components/tareas/persistent-task-workspace'
 
 export const Route = createFileRoute('/tareas')({
   head: () => ({
@@ -25,13 +24,5 @@ export const Route = createFileRoute('/tareas')({
 })
 
 function TareasPage() {
-  return (
-    <div className="mx-auto max-w-[1400px]">
-      <SectionHeader
-        title="Tareas"
-        subtitle="Todo el trabajo del despacho en un único tablero. Cada tarea tiene responsable, fecha y trazabilidad completa: apertura, reclamaciones, evidencias y cierre."
-      />
-      <TareasWorkspace />
-    </div>
-  )
+  return <PersistentTaskWorkspace />
 }

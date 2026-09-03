@@ -11,6 +11,9 @@ Aplicación web operativa para la gestión comercial y operativa de despachos de
 
 Las migraciones de base de datos residen en `supabase/migrations`. La aplicación cliente utiliza exclusivamente `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`; no incorpores claves de servicio, contraseñas ni datos reales al repositorio o a entornos de prueba.
 
+La fuente de verdad del alcance P0/P1/P2, flujos, permisos, aceptación y Definition of Done es
+[`docs/mvp-juridico-aprobado.md`](docs/mvp-juridico-aprobado.md).
+
 Los datos de demostración deben identificarse de forma inequívoca y mantenerse separados de los datos reales del despacho.
 
 ## Modelo funcional

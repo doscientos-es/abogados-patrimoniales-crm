@@ -63,6 +63,8 @@ export type Database = {
       crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_events: Table<CaseEventRow, never, never>
+      crm_tasks: Table<TaskRow, TaskInsert, never>
+      crm_task_events: Table<TaskEventRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
@@ -112,6 +114,31 @@ export type Database = {
           new_current_position: string
         }
         Returns: CaseRow
+      }
+      crm_update_task: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          new_title: string
+          new_description: string
+          new_status: TaskStatus
+          new_priority: OpportunityPriority
+          new_due_at: string | null
+          new_reminder_at: string | null
+          new_assigned_to: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_validate_deadline: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          decision: 'validated' | 'rejected'
+          confirmed_due_at: string | null
+          source_reference: string
+          professional_note: string
+        }
+        Returns: TaskRow
       }
       crm_update_opportunity: {
         Args: {
@@ -202,6 +229,7 @@ export type OpportunityStage =
   | 'lost'
 export type OpportunityPriority = 'low' | 'medium' | 'high'
 export type CaseNature = 'judicial' | 'extrajudicial'
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 
 export type ContactRow = {
   id: string
@@ -411,6 +439,70 @@ export type CaseEventRow = {
   entity_id: string
   action: 'created' | 'updated' | 'deleted'
   changed_fields: string[]
+  actor_id: string | null
+  created_at: string
+}
+
+export type TaskRow = {
+  id: string
+  firm_id: string
+  opportunity_id: string | null
+  case_id: string | null
+  workstream_id: string | null
+  kind: 'task' | 'reminder' | 'event' | 'deadline'
+  title: string
+  description: string
+  status: TaskStatus
+  priority: OpportunityPriority
+  due_on: string | null
+  due_at: string | null
+  reminder_at: string | null
+  deadline_class: 'judicial' | 'extrajudicial' | null
+  validation_status: 'not_required' | 'proposed' | 'validated' | 'rejected'
+  deadline_source: string
+  validation_note: string
+  validated_by: string | null
+  validated_at: string | null
+  completed_at: string | null
+  critical: boolean
+  assigned_to: string | null
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TaskInsert = {
+  id?: string
+  firm_id: string
+  opportunity_id?: string | null
+  case_id?: string | null
+  workstream_id?: string | null
+  kind?: TaskRow['kind']
+  title: string
+  description?: string
+  status?: TaskStatus
+  priority?: OpportunityPriority
+  due_on?: string | null
+  due_at?: string | null
+  reminder_at?: string | null
+  deadline_class?: TaskRow['deadline_class']
+  validation_status?: TaskRow['validation_status']
+  deadline_source?: string
+  validation_note?: string
+  critical?: boolean
+  assigned_to?: string | null
+  details?: Json
+}
+
+export type TaskEventRow = {
+  id: string
+  firm_id: string
+  task_id: string
+  event_type: string
+  payload: Json
   actor_id: string | null
   created_at: string
 }

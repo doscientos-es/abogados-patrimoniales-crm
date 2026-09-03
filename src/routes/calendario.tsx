@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { SectionHeader } from '@/components/common'
-import { FechasWorkspace } from '@/components/fechas/workspace'
+import { PersistentTaskWorkspace } from '../components/tareas/persistent-task-workspace'
 
 export const Route = createFileRoute('/calendario')({
   head: () => ({
@@ -26,13 +25,5 @@ export const Route = createFileRoute('/calendario')({
 })
 
 function FechasPage() {
-  return (
-    <div className="mx-auto max-w-[1400px]">
-      <SectionHeader
-        title="Fechas y plazos"
-        subtitle="Todo lo que ocurre en el tiempo se registra una sola vez y se muestra donde corresponde: recordatorios, fechas, eventos y plazos. El vencimiento de un plazo siempre lo valida un profesional."
-      />
-      <FechasWorkspace />
-    </div>
-  )
+  return <PersistentTaskWorkspace mode="calendar" />
 }
