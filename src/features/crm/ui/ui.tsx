@@ -30,18 +30,18 @@ import { cn } from '@/lib/utils'
 import * as Kanban from '@/shared/ui/kanban'
 
 export const toneClass: Record<Tono, string> = {
-  neutro: 'border-border bg-muted text-muted-foreground',
-  exito: 'border-success/40 bg-success/10 text-success',
-  aviso: 'border-warning/50 bg-warning/15 text-warning-foreground',
-  riesgo: 'border-destructive/40 bg-destructive/10 text-destructive',
-  info: 'border-primary/30 bg-primary/10 text-primary',
+  neutro: 'bg-muted text-muted-foreground',
+  exito: 'bg-success/10 text-success',
+  aviso: 'bg-warning/15 text-warning-foreground',
+  riesgo: 'bg-destructive/10 text-destructive',
+  info: 'bg-primary/10 text-primary',
 }
 
 export function ToneBadge({ tono, children }: { tono: Tono; children: ReactNode }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
         toneClass[tono],
       )}
     >
@@ -63,7 +63,7 @@ export function AlertPills({ items }: { items: string[] }) {
       {items.map((a) => (
         <span
           key={a}
-          className="border-destructive/30 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+          className="bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
         >
           <AlertTriangle className="h-3 w-3" />
           {a}
@@ -220,7 +220,7 @@ export function TimelineFeed({ items }: { items: HistorialItem[] }) {
     <ol className="border-border relative ml-2 border-l pl-6">
       {items.map((it, i) => (
         <li key={i} className="relative pb-5 last:pb-0">
-          <span className="absolute top-1 -left-[1.9rem] flex h-3 w-3 items-center justify-center">
+          <span className="absolute top-1 left-[-1.9rem] flex h-3 w-3 items-center justify-center">
             <Circle className="fill-primary text-primary h-3 w-3" />
           </span>
           <div className="flex flex-wrap items-center gap-2">

@@ -64,6 +64,7 @@ export type Database = {
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>
+      crm_document_folders: Table<DocumentFolderRow, never, never>
       crm_tasks: Table<TaskRow, TaskInsert, never>
       crm_task_events: Table<TaskEventRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
@@ -169,6 +170,19 @@ export type Database = {
         Returns: CaseDocumentRow
       }
       crm_abort_document_version: { Args: { target_document_id: string }; Returns: undefined }
+      crm_create_document_folder: {
+        Args: {
+          target_firm_id: string
+          target_case_id: string
+          target_parent_id: string | null
+          folder_name: string
+        }
+        Returns: DocumentFolderRow
+      }
+      crm_move_case_document: {
+        Args: { target_document_id: string; target_folder_id: string | null }
+        Returns: CaseDocumentRow
+      }
       crm_update_firm_member: {
         Args: {
           target_firm_id: string
@@ -486,6 +500,7 @@ export type CaseDocumentRow = {
   firm_id: string
   case_id: string
   workstream_id: string | null
+  folder_id: string | null
   logical_document_id: string
   previous_version_id: string | null
   version: number
@@ -500,6 +515,17 @@ export type CaseDocumentRow = {
   is_current: boolean
   archived_at: string | null
   archived_by: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type DocumentFolderRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  parent_id: string | null
+  name: string
   created_by: string | null
   created_at: string
   updated_at: string

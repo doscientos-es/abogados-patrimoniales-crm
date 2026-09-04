@@ -38,6 +38,24 @@ export const Route = createFileRoute('/')({
   component: InicioPage,
 })
 
+const metricGroupDotClass: Record<Tono, string> = {
+  neutro: 'bg-muted-foreground',
+  exito: 'bg-success',
+  aviso: 'bg-warning',
+  riesgo: 'bg-destructive',
+  info: 'bg-primary',
+}
+
+const metricValueClass: Record<Tono, string> = {
+  neutro: 'bg-muted text-muted-foreground',
+  exito: 'bg-success/15 text-success',
+  aviso: 'bg-warning/20 text-warning-foreground',
+  riesgo: 'bg-destructive/10 text-destructive',
+  info: 'bg-primary/10 text-primary',
+}
+
+const dashboardSurfaceClass = 'rounded-2xl border-0 bg-card shadow-none ring-1 ring-foreground/5'
+
 function Tarjeta({
   label,
   value,
@@ -62,7 +80,11 @@ function Tarjeta({
     >
       <span className="text-foreground min-w-0 text-sm leading-snug">{label}</span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
-        <ToneBadge tono={tono}>{value}</ToneBadge>
+        <span
+          className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums ${metricValueClass[tono]}`}
+        >
+          {value}
+        </span>
         <ArrowRight className="text-muted-foreground h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
       </span>
       <span className="sr-only">Ver listado de {label}</span>
@@ -70,10 +92,22 @@ function Tarjeta({
   )
 }
 
-function MetricGroup({ title, children }: { title: string; children: ReactNode }) {
+function MetricGroup({
+  title,
+  tono,
+  children,
+}: {
+  title: string
+  tono: Tono
+  children: ReactNode
+}) {
   return (
-    <section className="border-border bg-card rounded-lg border px-4 py-3" aria-label={title}>
-      <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+    <section
+      className="ring-foreground/5 bg-card rounded-2xl px-4 py-3.5 shadow-none ring-1"
+      aria-label={title}
+    >
+      <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${metricGroupDotClass[tono]}`} />
         {title}
       </h2>
       <div className="divide-border/60 mt-2 divide-y">{children}</div>
@@ -118,211 +152,218 @@ function InicioPage() {
     .reverse()
 
   return (
-    <div className="mx-auto max-w-[1400px]">
-      <SectionHeader
-        title="Panel de inicio"
-        subtitle="Visión diaria de prioridades, plazos y oportunidades del despacho."
-        actions={<QuickTaskDialog />}
-      />
+    <div className="bg-primary/3 -m-4 min-h-full p-4 sm:-m-6 sm:p-6">
+      <div className="mx-auto max-w-350">
+        <SectionHeader
+          title="Panel de inicio"
+          subtitle="Visión diaria de prioridades, plazos y oportunidades del despacho."
+          actions={<QuickTaskDialog />}
+        />
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <MetricGroup title="Trabajo del día">
-          <Tarjeta
-            label="Tareas pendientes"
-            value={tareasPendientes.length}
-            tono="aviso"
-            to="/tareas"
-          />
-          <Tarjeta
-            label="Tareas vencidas"
-            value={tareasVencidas.length}
-            tono="riesgo"
-            to="/tareas"
-          />
-          <Tarjeta label="Actuaciones de hoy" value={hoy.length} tono="info" to="/actuaciones" />
-          <Tarjeta label="Próximas citas" value={citas.length} tono="info" to="/calendario" />
-        </MetricGroup>
+        <div className="grid gap-4 xl:grid-cols-3">
+          <MetricGroup title="Trabajo del día" tono="info">
+            <Tarjeta
+              label="Tareas pendientes"
+              value={tareasPendientes.length}
+              tono="aviso"
+              to="/tareas"
+            />
+            <Tarjeta
+              label="Tareas vencidas"
+              value={tareasVencidas.length}
+              tono="riesgo"
+              to="/tareas"
+            />
+            <Tarjeta label="Actuaciones de hoy" value={hoy.length} tono="info" to="/actuaciones" />
+            <Tarjeta label="Próximas citas" value={citas.length} tono="info" to="/calendario" />
+          </MetricGroup>
 
-        <MetricGroup title="Captación">
-          <Tarjeta label="Fechas críticas" value={criticas.length} tono="riesgo" to="/calendario" />
-          <Tarjeta
-            label="Leads nuevos"
-            value={nuevas.length}
-            tono="info"
-            to="/oportunidades"
-            search={{ vista: 'todas', abrir: '' }}
-          />
-          <Tarjeta
-            label="Sin seguimiento"
-            value={sinSeguimiento.length}
-            tono="aviso"
-            to="/oportunidades"
-            search={{ vista: 'sin-accion', abrir: '' }}
-          />
-          <Tarjeta
-            label="Expedientes activos"
-            value={activos.length}
-            tono="exito"
-            to="/expedientes"
-          />
-        </MetricGroup>
+          <MetricGroup title="Captación" tono="exito">
+            <Tarjeta
+              label="Fechas críticas"
+              value={criticas.length}
+              tono="riesgo"
+              to="/calendario"
+            />
+            <Tarjeta
+              label="Leads nuevos"
+              value={nuevas.length}
+              tono="info"
+              to="/oportunidades"
+              search={{ vista: 'todas', abrir: '' }}
+            />
+            <Tarjeta
+              label="Sin seguimiento"
+              value={sinSeguimiento.length}
+              tono="aviso"
+              to="/oportunidades"
+              search={{ vista: 'sin-accion', abrir: '' }}
+            />
+            <Tarjeta
+              label="Expedientes activos"
+              value={activos.length}
+              tono="exito"
+              to="/expedientes"
+            />
+          </MetricGroup>
 
-        <MetricGroup title="Onboarding y cobros">
-          <Tarjeta
-            label="Pendientes de elaboración"
-            value={porElaborar.length}
-            tono="aviso"
-            to="/oportunidades"
-            search={{ vista: 'presupuestos', abrir: '' }}
-          />
-          <Tarjeta
-            label="Pendientes de validación"
-            value={porValidar.length}
-            tono="aviso"
-            to="/oportunidades"
-            search={{ vista: 'validacion', abrir: '' }}
-          />
-          <Tarjeta
-            label="Enviados sin respuesta"
-            value={enviados.length}
-            tono="info"
-            to="/oportunidades"
-            search={{ vista: 'todas', abrir: '' }}
-          />
-          <Tarjeta
-            label="Proformas pendientes"
-            value={proformas.length}
-            tono="aviso"
-            to="/onboarding"
-          />
-          <Tarjeta
-            label="Expedientes con actuación vencida"
-            value={vencidos.length}
-            tono="riesgo"
-            to="/expedientes"
-            search={{ filtro: 'vencidos' }}
-          />
-        </MetricGroup>
-      </div>
+          <MetricGroup title="Onboarding y cobros" tono="aviso">
+            <Tarjeta
+              label="Pendientes de elaboración"
+              value={porElaborar.length}
+              tono="aviso"
+              to="/oportunidades"
+              search={{ vista: 'presupuestos', abrir: '' }}
+            />
+            <Tarjeta
+              label="Pendientes de validación"
+              value={porValidar.length}
+              tono="aviso"
+              to="/oportunidades"
+              search={{ vista: 'validacion', abrir: '' }}
+            />
+            <Tarjeta
+              label="Enviados sin respuesta"
+              value={enviados.length}
+              tono="info"
+              to="/oportunidades"
+              search={{ vista: 'todas', abrir: '' }}
+            />
+            <Tarjeta
+              label="Proformas pendientes"
+              value={proformas.length}
+              tono="aviso"
+              to="/onboarding"
+            />
+            <Tarjeta
+              label="Expedientes con actuación vencida"
+              value={vencidos.length}
+              tono="riesgo"
+              to="/expedientes"
+              search={{ filtro: 'vencidos' }}
+            />
+          </MetricGroup>
+        </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-              Tareas y plazos inmediatos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-border divide-y">
-              {TAREAS.filter((t) => t.estado !== 'Completada')
-                .slice(0, 6)
-                .map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-foreground truncate text-sm font-medium">{t.titulo}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {t.responsable} · {t.relacion?.label ?? 'Sin vínculo'} ·{' '}
-                        {t.limite ? `Límite ${t.limite}` : 'Sin fecha'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PriorityBadge value={t.prioridad} />
-                      {t.vencida ? <ToneBadge tono="riesgo">Vencida</ToneBadge> : null}
-                    </div>
-                  </li>
-                ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-              Pipeline destacado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {OPORTUNIDADES.filter((o) => !['cerrada', 'convertida'].includes(o.etapa))
-              .slice(0, 5)
-              .map((o) => (
-                <Link
-                  key={o.id}
-                  to="/oportunidades"
-                  search={{ vista: 'todas', abrir: o.id }}
-                  className="border-border hover:bg-accent/50 block rounded-md border p-3"
-                >
-                  <p className="text-foreground truncate text-sm font-medium">{o.titulo}</p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {nombreContacto(o.contactoId)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <ToneBadge tono={etapaOportunidad(o.etapa).tono}>
-                      {etapaOportunidad(o.etapa).nombre}
-                    </ToneBadge>
-                    <AlertPills items={o.alertas} />
-                  </div>
-                </Link>
-              ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-              Actuación reciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TimelineFeed items={actividadReciente} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-              Presupuestos en curso
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="divide-border/70 divide-y">
-            {PRESUPUESTOS.filter(
-              (p) => !['pagado', 'rechazado', 'caducado', 'cancelado'].includes(p.estado),
-            )
-              .slice(0, 6)
-              .map((p) => {
-                const fase = fasePresupuesto(faseDePresupuesto(p))
-                const etiquetaFase = fase.id === 'validacion' ? 'Por validar' : fase.nombre
-
-                return (
-                  <Link
-                    key={p.id}
-                    to="/presupuestos/$id"
-                    params={{ id: p.id }}
-                    className="hover:bg-accent/50 focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-3 transition-colors outline-none focus-visible:ring-2"
-                  >
-                    <span className="min-w-0">
-                      <span className="text-foreground block truncate text-sm font-medium">
-                        {p.codigo} · {p.titulo}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {nombreContacto(p.contactoId)} · {p.total}
-                      </span>
-                    </span>
-                    <span
-                      className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-medium whitespace-nowrap ${presupuestoEstadoClass[fase.tono]}`}
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <Card className={`lg:col-span-2 ${dashboardSurfaceClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-foreground text-sm font-semibold">
+                Tareas y plazos inmediatos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="divide-border divide-y">
+                {TAREAS.filter((t) => t.estado !== 'Completada')
+                  .slice(0, 6)
+                  .map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
                     >
-                      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" />
-                      {etiquetaFase}
-                    </span>
+                      <div className="min-w-0">
+                        <p className="text-foreground truncate text-sm font-medium">{t.titulo}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {t.responsable} · {t.relacion?.label ?? 'Sin vínculo'} ·{' '}
+                          {t.limite ? `Límite ${t.limite}` : 'Sin fecha'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <PriorityBadge value={t.prioridad} />
+                        {t.vencida ? <ToneBadge tono="riesgo">Vencida</ToneBadge> : null}
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className={dashboardSurfaceClass}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-foreground text-sm font-semibold">
+                Pipeline destacado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="divide-border/60 divide-y">
+              {OPORTUNIDADES.filter((o) => !['cerrada', 'convertida'].includes(o.etapa))
+                .slice(0, 5)
+                .map((o) => (
+                  <Link
+                    key={o.id}
+                    to="/oportunidades"
+                    search={{ vista: 'todas', abrir: o.id }}
+                    className="hover:bg-accent/50 -mx-2 block rounded-xl px-2 py-3 transition-colors"
+                  >
+                    <p className="text-foreground truncate text-sm font-medium">{o.titulo}</p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {nombreContacto(o.contactoId)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <ToneBadge tono={etapaOportunidad(o.etapa).tono}>
+                        {etapaOportunidad(o.etapa).nombre}
+                      </ToneBadge>
+                      <AlertPills items={o.alertas} />
+                    </div>
                   </Link>
-                )
-              })}
-          </CardContent>
-        </Card>
+                ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card className={dashboardSurfaceClass}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-foreground text-sm font-semibold">
+                Actuación reciente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TimelineFeed items={actividadReciente} />
+            </CardContent>
+          </Card>
+
+          <Card className={dashboardSurfaceClass}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-foreground text-sm font-semibold">
+                Presupuestos en curso
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="divide-border/70 divide-y">
+              {PRESUPUESTOS.filter(
+                (p) => !['pagado', 'rechazado', 'caducado', 'cancelado'].includes(p.estado),
+              )
+                .slice(0, 6)
+                .map((p) => {
+                  const fase = fasePresupuesto(faseDePresupuesto(p))
+                  const etiquetaFase = fase.id === 'validacion' ? 'Por validar' : fase.nombre
+
+                  return (
+                    <Link
+                      key={p.id}
+                      to="/presupuestos/$id"
+                      params={{ id: p.id }}
+                      className="hover:bg-accent/50 focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-3 transition-colors outline-none focus-visible:ring-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="text-foreground block truncate text-sm font-medium">
+                          {p.codigo} · {p.titulo}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {nombreContacto(p.contactoId)} · {p.total}
+                        </span>
+                      </span>
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-medium whitespace-nowrap ${presupuestoEstadoClass[fase.tono]}`}
+                      >
+                        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" />
+                        {etiquetaFase}
+                      </span>
+                    </Link>
+                  )
+                })}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
