@@ -21,7 +21,7 @@ export function SectionHeader({
     <div className="border-border mb-6 grid gap-4 border-b pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
       <div className="min-w-0">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-foreground min-w-0 truncate font-serif text-xl font-semibold tracking-wide uppercase sm:text-2xl">
+          <h1 className="text-foreground min-w-0 truncate font-serif text-2xl font-semibold tracking-tight sm:text-3xl">
             {title}
           </h1>
           {meta ? (
@@ -165,7 +165,7 @@ export function Timeline({ items }: { items: { fecha: string; hito: string; fase
     <ol className="border-border relative ml-2 border-l pl-6">
       {items.map((it, i) => (
         <li key={i} className="relative pb-5 last:pb-0">
-          <span className="absolute top-1 -left-[1.9rem] flex h-3 w-3 items-center justify-center">
+          <span className="absolute top-1 left-[-1.9rem] flex h-3 w-3 items-center justify-center">
             <Circle className="fill-primary text-primary h-3 w-3" />
           </span>
           <p className="text-foreground text-sm font-medium">{it.hito}</p>
