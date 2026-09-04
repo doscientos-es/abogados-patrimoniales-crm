@@ -8,9 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@doscientos/billing':
+        specifier: link:..\..\modules\billing
+        version: link:../../modules/billing
       '@doscientos/ui':
         specifier: ^0.1.29
         version: 0.1.29(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@doscientos/verifactu':
+        specifier: link:..\..\modules\verifactu
+        version: link:../../modules/verifactu
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.9.1(react-hook-form@7.87.0(react@19.2.8))(zod@3.25.76)

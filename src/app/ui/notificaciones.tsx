@@ -204,10 +204,10 @@ export function CampanaNotificaciones({ onAbrirTarea }: { onAbrirTarea?: (id: st
 
   return (
     <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button size="sm" variant="ghost" className="relative h-9 w-9 p-0">
+      <Button size="sm" variant="ghost" className="relative h-9 w-9 overflow-visible p-0">
         <Bell className="h-4 w-4" />
         {pendientes ? (
-          <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
+          <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 z-10 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold">
             {pendientes > 9 ? '9+' : pendientes}
           </span>
         ) : null}

@@ -16,7 +16,9 @@
     "quality": "pnpm format:check && pnpm lint && pnpm typecheck"
   },
   "dependencies": {
+    "@doscientos/billing": "link:..\\..\\modules\\billing",
     "@doscientos/ui": "^0.1.29",
+    "@doscientos/verifactu": "link:..\\..\\modules\\verifactu",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",

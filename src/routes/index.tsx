@@ -14,6 +14,7 @@ import {
   OPORTUNIDADES,
   PRESUPUESTOS,
   TAREAS,
+  type Tono,
 } from '@/data/crm'
 import { AlertPills, PriorityBadge, QuickTaskDialog, TimelineFeed, ToneBadge } from '@/features/crm'
 
@@ -78,6 +79,14 @@ function MetricGroup({ title, children }: { title: string; children: ReactNode }
       <div className="divide-border/60 mt-2 divide-y">{children}</div>
     </section>
   )
+}
+
+const presupuestoEstadoClass: Record<Tono, string> = {
+  neutro: 'text-muted-foreground [&>span]:bg-muted-foreground',
+  exito: 'text-success [&>span]:bg-success',
+  aviso: 'text-warning-foreground [&>span]:bg-warning',
+  riesgo: 'text-destructive [&>span]:bg-destructive',
+  info: 'text-primary [&>span]:bg-primary',
 }
 
 function InicioPage() {
@@ -279,31 +288,39 @@ function InicioPage() {
               Presupuestos en curso
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="divide-border/70 divide-y">
             {PRESUPUESTOS.filter(
               (p) => !['pagado', 'rechazado', 'caducado', 'cancelado'].includes(p.estado),
             )
               .slice(0, 6)
-              .map((p) => (
-                <Link
-                  key={p.id}
-                  to="/presupuestos/$id"
-                  params={{ id: p.id }}
-                  className="border-border hover:bg-accent/50 flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-                >
-                  <span className="min-w-0">
-                    <span className="text-foreground block truncate text-sm font-medium">
-                      {p.codigo} · {p.titulo}
+              .map((p) => {
+                const fase = fasePresupuesto(faseDePresupuesto(p))
+                const etiquetaFase = fase.id === 'validacion' ? 'Por validar' : fase.nombre
+
+                return (
+                  <Link
+                    key={p.id}
+                    to="/presupuestos/$id"
+                    params={{ id: p.id }}
+                    className="hover:bg-accent/50 focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-3 transition-colors outline-none focus-visible:ring-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="text-foreground block truncate text-sm font-medium">
+                        {p.codigo} · {p.titulo}
+                      </span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {nombreContacto(p.contactoId)} · {p.total}
+                      </span>
                     </span>
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {nombreContacto(p.contactoId)} · {p.total}
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-medium whitespace-nowrap ${presupuestoEstadoClass[fase.tono]}`}
+                    >
+                      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" />
+                      {etiquetaFase}
                     </span>
-                  </span>
-                  <ToneBadge tono={fasePresupuesto(faseDePresupuesto(p)).tono}>
-                    {fasePresupuesto(faseDePresupuesto(p)).nombre}
-                  </ToneBadge>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
           </CardContent>
         </Card>
       </div>
