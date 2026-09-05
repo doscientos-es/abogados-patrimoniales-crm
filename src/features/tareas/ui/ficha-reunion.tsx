@@ -208,9 +208,11 @@ export function FichaTareaReunion({
           {...(inicialNota ? { inicial: inicialNota } : {})}
           modoRapido
           onCreate={(borrador) => {
-            const creada = notasStore.crear(borrador)
-            ops.vincularNotaReunion(tarea.id, creada.id)
-            toast.success('Nota interna añadida')
+            void notasStore.crear(borrador).then((creada) => {
+              if (!creada) return
+              ops.vincularNotaReunion(tarea.id, creada.id)
+              toast.success('Nota interna añadida')
+            })
           }}
           trigger={
             <Button size="sm" variant="outline">

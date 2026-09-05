@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -21,18 +21,22 @@ export function CaseCreateDialog({
   miembros,
   pending,
   onCreate,
+  onCreated,
+  trigger,
 }: {
-  contactos: ContactoPersistido[]
+  contactos: Pick<ContactoPersistido, 'id' | 'nombre'>[]
   miembros: MiembroDespacho[]
   pending: boolean
-  onCreate: (input: CrearExpedienteInput) => Promise<void>
+  onCreate: (input: CrearExpedienteInput) => Promise<{ id: string }>
+  onCreated?: (id: string) => void
+  trigger?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     try {
-      await onCreate({
+      const expediente = await onCreate({
         contactoPrincipalId: formText(data, 'contacto'),
         titulo: formText(data, 'titulo'),
         area: formText(data, 'area'),
@@ -46,6 +50,7 @@ export function CaseCreateDialog({
       })
       toast.success('Expediente creado.')
       setOpen(false)
+      onCreated?.(expediente.id)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear el expediente.')
     }
@@ -53,9 +58,11 @@ export function CaseCreateDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" /> Nuevo expediente
-        </Button>
+        {trigger ?? (
+          <Button>
+            <Plus className="h-4 w-4" /> Nuevo expediente
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>

@@ -227,6 +227,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      crm_save_note: {
+        Args: {
+          target_firm_id: string
+          target_note_id: string | null
+          target_payload: Json
+          event_type: string
+          event_detail?: string | null
+        }
+        Returns: NoteRow
+      }
+      crm_acknowledge_note: {
+        Args: { target_note_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       crm_member_role: MemberRole

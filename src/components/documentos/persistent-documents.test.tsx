@@ -7,7 +7,10 @@ import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 import { PersistentDocuments } from './persistent-documents'
 
 const moveDocument = vi.fn().mockResolvedValue({ error: null })
+const createFolder = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
+let hasDocuments = true
+let hasFolders = true
 const document: CaseDocumentRow = {
   id: 'document-1',
   firm_id: 'firm-1',
@@ -55,7 +58,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
               eq: () => ({
                 is: () => ({
                   order: async () => ({
-                    data: documentQueryFails ? null : [document],
+                    data: documentQueryFails ? null : hasDocuments ? [document] : [],
                     error: documentQueryFails ? new Error('offline') : null,
                   }),
                 }),
@@ -66,26 +69,31 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
         return {
           eq: () => ({
             order: async () => ({
-              data: [
-                {
-                  id: 'folder-1',
-                  firm_id: 'firm-1',
-                  case_id: 'case-1',
-                  parent_id: null,
-                  name: 'Escritos',
-                  created_by: 'user-1',
-                  created_at: '2026-01-01',
-                  updated_at: '2026-01-01',
-                },
-              ],
+              data: hasFolders
+                ? [
+                    {
+                      id: 'folder-1',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Escritos',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
+                  ]
+                : [],
               error: null,
             }),
           }),
         }
       },
     }),
-    rpc: (name: string, args: unknown) =>
-      name === 'crm_move_case_document' ? moveDocument(args) : Promise.resolve({ error: null }),
+    rpc: (name: string, args: unknown) => {
+      if (name === 'crm_move_case_document') return moveDocument(args)
+      if (name === 'crm_create_document_folder') return createFolder(args)
+      return Promise.resolve({ error: null })
+    },
   }),
 }))
 
@@ -100,7 +108,10 @@ function renderDocuments() {
 
 afterEach(() => {
   documentQueryFails = false
+  hasDocuments = true
+  hasFolders = true
   moveDocument.mockClear()
+  createFolder.mockClear()
 })
 
 describe('PersistentDocuments', () => {
@@ -125,6 +136,61 @@ describe('PersistentDocuments', () => {
         target_folder_id: 'folder-1',
       }),
     )
+  })
+
+  it('allows creating the first folder before any document is uploaded', async () => {
+    hasDocuments = false
+    hasFolders = false
+    renderDocuments()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Nueva carpeta' }))
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Escritos' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear carpeta' }))
+
+    await waitFor(() =>
+      expect(createFolder).toHaveBeenCalledWith({
+        target_firm_id: 'firm-1',
+        target_case_id: 'case-1',
+        target_parent_id: null,
+        folder_name: 'Escritos',
+      }),
+    )
+  })
+
+  it('reports the selected folder so the route can persist it in the URL', async () => {
+    const onLocationChange = vi.fn()
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <PersistentDocuments
+          location={{ caseId: 'case-1', folderId: null }}
+          onLocationChange={onLocationChange}
+        />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir carpeta Escritos' }))
+    expect(onLocationChange).toHaveBeenCalledWith({ caseId: 'case-1', folderId: 'folder-1' })
+  })
+
+  it('shows root actions only while listing the document cases', async () => {
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <PersistentDocuments rootActions={<button type="button">Nuevo expediente</button>} />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByRole('button', { name: 'Nuevo expediente' })).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+    expect(screen.queryByRole('button', { name: 'Nuevo expediente' })).toBeNull()
   })
 
   it('explains a loading failure and provides a recovery action', async () => {

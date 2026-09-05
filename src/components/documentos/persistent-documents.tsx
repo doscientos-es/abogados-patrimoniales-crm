@@ -13,10 +13,10 @@ import {
   RefreshCw,
   Upload,
 } from 'lucide-react'
-import { useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react'
+import { useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
-import { PendingPanel, SectionHeader } from '@/components/common'
+import { PendingPanel } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -48,6 +48,13 @@ const ALLOWED = new Set([
 const MAX_FILE_SIZE = 26214400
 const DOCUMENT_DRAG_TYPE = 'application/x-lex-document-id'
 type DocumentConfidentiality = CaseDocumentRow['confidentiality']
+type DocumentLocation = { caseId: string | null; folderId: string | null }
+
+type PersistentDocumentsProps = {
+  location?: DocumentLocation
+  onLocationChange?: (location: DocumentLocation) => void
+  rootActions?: ReactNode
+}
 
 function actionErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message.toLowerCase() : ''
@@ -64,14 +71,20 @@ function actionErrorMessage(error: unknown, fallback: string) {
   return `${fallback} Vuelve a intentarlo. Si continúa, contacta con soporte.`
 }
 
-export function PersistentDocuments() {
+export function PersistentDocuments({
+  location,
+  onLocationChange,
+  rootActions,
+}: PersistentDocumentsProps) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const cases = useExpedientesPersistentes(firmId)
   const qc = useQueryClient()
-  const [caseId, setCaseId] = useState<string | null>(null)
-  const [folderId, setFolderId] = useState<string | null>(null)
+  const [internalLocation, setInternalLocation] = useState<DocumentLocation>({
+    caseId: null,
+    folderId: null,
+  })
   const [confidentiality, setConfidentiality] = useState<DocumentConfidentiality>('normal')
   const [uploading, setUploading] = useState(false)
   const [creatingFolder, setCreatingFolder] = useState(false)
@@ -84,6 +97,11 @@ export function PersistentDocuments() {
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('root')
   const [movingDocumentId, setMovingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
+  const { caseId, folderId } = location ?? internalLocation
+  const setLocation = (nextLocation: DocumentLocation) => {
+    if (onLocationChange) onLocationChange(nextLocation)
+    else setInternalLocation(nextLocation)
+  }
   const docs = useQuery({
     queryKey: ['documents', firmId],
     enabled: Boolean(firmId),
@@ -339,8 +357,7 @@ export function PersistentDocuments() {
     })
     .sort((a, b) => a.label.localeCompare(b.label, 'es'))
   const openCase = (nextCaseId: string) => {
-    setCaseId(nextCaseId || null)
-    setFolderId(null)
+    setLocation({ caseId: nextCaseId || null, folderId: null })
   }
   const openMoveDialog = (document: CaseDocumentRow) => {
     setDocumentToMove(document)
@@ -436,63 +453,63 @@ export function PersistentDocuments() {
   }
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
-      <SectionHeader
-        title="Documentos"
-        subtitle="Espacio privado por expediente, con carpetas, control de acceso y versiones."
-      />
       <output className="sr-only" aria-live="polite" aria-atomic="true">
         {statusMessage}
       </output>
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          <div className="flex flex-wrap items-end gap-3">
-            <div
-              className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm"
-              aria-label="Ubicación actual"
-            >
+      <header className="border-border/80 bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 shadow-sm">
+        <nav
+          className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm"
+          aria-label="Ubicación actual"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setLocation({ caseId: null, folderId: null })
+            }}
+            aria-current={activeCase ? undefined : 'page'}
+          >
+            Documentos
+          </Button>
+          {activeCase ? (
+            <>
+              <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setCaseId(null)
-                  setFolderId(null)
-                }}
+                onClick={() => setLocation({ caseId, folderId: null })}
+                aria-current={folderPath.length ? undefined : 'page'}
               >
-                Documentos
+                {activeCase.referencia}
               </Button>
-              {activeCase ? (
-                <>
+              {folderPath.map((folder, index) => (
+                <span className="flex items-center gap-1" key={folder.id}>
                   <ChevronRight
                     className="text-muted-foreground h-4 w-4 shrink-0"
                     aria-hidden="true"
                   />
-                  <Button variant="ghost" size="sm" onClick={() => setFolderId(null)}>
-                    {activeCase.referencia}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLocation({ caseId, folderId: folder.id })}
+                    aria-current={index === folderPath.length - 1 ? 'page' : undefined}
+                  >
+                    {folder.name}
                   </Button>
-                  {folderPath.map((folder, index) => (
-                    <span className="flex items-center gap-1" key={folder.id}>
-                      <ChevronRight
-                        className="text-muted-foreground h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setFolderId(folder.id)}
-                        aria-current={index === folderPath.length - 1 ? 'page' : undefined}
-                      >
-                        {folder.name}
-                      </Button>
-                    </span>
-                  ))}
-                </>
-              ) : null}
-            </div>
+                </span>
+              ))}
+            </>
+          ) : null}
+        </nav>
+        {activeCase ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <span id="document-upload-help" className="sr-only">
+              PDF, DOCX, XLSX, JPG o PNG; máximo 25 MB. El archivo se guardará en esta ubicación.
+            </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={!activeCase || creatingFolder}
-              aria-describedby={!activeCase ? 'document-select-case-hint' : undefined}
+              disabled={creatingFolder}
               onClick={() => {
                 setFolderError(null)
                 setFolderDialogOpen(true)
@@ -505,7 +522,7 @@ export function PersistentDocuments() {
               <select
                 id="document-confidentiality"
                 value={confidentiality}
-                disabled={!activeCase || uploading}
+                disabled={uploading}
                 onChange={(e) => setConfidentiality(e.target.value as DocumentConfidentiality)}
                 className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50"
               >
@@ -515,7 +532,7 @@ export function PersistentDocuments() {
               </select>
             </div>
             <label
-              className={`bg-primary text-primary-foreground focus-within:ring-ring inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${uploading || !activeCase ? 'pointer-events-none opacity-50' : 'hover:bg-primary/90'}`}
+              className={`bg-primary text-primary-foreground focus-within:ring-ring inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${uploading ? 'pointer-events-none opacity-50' : 'hover:bg-primary/90'}`}
             >
               <Upload className="h-4 w-4" aria-hidden="true" />
               {uploading ? 'Subiendo…' : 'Subir archivo'}
@@ -525,36 +542,29 @@ export function PersistentDocuments() {
                 accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
                 aria-describedby="document-upload-help"
                 onChange={(e) => void upload(e)}
-                disabled={uploading || !activeCase}
+                disabled={uploading}
               />
             </label>
           </div>
-          <p id="document-upload-help" className="text-muted-foreground text-xs">
-            PDF, DOCX, XLSX, JPG o PNG; máximo 25 MB.{' '}
-            {activeCase
-              ? 'El archivo se guardará en esta ubicación.'
-              : 'Elige un expediente para habilitar las acciones.'}
-          </p>
-          {!activeCase ? (
-            <p
-              id="document-select-case-hint"
-              className="text-warning-foreground flex items-center gap-2 text-xs"
-            >
-              <Info className="h-4 w-4 shrink-0" aria-hidden="true" /> Selecciona un expediente para
-              crear carpetas o subir documentos.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+        ) : null}
+      </header>
       {!activeCase ? (
         <section className="space-y-3" aria-labelledby="document-case-list-title">
-          <div>
-            <h2 id="document-case-list-title" className="font-serif text-lg font-semibold">
-              Expedientes
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Selecciona un expediente para consultar y ordenar sus documentos.
-            </p>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h1 id="document-case-list-title" className="font-serif text-lg font-semibold">
+                Expedientes
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Cada expediente funciona como la carpeta principal de su documentación.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground text-xs">
+                {(cases.data ?? []).length} expediente{(cases.data ?? []).length === 1 ? '' : 's'}
+              </span>
+              {rootActions}
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(cases.data ?? []).map((item) => {
@@ -650,7 +660,7 @@ export function PersistentDocuments() {
                 <button
                   type="button"
                   className="focus-visible:ring-ring w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-offset-2"
-                  onClick={() => setFolderId(folder.id)}
+                  onClick={() => setLocation({ caseId, folderId: folder.id })}
                   aria-label={`Abrir carpeta ${folder.name}`}
                 >
                   <CardContent className="flex items-center gap-3 pt-5">

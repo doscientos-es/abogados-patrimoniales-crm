@@ -20,6 +20,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
 import { NuevaTareaDialog } from '@/features/crm'
+import { NotasRemotasSync } from '@/features/notas/ui/notas-remotas-sync'
 
 import { reportLovableError } from '../lib/lovable-error-reporting'
 
@@ -157,6 +158,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AccessGate>
+        <NotasRemotasSync />
         <AuthenticatedRoot />
       </AccessGate>
       <Toaster />

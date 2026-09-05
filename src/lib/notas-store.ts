@@ -1,25 +1,21 @@
-// Motor único de NOTAS INTERNAS de LEX.
-// Persiste hoy en localStorage (mismo patrón que crm-store y expedientes-store)
-// con una API desacoplada: sustituirlo por Lovable Cloud no exigirá tocar las
-// pantallas. Todas las lecturas pasan por el filtro de permisos.
+// Estado de presentación de NOTAS INTERNAS de LEX.
+// Los datos operativos se cargan y escriben en Supabase. Este módulo sólo
+// conserva una instantánea en memoria para que los selectores existentes sigan
+// siendo reutilizables entre las distintas pantallas.
 import { useSyncExternalStore } from 'react'
 
-import { CONTACTOS } from '@/data/contactos'
-import { SEMILLA_OPERATIVA } from '@/data/expedientes-model'
 import {
   type AlVencer,
   type AmbitoNota,
   type ConversionNota,
   type DisparadorNota,
-  type EstadoNota,
-  type EventoNota,
   type NotaInterna,
   type OrigenNota,
   type TipoConversion,
   type VigenciaNota,
   type VisibilidadNota,
 } from '@/data/notas'
-import { HOY, hoyTexto, parseFecha, sumarDias } from '@/data/pipeline'
+import { HOY, hoyTexto, parseFecha } from '@/data/pipeline'
 
 export type NotasState = {
   version: number
@@ -28,9 +24,7 @@ export type NotasState = {
   notas: NotaInterna[]
 }
 
-const STORAGE_KEY = 'patrimonial-suite-notas'
 const VERSION = 1
-const isBrowser = typeof document !== 'undefined'
 
 /* ------------------------------------------------------------------ */
 /* Utilidades de fecha                                                 */
@@ -58,160 +52,15 @@ const revisionAlcanzada = (n: NotaInterna) => {
 }
 
 /* ------------------------------------------------------------------ */
-/* Semilla                                                             */
-/* ------------------------------------------------------------------ */
-
-function evento(accion: string, usuario: string, fecha: string, detalle?: string): EventoNota {
-  return {
-    id: `EV-${Math.random().toString(36).slice(2, 9)}`,
-    fecha,
-    usuario,
-    accion,
-    ...(detalle ? { detalle } : {}),
-  }
-}
-
-function base(
-  n: Partial<NotaInterna> & {
-    id: string
-    ambito: AmbitoNota
-    contenido: string
-    origen: OrigenNota
-    autor: string
-    creada: string
-  },
-): NotaInterna {
-  return {
-    contactos: [],
-    estado: 'activa',
-    destacada: false,
-    critica: false,
-    requiereConfirmacion: false,
-    confirmaciones: [],
-    vigencia: 'permanente',
-    alVencer: 'archivar',
-    pendienteRevision: false,
-    disparadores: [],
-    visibilidad: 'equipo',
-    autorizados: [],
-    conversiones: [],
-    historial: [evento('Creación', n.autor, n.creada)],
-    ...n,
-  }
-}
-
-function semilla(): NotasState {
-  const notas: NotaInterna[] = []
-  let seq = 100
-
-  // Notas de persona ya existentes en las fichas de contacto.
-  for (const c of CONTACTOS) {
-    const etiqueta = [c.nombre, c.apellidos].filter(Boolean).join(' ') || c.razonSocial || c.id
-    for (const n of c.notas) {
-      seq += 1
-      notas.push(
-        base({
-          id: `NT-${seq}`,
-          ambito: 'persona',
-          titulo: n.titulo,
-          contenido: n.contenido,
-          origen: { tipo: 'persona', id: c.id, etiqueta },
-          contactos: [c.id],
-          autor: n.autor,
-          creada: n.fecha,
-          destacada: n.destacada,
-          estado: n.archivada ? 'archivada' : 'activa',
-        }),
-      )
-    }
-  }
-
-  // Notas de expediente sobre expedientes reales de la semilla operativa.
-  const expedientes = SEMILLA_OPERATIVA().expedientes.slice(0, 3)
-  const textos = [
-    {
-      titulo: 'Estrategia con la contraparte',
-      contenido:
-        'La contraparte parece dispuesta a negociar. No remitir todavía la propuesta económica hasta comentar la estrategia con Igor.',
-      destacada: true,
-    },
-    {
-      titulo: 'Sensibilidad del cliente',
-      contenido:
-        'Está especialmente preocupado por los costes: anticipar cualquier gasto extraordinario.',
-      destacada: false,
-    },
-    {
-      titulo: 'Confidencialidad familiar',
-      contenido: 'No facilitar información al hermano sin consultarle previamente.',
-      destacada: true,
-    },
-  ]
-  expedientes.forEach((e, i) => {
-    const t = textos[i] ?? textos.at(-1)
-    if (!t) return
-    seq += 1
-    notas.push(
-      base({
-        id: `NT-${seq}`,
-        ambito: 'expediente',
-        titulo: t.titulo,
-        contenido: t.contenido,
-        origen: { tipo: 'expediente', id: e.id, etiqueta: `${e.codigo} · ${e.nombre}` },
-        contactos: [e.contactoId],
-        expedienteId: e.id,
-        autor: e.responsable,
-        creada: `${hoyTexto()} 09:15`,
-        destacada: t.destacada,
-        critica: i === 2,
-        requiereConfirmacion: i === 2,
-        disparadores: i === 2 ? (['abrir-expediente', 'antes-contactar'] as DisparadorNota[]) : [],
-      }),
-    )
-  })
-
-  return { version: VERSION, usuario: 'Ana Torregrosa', secuencia: seq, notas }
-}
-
-/* ------------------------------------------------------------------ */
 /* Store                                                               */
 /* ------------------------------------------------------------------ */
 
-// SSR must not eagerly build the demo seed: its cross-domain data imports can
-// be split into circular server chunks. Browser hydration still receives the
-// same local demo seed until this store is replaced by Supabase.
-const semillaBase: NotasState = !isBrowser
-  ? { version: VERSION, usuario: '', secuencia: 100, notas: [] }
-  : semilla()
+const semillaBase: NotasState = { version: VERSION, usuario: '', secuencia: 0, notas: [] }
 let estado: NotasState = semillaBase
-let hidratado = false
 const listeners = new Set<() => void>()
-
-function leerAlmacen(): NotasState {
-  if (!isBrowser) return semillaBase
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return semilla()
-    const parsed = JSON.parse(raw) as NotasState
-    if (parsed.version !== VERSION) return semilla()
-    return parsed
-  } catch {
-    return semilla()
-  }
-}
-
-function persistir() {
-  if (!isBrowser) return
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
-  } catch {
-    /* almacenamiento no disponible */
-  }
-}
 
 function set(fn: (s: NotasState) => NotasState) {
   estado = fn(estado)
-  persistir()
   listeners.forEach((l) => l())
 }
 
@@ -220,29 +69,9 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l)
 }
 
-function nuevoId() {
-  const n = estado.secuencia + 1
-  estado = { ...estado, secuencia: n }
-  return `NT-${n}`
-}
-
-function mapNota(id: string, fn: (n: NotaInterna) => NotaInterna) {
-  set((s) => ({ ...s, notas: s.notas.map((n) => (n.id === id ? fn(n) : n)) }))
-}
-
-/** Añade un evento al historial y sella la modificación. */
-function registrar(
-  n: NotaInterna,
-  accion: string,
-  detalle?: string,
-  usuario = estado.usuario,
-): NotaInterna {
-  return {
-    ...n,
-    modificada: ahora(),
-    modificadaPor: usuario,
-    historial: [evento(accion, usuario, ahora(), detalle), ...n.historial],
-  }
+/** Reemplaza la instantánea en memoria con la lectura autorizada de Supabase. */
+export function sincronizarNotasRemotas(notas: NotaInterna[], usuario: string) {
+  set((s) => ({ ...s, usuario, secuencia: notas.length, notas }))
 }
 
 /* ------------------------------------------------------------------ */
@@ -251,60 +80,8 @@ function registrar(
 
 /** Aplica revisión y vencimiento. Nunca borra: archiva o deja pendiente. */
 export function aplicarAutomatismos() {
-  let cambios = 0
-  const notas = estado.notas.map((n) => {
-    if (n.estado === 'archivada') return n
-    let out = n
-    if (!out.pendienteRevision && out.revision && revisionAlcanzada(out)) {
-      cambios += 1
-      out = {
-        ...out,
-        pendienteRevision: true,
-        historial: [
-          evento('Revisión alcanzada', 'Sistema', ahora(), `Fecha de revisión ${out.revision}`),
-          ...out.historial,
-        ],
-      }
-    }
-    if (out.estado === 'activa' && out.vigencia === 'temporal' && vencida(out)) {
-      cambios += 1
-      if (out.alVencer === 'archivar') {
-        out = {
-          ...out,
-          estado: 'archivada',
-          archivadaPor: 'Sistema',
-          archivadaEl: ahora(),
-          historial: [
-            evento('Archivo automático', 'Sistema', ahora(), `Vencida el ${out.vencimiento}`),
-            ...out.historial,
-          ],
-        }
-      } else if (!out.pendienteRevision) {
-        out = {
-          ...out,
-          pendienteRevision: true,
-          historial: [
-            evento(
-              'Pendiente de confirmación',
-              'Sistema',
-              ahora(),
-              `Vencida el ${out.vencimiento}`,
-            ),
-            ...out.historial,
-          ],
-        }
-      }
-    }
-    return out
-  })
-  if (cambios) set((s) => ({ ...s, notas }))
-}
-
-if (isBrowser && !hidratado) {
-  hidratado = true
-  estado = leerAlmacen()
-  aplicarAutomatismos()
-  persistir()
+  // La aplicación de vencimientos se realiza en el backend al guardar una nota.
+  // No se modifican datos jurídicos localmente al abrir una pantalla.
 }
 
 export function useNotas<T>(selector: (s: NotasState) => T): T {
@@ -447,220 +224,119 @@ export type NuevaNotaInput = {
   autor?: string
 }
 
+export type NotasRemotasApi = {
+  crear: (input: NuevaNotaInput) => Promise<NotaInterna | null>
+  actualizar: (id: string, cambios: Partial<NotaInterna>) => Promise<NotaInterna | null>
+  destacar: (id: string, valor: boolean) => Promise<NotaInterna | null>
+  marcarCritica: (id: string, valor: boolean) => Promise<NotaInterna | null>
+  requerirConfirmacion: (id: string, valor: boolean) => Promise<NotaInterna | null>
+  confirmarLectura: (id: string) => Promise<void>
+  cambiarVigencia: (
+    id: string,
+    valor: { vigencia: VigenciaNota; revision?: string; vencimiento?: string; alVencer?: AlVencer },
+  ) => Promise<NotaInterna | null>
+  prorrogar: (id: string, vencimiento: string) => Promise<NotaInterna | null>
+  marcarRevisada: (id: string) => Promise<NotaInterna | null>
+  posponerAviso: (id: string, dias: number) => Promise<NotaInterna | null>
+  resolver: (id: string) => Promise<NotaInterna | null>
+  archivar: (id: string) => Promise<NotaInterna | null>
+  reactivar: (id: string) => Promise<NotaInterna | null>
+  registrarConversion: (
+    id: string,
+    conversion: Omit<ConversionNota, 'fecha' | 'usuario'>,
+  ) => Promise<NotaInterna | null>
+}
+
+let apiRemota: NotasRemotasApi | null = null
+
+/** Conecta las acciones visibles de la UI con las mutaciones persistentes. */
+export function conectarNotasRemotas(api: NotasRemotasApi | null) {
+  apiRemota = api
+}
+
+function api(): NotasRemotasApi {
+  if (!apiRemota) throw new Error('Las notas internas no están listas para guardarse.')
+  return apiRemota
+}
+
 export const notas = {
   setUsuario(usuario: string) {
     set((s) => ({ ...s, usuario }))
   },
 
   crear(input: NuevaNotaInput) {
-    const id = nuevoId()
-    const autor = input.autor ?? estado.usuario
-    const creada = ahora()
-    const nota: NotaInterna = base({
-      id,
-      ambito: input.ambito,
-      contenido: input.contenido.trim(),
-      origen: input.origen,
-      autor,
-      creada,
-      contactos: input.contactos ?? [],
-      ...(input.titulo?.trim() ? { titulo: input.titulo.trim() } : {}),
-      ...(input.expedienteId ? { expedienteId: input.expedienteId } : {}),
-      ...(input.oportunidadId ? { oportunidadId: input.oportunidadId } : {}),
-      ...(input.ejecucionId ? { ejecucionId: input.ejecucionId } : {}),
-      ...(input.presupuestoId ? { presupuestoId: input.presupuestoId } : {}),
-      destacada: input.destacada ?? false,
-      critica: input.critica ?? false,
-      requiereConfirmacion: input.requiereConfirmacion ?? false,
-      vigencia: input.vigencia ?? 'permanente',
-      ...(input.desde ? { desde: input.desde } : {}),
-      ...(input.revision ? { revision: input.revision } : {}),
-      ...(input.vencimiento ? { vencimiento: input.vencimiento } : {}),
-      alVencer: input.alVencer ?? 'archivar',
-      disparadores: input.disparadores ?? [],
-      visibilidad: input.visibilidad ?? 'equipo',
-      autorizados: input.autorizados ?? [],
-    })
-    set((s) => ({ ...s, notas: [nota, ...s.notas] }))
-    return nota
+    return api().crear(input)
   },
 
-  actualizar(id: string, cambios: Partial<NuevaNotaInput>) {
-    mapNota(id, (n) => {
-      const detalles: string[] = []
-      if (cambios.contenido !== undefined && cambios.contenido !== n.contenido)
-        detalles.push('contenido')
-      if (cambios.titulo !== undefined && cambios.titulo !== n.titulo) detalles.push('título')
-      if (cambios.ambito && cambios.ambito !== n.ambito) detalles.push(`tipo → ${cambios.ambito}`)
-      if (cambios.visibilidad && cambios.visibilidad !== n.visibilidad) detalles.push('permisos')
-      if (cambios.vencimiento !== undefined || cambios.revision !== undefined || cambios.vigencia)
-        detalles.push('vigencia')
-      const limpio = Object.fromEntries(
-        Object.entries(cambios).filter(([, v]) => v !== undefined),
-      ) as Partial<NotaInterna>
-      return registrar({ ...n, ...limpio }, 'Edición', detalles.join(', ') || undefined)
-    })
+  actualizar(id: string, cambios: Partial<NotaInterna>) {
+    return api().actualizar(id, cambios)
   },
 
   destacar(id: string, valor: boolean) {
-    mapNota(id, (n) => registrar({ ...n, destacada: valor }, valor ? 'Destacada' : 'Sin destacar'))
+    return api().destacar(id, valor)
   },
 
   marcarCritica(id: string, valor: boolean) {
-    mapNota(id, (n) =>
-      registrar(
-        { ...n, critica: valor },
-        valor ? 'Marcada como advertencia crítica' : 'Retirada la advertencia crítica',
-      ),
-    )
+    return api().marcarCritica(id, valor)
   },
 
   requerirConfirmacion(id: string, valor: boolean) {
-    mapNota(id, (n) =>
-      registrar(
-        { ...n, requiereConfirmacion: valor, ...(valor ? { confirmaciones: [] } : {}) },
-        valor ? 'Requiere confirmación de lectura' : 'Confirmación de lectura no requerida',
-      ),
-    )
+    return api().requerirConfirmacion(id, valor)
   },
 
   confirmarLectura(id: string) {
-    mapNota(id, (n) =>
-      n.confirmaciones.some((c) => c.usuario === estado.usuario)
-        ? n
-        : registrar(
-            {
-              ...n,
-              confirmaciones: [...n.confirmaciones, { usuario: estado.usuario, fecha: ahora() }],
-            },
-            'Confirmación de lectura',
-          ),
-    )
+    return api().confirmarLectura(id)
   },
 
   cambiarVigencia(
     id: string,
     v: { vigencia: VigenciaNota; revision?: string; vencimiento?: string; alVencer?: AlVencer },
   ) {
-    mapNota(id, (n) => {
-      const out: NotaInterna = {
-        ...n,
-        vigencia: v.vigencia,
-        alVencer: v.alVencer ?? n.alVencer,
-      }
-      if (v.vigencia === 'permanente') {
-        delete out.vencimiento
-      } else if (v.vencimiento) {
-        out.vencimiento = v.vencimiento
-      }
-      if (v.revision) out.revision = v.revision
-      else delete out.revision
-      return registrar(
-        out,
-        'Cambio de vigencia',
-        v.vigencia === 'temporal' ? `Hasta ${out.vencimiento ?? '—'}` : 'Permanente',
-      )
-    })
+    return api().cambiarVigencia(id, v)
   },
 
   prorrogar(id: string, nuevoVencimiento: string) {
-    mapNota(id, (n) =>
-      registrar(
-        {
-          ...n,
-          vigencia: 'temporal',
-          vencimiento: nuevoVencimiento,
-          estado: n.estado === 'archivada' ? 'activa' : n.estado,
-          pendienteRevision: false,
-        },
-        'Prórroga de vigencia',
-        `Nueva fecha: ${nuevoVencimiento}`,
-      ),
-    )
+    return api().prorrogar(id, nuevoVencimiento)
   },
 
   marcarRevisada(id: string) {
-    mapNota(id, (n) => registrar({ ...n, pendienteRevision: false }, 'Marcada como revisada'))
+    return api().marcarRevisada(id)
   },
 
   posponerAviso(id: string, dias: number) {
-    mapNota(id, (n) =>
-      registrar({ ...n, posponerHasta: sumarDias(dias) }, 'Aviso pospuesto', `${dias} día(s)`),
-    )
+    return api().posponerAviso(id, dias)
   },
 
   resolver(id: string) {
-    mapNota(id, (n) =>
-      registrar(
-        {
-          ...n,
-          estado: 'resuelta' as EstadoNota,
-          resueltaPor: estado.usuario,
-          resueltaEl: ahora(),
-          pendienteRevision: false,
-        },
-        'Resuelta',
-      ),
-    )
+    return api().resolver(id)
   },
 
   archivar(id: string) {
-    mapNota(id, (n) =>
-      registrar(
-        {
-          ...n,
-          estado: 'archivada' as EstadoNota,
-          archivadaPor: estado.usuario,
-          archivadaEl: ahora(),
-          pendienteRevision: false,
-        },
-        'Archivada',
-      ),
-    )
+    return api().archivar(id)
   },
 
   reactivar(id: string) {
-    mapNota(id, (n) => {
-      const out: NotaInterna = { ...n, estado: 'activa' }
-      delete out.archivadaEl
-      delete out.archivadaPor
-      delete out.resueltaEl
-      delete out.resueltaPor
-      return registrar(out, 'Reactivada')
-    })
+    return api().reactivar(id)
   },
 
   registrarConversion(id: string, c: Omit<ConversionNota, 'fecha' | 'usuario'>) {
-    mapNota(id, (n) =>
-      registrar(
-        {
-          ...n,
-          conversiones: [
-            ...n.conversiones,
-            { ...c, fecha: ahora(), usuario: estado.usuario } satisfies ConversionNota,
-          ],
-        },
-        'Conversión',
-        `${c.tipo}: ${c.etiqueta}`,
-      ),
-    )
+    return api().registrarConversion(id, c)
   },
 
   /** Guarda un lote de borradores (alta de contacto) una vez existe el contacto. */
   guardarBorradores(contactoId: string, etiqueta: string, borradores: NuevaNotaInput[]) {
-    const creadas: NotaInterna[] = []
-    for (const b of borradores) {
-      if (!b.contenido.trim()) continue
-      creadas.push(
-        this.crear({
-          ...b,
-          ambito: 'persona',
-          origen: { tipo: 'persona', id: contactoId, etiqueta },
-          contactos: [contactoId],
-        }),
-      )
-    }
-    return creadas
+    return Promise.all(
+      borradores
+        .filter((b) => b.contenido.trim())
+        .map((b) =>
+          this.crear({
+            ...b,
+            ambito: 'persona',
+            origen: { tipo: 'persona', id: contactoId, etiqueta },
+            contactos: [contactoId],
+          }),
+        ),
+    )
   },
 }
 

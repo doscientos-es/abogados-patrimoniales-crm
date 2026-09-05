@@ -179,9 +179,7 @@ function ExpedientesPersistentesRoute() {
           contactos={contacts.data ?? []}
           miembros={members.data ?? []}
           pending={createCase.isPending}
-          onCreate={async (input) => {
-            await createCase.mutateAsync(input)
-          }}
+          onCreate={(input) => createCase.mutateAsync(input)}
         />
       }
     />

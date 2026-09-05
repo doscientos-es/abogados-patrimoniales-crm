@@ -34,14 +34,16 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { ESTADOS_DOC_SIMPLE, type Documento } from '@/data/expedientes-model'
-import { ToneBadge, ViewSwitch } from '@/features/crm'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
+import { ToneBadge, useMiembrosDespacho, ViewSwitch } from '@/features/crm'
+import { CaseCreateDialog, useCrearExpediente } from '@/features/expedientes'
 import { ops, useOps } from '@/lib/expedientes-store'
 
+type DocumentsSearch = { doc?: string; case?: string; folder?: string }
+
 export const Route = createFileRoute('/documentos')({
-  validateSearch: (search: Record<string, unknown>) =>
-    typeof search['doc'] === 'string' && search['doc']
-      ? { doc: search['doc'] as string }
-      : ({} as { doc?: string }),
+  validateSearch: parseDocumentsSearch,
   head: () => ({
     meta: [
       { title: 'Documentos — LEX' },
@@ -60,8 +62,83 @@ export const Route = createFileRoute('/documentos')({
       { name: 'twitter:card', content: 'summary' },
     ],
   }),
-  component: PersistentDocuments,
+  component: PersistentDocumentsRoute,
 })
+
+function parseDocumentsSearch(search: Record<string, unknown>): DocumentsSearch {
+  const doc = readDocumentSearchParam(search, 'doc')
+  const caseId = readDocumentSearchParam(search, 'case')
+  const folder = readDocumentSearchParam(search, 'folder')
+
+  return {
+    ...(doc ? { doc } : {}),
+    ...(caseId ? { case: caseId } : {}),
+    ...(folder ? { folder } : {}),
+  }
+}
+
+function readDocumentSearchParam(search: Record<string, unknown>, key: string) {
+  const value = search[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function PersistentDocumentsRoute() {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const contacts = useContactos(firmId)
+  const members = useMiembrosDespacho(firmId)
+  const createCase = useCrearExpediente(firmId)
+
+  const updateLocation = ({
+    caseId,
+    folderId,
+  }: {
+    caseId: string | null
+    folderId: string | null
+  }) => {
+    void navigate({
+      search: (previous) => {
+        const nextSearch = { ...previous }
+        delete nextSearch.case
+        delete nextSearch.folder
+        return {
+          ...nextSearch,
+          ...(caseId ? { case: caseId } : {}),
+          ...(folderId ? { folder: folderId } : {}),
+        }
+      },
+    })
+  }
+
+  const canCreateCase =
+    session.status === 'signed-in' &&
+    Boolean(firmId) &&
+    !contacts.isPending &&
+    !contacts.isError &&
+    !members.isPending &&
+    !members.isError
+
+  return (
+    <PersistentDocuments
+      location={{ caseId: search.case ?? null, folderId: search.folder ?? null }}
+      onLocationChange={updateLocation}
+      rootActions={
+        canCreateCase ? (
+          <CaseCreateDialog
+            contactos={contacts.data ?? []}
+            miembros={members.data ?? []}
+            pending={createCase.isPending}
+            onCreate={(input) => createCase.mutateAsync(input)}
+            onCreated={(caseId) => updateLocation({ caseId, folderId: null })}
+          />
+        ) : null
+      }
+    />
+  )
+}
 
 /** Columnas del flujo documental mínimo acordado. */
 const COLUMNAS_FLUJO = [

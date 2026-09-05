@@ -37,8 +37,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { CONTACTOS } from '@/data/contactos'
-import { USUARIOS } from '@/data/crm'
 import {
   AMBITOS,
   AMBITO_META,
@@ -53,11 +51,15 @@ import {
   type VisibilidadNota,
 } from '@/data/notas'
 import { sumarDias } from '@/data/pipeline'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
+import { useMiembrosDespacho, useOportunidades } from '@/features/crm'
+import { useExpedientesPersistentes } from '@/features/expedientes'
 import { useCrm } from '@/lib/crm-store'
 import { useOps } from '@/lib/expedientes-store'
 import { notas } from '@/lib/notas-store'
 
-import { nombreContacto, useContextoNota, type ContextoNota } from './contexto'
+import { useContextoNota, type ContextoNota } from './contexto'
 
 export type NotaInicial = Partial<ContextoNota>
 
@@ -145,8 +147,37 @@ export function NotaDialog({
    */
   modoRapido?: boolean
 }) {
-  const expedientes = useOps((s) => s.expedientes)
-  const oportunidades = useCrm((s) => s.oportunidades)
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const contactos = useContactos(firmId).data ?? []
+  const expedientesPersistentes = useExpedientesPersistentes(firmId).data ?? []
+  const oportunidadesPersistentes = useOportunidades(firmId).data ?? []
+  const miembros = useMiembrosDespacho(firmId).data ?? []
+  const expedientesLocales = useOps((s) => s.expedientes)
+  const oportunidadesLocales = useCrm((s) => s.oportunidades)
+  const expedientes = firmId
+    ? expedientesPersistentes.map((e) => ({
+        id: e.id,
+        etiqueta: `${e.referencia} · ${e.titulo}`,
+        contactos: [e.contactoPrincipalId],
+      }))
+    : expedientesLocales.map((e) => ({
+        id: e.id,
+        etiqueta: `${e.codigo} · ${e.nombre}`,
+        contactos: [e.contactoId],
+      }))
+  const oportunidades = firmId
+    ? oportunidadesPersistentes.map((o) => ({
+        id: o.id,
+        etiqueta: `${o.referencia} · ${o.titulo}`,
+        contactos: [o.contactoId],
+      }))
+    : oportunidadesLocales.map((o) => ({
+        id: o.id,
+        etiqueta: `${o.codigo} · ${o.titulo}`,
+        contactos: [o.contactoId],
+      }))
   const [f, setF] = useState<FormState>(() => estadoInicial(nota, inicial))
   const [avanzado, setAvanzado] = useState(false)
 
@@ -157,26 +188,20 @@ export function NotaDialog({
       return [
         { id: origenFijo.id, etiqueta: origenFijo.etiqueta, contactos: origenFijo.contactos ?? [] },
       ]
-    if (f.ambito === 'expediente')
-      return expedientes.map((e) => ({
-        id: e.id,
-        etiqueta: `${e.codigo} · ${e.nombre}`,
-        contactos: [e.contactoId],
-      }))
-    if (f.ambito === 'oportunidad')
-      return oportunidades.map((o) => ({
-        id: o.id,
-        etiqueta: `${o.codigo} · ${o.titulo}`,
-        contactos: [o.contactoId],
-      }))
+    if (f.ambito === 'expediente') return expedientes
+    if (f.ambito === 'oportunidad') return oportunidades
     if (f.ambito === 'persona')
-      return CONTACTOS.map((c) => ({ id: c.id, etiqueta: nombreContacto(c.id), contactos: [c.id] }))
+      return contactos.map((c) => ({
+        id: c.id,
+        etiqueta: [c.nombre, c.apellidos].filter(Boolean).join(' ') || c.razonSocial || c.id,
+        contactos: [c.id],
+      }))
     return [] as { id: string; etiqueta: string; contactos: string[] }[]
-  }, [f.ambito, expedientes, oportunidades, origenFijo])
+  }, [contactos, f.ambito, expedientes, oportunidades, origenFijo])
 
   const elegido = origenFijo ? opciones[0] : opciones.find((o) => o.id === f.origenId)
 
-  const guardar = (otra: boolean) => {
+  const guardar = async (otra: boolean) => {
     if (!f.contenido.trim()) {
       toast.error('El contenido de la nota es obligatorio.')
       return
@@ -209,7 +234,7 @@ export function NotaDialog({
     }
 
     if (nota) {
-      notas.actualizar(nota.id, payload)
+      if (!(await notas.actualizar(nota.id, payload))) return
       toast.success('Nota actualizada.')
       onOpenChange(false)
       return
@@ -218,7 +243,7 @@ export function NotaDialog({
       onCreate(payload)
       toast.success('Nota añadida al alta.')
     } else {
-      notas.crear(payload)
+      if (!(await notas.crear(payload))) return
       toast.success('Nota interna guardada.')
     }
 
@@ -333,7 +358,7 @@ export function NotaDialog({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="max-h-72 w-72 overflow-y-auto">
-                    {CONTACTOS.map((c) => (
+                    {contactos.map((c) => (
                       <DropdownMenuCheckboxItem
                         key={c.id}
                         checked={f.contactos.includes(c.id)}
@@ -345,7 +370,7 @@ export function NotaDialog({
                           )
                         }
                       >
-                        {nombreContacto(c.id)}
+                        {[c.nombre, c.apellidos].filter(Boolean).join(' ') || c.razonSocial || c.id}
                       </DropdownMenuCheckboxItem>
                     ))}
                   </DropdownMenuContent>
@@ -354,7 +379,16 @@ export function NotaDialog({
                   <div className="flex flex-wrap gap-1.5">
                     {f.contactos.map((id) => (
                       <Badge key={id} variant="secondary" className="font-normal">
-                        {nombreContacto(id)}
+                        {contactos.find((contacto) => contacto.id === id)
+                          ? [
+                              contactos.find((contacto) => contacto.id === id)?.nombre,
+                              contactos.find((contacto) => contacto.id === id)?.apellidos,
+                            ]
+                              .filter(Boolean)
+                              .join(' ') ||
+                            contactos.find((contacto) => contacto.id === id)?.razonSocial ||
+                            id
+                          : id}
                       </Badge>
                     ))}
                   </div>
@@ -528,17 +562,17 @@ export function NotaDialog({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-64">
-                          {USUARIOS.map((u) => (
+                          {miembros.map((u) => (
                             <DropdownMenuCheckboxItem
                               key={u.id}
-                              checked={f.autorizados.includes(u.nombre)}
+                              checked={f.autorizados.includes(u.id)}
                               onSelect={(e) => e.preventDefault()}
                               onCheckedChange={(v) =>
                                 set(
                                   'autorizados',
                                   v
-                                    ? [...f.autorizados, u.nombre]
-                                    : f.autorizados.filter((x) => x !== u.nombre),
+                                    ? [...f.autorizados, u.id]
+                                    : f.autorizados.filter((x) => x !== u.id),
                                 )
                               }
                             >

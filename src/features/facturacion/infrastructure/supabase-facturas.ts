@@ -19,6 +19,7 @@ const invoiceStatusLabel: Record<InvoiceStatus, string> = {
 
 export type FacturaResumen = {
   id: string
+  contactoId: string
   referencia: string
   cliente: string
   asuntoId: string
@@ -42,6 +43,7 @@ function facturaFromRow(
   const importeCobrado = payments.reduce((total, payment) => total + payment.amount, 0)
   return {
     id: row.id,
+    contactoId: row.contact_id,
     referencia: row.reference,
     cliente: row.recipient_name || 'Cliente pendiente',
     asuntoId: row.case_id,
