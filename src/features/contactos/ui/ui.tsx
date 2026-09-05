@@ -1,5 +1,5 @@
 import { AlertTriangle, Star } from 'lucide-react'
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, type ComponentProps, type ReactNode } from 'react'
 
 import { Input } from '@/components/ui/input'
 import { type Naturaleza, type RelacionDespacho, type Satisfaccion } from '@/data/contactos'
@@ -116,6 +116,9 @@ export function Field({
   wide,
   editable = true,
   onChange,
+  editControl,
+  editValue,
+  inputProps,
 }: {
   label: string
   value?: ReactNode
@@ -123,24 +126,34 @@ export function Field({
   /** Cuando es false el campo nunca se convierte en editable. */
   editable?: boolean
   onChange?: (value: string) => void
+  /** Control semántico que sustituye al input de texto durante la edición. */
+  editControl?: ReactNode
+  /** Valor alternativo que necesita el control durante la edición. */
+  editValue?: string
+  inputProps?: Omit<ComponentProps<typeof Input>, 'aria-label' | 'defaultValue' | 'onChange' | 'value'>
 }) {
   const editing = useFichaEdit()
   const editableValue = typeof value === 'string' || value === undefined
+  const inputValue = editValue ?? (typeof value === 'string' ? value : '')
+  const canEdit = Boolean(onChange || editControl)
 
   return (
     <div className={cn('min-w-0', wide && 'sm:col-span-2 lg:col-span-3')}>
       <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
         {label}
       </p>
-      {editing && editable && editableValue ? (
+      {editing && editable && canEdit && editControl ? (
+        editControl
+      ) : editing && editable && canEdit && editableValue ? (
         <Input
           className="mt-1"
+          {...inputProps}
           {...(onChange
             ? {
-                value: typeof value === 'string' ? value : '',
+                value: inputValue,
                 onChange: (event) => onChange(event.target.value),
               }
-            : { defaultValue: typeof value === 'string' ? value : '' })}
+            : { defaultValue: inputValue })}
           aria-label={label}
         />
       ) : (

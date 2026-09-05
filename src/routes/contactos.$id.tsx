@@ -3,11 +3,13 @@ import {
   Archive,
   ArrowLeft,
   Briefcase,
+  CalendarClock,
   ClipboardList,
   Copy,
   Download,
   Eye,
   EyeOff,
+  FileText,
   FileUp,
   Lock,
   Mail,
@@ -36,7 +38,6 @@ import {
   FichaEditContext,
   Field,
   FieldGrid,
-  FuturePlaceholder,
   InlineWarning,
   NaturalezaBadge,
   RelacionBadge,
@@ -88,6 +89,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
   SATISFACCIONES,
+  CANALES,
+  ORIGENES,
+  PAISES,
+  PROVINCIAS,
+  RELACIONES,
   TIPOS_RECLAMACION,
   avisoBancario,
   esCliente,
@@ -106,7 +112,12 @@ import {
   useActualizarEstadoContacto,
   useContacto,
 } from '@/features/contactos'
-import { NuevaTareaDialog } from '@/features/crm'
+import { operacionesDelContacto } from '@/features/contactos/application/contact-related-operations'
+import { valorFechaParaInput } from '@/features/contactos/application/contact-form-values'
+import { NuevaTareaDialog, useOportunidades } from '@/features/crm'
+import { useExpedientesPersistentes } from '@/features/expedientes'
+import { useFacturas } from '@/features/facturacion/infrastructure/supabase-facturas'
+import { useTareasPersistentes } from '@/features/tareas'
 import { comunicacionesDeContacto, useOps } from '@/lib/expedientes-store'
 import { notasDeContacto, useNotas } from '@/lib/notas-store'
 
@@ -153,6 +164,32 @@ function FichaPage() {
   const [editando, setEditando] = useState(false)
   const [borrador, setBorrador] = useState<Contacto | null>(null)
   const expedientes = useExpedientesDeContacto(id)
+  const expedientesQuery = useExpedientesPersistentes(membership.data?.firmId)
+  const oportunidadesQuery = useOportunidades(membership.data?.firmId)
+  const facturasQuery = useFacturas(membership.data?.firmId)
+  const tareasQuery = useTareasPersistentes(membership.data?.firmId)
+  const operaciones = useMemo(
+    () =>
+      operacionesDelContacto({
+        contactoId: id,
+        expedientes: expedientesQuery.data ?? [],
+        oportunidades: oportunidadesQuery.data ?? [],
+        facturas: facturasQuery.data ?? [],
+        tareas: tareasQuery.data ?? [],
+      }),
+    [
+      expedientesQuery.data,
+      facturasQuery.data,
+      id,
+      oportunidadesQuery.data,
+      tareasQuery.data,
+    ],
+  )
+  const cargandoOperaciones =
+    expedientesQuery.isPending ||
+    oportunidadesQuery.isPending ||
+    facturasQuery.isPending ||
+    tareasQuery.isPending
 
   if (session.status === 'loading') {
     return (
@@ -287,7 +324,12 @@ function FichaPage() {
           </TabsList>
 
           <TabsContent value="resumen" className="space-y-4">
-            <TabResumen contacto={contacto} numExpedientes={expedientes.length} />
+            <TabResumen
+              contacto={contacto}
+              numExpedientes={expedientes.length}
+              operaciones={operaciones}
+              cargandoOperaciones={cargandoOperaciones}
+            />
           </TabsContent>
           <TabsContent value="generales" className="space-y-4">
             <TabGenerales
@@ -516,7 +558,17 @@ function IntervencionEnExpedientes({ contacto }: { contacto: Contacto }) {
   )
 }
 
-function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExpedientes: number }) {
+function TabResumen({
+  contacto,
+  numExpedientes,
+  operaciones,
+  cargandoOperaciones,
+}: {
+  contacto: Contacto
+  numExpedientes: number
+  operaciones: ReturnType<typeof operacionesDelContacto>
+  cargandoOperaciones: boolean
+}) {
   const direccion = `${contacto.direccion}, ${contacto.cp} ${contacto.municipio} (${contacto.provincia}), ${contacto.pais}`
   const doc = estadoDocumental(contacto)
 
@@ -616,6 +668,8 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
 
       <ComunicacionesDelContacto contactoId={contacto.id} />
 
+      <ActividadOperativaContacto operaciones={operaciones} cargando={cargandoOperaciones} />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Últimas notas internas</CardTitle>
@@ -625,24 +679,104 @@ function TabResumen({ contacto, numExpedientes }: { contacto: Contacto; numExped
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Áreas previstas en fases posteriores</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FuturePlaceholder title="Presupuestos" description="Propuestas económicas emitidas." />
-          <FuturePlaceholder title="Facturas" description="Minutas y su estado de cobro." />
-          <FuturePlaceholder
-            title="Tareas"
-            description="Tareas del equipo asociadas al contacto."
-          />
-          <FuturePlaceholder
-            title="Próximas actuaciones"
-            description="Plazos y vencimientos previstos."
-          />
-        </CardContent>
-      </Card>
     </>
+  )
+}
+
+function ActividadOperativaContacto({
+  operaciones,
+  cargando,
+}: {
+  operaciones: ReturnType<typeof operacionesDelContacto>
+  cargando: boolean
+}) {
+  const elementos = [
+    {
+      titulo: 'Presupuestos',
+      icono: FileText,
+      cantidad: operaciones.presupuestos.length,
+      vacio: 'No hay presupuestos vinculados.',
+      contenido: operaciones.presupuestos.slice(0, 3).map((presupuesto) => (
+        <Link
+          key={presupuesto.id}
+          to="/presupuestos/$id"
+          params={{ id: presupuesto.id }}
+          className="text-primary block truncate text-sm font-medium hover:underline"
+        >
+          {presupuesto.referencia} · {presupuesto.titulo}
+        </Link>
+      )),
+    },
+    {
+      titulo: 'Facturas',
+      icono: FileText,
+      cantidad: operaciones.facturas.length,
+      vacio: 'No hay facturas vinculadas.',
+      contenido: operaciones.facturas.slice(0, 3).map((factura) => (
+        <Link
+          key={factura.id}
+          to="/facturacion"
+          className="text-primary block truncate text-sm font-medium hover:underline"
+        >
+          {factura.referencia} · {factura.estado}
+        </Link>
+      )),
+    },
+    {
+      titulo: 'Tareas',
+      icono: ClipboardList,
+      cantidad: operaciones.tareas.length,
+      vacio: 'No hay tareas vinculadas.',
+      contenido: operaciones.tareas.slice(0, 3).map((tarea) => (
+        <Link
+          key={tarea.id}
+          to="/tareas"
+          className="text-primary block truncate text-sm font-medium hover:underline"
+        >
+          {tarea.titulo} · {tarea.estado}
+        </Link>
+      )),
+    },
+    {
+      titulo: 'Próximas actuaciones',
+      icono: CalendarClock,
+      cantidad: operaciones.proximasActuaciones.length,
+      vacio: 'No hay actuaciones o vencimientos pendientes.',
+      contenido: operaciones.proximasActuaciones.slice(0, 3).map((actuacion) => (
+        <Link
+          key={`${actuacion.tipo}-${actuacion.id}`}
+          to="/expedientes/$id"
+          params={{ id: actuacion.expedienteId }}
+          className="text-primary block truncate text-sm font-medium hover:underline"
+        >
+          {actuacion.titulo}
+          <span className="text-muted-foreground"> · {actuacion.detalle}</span>
+        </Link>
+      )),
+    },
+  ]
+
+  return (
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Actividad operativa">
+      {elementos.map(({ titulo, icono: Icono, cantidad, vacio, contenido }) => (
+        <Card key={titulo}>
+          <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
+            <Icono className="text-muted-foreground h-4 w-4" />
+            <CardTitle className="text-base">{titulo}</CardTitle>
+            <span className="text-muted-foreground ml-auto text-xs">{cantidad}</span>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {cargando ? (
+              <p className="text-muted-foreground text-sm">Cargando…</p>
+            ) : cantidad ? (
+              contenido
+            ) : (
+              <p className="text-muted-foreground text-sm">{vacio}</p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </section>
   )
 }
 
@@ -688,8 +822,24 @@ function TabGenerales({
             <Field label="Naturaleza" value={contacto.tipoPersona} editable={false} />
             <Field
               label="Relación con el despacho"
-              editable={false}
               value={<RelacionBadge value={contacto.relacion} />}
+              editControl={
+                <Select
+                  value={contacto.relacion}
+                  onValueChange={(relacion) => onChange({ relacion: relacion as Contacto['relacion'] })}
+                >
+                  <SelectTrigger className="mt-1" aria-label="Relación con el despacho">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELACIONES.map((relacion) => (
+                      <SelectItem key={relacion.id} value={relacion.id}>
+                        {relacion.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
             />
             {contacto.tipoPersona === 'Persona física' ? (
               <>
@@ -711,7 +861,9 @@ function TabGenerales({
                 <Field
                   label="Fecha de nacimiento"
                   value={contacto.nacimiento}
+                  editValue={valorFechaParaInput(contacto.nacimiento)}
                   onChange={(nacimiento) => onChange({ nacimiento })}
+                  inputProps={{ type: 'date', autoComplete: 'bday' }}
                 />
               </>
             ) : contacto.tipoPersona === 'Persona jurídica' ? (
@@ -751,28 +903,37 @@ function TabGenerales({
               label="Teléfono principal"
               value={contacto.telefono}
               onChange={(telefono) => onChange({ telefono })}
+              inputProps={{ type: 'tel', autoComplete: 'tel', inputMode: 'tel' }}
             />
             <Field
               label="Teléfono secundario"
               value={contacto.telefono2}
               onChange={(telefono2) => onChange({ telefono2 })}
+              inputProps={{ type: 'tel', autoComplete: 'tel-national', inputMode: 'tel' }}
             />
             <Field
               label="Correo electrónico principal"
               value={contacto.email}
               onChange={(email) => onChange({ email })}
+              inputProps={{ type: 'email', autoComplete: 'email', inputMode: 'email' }}
             />
             <Field
               label="Correo electrónico secundario"
               value={contacto.email2}
               onChange={(email2) => onChange({ email2 })}
+              inputProps={{ type: 'email', autoComplete: 'email', inputMode: 'email' }}
             />
             <Field
               label="Dirección"
               value={contacto.direccion}
               onChange={(direccion) => onChange({ direccion })}
             />
-            <Field label="Código postal" value={contacto.cp} onChange={(cp) => onChange({ cp })} />
+            <Field
+              label="Código postal"
+              value={contacto.cp}
+              onChange={(cp) => onChange({ cp })}
+              inputProps={{ autoComplete: 'postal-code', inputMode: 'numeric' }}
+            />
             <Field
               label="Municipio"
               value={contacto.municipio}
@@ -781,9 +942,78 @@ function TabGenerales({
             <Field
               label="Provincia"
               value={contacto.provincia}
-              onChange={(provincia) => onChange({ provincia })}
+              editControl={
+                <Select
+                  value={contacto.provincia}
+                  onValueChange={(provincia) => onChange({ provincia })}
+                >
+                  <SelectTrigger className="mt-1" aria-label="Provincia">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVINCIAS.map((provincia) => (
+                      <SelectItem key={provincia} value={provincia}>
+                        {provincia}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
             />
-            <Field label="País" value={contacto.pais} onChange={(pais) => onChange({ pais })} />
+            <Field
+              label="País"
+              value={contacto.pais}
+              editControl={
+                <Select value={contacto.pais} onValueChange={(pais) => onChange({ pais })}>
+                  <SelectTrigger className="mt-1" aria-label="País">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAISES.map((pais) => (
+                      <SelectItem key={pais} value={pais}>
+                        {pais}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <Field
+              label="Origen del contacto"
+              value={contacto.origen}
+              editControl={
+                <Select value={contacto.origen} onValueChange={(origen) => onChange({ origen })}>
+                  <SelectTrigger className="mt-1" aria-label="Origen del contacto">
+                    <SelectValue placeholder="Seleccionar origen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORIGENES.map((origen) => (
+                      <SelectItem key={origen} value={origen}>
+                        {origen}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <Field
+              label="Canal preferido"
+              value={contacto.canal}
+              editControl={
+                <Select value={contacto.canal} onValueChange={(canal) => onChange({ canal })}>
+                  <SelectTrigger className="mt-1" aria-label="Canal preferido">
+                    <SelectValue placeholder="Seleccionar canal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CANALES.map((canal) => (
+                      <SelectItem key={canal} value={canal}>
+                        {canal}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            />
           </FieldGrid>
         </CardContent>
       </Card>
@@ -997,9 +1227,10 @@ function TabBancarios({ contacto }: { contacto: Contacto }) {
                 <div className="space-y-1.5">
                   <Label>Fecha del mandato SEPA</Label>
                   <Input
+                    type="date"
                     value={form.fechaSepa}
                     onChange={(e) => setForm({ ...form, fechaSepa: e.target.value })}
-                    placeholder="dd/mm/aaaa"
+                    aria-label="Fecha del mandato SEPA"
                   />
                 </div>
                 <div className="space-y-1.5">

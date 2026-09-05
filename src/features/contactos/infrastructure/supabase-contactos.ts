@@ -189,6 +189,7 @@ export function useActualizarContacto(firmId: string | undefined) {
         pais: contacto.pais,
         personaContacto: contacto.personaContacto ?? '',
         cargo: contacto.cargoContacto ?? '',
+        canal: contacto.canal,
       }
       const { data: actual, error: actualError } = await client
         .from('crm_contacts')
@@ -210,6 +211,8 @@ export function useActualizarContacto(firmId: string | undefined) {
           tax_id: contacto.nif || null,
           email: contacto.email || null,
           phone: contacto.telefono || null,
+          relationship: relationshipToDatabase[contacto.relacion],
+          source: contacto.origen || null,
           details: { ...asObject(actual.details), ...details } as Json,
           version: version + 1,
         })

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  CANALES,
   NATURALEZAS,
   ORIGENES,
   PAISES,
@@ -250,7 +251,12 @@ function NuevoContactoPage() {
                   <Input placeholder="00000000A" {...set('documento')} />
                 </Campo>
                 <Campo label="Fecha de nacimiento">
-                  <Input placeholder="dd/mm/aaaa" {...set('fechaNacimiento')} />
+                  <Input
+                    type="date"
+                    autoComplete="bday"
+                    aria-label="Fecha de nacimiento"
+                    {...set('fechaNacimiento')}
+                  />
                 </Campo>
               </>
             ) : null}
@@ -331,22 +337,54 @@ function NuevoContactoPage() {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Campo label="Teléfono principal">
-              <Input placeholder="600 000 000" inputMode="tel" {...set('telefono')} />
+              <Input
+                type="tel"
+                placeholder="600 000 000"
+                autoComplete="tel"
+                aria-label="Teléfono principal"
+                {...set('telefono')}
+              />
             </Campo>
             <Campo label="Teléfono secundario">
-              <Input placeholder="900 000 000" inputMode="tel" {...set('telefono2')} />
+              <Input
+                type="tel"
+                placeholder="900 000 000"
+                autoComplete="tel-national"
+                aria-label="Teléfono secundario"
+                {...set('telefono2')}
+              />
             </Campo>
             <Campo label="Correo electrónico">
-              <Input placeholder="correo@dominio.es" {...set('email')} />
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="correo@dominio.es"
+                aria-label="Correo electrónico"
+                {...set('email')}
+              />
             </Campo>
             <Campo label="Correo secundario">
-              <Input placeholder="correo2@dominio.es" {...set('email2')} />
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="correo2@dominio.es"
+                aria-label="Correo electrónico secundario"
+                {...set('email2')}
+              />
             </Campo>
             <Campo label={esFisica || esJuridica ? 'Domicilio' : 'Dirección'}>
               <Input placeholder="Calle, número, piso" {...set('direccion')} />
             </Campo>
             <Campo label="Código postal">
-              <Input placeholder="00000" {...set('codigoPostal')} />
+              <Input
+                inputMode="numeric"
+                autoComplete="postal-code"
+                placeholder="00000"
+                aria-label="Código postal"
+                {...set('codigoPostal')}
+              />
             </Campo>
             <Campo label="Municipio">
               <Input placeholder="Municipio" {...set('municipio')} />
@@ -356,7 +394,7 @@ function NuevoContactoPage() {
                 value={valores['provincia'] ?? ''}
                 onValueChange={(v) => setValores((x) => ({ ...x, provincia: v }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Provincia">
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -373,7 +411,7 @@ function NuevoContactoPage() {
                 value={valores['pais'] ?? ''}
                 onValueChange={(v) => setValores((x) => ({ ...x, pais: v }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="País">
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -398,13 +436,30 @@ function NuevoContactoPage() {
                 value={valores['origen'] ?? ''}
                 onValueChange={(v) => setValores((x) => ({ ...x, origen: v }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Origen del contacto">
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
                   {ORIGENES.map((o) => (
                     <SelectItem key={o} value={o}>
                       {o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Campo>
+            <Campo label="Canal preferido">
+              <Select
+                value={valores['canal'] ?? ''}
+                onValueChange={(v) => setValores((x) => ({ ...x, canal: v }))}
+              >
+                <SelectTrigger aria-label="Canal preferido">
+                  <SelectValue placeholder="Seleccionar canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANALES.map((canal) => (
+                    <SelectItem key={canal} value={canal}>
+                      {canal}
                     </SelectItem>
                   ))}
                 </SelectContent>
