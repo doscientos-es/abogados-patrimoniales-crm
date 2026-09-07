@@ -595,11 +595,11 @@ export function NotaDialog({
           </Button>
           <div className="flex flex-wrap gap-2">
             {nota ? null : (
-              <Button variant="outline" onClick={() => guardar(true)}>
+              <Button variant="outline" onClick={() => void Promise.resolve(guardar(true))}>
                 Guardar y añadir otra
               </Button>
             )}
-            <Button onClick={() => guardar(false)}>Guardar</Button>
+            <Button onClick={() => void guardar(false)}>Guardar</Button>
           </div>
         </DialogFooter>
       </DialogContent>

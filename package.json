@@ -1,10 +1,6 @@
 {
   "name": "abogados-patrimoniales-crm",
   "type": "module",
-  "packageManager": "pnpm@11.25.0",
-  "engines": {
-    "node": ">=22.18"
-  },
   "sideEffects": false,
   "scripts": {
     "dev": "vite dev",
@@ -13,8 +9,8 @@
     "preview": "vite preview",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix --fix-suggestions",
-    "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
-    "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
+    "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .github docs public src supabase README.md package.json pnpm-workspace.yaml oxlint.config.ts tsconfig.json vite.config.ts vitest.config.ts",
+    "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .github docs public src supabase README.md package.json pnpm-workspace.yaml oxlint.config.ts tsconfig.json vite.config.ts vitest.config.ts",
     "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "quality": "pnpm format:check && pnpm lint && pnpm typecheck",
@@ -83,5 +79,9 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.5",
     "vitest": "^5.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@11.25.0"
 }

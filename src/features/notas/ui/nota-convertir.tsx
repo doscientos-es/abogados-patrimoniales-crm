@@ -136,7 +136,7 @@ export function ConvertirNotaDialog({
       })
     }
 
-    notas.registrarConversion(n.id, { tipo, referenciaId, etiqueta: titulo })
+    void Promise.resolve(notas.registrarConversion(n.id, { tipo, referenciaId, etiqueta: titulo }))
     toast.success(`${ETIQUETA[tipo]} creada. La nota original se conserva.`)
     onOpenChange(false)
   }

@@ -20,12 +20,12 @@ import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import {
   OPPORTUNITY_STAGE_LABELS,
-  PersistentPipelineBoard,
   ViewSwitch,
   useOportunidades,
   useTransicionarOportunidad,
   type OportunidadResumen,
 } from '@/features/crm'
+import { PersistentPipelineBoard } from '@/features/crm-presentation'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/')({

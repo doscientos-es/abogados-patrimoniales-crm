@@ -12,21 +12,21 @@
 
 ## Backlog cruzado con Backoffice
 
-| Orden | Trabajo pendiente | Estado MCP | Evidencia / cierre requerido |
-| ---: | --- | --- | --- |
-| 1 | CI y puertas de entrega | todo | Checkout limpio, calidad, estructura, tests, build y auditoría en verde |
-| 2 | Documentos privados versionados | in_review | Cerrar revisión RLS/Storage, huérfanos, archivo y regresión |
-| 3 | Invitaciones y miembros | in_review | Probar altas, suspensión, roles, MFA y CORS restringido |
-| 4 | RLS multi-despacho | in_review | Resolver advisors y ejecutar matriz 2 despachos × 4 roles |
-| 5 | Onboarding y SOPs trazables | todo | Sustituir `onboarding-store`, checklist, evidencias y conversión transaccional |
-| 6 | Comunicaciones persistentes | todo | Sustituir `expedientes-store`, hilos, adjuntos, idempotencia y reintentos |
-| 7 | Facturación, pagos y emisión | todo | CRUD, impuestos, serie, emisión inmutable, cobros y rectificativas |
-| 8 | Pruebas unitarias/integración/E2E | todo | Auth, RLS, documentos, plazos, expediente, concurrencia y facturación |
-| 9 | Staging y Cloudflare | todo | Entornos separados, variables, WAF, despliegue y rollback probado |
-| 10 | Importación, UAT y piloto | todo | Importador idempotente, conciliación, formación y go/no-go firmado |
-| 11 | Observabilidad segura | todo | Errores/rendimiento sin PII, alertas y runbooks accionables |
-| 12 | Backups y restauración | todo | RPO/RTO, retención y restauración ensayada |
-| 13 | Informes con datos reales | todo | Dashboard paginado, autorizado y reconciliado |
+| Orden | Trabajo pendiente                 | Estado MCP | Evidencia / cierre requerido                                                   |
+| ----: | --------------------------------- | ---------- | ------------------------------------------------------------------------------ |
+|     1 | CI y puertas de entrega           | todo       | Checkout limpio, calidad, estructura, tests, build y auditoría en verde        |
+|     2 | Documentos privados versionados   | in_review  | Cerrar revisión RLS/Storage, huérfanos, archivo y regresión                    |
+|     3 | Invitaciones y miembros           | in_review  | Probar altas, suspensión, roles, MFA y CORS restringido                        |
+|     4 | RLS multi-despacho                | in_review  | Resolver advisors y ejecutar matriz 2 despachos × 4 roles                      |
+|     5 | Onboarding y SOPs trazables       | todo       | Sustituir `onboarding-store`, checklist, evidencias y conversión transaccional |
+|     6 | Comunicaciones persistentes       | todo       | Sustituir `expedientes-store`, hilos, adjuntos, idempotencia y reintentos      |
+|     7 | Facturación, pagos y emisión      | todo       | CRUD, impuestos, serie, emisión inmutable, cobros y rectificativas             |
+|     8 | Pruebas unitarias/integración/E2E | todo       | Auth, RLS, documentos, plazos, expediente, concurrencia y facturación          |
+|     9 | Staging y Cloudflare              | todo       | Entornos separados, variables, WAF, despliegue y rollback probado              |
+|    10 | Importación, UAT y piloto         | todo       | Importador idempotente, conciliación, formación y go/no-go firmado             |
+|    11 | Observabilidad segura             | todo       | Errores/rendimiento sin PII, alertas y runbooks accionables                    |
+|    12 | Backups y restauración            | todo       | RPO/RTO, retención y restauración ensayada                                     |
+|    13 | Informes con datos reales         | todo       | Dashboard paginado, autorizado y reconciliado                                  |
 
 ## Hallazgos adicionales no reflejados como tarea independiente
 

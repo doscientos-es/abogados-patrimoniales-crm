@@ -153,7 +153,7 @@ function ProrrogarDialog({
           </Button>
           <Button
             onClick={() => {
-              notas.prorrogar(n.id, fecha)
+              void Promise.resolve(notas.prorrogar(n.id, fecha))
               onOpenChange(false)
               toast.success('Vigencia prorrogada.')
             }}
@@ -218,15 +218,15 @@ export function NotaCard({
               <DropdownMenuItem onSelect={() => setEditar(true)}>
                 <Pencil className="h-4 w-4" /> Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => notas.destacar(n.id, !n.destacada)}>
+              <DropdownMenuItem onSelect={() => void notas.destacar(n.id, !n.destacada)}>
                 <Pin className="h-4 w-4" /> {n.destacada ? 'Quitar destacada' : 'Destacar'}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => notas.marcarCritica(n.id, !n.critica)}>
+              <DropdownMenuItem onSelect={() => void notas.marcarCritica(n.id, !n.critica)}>
                 <ShieldAlert className="h-4 w-4" />
                 {n.critica ? 'Quitar advertencia crítica' : 'Marcar como crítica'}
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => notas.requerirConfirmacion(n.id, !n.requiereConfirmacion)}
+                onSelect={() => void notas.requerirConfirmacion(n.id, !n.requiereConfirmacion)}
               >
                 <CheckCheck className="h-4 w-4" />
                 {n.requiereConfirmacion
@@ -238,21 +238,21 @@ export function NotaCard({
                 <CalendarClock className="h-4 w-4" /> Prorrogar vigencia
               </DropdownMenuItem>
               {necesitaRevision(n) ? (
-                <DropdownMenuItem onSelect={() => notas.marcarRevisada(n.id)}>
+                <DropdownMenuItem onSelect={() => void notas.marcarRevisada(n.id)}>
                   <Check className="h-4 w-4" /> Marcar como revisada
                 </DropdownMenuItem>
               ) : null}
               {n.estado === 'activa' ? (
                 <>
-                  <DropdownMenuItem onSelect={() => notas.resolver(n.id)}>
+                  <DropdownMenuItem onSelect={() => void notas.resolver(n.id)}>
                     <Check className="h-4 w-4" /> Resolver
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => notas.archivar(n.id)}>
+                  <DropdownMenuItem onSelect={() => void notas.archivar(n.id)}>
                     <Archive className="h-4 w-4" /> Archivar
                   </DropdownMenuItem>
                 </>
               ) : (
-                <DropdownMenuItem onSelect={() => notas.reactivar(n.id)}>
+                <DropdownMenuItem onSelect={() => void notas.reactivar(n.id)}>
                   <RotateCcw className="h-4 w-4" /> Reactivar
                 </DropdownMenuItem>
               )}
@@ -321,7 +321,7 @@ export function NotaCard({
               variant="outline"
               className="bg-background/50 h-7 border-current/40 text-xs"
               onClick={() => {
-                notas.confirmarLectura(n.id)
+                void notas.confirmarLectura(n.id)
                 toast.success('Lectura confirmada y registrada.')
               }}
             >

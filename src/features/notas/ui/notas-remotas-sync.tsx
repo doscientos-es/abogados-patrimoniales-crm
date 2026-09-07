@@ -19,7 +19,9 @@ import {
   guardarNotaRemota,
   notaDesdeRemota,
   useNotasRemotas,
-} from '../infrastructure/supabase-notas'
+} from '../application'
+
+// Sincroniza el store de transición con la persistencia remota del despacho activo.
 
 function crearNota(input: NuevaNotaInput, usuario: string): NotaInterna {
   return {

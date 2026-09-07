@@ -106,7 +106,7 @@ export function NotaAvisos({
                         size="sm"
                         variant="outline"
                         className="bg-background/50 h-7 border-current/40 text-xs"
-                        onClick={() => notas.confirmarLectura(n.id)}
+                        onClick={() => void Promise.resolve(notas.confirmarLectura(n.id))}
                       >
                         Confirmar lectura
                       </Button>
@@ -123,7 +123,7 @@ export function NotaAvisos({
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs"
-                      onClick={() => notas.marcarRevisada(n.id)}
+                      onClick={() => void notas.marcarRevisada(n.id)}
                     >
                       Revisada
                     </Button>
@@ -131,7 +131,7 @@ export function NotaAvisos({
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs"
-                      onClick={() => notas.resolver(n.id)}
+                      onClick={() => void notas.resolver(n.id)}
                     >
                       Resolver
                     </Button>
@@ -139,7 +139,7 @@ export function NotaAvisos({
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs"
-                      onClick={() => notas.posponerAviso(n.id, 7)}
+                      onClick={() => void notas.posponerAviso(n.id, 7)}
                     >
                       Posponer 7 d
                     </Button>
