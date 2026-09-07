@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
+  Archive,
   ChevronRight,
   Download,
   FileText,
@@ -62,6 +63,8 @@ function actionErrorMessage(error: unknown, fallback: string) {
     return 'La carpeta ya no está disponible. Actualiza la vista e inténtalo de nuevo.'
   if (message.includes('document not found'))
     return 'El documento ya no está disponible o no tienes permiso para modificarlo.'
+  if (message.includes('changed by another user'))
+    return 'El documento ha cambiado por otra persona. Actualiza la vista antes de continuar.'
   if (message.includes('invalid folder name'))
     return 'Escribe un nombre de carpeta entre 1 y 160 caracteres.'
   if (message.includes('already exists') || message.includes('duplicate'))
@@ -96,6 +99,8 @@ export function PersistentDocuments({
   const [documentToMove, setDocumentToMove] = useState<CaseDocumentRow | null>(null)
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('root')
   const [movingDocumentId, setMovingDocumentId] = useState<string | null>(null)
+  const [documentToArchive, setDocumentToArchive] = useState<CaseDocumentRow | null>(null)
+  const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const { caseId, folderId } = location ?? internalLocation
   const setLocation = (nextLocation: DocumentLocation) => {
@@ -438,6 +443,33 @@ export function PersistentDocuments({
       setDragTargetFolderId(undefined)
     }
   }
+  const archiveDocument = async (document: CaseDocumentRow) => {
+    if (!firmId) return
+    const c = getSupabaseBrowserClient()
+    if (!c) {
+      toast.error('No se pudo conectar para archivar el documento. Inténtalo de nuevo.')
+      return
+    }
+    setArchivingDocumentId(document.id)
+    setStatusMessage(`Archivando ${document.original_name}.`)
+    try {
+      const { error } = await c.rpc('crm_archive_case_document', {
+        target_document_id: document.id,
+        target_expected_version: document.version,
+      })
+      if (error) throw error
+      await qc.invalidateQueries({ queryKey: ['documents', firmId] })
+      toast.success(`Documento “${document.original_name}” archivado.`)
+      setStatusMessage(`Documento “${document.original_name}” archivado.`)
+      setDocumentToArchive(null)
+    } catch (error) {
+      const message = actionErrorMessage(error, 'No se pudo archivar el documento.')
+      toast.error(message)
+      setStatusMessage(message)
+    } finally {
+      setArchivingDocumentId(null)
+    }
+  }
   const beginDocumentDrag = (event: DragEvent<HTMLElement>, documentId: string) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData(DOCUMENT_DRAG_TYPE, documentId)
@@ -609,7 +641,7 @@ export function PersistentDocuments({
         <section
           className="space-y-4"
           aria-labelledby="document-location-title"
-          aria-busy={uploading || movingDocumentId !== null}
+          aria-busy={uploading || movingDocumentId !== null || archivingDocumentId !== null}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
@@ -733,6 +765,15 @@ export function PersistentDocuments({
                       aria-label={`Descargar ${doc.original_name}`}
                     >
                       <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={archivingDocumentId !== null}
+                      onClick={() => setDocumentToArchive(doc)}
+                      aria-label={`Archivar ${doc.original_name}`}
+                    >
+                      <Archive className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -873,6 +914,42 @@ export function PersistentDocuments({
               </Button>
             </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={documentToArchive !== null}
+        onOpenChange={(open) => {
+          if (!open && archivingDocumentId === null) setDocumentToArchive(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Archivar documento</DialogTitle>
+            <DialogDescription>
+              {documentToArchive
+                ? `“${documentToArchive.original_name}” y todas sus versiones dejarán de estar disponibles. El archivo se conservará de forma privada para auditoría.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={archivingDocumentId !== null}
+              onClick={() => setDocumentToArchive(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={!documentToArchive || archivingDocumentId !== null}
+              onClick={() => {
+                if (documentToArchive) void archiveDocument(documentToArchive)
+              }}
+            >
+              {archivingDocumentId ? 'Archivando…' : 'Confirmar archivo'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>

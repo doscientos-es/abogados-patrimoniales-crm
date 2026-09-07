@@ -8,6 +8,7 @@ import { PersistentDocuments } from './persistent-documents'
 
 const moveDocument = vi.fn().mockResolvedValue({ error: null })
 const createFolder = vi.fn().mockResolvedValue({ error: null })
+const archiveDocument = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
 let hasDocuments = true
 let hasFolders = true
@@ -92,6 +93,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
     rpc: (name: string, args: unknown) => {
       if (name === 'crm_move_case_document') return moveDocument(args)
       if (name === 'crm_create_document_folder') return createFolder(args)
+      if (name === 'crm_archive_case_document') return archiveDocument(args)
       return Promise.resolve({ error: null })
     },
   }),
@@ -112,6 +114,7 @@ afterEach(() => {
   hasFolders = true
   moveDocument.mockClear()
   createFolder.mockClear()
+  archiveDocument.mockClear()
 })
 
 describe('PersistentDocuments', () => {
@@ -156,6 +159,26 @@ describe('PersistentDocuments', () => {
         target_case_id: 'case-1',
         target_parent_id: null,
         folder_name: 'Escritos',
+      }),
+    )
+  })
+
+  it('archives a document only after an explicit confirmation', async () => {
+    renderDocuments()
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Archivar Poder notarial.pdf' }))
+
+    expect(screen.getByRole('dialog', { name: 'Archivar documento' }).textContent).toContain(
+      'todas sus versiones dejarán de estar disponibles',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar archivo' }))
+
+    await waitFor(() =>
+      expect(archiveDocument).toHaveBeenCalledWith({
+        target_document_id: 'document-1',
+        target_expected_version: 1,
       }),
     )
   })

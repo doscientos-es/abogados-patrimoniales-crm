@@ -17,6 +17,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1
 select set_config('request.jwt.claim.role', 'authenticated', true);
 do $$
 declare first_document public.crm_case_documents; second_document public.crm_case_documents;
+  archived_document public.crm_case_documents;
   root_folder public.crm_document_folders; nested_folder public.crm_document_folders;
   other_case_folder public.crm_document_folders;
 begin
@@ -55,6 +56,25 @@ begin
   end;
   if not exists (select 1 from public.crm_case_documents where id = second_document.id and is_current and content_status = 'validated') then
     raise exception 'Validated document version was not current';
+  end if;
+  begin
+    perform public.crm_archive_case_document(second_document.id, 1);
+    raise exception 'Stale document archive was allowed';
+  exception when sqlstate '40001' then null;
+  end;
+  select * into archived_document from public.crm_archive_case_document(second_document.id, 2);
+  if archived_document.archived_at is null or archived_document.archived_by is null
+    or exists (
+      select 1 from public.crm_case_documents
+      where logical_document_id = second_document.logical_document_id and archived_at is null
+    ) or public.crm_can_read_case_document(second_document.storage_path) then
+    raise exception 'Document archive contract failed';
+  end if;
+  if not exists (
+    select 1 from public.crm_case_document_events
+    where document_id = second_document.id and event_type = 'archived'
+  ) then
+    raise exception 'Document archive audit event was not recorded';
   end if;
 end;
 $$;

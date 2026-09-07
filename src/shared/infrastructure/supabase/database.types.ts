@@ -155,6 +155,10 @@ export type Database = {
         }
         Returns: CaseDocumentRow
       }
+      crm_archive_case_document: {
+        Args: { target_document_id: string; target_expected_version: number }
+        Returns: CaseDocumentRow
+      }
       crm_create_document_version: {
         Args: {
           target_document_id: string
