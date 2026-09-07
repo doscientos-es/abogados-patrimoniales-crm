@@ -23,6 +23,7 @@ export type EstadoContacto = 'Activo' | 'Inactivo' | 'Archivado'
 
 export type ContactoPersistido = {
   id: string
+  referencia?: string
   tipoPersona: Naturaleza
   relacion: RelacionDespacho
   nombre: string
@@ -45,7 +46,9 @@ export type ContactoPersistido = {
   origen: string
   canal: string
   creado: string
+  creadoEn?: string
   modificado: string
+  modificadoEn?: string
   version: number
 }
 
@@ -118,6 +121,7 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
   const details = asObject(row.details)
   return {
     id: row.id,
+    referencia: row.reference,
     tipoPersona: natureFromDatabase[row.nature],
     relacion: relationshipFromDatabase[row.relationship],
     nombre: row.first_name ?? row.legal_name ?? row.display_name,
@@ -142,7 +146,9 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     origen: row.source ?? '',
     canal: details['canal'] ?? '',
     creado: spanishDate(row.created_at),
+    creadoEn: row.created_at,
     modificado: spanishDate(row.updated_at),
+    modificadoEn: row.updated_at,
     version: row.version,
   }
 }
@@ -307,6 +313,33 @@ export function useActualizarEstadoContacto(firmId: string | undefined) {
       if (error) throw error
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'contactos', firmId] }),
+  })
+}
+
+export function useEliminarContacto(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client
+        .from('crm_contacts')
+        .delete()
+        .eq('id', id)
+        .eq('firm_id', firmId)
+      if (error?.code === '23503') {
+        throw new Error(
+          'Este contacto tiene registros vinculados. Archívalo en lugar de eliminarlo.',
+        )
+      }
+      if (error) throw error
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.setQueryData<ContactoPersistido[]>(['crm', 'contactos', firmId], (current) =>
+        current?.filter((contact) => contact.id !== id),
+      )
+      queryClient.removeQueries({ queryKey: ['crm', 'contactos', firmId, id], exact: true })
+    },
   })
 }
 

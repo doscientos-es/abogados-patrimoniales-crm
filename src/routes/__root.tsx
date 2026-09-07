@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
+import { GlobalSearch } from '@/features/search'
 
 import { reportLovableError } from '../lib/lovable-error-reporting'
 
@@ -180,6 +181,7 @@ function AuthenticatedRoot() {
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
+            <GlobalSearch />
             <div className="hidden min-w-0 flex-1 items-center gap-2 md:flex">
               <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                 Área de trabajo
@@ -196,7 +198,7 @@ function AuthenticatedRoot() {
               <AccountMenu />
             </div>
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
             {/* Required: nested routes render here. */}
             <Outlet />
           </main>

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
@@ -7,9 +8,12 @@ import { useMiembrosDespacho } from '@/features/crm'
 import {
   CaseCreateDialog,
   PersistentCasesPage,
+  useActuacionesDespacho,
+  useActualizarExpediente,
   useCrearExpediente,
   useExpedientesPersistentes,
 } from '@/features/expedientes'
+import { useTareasPersistentes } from '@/features/tareas'
 
 export const Route = createFileRoute('/expedientes/')({
   head: () => ({
@@ -30,6 +34,9 @@ function ExpedientesPersistentesRoute() {
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
   const createCase = useCrearExpediente(firmId)
+  const updateCase = useActualizarExpediente(firmId)
+  const tasks = useTareasPersistentes(firmId)
+  const activities = useActuacionesDespacho(firmId)
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Cargando expedientes" description="Consultando tu despacho…" />
@@ -40,11 +47,11 @@ function ExpedientesPersistentesRoute() {
         description="Necesitas una sesión y una membresía activa."
       />
     )
-  if (cases.isPending || contacts.isPending || members.isPending)
+  if (cases.isPending || contacts.isPending || members.isPending || tasks.isPending || activities.isPending)
     return (
       <PendingPanel title="Cargando expedientes" description="Consultando datos compartidos…" />
     )
-  if (cases.isError || contacts.isError || members.isError)
+  if (cases.isError || contacts.isError || members.isError || tasks.isError || activities.isError)
     return (
       <PendingPanel
         title="No se pudieron cargar los expedientes"
@@ -56,6 +63,31 @@ function ExpedientesPersistentesRoute() {
     <PersistentCasesPage
       expedientes={cases.data ?? []}
       contactos={contacts.data ?? []}
+      miembros={members.data ?? []}
+      tareas={tasks.data ?? []}
+      actuaciones={activities.data ?? []}
+      usuarioId={session.user.id}
+      moving={updateCase.isPending}
+      onMove={async (expediente, fase) => {
+        await updateCase.mutateAsync({
+          id: expediente.id,
+          versionEsperada: expediente.version,
+          titulo: expediente.titulo,
+          area: expediente.area,
+          tipoAsunto: expediente.tipoAsunto,
+          naturaleza: expediente.naturaleza,
+          prioridad: expediente.prioridad,
+          asignadoId: expediente.asignadoId,
+          fechaApertura: expediente.fechaApertura,
+          fechaCierre: expediente.fechaCierre,
+          proximaAccion: expediente.proximaAccion,
+          dondeEstamos: expediente.dondeEstamos,
+          estadoGeneral: expediente.estadoGeneral,
+          fase,
+          estadoOperativo: expediente.estadoOperativo,
+        })
+        toast.success('Expediente movido a la fase seleccionada.')
+      }}
       actions={
         <CaseCreateDialog
           contactos={contacts.data ?? []}

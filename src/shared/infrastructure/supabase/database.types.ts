@@ -15,6 +15,7 @@ export type Database = {
           id: string
           name: string
           invoice_sequence: number
+          onboarding_sequence: number
           created_at: string
           updated_at: string
         },
@@ -22,6 +23,7 @@ export type Database = {
           id?: string
           name: string
           invoice_sequence?: number
+          onboarding_sequence?: number
           created_at?: string
           updated_at?: string
         }
@@ -85,6 +87,8 @@ export type Database = {
         Partial<OpportunityInsert> & { id?: string; version?: number }
       >
       crm_opportunity_events: Table<OpportunityEventRow, OpportunityEventInsert, never>
+      crm_onboardings: Table<OnboardingRow, OnboardingInsert, never>
+      crm_onboarding_events: Table<OnboardingEventRow, never, never>
     }
     Views: Record<never, never>
     Functions: {
@@ -215,6 +219,18 @@ export type Database = {
         }
         Returns: OpportunityRow
       }
+      crm_update_opportunity_details: {
+        Args: { target_opportunity_id: string; target_expected_version: number; new_details: Json }
+        Returns: OpportunityRow
+      }
+      crm_log_opportunity_communication: {
+        Args: {
+          target_opportunity_id: string
+          communication_type: string
+          subject_or_summary: string
+        }
+        Returns: undefined
+      }
       crm_transition_opportunity: {
         Args: {
           target_opportunity_id: string
@@ -248,6 +264,73 @@ export type Database = {
       crm_acknowledge_note: {
         Args: { target_note_id: string }
         Returns: undefined
+      }
+      crm_create_onboarding: {
+        Args: {
+          target_firm_id: string
+          target_contact_id: string
+          target_opportunity_id: string
+          new_matter_title: string
+          new_quote_reference: string
+          new_quote_amount: number | null
+          new_assigned_to: string | null
+          new_proforma_sent_on: string
+          new_next_action: string
+        }
+        Returns: OnboardingRow
+      }
+      crm_update_onboarding_action: {
+        Args: {
+          target_onboarding_id: string
+          target_expected_version: number
+          new_next_action: string
+        }
+        Returns: OnboardingRow
+      }
+      crm_transition_onboarding: {
+        Args: {
+          target_onboarding_id: string
+          target_expected_version: number
+          transition_action: string
+          occurred_on: string | null
+          scheduled_at: string | null
+          new_engagement_mode: string | null
+        }
+        Returns: OnboardingRow
+      }
+      crm_log_onboarding_communication: {
+        Args: {
+          target_onboarding_id: string
+          communication_type: string
+          subject_or_summary: string
+        }
+        Returns: undefined
+      }
+      crm_open_onboarding_case: {
+        Args: {
+          target_onboarding_id: string
+          target_expected_version: number
+          new_title: string
+          new_area: string
+          new_matter_type: string
+          new_nature: CaseNature
+          new_priority: OpportunityPriority
+          new_assigned_to: string | null
+          new_next_action: string
+          new_current_position: string
+        }
+        Returns: CaseRow
+      }
+      crm_global_search: {
+        Args: { target_firm_id: string; search_term: string }
+        Returns: {
+          id: string
+          entity_type: string
+          title: string
+          subtitle: string
+          href: string
+          rank: number
+        }[]
       }
     }
     Enums: {
@@ -833,4 +916,60 @@ export type OpportunityEventInsert = {
   opportunity_id: string
   event_type: string
   payload?: Json
+}
+
+export type OnboardingPhase = 'proforma' | 'payment' | 'formal_start' | 'completed'
+export type OnboardingEngagementMode = 'pending' | 'in_person' | 'video_call' | 'phone_call'
+
+export type OnboardingRow = {
+  id: string
+  firm_id: string
+  contact_id: string
+  opportunity_id: string | null
+  case_id: string | null
+  reference: string
+  matter_title: string
+  phase: OnboardingPhase
+  phase_changed_on: string
+  quote_reference: string | null
+  quote_amount: number | null
+  proforma_sent_on: string
+  payment_confirmed_on: string | null
+  formal_start_scheduled_at: string | null
+  formal_start_completed_at: string | null
+  assigned_to: string | null
+  next_action: string
+  engagement_mode: OnboardingEngagementMode
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type OnboardingInsert = Omit<
+  OnboardingRow,
+  'id' | 'version' | 'created_by' | 'updated_by' | 'created_at' | 'updated_at'
+> & {
+  phase_changed_on?: string
+  quote_reference?: string | null
+  quote_amount?: number | null
+  payment_confirmed_on?: string | null
+  formal_start_scheduled_at?: string | null
+  formal_start_completed_at?: string | null
+  assigned_to?: string | null
+  next_action?: string
+  engagement_mode?: OnboardingEngagementMode
+  details?: Json
+}
+
+export type OnboardingEventRow = {
+  id: string
+  firm_id: string
+  onboarding_id: string
+  event_type: string
+  payload: Json
+  actor_id: string | null
+  created_at: string
 }

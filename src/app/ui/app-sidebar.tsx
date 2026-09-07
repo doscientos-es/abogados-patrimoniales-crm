@@ -6,6 +6,7 @@ import {
   Contact,
   FileText,
   Gauge,
+  Handshake,
   Landmark,
   Receipt,
   Settings,
@@ -33,6 +34,7 @@ const general = [
 const comercial = [
   { title: 'Contactos', url: '/contactos', icon: Contact },
   { title: 'Leads', url: '/oportunidades', icon: Target },
+  { title: 'Onboarding', url: '/onboarding', icon: Handshake },
 ] as const
 
 const operativa = [

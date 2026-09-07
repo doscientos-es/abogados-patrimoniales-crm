@@ -181,6 +181,45 @@ export function useActuacionesPersistentes(firmId: string | undefined, caseId: s
   })
 }
 
+/** Actividad transversal para el panel de inicio, limitada a los últimos movimientos del despacho. */
+export function useActuacionesRecientes(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_activities')
+        .select('*')
+        .eq('firm_id', firmId)
+        .order('occurred_at', { ascending: false })
+        .limit(8)
+      if (error) throw error
+      return data.map(actuacionFromRow)
+    },
+  })
+}
+
+/** Actividad de los expedientes del despacho para indicadores del tablero de control. */
+export function useActuacionesDespacho(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, 'actuaciones'],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_activities')
+        .select('*')
+        .eq('firm_id', firmId)
+        .order('occurred_at', { ascending: false })
+      if (error) throw error
+      return data.map(actuacionFromRow)
+    },
+  })
+}
+
 export function useParticipantesPersistentes(firmId: string | undefined, caseId: string) {
   return useQuery({
     queryKey: ['expedientes', firmId, caseId, 'participantes'],

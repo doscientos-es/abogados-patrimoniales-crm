@@ -39,6 +39,7 @@ import {
   useTransicionarOportunidad,
 } from '@/features/crm'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
+import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
 
 export const Route = createFileRoute('/oportunidades/$id')({
   head: () => ({
@@ -164,6 +165,7 @@ function FichaOportunidadPage() {
           </Link>
         </CardContent>
       </Card>
+      <LeadWorkspace key={`workspace-${data.id}-${data.version}`} opportunity={data} firmId={membership.data.firmId} />
       {data.archivadoEn ? (
         <Card>
           <CardContent className="pt-6 text-sm">

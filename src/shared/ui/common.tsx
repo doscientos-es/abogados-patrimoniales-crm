@@ -45,27 +45,55 @@ const statTono: Record<string, string> = {
   riesgo: 'text-destructive',
 }
 
+const statTonoBorder: Record<string, string> = {
+  neutro: 'border-l-border',
+  info: 'border-l-primary',
+  exito: 'border-l-success',
+  aviso: 'border-l-warning',
+  riesgo: 'border-l-destructive',
+}
+
 /** Indicador numérico homogéneo para todas las pantallas. */
 export function StatTile({
   label,
   value,
   hint,
   tono = 'neutro',
+  compact = false,
 }: {
   label: string
   value: ReactNode
   hint?: ReactNode
   tono?: 'neutro' | 'info' | 'exito' | 'aviso' | 'riesgo'
+  compact?: boolean
 }) {
   return (
-    <div className="border-border bg-card rounded-lg border p-4">
-      <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-        {label}
-      </p>
-      <p className={cn('mt-1.5 font-serif text-2xl font-semibold tabular-nums', statTono[tono])}>
+    <div
+      className={cn(
+        'border-border bg-card rounded-lg border',
+        compact
+          ? cn(
+              'flex min-h-20 items-center justify-between gap-3 border-l-[3px] px-3.5 py-3 shadow-sm',
+              statTonoBorder[tono],
+            )
+          : 'p-4',
+      )}
+    >
+      <div className="min-w-0">
+        <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+          {label}
+        </p>
+        {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
+      </div>
+      <p
+        className={cn(
+          compact ? 'shrink-0 text-right text-xl sm:text-2xl' : 'mt-1.5 text-2xl',
+          'font-serif font-semibold tabular-nums',
+          statTono[tono],
+        )}
+      >
         {value}
       </p>
-      {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
     </div>
   )
 }

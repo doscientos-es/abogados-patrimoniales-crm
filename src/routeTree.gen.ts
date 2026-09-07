@@ -16,6 +16,7 @@ import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as NotasRouteImport } from './routes/notas'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as ContactosIndexRouteImport } from './routes/contactos.index'
 import { Route as ContactosIdRouteImport } from './routes/contactos.$id'
@@ -60,6 +61,11 @@ const FacturacionRoute = FacturacionRouteImport.update({
 const NotasRoute = NotasRouteImport.update({
   id: '/notas',
   path: '/notas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TareasRoute = TareasRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
+  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
+  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
+  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/facturacion'
     | '/notas'
+    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/facturacion'
     | '/notas'
+    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/facturacion'
     | '/notas'
+    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
@@ -239,6 +251,7 @@ export interface RootRouteChildren {
   DocumentosRoute: typeof DocumentosRoute
   FacturacionRoute: typeof FacturacionRoute
   NotasRoute: typeof NotasRoute
+  OnboardingRoute: typeof OnboardingRoute
   TareasRoute: typeof TareasRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/notas'
       fullPath: '/notas'
       preLoaderRoute: typeof NotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tareas': {
@@ -383,6 +403,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentosRoute: DocumentosRoute,
   FacturacionRoute: FacturacionRoute,
   NotasRoute: NotasRoute,
+  OnboardingRoute: OnboardingRoute,
   TareasRoute: TareasRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,

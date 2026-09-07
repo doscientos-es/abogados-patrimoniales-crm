@@ -1,6 +1,7 @@
 export {
   useActualizarContacto,
   useActualizarEstadoContacto,
+  useEliminarContacto,
   useContacto,
   useContactos,
   useCrearContacto,

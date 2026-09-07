@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { PendingPanel, SectionHeader, StatTile, StatusBadge } from '@/components/common'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -13,12 +14,18 @@ import {
 } from '@/components/ui/table'
 import { useAuthSession } from '@/features/auth/application/auth-session'
 import { useActiveMembership } from '@/features/auth/application/membership'
+import { useContactos } from '@/features/contactos'
 import {
   formatCurrency,
   formatDate,
   type FacturaResumen,
   useFacturas,
 } from '@/features/facturacion/infrastructure/supabase-facturas'
+import {
+  etiquetaEstadoEconomicoProvisional,
+  resumenEconomicoProvisional,
+} from '@/features/facturacion'
+import { useOnboardings } from '@/features/onboarding'
 
 const EMPTY_FACTURAS: FacturaResumen[] = []
 
@@ -43,8 +50,19 @@ export const Route = createFileRoute('/facturacion')({
 function FacturacionPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
-  const facturasQuery = useFacturas(membership.data?.firmId)
+  const firmId = membership.data?.firmId
+  const facturasQuery = useFacturas(firmId)
+  const onboardingsQuery = useOnboardings(firmId)
+  const contactsQuery = useContactos(firmId)
   const facturas = facturasQuery.data ?? EMPTY_FACTURAS
+  const provisionales = useMemo(
+    () => resumenEconomicoProvisional(onboardingsQuery.data ?? []),
+    [onboardingsQuery.data],
+  )
+  const contactNames = useMemo(
+    () => new Map((contactsQuery.data ?? []).map((contact) => [contact.id, contact.nombre])),
+    [contactsQuery.data],
+  )
   const resumen = useMemo(
     () =>
       facturas.reduce(
@@ -80,7 +98,7 @@ function FacturacionPage() {
   return (
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader title="Facturación" subtitle="Facturas y cobros por expediente." />
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile label="Emitido en el año" value={formatCurrency(resumen.emitido, 'EUR')} />
         <StatTile label="Cobrado" value={formatCurrency(resumen.cobrado, 'EUR')} tono="exito" />
         <StatTile
@@ -88,7 +106,59 @@ function FacturacionPage() {
           value={formatCurrency(resumen.pendiente, 'EUR')}
           tono={resumen.pendiente ? 'aviso' : 'neutro'}
         />
+        <StatTile
+          label="Proformas pendientes"
+          value={String(provisionales.proformasPendientes.length)}
+          tono={provisionales.proformasPendientes.length ? 'aviso' : 'neutro'}
+        />
+        <StatTile
+          label="Pagos manuales confirmados"
+          value={String(provisionales.pagosConfirmados.length)}
+          tono={provisionales.pagosConfirmados.length ? 'exito' : 'neutro'}
+        />
       </div>
+      <Card className="mb-4">
+        <CardContent className="pt-6">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-lg font-semibold">Seguimiento provisional de presupuestos</h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Confirmaciones manuales del onboarding. No son documentos fiscales ni se incluyen en los totales anteriores.
+              </p>
+            </div>
+            <Link to="/onboarding" className="text-primary text-sm font-medium hover:underline">
+              Abrir Onboarding
+            </Link>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Onboarding</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Asunto</TableHead>
+                <TableHead>Presupuesto</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Estado provisional</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {provisionales.items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.referencia}</TableCell>
+                  <TableCell>{contactNames.get(item.contactoId) ?? 'Contacto no disponible'}</TableCell>
+                  <TableCell>{item.asunto}</TableCell>
+                  <TableCell>{item.importePresupuesto === null ? '—' : formatCurrency(item.importePresupuesto, 'EUR')}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(item.fechaEstado)}</TableCell>
+                  <TableCell><Badge variant={item.estadoEconomico === 'payment_confirmed' ? 'secondary' : 'outline'}>{etiquetaEstadoEconomicoProvisional(item.estadoEconomico)}</Badge></TableCell>
+                </TableRow>
+              ))}
+              {onboardingsQuery.isLoading ? <TableRow><TableCell colSpan={6} className="text-muted-foreground py-8 text-center">Cargando confirmaciones provisionales…</TableCell></TableRow> : null}
+              {onboardingsQuery.isError ? <TableRow><TableCell colSpan={6} className="text-destructive py-8 text-center">No se pudieron cargar las confirmaciones provisionales.</TableCell></TableRow> : null}
+              {!onboardingsQuery.isLoading && !onboardingsQuery.isError && !provisionales.items.length ? <TableRow><TableCell colSpan={6} className="text-muted-foreground py-8 text-center">No hay proformas pendientes ni pagos manuales por revisar.</TableCell></TableRow> : null}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       <Card>
         <CardContent className="pt-6">
           <Table>

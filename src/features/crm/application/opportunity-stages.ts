@@ -35,6 +35,10 @@ export const OPPORTUNITY_TRANSITIONS: Record<OpportunityStage, OpportunityStage[
 
 const ACTIVE_STAGES: OpportunityStage[] = OPPORTUNITY_STAGES.filter((stage) => stage !== 'lost')
 
+export function canMoveLeadInPipeline(current: OpportunityStage, target: OpportunityStage) {
+  return target !== 'lost' && OPPORTUNITY_TRANSITIONS[current].includes(target)
+}
+
 export function nextOpportunityStage(stage: OpportunityStage) {
   const currentIndex = ACTIVE_STAGES.indexOf(stage)
   return currentIndex >= 0 ? ACTIVE_STAGES[currentIndex + 1] : undefined

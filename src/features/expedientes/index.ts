@@ -1,4 +1,5 @@
 export * from './application/case-types'
+export * from './application/case-control'
 export * from './infrastructure/supabase-expedientes'
 export * from './infrastructure/supabase-expedientes-write'
 export * from './ui/case-create-dialog'

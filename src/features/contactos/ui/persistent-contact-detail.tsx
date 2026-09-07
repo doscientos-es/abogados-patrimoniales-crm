@@ -113,7 +113,7 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
         subtitle={`${contact.tipoPersona} · ${contact.relacion}`}
         meta={contact.estado}
       />
-      <Card>
+      <Card id="datos-generales">
         <CardHeader>
           <CardTitle className="text-base">Datos generales</CardTitle>
         </CardHeader>
