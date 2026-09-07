@@ -12,7 +12,6 @@ import type {
 import {
   getSupabaseBrowserClient,
   type CaseActivityInsert,
-  type CaseInsert,
   type CaseParticipantInsert,
   type CaseWorkstreamInsert,
   type OpportunityPriority,
@@ -44,21 +43,20 @@ export function useCrearExpediente(firmId: string | undefined) {
     mutationFn: async (input: CrearExpedienteInput) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
-      const payload: CaseInsert = {
-        firm_id: firmId,
-        primary_contact_id: input.contactoPrincipalId,
-        opportunity_id: input.oportunidadId ?? null,
-        title: required(input.titulo, 'El asunto'),
-        area: input.area.trim(),
-        matter_type: input.tipoAsunto.trim(),
-        nature: natureToDatabase[input.naturaleza],
-        priority: priorityToDatabase[input.prioridad],
-        assigned_to: input.asignadoId,
-        opened_on: input.fechaApertura,
-        next_action: input.proximaAccion.trim(),
-        current_position: input.dondeEstamos.trim(),
-      }
-      const { data, error } = await client.from('crm_cases').insert(payload).select('*').single()
+      const { data, error } = await client.rpc('crm_create_case', {
+        target_firm_id: firmId,
+        target_contact_id: required(input.contactoPrincipalId, 'El contacto principal'),
+        target_opportunity_id: input.oportunidadId ?? null,
+        new_title: required(input.titulo, 'El asunto'),
+        new_area: input.area.trim(),
+        new_matter_type: input.tipoAsunto.trim(),
+        new_nature: natureToDatabase[input.naturaleza],
+        new_priority: priorityToDatabase[input.prioridad],
+        new_assigned_to: input.asignadoId,
+        new_opened_on: input.fechaApertura,
+        new_next_action: input.proximaAccion.trim(),
+        new_current_position: input.dondeEstamos.trim(),
+      })
       if (error) throw error
       return expedienteFromRow(data)
     },

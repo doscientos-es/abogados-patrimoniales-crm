@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
@@ -27,6 +27,7 @@ export const Route = createFileRoute('/expedientes/')({
 })
 
 function ExpedientesPersistentesRoute() {
+  const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -47,7 +48,13 @@ function ExpedientesPersistentesRoute() {
         description="Necesitas una sesión y una membresía activa."
       />
     )
-  if (cases.isPending || contacts.isPending || members.isPending || tasks.isPending || activities.isPending)
+  if (
+    cases.isPending ||
+    contacts.isPending ||
+    members.isPending ||
+    tasks.isPending ||
+    activities.isPending
+  )
     return (
       <PendingPanel title="Cargando expedientes" description="Consultando datos compartidos…" />
     )
@@ -94,6 +101,7 @@ function ExpedientesPersistentesRoute() {
           miembros={members.data ?? []}
           pending={createCase.isPending}
           onCreate={(input) => createCase.mutateAsync(input)}
+          onCreated={(id) => navigate({ to: '/expedientes/$id', params: { id } })}
         />
       }
     />

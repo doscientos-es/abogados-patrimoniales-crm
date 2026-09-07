@@ -177,7 +177,7 @@ export function PersistentCrmDashboard() {
   )
 
   return (
-    <main className="mx-auto max-w-[1400px] space-y-6">
+    <main className="mx-auto max-w-350 space-y-6">
       <SectionHeader
         title="Cockpit CRM"
         subtitle="Estado actual del embudo comercial, alertas operativas e indicadores de conversión."
@@ -413,7 +413,7 @@ function HorizontalBars({
               />
             </div>
             <span className="text-muted-foreground flex shrink-0 items-baseline gap-1 text-xs tabular-nums">
-              <span className="font-medium text-foreground">{item.value}</span>
+              <span className="text-foreground font-medium">{item.value}</span>
               <span className="hidden sm:inline">{unit}</span>
               {showPercentage ? <span>· {percentage(item.value, max)} %</span> : null}
               {item.detail ? <span>· {item.detail}</span> : null}

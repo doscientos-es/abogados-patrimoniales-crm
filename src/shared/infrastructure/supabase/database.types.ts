@@ -121,6 +121,23 @@ export type Database = {
         }
         Returns: CaseRow
       }
+      crm_create_case: {
+        Args: {
+          target_firm_id: string
+          target_contact_id: string
+          target_opportunity_id: string | null
+          new_title: string
+          new_area: string
+          new_matter_type: string
+          new_nature: CaseNature
+          new_priority: OpportunityPriority
+          new_assigned_to: string | null
+          new_opened_on: string
+          new_next_action: string
+          new_current_position: string
+        }
+        Returns: CaseRow
+      }
       crm_update_task: {
         Args: {
           target_task_id: string
