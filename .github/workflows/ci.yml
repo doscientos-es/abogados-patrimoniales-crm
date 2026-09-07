@@ -26,5 +26,5 @@ jobs:
           node-version: 22.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      - run: pnpm run check
       - run: pnpm audit --audit-level high

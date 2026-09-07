@@ -8,19 +8,14 @@ import {
   useRouter,
   useRouterState,
 } from '@tanstack/react-router'
-import { PanelLeft, Plus, StickyNote } from 'lucide-react'
+import { PanelLeft } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
-import { NuevaNotaBoton } from '@/components/notas/nota-form'
-import { CampanaNotificaciones } from '@/components/notificaciones'
-import { TareaFicha } from '@/components/tareas/ficha-modal'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
-import { NuevaTareaDialog } from '@/features/crm'
-import { NotasRemotasSync } from '@/features/notas/ui/notas-remotas-sync'
 
 import { reportLovableError } from '../lib/lovable-error-reporting'
 
@@ -56,7 +51,7 @@ function NotFoundComponent() {
         <h1 className="text-foreground font-serif text-7xl font-bold">404</h1>
         <h2 className="text-foreground mt-4 text-xl font-semibold">Página no encontrada</h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          Esta pantalla todavía no forma parte del prototipo.
+          La dirección solicitada no existe o ya no está disponible.
         </p>
         <div className="mt-6">
           <Link
@@ -158,7 +153,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AccessGate>
-        <NotasRemotasSync />
         <AuthenticatedRoot />
       </AccessGate>
       <Toaster />
@@ -167,8 +161,6 @@ function RootComponent() {
 }
 
 function AuthenticatedRoot() {
-  // Un aviso abre la tarea allá donde estés, sin cambiar de pantalla.
-  const [tareaAvisada, setTareaAvisada] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
@@ -198,23 +190,9 @@ function AuthenticatedRoot() {
               </span>
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-              <NuevaNotaBoton
-                trigger={
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <StickyNote className="h-4 w-4" />
-                    <span>Nueva nota</span>
-                  </Button>
-                }
-              />
-              <NuevaTareaDialog
-                trigger={
-                  <Button size="sm" className="gap-1.5">
-                    <Plus className="h-4 w-4" />
-                    <span>Nueva tarea</span>
-                  </Button>
-                }
-              />
-              <CampanaNotificaciones onAbrirTarea={setTareaAvisada} />
+              <Link to="/tareas" className={buttonVariants({ size: 'sm' })}>
+                Nueva tarea
+              </Link>
               <AccountMenu />
             </div>
           </header>
@@ -224,7 +202,6 @@ function AuthenticatedRoot() {
           </main>
         </div>
       </div>
-      <TareaFicha tareaId={tareaAvisada} onOpenChange={(v) => !v && setTareaAvisada(null)} />
     </SidebarProvider>
   )
 }

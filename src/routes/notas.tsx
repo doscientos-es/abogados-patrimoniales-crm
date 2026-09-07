@@ -1,73 +1,100 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AlarmClock, Archive, Pin, ShieldAlert, Timer } from 'lucide-react'
 
-import { SectionHeader, StatTile } from '@/components/common'
-import { NuevaNotaBoton } from '@/components/notas/nota-form'
-import { NotaMuro } from '@/components/notas/nota-muro'
+import { PendingPanel, SectionHeader, StatTile } from '@/components/common'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AVISO_INTERNO } from '@/data/notas'
-import { contadores, notasVisibles, useNotas } from '@/lib/notas-store'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useNotasRemotas } from '@/features/notas'
 
 export const Route = createFileRoute('/notas')({
   head: () => ({
     meta: [
       { title: 'Notas internas — LEX' },
-      {
-        name: 'description',
-        content:
-          'Panel transversal de notas internas del despacho: contexto, avisos, vigencia y trazabilidad.',
-      },
-      { property: 'og:title', content: 'Notas internas — LEX' },
-      {
-        property: 'og:description',
-        content: 'Busca y gestiona las notas internas de contactos, expedientes y oportunidades.',
-      },
+      { name: 'description', content: 'Notas internas persistentes del despacho.' },
+      { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: NotasPage,
+  component: NotasPersistentesPage,
 })
 
-function NotasPage() {
-  const lista = useNotas(notasVisibles)
-  const c = useNotas(contadores)
+function NotasPersistentesPage() {
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const notes = useNotasRemotas(firmId)
 
+  if (session.status === 'loading' || membership.isPending || notes.isPending)
+    return <PendingPanel title="Cargando notas" description="Consultando el despacho…" />
+  if (session.status !== 'signed-in' || !firmId)
+    return (
+      <PendingPanel
+        title="Notas no disponibles"
+        description="Necesitas una sesión y una membresía activa."
+      />
+    )
+  if (notes.isError)
+    return (
+      <PendingPanel
+        title="No se pudieron cargar las notas"
+        description="Reintenta en unos instantes."
+      />
+    )
+
+  const list = notes.data ?? []
   return (
-    <div className="mx-auto max-w-[1400px]">
-      <SectionHeader title="Notas internas" subtitle={AVISO_INTERNO} actions={<NuevaNotaBoton />} />
-
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatTile label="Destacadas activas" value={c.destacadas} tono="info" />
-        <StatTile label="Advertencias críticas" value={c.criticas} tono="riesgo" />
-        <StatTile label="Para revisar" value={c.revisarHoy} tono="aviso" />
-        <StatTile label="Vencidas pendientes" value={c.vencidasPendientes} tono="aviso" />
-        <StatTile label="Vencen en 7 días" value={c.proximasVencer} tono="neutro" />
+    <main className="mx-auto max-w-6xl space-y-5 p-6">
+      <SectionHeader
+        title="Notas internas"
+        subtitle="Información persistente visible según los permisos del despacho."
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatTile label="Activas" value={list.filter((note) => note.status === 'active').length} />
+        <StatTile
+          label="Destacadas"
+          value={list.filter((note) => note.status === 'active' && note.highlighted).length}
+          tono="info"
+        />
+        <StatTile
+          label="Críticas"
+          value={list.filter((note) => note.status === 'active' && note.critical).length}
+          tono="riesgo"
+        />
       </div>
-
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Pin className="h-4 w-4" /> Muro de notas
-          </CardTitle>
+        <CardHeader>
+          <CardTitle className="text-base">Muro de notas</CardTitle>
         </CardHeader>
-        <CardContent>
-          <NotaMuro notas={lista} />
+        <CardContent className="space-y-3">
+          {list.map((note) => (
+            <article key={note.id} className="rounded-md border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium">{note.title || 'Nota interna'}</p>
+                  <p className="text-muted-foreground text-xs">{note.origin_label}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Badge variant="outline">{statusLabel(note.status)}</Badge>
+                  {note.highlighted ? <Badge>Destacada</Badge> : null}
+                  {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
+                </div>
+              </div>
+              <p className="mt-3 text-sm whitespace-pre-wrap">{note.content}</p>
+              <p className="text-muted-foreground mt-3 text-xs">
+                Actualizada {new Date(note.updated_at).toLocaleString('es-ES')}
+              </p>
+            </article>
+          ))}
+          {!list.length ? (
+            <p className="text-muted-foreground py-8 text-center text-sm">
+              No hay notas persistentes visibles.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
-
-      <p className="text-muted-foreground mt-4 flex flex-wrap items-center gap-4 text-xs">
-        <span className="inline-flex items-center gap-1">
-          <ShieldAlert className="h-3.5 w-3.5" /> Crítica
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <AlarmClock className="h-3.5 w-3.5" /> Pendiente de revisar
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Timer className="h-3.5 w-3.5" /> Temporal
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Archive className="h-3.5 w-3.5" /> Archivada o resuelta
-        </span>
-      </p>
-    </div>
+    </main>
   )
+}
+
+function statusLabel(status: string) {
+  return status === 'active' ? 'Activa' : status === 'resolved' ? 'Resuelta' : 'Archivada'
 }

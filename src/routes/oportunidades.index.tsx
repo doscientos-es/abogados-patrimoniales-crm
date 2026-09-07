@@ -15,9 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { nombreCompleto, type Contacto } from '@/data/contactos'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useContactos } from '@/features/contactos'
+import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import {
   OPPORTUNITY_STAGE_LABELS,
   ViewSwitch,
@@ -122,7 +121,7 @@ function LeadsPersistidos({
 }: {
   firmId: string
   oportunidades: OportunidadResumen[]
-  contactos: Contacto[]
+  contactos: ContactoPersistido[]
   cargando: boolean
   error: boolean
 }) {
@@ -130,7 +129,13 @@ function LeadsPersistidos({
   const [query, setQuery] = useState('')
   const transition = useTransicionarOportunidad(firmId)
   const contactosPorId = useMemo(
-    () => new Map(contactos.map((contacto) => [contacto.id, nombreCompleto(contacto)])),
+    () =>
+      new Map(
+        contactos.map((contacto) => [
+          contacto.id,
+          contacto.razonSocial || `${contacto.nombre} ${contacto.apellidos ?? ''}`.trim(),
+        ]),
+      ),
     [contactos],
   )
   const filtradas = oportunidades.filter((oportunidad) => {

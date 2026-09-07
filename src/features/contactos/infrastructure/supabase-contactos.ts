@@ -2,12 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import {
-  nombreCompleto,
-  type Contacto,
-  type Naturaleza,
-  type RelacionDespacho,
-} from '@/data/contactos'
-import {
   getSupabaseBrowserClient,
   type ContactInsert,
   type ContactNature,
@@ -16,6 +10,44 @@ import {
   type ContactStatus,
   type Json,
 } from '@/shared/infrastructure/supabase'
+
+export type Naturaleza = 'Persona física' | 'Persona jurídica' | 'Órgano judicial' | 'Público'
+export type RelacionDespacho =
+  | 'Lead'
+  | 'Cliente'
+  | 'Profesional / colaborador'
+  | 'Tercero'
+  | 'Contraparte'
+  | 'Proveedor'
+export type EstadoContacto = 'Activo' | 'Inactivo' | 'Archivado'
+
+export type ContactoPersistido = {
+  id: string
+  tipoPersona: Naturaleza
+  relacion: RelacionDespacho
+  nombre: string
+  apellidos?: string
+  razonSocial?: string
+  nif: string
+  nacimiento?: string
+  estado: EstadoContacto
+  telefono: string
+  telefono2?: string
+  email: string
+  email2?: string
+  direccion: string
+  cp: string
+  municipio: string
+  provincia: string
+  pais: string
+  personaContacto?: string
+  cargoContacto?: string
+  origen: string
+  canal: string
+  creado: string
+  modificado: string
+  version: number
+}
 
 const inputSchema = z.object({
   tipoPersona: z.enum(['Persona física', 'Persona jurídica', 'Órgano judicial', 'Público']),
@@ -28,11 +60,9 @@ const inputSchema = z.object({
     'Proveedor',
   ]),
   valores: z.record(z.string()),
-  borradores: z.array(z.unknown()).default([]),
 })
 
 export type NuevoContactoInput = z.infer<typeof inputSchema>
-export type ContactoPersistido = Contacto & { version: number }
 
 const natureToDatabase: Record<Naturaleza, ContactNature> = {
   'Persona física': 'person',
@@ -86,8 +116,7 @@ function spanishDate(value: string) {
 
 export function contactoFromRow(row: ContactRow): ContactoPersistido {
   const details = asObject(row.details)
-  const client = row.relationship === 'client'
-  const contacto: ContactoPersistido = {
+  return {
     id: row.id,
     tipoPersona: natureFromDatabase[row.nature],
     relacion: relationshipFromDatabase[row.relationship],
@@ -97,7 +126,6 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     ...(details['codigoOrgano'] ? { codigoOrgano: details['codigoOrgano'] } : {}),
     nif: row.tax_id ?? '',
     ...(details['fechaNacimiento'] ? { nacimiento: details['fechaNacimiento'] } : {}),
-    categorias: [],
     estado:
       row.status === 'active' ? 'Activo' : row.status === 'inactive' ? 'Inactivo' : 'Archivado',
     telefono: row.phone ?? '',
@@ -108,49 +136,15 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     cp: details['codigoPostal'] ?? '',
     municipio: details['municipio'] ?? '',
     provincia: details['provincia'] ?? '',
-    pais: details['pais'] ?? 'España',
-    idioma: details['idioma'] ?? 'Castellano',
+    pais: details['pais'] ?? '',
     ...(details['personaContacto'] ? { personaContacto: details['personaContacto'] } : {}),
     ...(details['cargo'] ? { cargoContacto: details['cargo'] } : {}),
-    ...(details['observaciones'] ? { observaciones: details['observaciones'] } : {}),
     origen: row.source ?? '',
     canal: details['canal'] ?? '',
-    horario: details['horario'] ?? '',
-    tratamiento: details['tratamiento'] ?? '',
-    indicaciones: details['indicaciones'] ?? '',
-    observacionesTrato: details['observacionesTrato'] ?? '',
-    satisfaccion: 'Sin valorar',
-    fechaSatisfaccion: '',
-    historialSatisfaccion: [],
-    haRecomendado: [],
-    incidencias: [],
-    banco: {
-      titular: '',
-      nif: '',
-      iban: '',
-      entidad: '',
-      bic: '',
-      sepa: false,
-      estadoMandato: 'Pendiente',
-      observaciones: '',
-    },
-    documentacion: {
-      identificacion: client ? 'Pendiente' : 'Completa',
-      rgpd: client ? 'Pendiente' : 'Firmada',
-      poderes: client ? 'Inexistentes' : 'Vigentes',
-    },
-    identificacion: [],
-    proteccionDatos: [],
-    poderes: [],
-    otrosDocumentos: [],
-    notas: [],
     creado: spanishDate(row.created_at),
-    creadoPor: 'Usuario del despacho',
     modificado: spanishDate(row.updated_at),
-    modificadoPor: 'Usuario del despacho',
     version: row.version,
   }
-  return contacto
 }
 
 export function useContacto(firmId: string | undefined, id: string) {
@@ -175,7 +169,13 @@ export function useContacto(firmId: string | undefined, id: string) {
 export function useActualizarContacto(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ contacto, version }: { contacto: Contacto; version: number }) => {
+    mutationFn: async ({
+      contacto,
+      version,
+    }: {
+      contacto: ContactoPersistido
+      version: number
+    }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const details = {
@@ -204,7 +204,8 @@ export function useActualizarContacto(firmId: string | undefined) {
       const { data, error } = await client
         .from('crm_contacts')
         .update({
-          display_name: nombreCompleto(contacto),
+          display_name:
+            contacto.razonSocial || `${contacto.nombre} ${contacto.apellidos ?? ''}`.trim(),
           first_name: contacto.nombre || null,
           last_name: contacto.apellidos || null,
           legal_name: contacto.razonSocial || null,
@@ -233,7 +234,7 @@ export function useActualizarContacto(firmId: string | undefined) {
 }
 
 function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
-  const { tipoPersona, relacion, valores, borradores } = input
+  const { tipoPersona, relacion, valores } = input
   const legalName = valores['razonSocial'] || valores['denominacion'] || null
   const displayName =
     tipoPersona === 'Persona física'
@@ -251,7 +252,7 @@ function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
     email: valores['email']?.trim().toLowerCase() || null,
     phone: valores['telefono']?.trim() || null,
     source: valores['origen']?.trim() || null,
-    details: { ...valores, pendingNotes: borradores } as Json,
+    details: valores as Json,
   }
 }
 
@@ -309,6 +310,6 @@ export function useActualizarEstadoContacto(firmId: string | undefined) {
   })
 }
 
-export function etiquetaContacto(contacto: Contacto) {
-  return nombreCompleto(contacto)
+export function etiquetaContacto(contacto: ContactoPersistido) {
+  return contacto.razonSocial || `${contacto.nombre} ${contacto.apellidos ?? ''}`.trim()
 }

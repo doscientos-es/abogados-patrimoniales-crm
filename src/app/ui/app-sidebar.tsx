@@ -3,18 +3,13 @@ import {
   Briefcase,
   CalendarClock,
   CheckSquare,
-  ClipboardList,
   Contact,
-  FileSignature,
   FileText,
   Gauge,
   Landmark,
-  MessagesSquare,
   Receipt,
   Settings,
-  ShieldAlert,
   Sparkles,
-  StickyNote,
   Target,
 } from 'lucide-react'
 
@@ -38,22 +33,16 @@ const general = [
 const comercial = [
   { title: 'Contactos', url: '/contactos', icon: Contact },
   { title: 'Leads', url: '/oportunidades', icon: Target },
-  { title: 'Onboarding', url: '/onboarding', icon: FileSignature },
 ] as const
 
 const operativa = [
   { title: 'Control de expedientes', url: '/expedientes', icon: Briefcase },
-  { title: 'Actuaciones', url: '/actuaciones', icon: ClipboardList },
-  { title: 'Ejecuciones', url: '/ejecuciones', icon: Landmark },
-  { title: 'Alertas y control', url: '/alertas', icon: ShieldAlert },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
   { title: 'Fechas y plazos', url: '/calendario', icon: CalendarClock },
 ] as const
 
 const gestion = [
   { title: 'Documentos', url: '/documentos', icon: FileText },
-  { title: 'Notas internas', url: '/notas', icon: StickyNote },
-  { title: 'Comunicaciones', url: '/comunicaciones', icon: MessagesSquare },
   { title: 'Facturación y cobros', url: '/facturacion', icon: Receipt },
 ] as const
 

@@ -35,4 +35,6 @@ if (regressions.length || !violations.length) {
   process.exit(result.status ?? 1)
 }
 
-console.log(`Structure check passed with ${violations.length} accepted legacy violation(s).`)
+process.stdout.write(
+  `Structure check passed with ${violations.length} accepted legacy violation(s).\n`,
+)
