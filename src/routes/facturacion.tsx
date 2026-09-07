@@ -144,9 +144,7 @@ function FacturacionPage() {
                   </TableCell>
                 </TableRow>
               ) : null}
-              {!facturasQuery.isLoading &&
-              !facturasQuery.isError &&
-              !facturas.length ? (
+              {!facturasQuery.isLoading && !facturasQuery.isError && !facturas.length ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
                     Todavía no hay facturas registradas para este despacho.

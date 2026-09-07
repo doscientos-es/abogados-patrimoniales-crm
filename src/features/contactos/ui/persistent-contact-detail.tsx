@@ -195,7 +195,7 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
           loading={tasksQuery.isPending}
           error={tasksQuery.isError}
         >
-          {tasks.slice(0, 8).map((item) => (
+          {tasks.slice(0, 8).map((item) =>
             item.expedienteId ? (
               <Link
                 key={item.id}
@@ -216,8 +216,8 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
                 <span>{item.titulo}</span>
                 <Badge variant="outline">{item.estado}</Badge>
               </Link>
-            ) : null
-          ))}
+            ) : null,
+          )}
         </Related>
         <Related
           title="Facturación"
