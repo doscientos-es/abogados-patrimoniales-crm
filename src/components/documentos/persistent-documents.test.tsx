@@ -181,7 +181,7 @@ describe('PersistentDocuments', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Mover carpeta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mover carpeta Escritos' }))
     expect(screen.getByRole('dialog', { name: 'Mover carpeta' }).textContent).toContain(
       'Sus archivos y subcarpetas se conservarán.',
     )

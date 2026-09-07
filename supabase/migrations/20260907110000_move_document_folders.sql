@@ -3,7 +3,7 @@
 create or replace function public.crm_move_document_folder(
   target_folder_id uuid, target_parent_id uuid
 )
-returns public.crm_document_folders language plpgsql security definer set search_path = public as $$
+returns public.crm_document_folders language plpgsql security definer set search_path = '' as $$
 declare
   source_folder public.crm_document_folders;
   destination_folder public.crm_document_folders;

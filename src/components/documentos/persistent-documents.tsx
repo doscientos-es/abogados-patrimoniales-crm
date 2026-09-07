@@ -875,6 +875,7 @@ export function PersistentDocuments({
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Mover carpeta ${folder.name}`}
                         disabled={movingFolderId !== null}
                         onClick={() => openFolderMoveDialog(folder)}
                       >
@@ -969,6 +970,7 @@ export function PersistentDocuments({
                     <Button
                       size="sm"
                       variant="ghost"
+                      aria-label={`Mover carpeta ${folder.name}`}
                       disabled={movingFolderId !== null}
                       onClick={() => openFolderMoveDialog(folder)}
                     >
