@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 
-import type { AmbitoNota, ConversionNota, DisparadorNota, NotaInterna } from '@/data/notas'
+import type {
+  AmbitoNota,
+  ConversionNota,
+  DisparadorNota,
+  NotaInterna,
+} from '@/features/notas/application/note-types'
 import { getSupabaseBrowserClient, type Json, type NoteRow } from '@/shared/infrastructure/supabase'
 
 export type NotaRemota = NoteRow & {
@@ -17,13 +22,6 @@ export type NotaRemota = NoteRow & {
   actorNames: Record<string, string>
 }
 
-const scopeFromAmbito: Record<AmbitoNota, NotaRemota['scope']> = {
-  persona: 'person',
-  expediente: 'case',
-  oportunidad: 'opportunity',
-  ejecucion: 'execution',
-  presupuesto: 'quote',
-}
 const ambitoFromScope: Record<NotaRemota['scope'], AmbitoNota> = {
   person: 'persona',
   case: 'expediente',
@@ -35,11 +33,6 @@ const ambitoFromScope: Record<NotaRemota['scope'], AmbitoNota> = {
 const dateToText = (value: string | null) =>
   value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : undefined
 const dateTimeToText = (value: string) => `${dateToText(value)} ${value.slice(11, 16)}`
-const dateToDatabase = (value: string | undefined) => {
-  if (!value) return null
-  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  return match ? `${match[3]}-${match[2]}-${match[1]}` : value
-}
 const asObject = (value: Json): Record<string, Json | undefined> =>
   value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 const asStrings = (value: Json | undefined): string[] =>
@@ -110,72 +103,6 @@ export function notaDesdeRemota(nota: NotaRemota): NotaInterna {
         }
       : {}),
   }
-}
-
-function payloadDesdeNota(nota: NotaInterna) {
-  return {
-    scope: scopeFromAmbito[nota.ambito],
-    origin_id: nota.origen.id,
-    origin_label: nota.origen.etiqueta,
-    title: nota.titulo?.trim() || null,
-    content: nota.contenido.trim(),
-    case_id: nota.expedienteId ?? (nota.ambito === 'expediente' ? nota.origen.id : null),
-    opportunity_id: nota.oportunidadId ?? (nota.ambito === 'oportunidad' ? nota.origen.id : null),
-    status:
-      nota.estado === 'activa' ? 'active' : nota.estado === 'resuelta' ? 'resolved' : 'archived',
-    highlighted: nota.destacada,
-    critical: nota.critica,
-    requires_acknowledgement: nota.requiereConfirmacion,
-    validity: nota.vigencia === 'permanente' ? 'permanent' : 'temporary',
-    starts_on: dateToDatabase(nota.desde),
-    review_on: dateToDatabase(nota.revision),
-    expires_on: nota.vigencia === 'temporal' ? dateToDatabase(nota.vencimiento) : null,
-    expiry_action: nota.alVencer === 'archivar' ? 'archive' : 'confirm',
-    review_pending: nota.pendienteRevision,
-    snoozed_until: dateToDatabase(nota.posponerHasta),
-    visibility: nota.visibilidad === 'equipo' ? 'team' : 'restricted',
-    contact_ids: nota.contactos,
-    permitted_user_ids: nota.visibilidad === 'restringida' ? nota.autorizados : [],
-    details: {
-      triggers: nota.disparadores,
-      conversions: nota.conversiones,
-      ...(nota.ejecucionId ? { executionId: nota.ejecucionId } : {}),
-      ...(nota.presupuestoId ? { quoteId: nota.presupuestoId } : {}),
-    },
-  } as Json
-}
-
-export async function guardarNotaRemota({
-  firmId,
-  noteId,
-  nota,
-  evento,
-  detalle,
-}: {
-  firmId: string
-  noteId: string | null
-  nota: NotaInterna
-  evento: string
-  detalle?: string
-}) {
-  const client = getSupabaseBrowserClient()
-  if (!client) throw new Error('Supabase no está configurado en este entorno.')
-  const { data, error } = await client.rpc('crm_save_note', {
-    target_firm_id: firmId,
-    target_note_id: noteId,
-    target_payload: payloadDesdeNota(nota),
-    event_type: evento,
-    event_detail: detalle ?? null,
-  })
-  if (error) throw error
-  return data
-}
-
-export async function confirmarLecturaRemota(noteId: string) {
-  const client = getSupabaseBrowserClient()
-  if (!client) throw new Error('Supabase no está configurado en este entorno.')
-  const { error } = await client.rpc('crm_acknowledge_note', { target_note_id: noteId })
-  if (error) throw error
 }
 
 /** Notes are always scoped by firm before ordering for the activity wall. */

@@ -1,1 +1,0 @@
-export { LocalStorageRepository as NotasLocalStorageRepository } from '@/shared/infrastructure/local-storage-repository'

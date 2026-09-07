@@ -2,4 +2,3 @@
 export * from './application'
 export * from './infrastructure/supabase-oportunidades'
 export * from './ui/opportunity-edit-form'
-export * from './ui/ui'

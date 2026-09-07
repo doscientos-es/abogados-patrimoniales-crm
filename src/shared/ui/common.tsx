@@ -1,9 +1,6 @@
-import { Link } from '@tanstack/react-router'
-import { Check, Circle, Construction } from 'lucide-react'
+import { Construction } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { type Prioridad } from '@/data/crm'
 import { cn } from '@/lib/utils'
 
 export function SectionHeader({
@@ -97,53 +94,6 @@ export function PendingPanel({ title, description }: { title: string; descriptio
   )
 }
 
-export function StatCard({
-  label,
-  value,
-  hint,
-  to,
-  params,
-}: {
-  label: string
-  value: string
-  hint?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  to: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params?: any
-}) {
-  return (
-    <Link
-      to={to}
-      params={params}
-      className="group border-border bg-card hover:border-primary/40 hover:bg-accent block rounded-lg border p-4 transition-colors"
-    >
-      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-      <p className="text-foreground mt-2 font-serif text-3xl font-semibold">{value}</p>
-      {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
-    </Link>
-  )
-}
-
-const prioridadClass: Record<Prioridad, string> = {
-  Alta: 'bg-destructive/10 text-destructive border-destructive/30',
-  Media: 'bg-warning/15 text-warning-foreground border-warning/40',
-  Baja: 'bg-muted text-muted-foreground border-border',
-}
-
-export function PriorityBadge({ value }: { value: Prioridad }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex rounded-full border px-2 py-0.5 text-xs font-medium',
-        prioridadClass[value],
-      )}
-    >
-      {value}
-    </span>
-  )
-}
-
 export function StatusBadge({ value }: { value: string }) {
   const bloqueado = /bloque/i.test(value)
   return (
@@ -160,76 +110,32 @@ export function StatusBadge({ value }: { value: string }) {
   )
 }
 
-export function Timeline({ items }: { items: { fecha: string; hito: string; fase: string }[] }) {
+export function ViewSwitch({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: { id: string; label: string }[]
+}) {
   return (
-    <ol className="border-border relative ml-2 border-l pl-6">
-      {items.map((it, i) => (
-        <li key={i} className="relative pb-5 last:pb-0">
-          <span className="absolute top-1 left-[-1.9rem] flex h-3 w-3 items-center justify-center">
-            <Circle className="fill-primary text-primary h-3 w-3" />
-          </span>
-          <p className="text-foreground text-sm font-medium">{it.hito}</p>
-          <p className="text-muted-foreground text-xs">
-            {it.fecha} · {it.fase}
-          </p>
-        </li>
-      ))}
-    </ol>
-  )
-}
-
-export function Checklist({ items, done = 0 }: { items: string[]; done?: number }) {
-  return (
-    <ul className="space-y-2">
-      {items.map((item, i) => (
-        <li
-          key={item}
-          className="border-border bg-card flex items-start gap-3 rounded-md border px-3 py-2.5"
+    <div className="border-border bg-card inline-flex rounded-md border p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange(option.id)}
+          className={cn(
+            'rounded px-3 py-1.5 text-xs font-medium transition-colors',
+            value === option.id
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
         >
-          <span
-            className={cn(
-              'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border',
-              i < done ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
-            )}
-          >
-            {i < done ? <Check className="h-3 w-3" /> : null}
-          </span>
-          <span
-            className={cn(
-              'text-sm',
-              i < done ? 'text-muted-foreground line-through' : 'text-foreground',
-            )}
-          >
-            {item}
-          </span>
-        </li>
+          {option.label}
+        </button>
       ))}
-    </ul>
-  )
-}
-
-export function InfoCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  )
-}
-
-export function FieldList({ items }: { items: [string, ReactNode][] }) {
-  return (
-    <dl className="grid gap-3 sm:grid-cols-2">
-      {items.map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-muted-foreground text-xs tracking-wide uppercase">{k}</dt>
-          <dd className="text-foreground mt-0.5 text-sm">{v}</dd>
-        </div>
-      ))}
-    </dl>
+    </div>
   )
 }

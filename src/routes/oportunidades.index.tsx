@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
-import { PendingPanel, SectionHeader } from '@/components/common'
+import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,7 +19,6 @@ import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import {
   OPPORTUNITY_STAGE_LABELS,
-  ViewSwitch,
   useOportunidades,
   useTransicionarOportunidad,
   type OportunidadResumen,

@@ -25,18 +25,8 @@
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@/components/crm/*": ["./src/features/crm/ui/*"],
-      "@/components/contactos/*": ["./src/features/contactos/ui/*"],
-      "@/components/comunicaciones/*": ["./src/features/comunicaciones/ui/*"],
-      "@/components/expedientes/*": ["./src/features/expedientes/ui/*"],
-      "@/components/fechas/*": ["./src/features/fechas/ui/*"],
-      "@/components/ia/*": ["./src/features/ia/ui/*"],
-      "@/components/notas/*": ["./src/features/notas/ui/*"],
-      "@/components/oportunidades/*": ["./src/features/oportunidades/ui/*"],
-      "@/components/tareas/*": ["./src/features/tareas/ui/*"],
       "@/components/common": ["./src/shared/ui/common.tsx"],
-      "@/components/app-sidebar": ["./src/app/ui/app-sidebar.tsx"],
-      "@/components/notificaciones": ["./src/app/ui/notificaciones.tsx"]
+      "@/components/app-sidebar": ["./src/app/ui/app-sidebar.tsx"]
     }
   }
 }

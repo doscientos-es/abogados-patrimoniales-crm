@@ -13,24 +13,12 @@ export default defineConfig({
     resolve: {
       alias: [
         {
-          find: /^@\/components\/(contactos|comunicaciones|expedientes|fechas|ia|notas|oportunidades|tareas)\/(.+)$/,
-          replacement: resolve(import.meta.dirname, 'src/features/$1/ui/$2'),
-        },
-        {
-          find: /^@\/components\/crm\/(.+)$/,
-          replacement: resolve(import.meta.dirname, 'src/features/crm/ui/$1'),
-        },
-        {
           find: '@/components/common',
           replacement: resolve(import.meta.dirname, 'src/shared/ui/common.tsx'),
         },
         {
           find: '@/components/app-sidebar',
           replacement: resolve(import.meta.dirname, 'src/app/ui/app-sidebar.tsx'),
-        },
-        {
-          find: '@/components/notificaciones',
-          replacement: resolve(import.meta.dirname, 'src/app/ui/notificaciones.tsx'),
         },
       ],
     },
