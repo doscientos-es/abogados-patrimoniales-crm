@@ -4,38 +4,37 @@
 
 ## Estado verificado
 
-- Build, TypeScript y 13 pruebas unitarias pasan; no hay pruebas E2E.
-- La puerta de lint estaba rota con 31 errores y no existía CI.
-- El control estructural conserva una línea base explícita de nueve incumplimientos legacy y bloquea regresiones.
+- La puerta `pnpm check` valida formato, lint, TypeScript, estructura, pruebas y build productivo.
+- CI ejecuta las mismas comprobaciones y bloquea regresiones.
+- El control estructural conserva cinco excepciones de disposición conocidas y bloquea nuevas infracciones.
 - Supabase productivo está activo y tiene aplicadas las 34 migraciones versionadas del repositorio.
 - Hay autenticación, membresía por despacho, MFA, RLS y Storage privado, pero faltan cierres de revisión.
-- El código todavía mezcla repositorios Supabase con semillas y stores operativos en `localStorage`.
+- Las rutas activas usan exclusivamente Supabase; se eliminaron seeds, stores locales y repositorios de demo.
 
 ## Backlog cruzado con Backoffice
 
-| Orden | Trabajo pendiente                 | Estado MCP | Evidencia / cierre requerido                                                   |
-| ----: | --------------------------------- | ---------- | ------------------------------------------------------------------------------ |
-|     1 | CI y puertas de entrega           | todo       | Checkout limpio, calidad, estructura, tests, build y auditoría en verde        |
-|     2 | Documentos privados versionados   | in_review  | Cerrar revisión RLS/Storage, huérfanos, archivo y regresión                    |
-|     3 | Invitaciones y miembros           | in_review  | Probar altas, suspensión, roles, MFA y CORS restringido                        |
-|     4 | RLS multi-despacho                | in_review  | Resolver advisors y ejecutar matriz 2 despachos × 4 roles                      |
-|     5 | Onboarding y SOPs trazables       | todo       | Sustituir `onboarding-store`, checklist, evidencias y conversión transaccional |
-|     6 | Comunicaciones persistentes       | todo       | Sustituir `expedientes-store`, hilos, adjuntos, idempotencia y reintentos      |
-|     7 | Facturación, pagos y emisión      | todo       | CRUD, impuestos, serie, emisión inmutable, cobros y rectificativas             |
-|     8 | Pruebas unitarias/integración/E2E | todo       | Auth, RLS, documentos, plazos, expediente, concurrencia y facturación          |
-|     9 | Staging y Cloudflare              | todo       | Entornos separados, variables, WAF, despliegue y rollback probado              |
-|    10 | Importación, UAT y piloto         | todo       | Importador idempotente, conciliación, formación y go/no-go firmado             |
-|    11 | Observabilidad segura             | todo       | Errores/rendimiento sin PII, alertas y runbooks accionables                    |
-|    12 | Backups y restauración            | todo       | RPO/RTO, retención y restauración ensayada                                     |
-|    13 | Informes con datos reales         | todo       | Dashboard paginado, autorizado y reconciliado                                  |
+| Orden | Trabajo pendiente                 | Estado MCP | Evidencia / cierre requerido                                            |
+| ----: | --------------------------------- | ---------- | ----------------------------------------------------------------------- |
+|     1 | CI y puertas de entrega           | todo       | Checkout limpio, calidad, estructura, tests, build y auditoría en verde |
+|     2 | Documentos privados versionados   | in_review  | Cerrar revisión RLS/Storage, huérfanos, archivo y regresión             |
+|     3 | Invitaciones y miembros           | in_review  | Probar altas, suspensión, roles, MFA y CORS restringido                 |
+|     4 | RLS multi-despacho                | in_review  | Resolver advisors y ejecutar matriz 2 despachos × 4 roles               |
+|     5 | Onboarding y SOPs trazables       | todo       | Implementar persistencia antes de habilitar el módulo                   |
+|     6 | Comunicaciones persistentes       | todo       | Implementar hilos, adjuntos, idempotencia y reintentos                  |
+|     7 | Facturación, pagos y emisión      | todo       | CRUD, impuestos, serie, emisión inmutable, cobros y rectificativas      |
+|     8 | Pruebas unitarias/integración/E2E | todo       | Auth, RLS, documentos, plazos, expediente, concurrencia y facturación   |
+|     9 | Staging y Cloudflare              | todo       | Entornos separados, variables, WAF, despliegue y rollback probado       |
+|    10 | Importación, UAT y piloto         | todo       | Importador idempotente, conciliación, formación y go/no-go firmado      |
+|    11 | Observabilidad segura             | todo       | Errores/rendimiento sin PII, alertas y runbooks accionables             |
+|    12 | Backups y restauración            | todo       | RPO/RTO, retención y restauración ensayada                              |
+|    13 | Informes con datos reales         | todo       | Dashboard paginado, autorizado y reconciliado                           |
 
 ## Hallazgos adicionales no reflejados como tarea independiente
 
 ### P0 — bloquean piloto
 
-- El inicio usa exclusivamente `src/data/crm.ts`; muestra métricas y fechas ficticias.
-- Onboarding, comunicaciones y parte de notas/expedientes aún dependen de stores locales y semillas.
-- Presupuestos son mayoritariamente documentales/demo y no tienen repositorio productivo completo.
+- Inicio, CRM, contactos, Leads, expedientes, tareas, documentos, notas y facturación consultan Supabase.
+- Onboarding, comunicaciones, presupuestos y otros módulos no migrados están deshabilitados sin datos simulados.
 - Facturación solo lee facturas y pagos; no crea, revisa, emite, rectifica ni registra cobros desde UI.
 - No hay estrategia de paginación para listados; varias consultas descargan todas las filas.
 - La Edge Function de invitaciones permite CORS `*`; debe limitarse a orígenes autorizados.
