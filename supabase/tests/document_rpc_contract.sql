@@ -31,6 +31,15 @@ begin
   select * into nested_folder from public.crm_create_document_folder(
     '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c1', root_folder.id,
     'Demandas');
+  select * into nested_folder from public.crm_move_document_folder(nested_folder.id, null);
+  if nested_folder.parent_id is not null then raise exception 'Folder move to root failed'; end if;
+  select * into nested_folder from public.crm_move_document_folder(nested_folder.id, root_folder.id);
+  begin
+    perform public.crm_move_document_folder(root_folder.id, nested_folder.id);
+    raise exception 'Folder cycle was allowed';
+  exception when others then
+    if sqlerrm <> 'Folder cycle' then raise; end if;
+  end;
   select * into first_document from public.crm_move_case_document(first_document.id, nested_folder.id);
   select * into second_document from public.crm_create_document_version(
     first_document.id, 1, 'contrato-v2.pdf', 'application/pdf', 1);
@@ -48,6 +57,12 @@ begin
   select * into other_case_folder from public.crm_create_document_folder(
     '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c2', null,
     'Otro expediente');
+  begin
+    perform public.crm_move_document_folder(nested_folder.id, other_case_folder.id);
+    raise exception 'Cross-case folder move was allowed';
+  exception when others then
+    if sqlerrm <> 'Folder not found' then raise; end if;
+  end;
   begin
     perform public.crm_move_case_document(second_document.id, other_case_folder.id);
     raise exception 'Cross-case document move was allowed';

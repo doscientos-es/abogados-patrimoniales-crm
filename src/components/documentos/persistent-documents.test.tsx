@@ -7,6 +7,7 @@ import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 import { PersistentDocuments } from './persistent-documents'
 
 const moveDocument = vi.fn().mockResolvedValue({ error: null })
+const moveFolder = vi.fn().mockResolvedValue({ error: null })
 const createFolder = vi.fn().mockResolvedValue({ error: null })
 const archiveDocument = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
@@ -82,6 +83,16 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
                       created_at: '2026-01-01',
                       updated_at: '2026-01-01',
                     },
+                    {
+                      id: 'folder-2',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Pruebas',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
                   ]
                 : [],
               error: null,
@@ -92,6 +103,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
     }),
     rpc: (name: string, args: unknown) => {
       if (name === 'crm_move_case_document') return moveDocument(args)
+      if (name === 'crm_move_document_folder') return moveFolder(args)
       if (name === 'crm_create_document_folder') return createFolder(args)
       if (name === 'crm_archive_case_document') return archiveDocument(args)
       return Promise.resolve({ error: null })
@@ -113,6 +125,7 @@ afterEach(() => {
   hasDocuments = true
   hasFolders = true
   moveDocument.mockClear()
+  moveFolder.mockClear()
   createFolder.mockClear()
   archiveDocument.mockClear()
 })
@@ -163,6 +176,26 @@ describe('PersistentDocuments', () => {
     )
   })
 
+  it('offers a confirmed keyboard alternative for moving folders', async () => {
+    renderDocuments()
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Mover carpeta' }))
+    expect(screen.getByRole('dialog', { name: 'Mover carpeta' }).textContent).toContain(
+      'Sus archivos y subcarpetas se conservarán.',
+    )
+    fireEvent.change(screen.getByLabelText('Destino'), { target: { value: 'folder-2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar movimiento' }))
+
+    await waitFor(() =>
+      expect(moveFolder).toHaveBeenCalledWith({
+        target_folder_id: 'folder-1',
+        target_parent_id: 'folder-2',
+      }),
+    )
+  })
+
   it('archives a document only after an explicit confirmation', async () => {
     renderDocuments()
     fireEvent.click(
@@ -198,6 +231,24 @@ describe('PersistentDocuments', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Abrir carpeta Escritos' }))
     expect(onLocationChange).toHaveBeenCalledWith({ caseId: 'case-1', folderId: 'folder-1' })
+  })
+
+  it('shows the same location in grid or list view', async () => {
+    renderDocuments()
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Vista de cuadrícula' }).getAttribute('aria-pressed'),
+    ).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Vista de lista' }))
+
+    expect(screen.getByRole('list', { name: 'Documentos en lista' })).toBeTruthy()
+    expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Vista de lista' }).getAttribute('aria-pressed'),
+    ).toBe('true')
   })
 
   it('shows root actions only while listing the document cases', async () => {

@@ -187,6 +187,10 @@ export type Database = {
         Args: { target_document_id: string; target_folder_id: string | null }
         Returns: CaseDocumentRow
       }
+      crm_move_document_folder: {
+        Args: { target_folder_id: string; target_parent_id: string | null }
+        Returns: DocumentFolderRow
+      }
       crm_update_firm_member: {
         Args: {
           target_firm_id: string

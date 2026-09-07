@@ -16,8 +16,11 @@ import { useActiveMembership } from '@/features/auth/application/membership'
 import {
   formatCurrency,
   formatDate,
+  type FacturaResumen,
   useFacturas,
 } from '@/features/facturacion/infrastructure/supabase-facturas'
+
+const EMPTY_FACTURAS: FacturaResumen[] = []
 
 export const Route = createFileRoute('/facturacion')({
   head: () => ({
@@ -41,7 +44,7 @@ function FacturacionPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const facturasQuery = useFacturas(membership.data?.firmId)
-  const facturas = facturasQuery.data ?? []
+  const facturas = facturasQuery.data ?? EMPTY_FACTURAS
   const resumen = useMemo(
     () =>
       facturas.reduce(

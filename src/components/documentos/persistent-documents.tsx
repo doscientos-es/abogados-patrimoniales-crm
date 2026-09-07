@@ -4,17 +4,29 @@ import {
   Archive,
   ChevronRight,
   Download,
+  FileImage,
+  FileSpreadsheet,
   FileText,
+  FileType2,
   Folder,
   FolderOpen,
   FolderPlus,
+  Grid2X2,
   GripVertical,
   Info,
+  List,
   MoveRight,
   RefreshCw,
   Upload,
 } from 'lucide-react'
-import { useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from 'react'
+import {
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
@@ -48,8 +60,19 @@ const ALLOWED = new Set([
 ])
 const MAX_FILE_SIZE = 26214400
 const DOCUMENT_DRAG_TYPE = 'application/x-lex-document-id'
+const FOLDER_DRAG_TYPE = 'application/x-lex-folder-id'
 type DocumentConfidentiality = CaseDocumentRow['confidentiality']
 type DocumentLocation = { caseId: string | null; folderId: string | null }
+type DocumentView = 'grid' | 'list'
+
+const FOLDER_TONES = [
+  'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+] as const
+const EMPTY_DOCUMENTS: CaseDocumentRow[] = []
+const EMPTY_FOLDERS: DocumentFolderRow[] = []
 
 type PersistentDocumentsProps = {
   location?: DocumentLocation
@@ -63,6 +86,8 @@ function actionErrorMessage(error: unknown, fallback: string) {
     return 'La carpeta ya no está disponible. Actualiza la vista e inténtalo de nuevo.'
   if (message.includes('document not found'))
     return 'El documento ya no está disponible o no tienes permiso para modificarlo.'
+  if (message.includes('folder cycle'))
+    return 'No puedes mover una carpeta dentro de ella misma ni de una de sus subcarpetas.'
   if (message.includes('changed by another user'))
     return 'El documento ha cambiado por otra persona. Actualiza la vista antes de continuar.'
   if (message.includes('invalid folder name'))
@@ -95,13 +120,17 @@ export function PersistentDocuments({
   const [folderName, setFolderName] = useState('')
   const [folderError, setFolderError] = useState<string | null>(null)
   const [draggedDocumentId, setDraggedDocumentId] = useState<string | null>(null)
+  const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null)
   const [dragTargetFolderId, setDragTargetFolderId] = useState<string | null | undefined>(undefined)
   const [documentToMove, setDocumentToMove] = useState<CaseDocumentRow | null>(null)
+  const [folderToMove, setFolderToMove] = useState<DocumentFolderRow | null>(null)
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('root')
   const [movingDocumentId, setMovingDocumentId] = useState<string | null>(null)
+  const [movingFolderId, setMovingFolderId] = useState<string | null>(null)
   const [documentToArchive, setDocumentToArchive] = useState<CaseDocumentRow | null>(null)
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
+  const [view, setView] = useState<DocumentView>('grid')
   const { caseId, folderId } = location ?? internalLocation
   const setLocation = (nextLocation: DocumentLocation) => {
     if (onLocationChange) onLocationChange(nextLocation)
@@ -139,6 +168,35 @@ export function PersistentDocuments({
       return data
     },
   })
+  const folderRows = folders.data ?? EMPTY_FOLDERS
+  const documentRows = docs.data ?? EMPTY_DOCUMENTS
+  const documentCountByCase = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const document of documentRows)
+      counts.set(document.case_id, (counts.get(document.case_id) ?? 0) + 1)
+    return counts
+  }, [documentRows])
+  const folderCountByCase = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const folder of folderRows)
+      counts.set(folder.case_id, (counts.get(folder.case_id) ?? 0) + 1)
+    return counts
+  }, [folderRows])
+  const documentCountByFolder = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const document of documentRows) {
+      if (document.folder_id)
+        counts.set(document.folder_id, (counts.get(document.folder_id) ?? 0) + 1)
+    }
+    return counts
+  }, [documentRows])
+  const childFolderCountByFolder = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const folder of folderRows) {
+      if (folder.parent_id) counts.set(folder.parent_id, (counts.get(folder.parent_id) ?? 0) + 1)
+    }
+    return counts
+  }, [folderRows])
   if (
     session.status === 'loading' ||
     membership.isPending ||
@@ -330,8 +388,6 @@ export function PersistentDocuments({
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
     setStatusMessage(`Se ha abierto la descarga de ${doc.original_name} en una pestaña nueva.`)
   }
-  const folderRows = folders.data ?? []
-  const documentRows = docs.data ?? []
   const activeCase = (cases.data ?? []).find((item) => item.id === caseId)
   const activeFolders = folderRows.filter(
     (folder) => folder.case_id === caseId && folder.parent_id === folderId,
@@ -367,6 +423,10 @@ export function PersistentDocuments({
   const openMoveDialog = (document: CaseDocumentRow) => {
     setDocumentToMove(document)
     setMoveTargetFolderId(document.folder_id ?? 'root')
+  }
+  const openFolderMoveDialog = (folder: DocumentFolderRow) => {
+    setFolderToMove(folder)
+    setMoveTargetFolderId(folder.parent_id ?? 'root')
   }
   const createFolder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -443,6 +503,44 @@ export function PersistentDocuments({
       setDragTargetFolderId(undefined)
     }
   }
+  const moveFolder = async (folderId: string, targetParentId: string | null) => {
+    if (!firmId) return
+    const c = getSupabaseBrowserClient()
+    if (!c) {
+      toast.error('No se pudo conectar para mover la carpeta. Inténtalo de nuevo.')
+      return
+    }
+    const folder = folderRows.find((item) => item.id === folderId)
+    if (folder?.parent_id === targetParentId) {
+      toast.info('La carpeta ya está en esa ubicación.')
+      setDraggedFolderId(null)
+      return
+    }
+    const destination = targetParentId
+      ? (folderRows.find((item) => item.id === targetParentId)?.name ?? 'la carpeta elegida')
+      : 'la raíz del expediente'
+    setMovingFolderId(folderId)
+    setStatusMessage(`Moviendo ${folder?.name ?? 'la carpeta'} a ${destination}.`)
+    try {
+      const { error } = await c.rpc('crm_move_document_folder', {
+        target_folder_id: folderId,
+        target_parent_id: targetParentId,
+      })
+      if (error) throw error
+      await qc.invalidateQueries({ queryKey: ['document-folders', firmId] })
+      toast.success(`Carpeta movida a ${destination}.`)
+      setStatusMessage(`Carpeta movida a ${destination}.`)
+      setFolderToMove(null)
+    } catch (error) {
+      const message = actionErrorMessage(error, 'No se pudo mover la carpeta.')
+      toast.error(message)
+      setStatusMessage(message)
+    } finally {
+      setMovingFolderId(null)
+      setDraggedFolderId(null)
+      setDragTargetFolderId(undefined)
+    }
+  }
   const archiveDocument = async (document: CaseDocumentRow) => {
     if (!firmId) return
     const c = getSupabaseBrowserClient()
@@ -478,10 +576,23 @@ export function PersistentDocuments({
       'Arrastre iniciado. Suelta el documento sobre una carpeta o usa el botón Mover.',
     )
   }
-  const dropDocument = (event: DragEvent<HTMLElement>, targetFolderId: string | null) => {
+  const beginFolderDrag = (event: DragEvent<HTMLElement>, folderId: string) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData(FOLDER_DRAG_TYPE, folderId)
+    setDraggedFolderId(folderId)
+    setStatusMessage('Arrastre iniciado. Suelta la carpeta sobre otra carpeta o en la raíz.')
+  }
+  const endDrag = () => {
+    setDraggedDocumentId(null)
+    setDraggedFolderId(null)
+    setDragTargetFolderId(undefined)
+  }
+  const dropItem = (event: DragEvent<HTMLElement>, targetFolderId: string | null) => {
     event.preventDefault()
+    const folderId = event.dataTransfer.getData(FOLDER_DRAG_TYPE) || draggedFolderId
     const documentId = event.dataTransfer.getData(DOCUMENT_DRAG_TYPE) || draggedDocumentId
-    if (documentId) void moveDocument(documentId, targetFolderId)
+    if (folderId) void moveFolder(folderId, targetFolderId)
+    else if (documentId) void moveDocument(documentId, targetFolderId)
   }
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
@@ -600,12 +711,12 @@ export function PersistentDocuments({
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(cases.data ?? []).map((item) => {
-              const documentCount = documentRows.filter(
-                (document) => document.case_id === item.id,
-              ).length
+              const documentCount = documentCountByCase.get(item.id) ?? 0
+              const folderCount = folderCountByCase.get(item.id) ?? 0
+              const tone = folderTone(item.id)
               return (
                 <Card
-                  className="group hover:border-primary/40 hover:bg-muted/40 transition-colors"
+                  className="group hover:border-primary/40 overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
                   key={item.id}
                 >
                   <button
@@ -614,13 +725,22 @@ export function PersistentDocuments({
                     onClick={() => openCase(item.id)}
                     aria-label={`Abrir documentos del expediente ${item.referencia}: ${item.titulo}`}
                   >
-                    <CardContent className="space-y-2 pt-5">
-                      <Folder className="text-primary h-5 w-5" aria-hidden="true" />
-                      <p className="font-medium">{item.referencia}</p>
-                      <p className="text-muted-foreground line-clamp-2 text-sm">{item.titulo}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {documentCount} documento{documentCount === 1 ? '' : 's'}
-                      </p>
+                    <CardContent className="space-y-3 pt-5">
+                      <div className={`inline-flex rounded-xl p-3 ${tone}`}>
+                        <Folder className="h-7 w-7" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{item.referencia}</p>
+                        <p className="text-muted-foreground line-clamp-2 text-sm">{item.titulo}</p>
+                      </div>
+                      <div className="text-muted-foreground flex gap-3 text-xs">
+                        <span>
+                          {documentCount} archivo{documentCount === 1 ? '' : 's'}
+                        </span>
+                        <span>
+                          {folderCount} carpeta{folderCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
                     </CardContent>
                   </button>
                 </Card>
@@ -641,7 +761,12 @@ export function PersistentDocuments({
         <section
           className="space-y-4"
           aria-labelledby="document-location-title"
-          aria-busy={uploading || movingDocumentId !== null || archivingDocumentId !== null}
+          aria-busy={
+            uploading ||
+            movingDocumentId !== null ||
+            movingFolderId !== null ||
+            archivingDocumentId !== null
+          }
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
@@ -649,13 +774,39 @@ export function PersistentDocuments({
                 {folderPath.at(-1)?.name ?? activeCase.referencia}
               </h2>
               <p id="document-move-help" className="text-muted-foreground mt-1 text-sm">
-                Arrastra un documento a una carpeta o usa el botón Mover para elegir el destino con
-                teclado.
+                Arrastra archivos o carpetas, o usa Mover para elegir el destino con teclado.
               </p>
             </div>
-            <span className="text-muted-foreground text-xs">
-              {activeDocuments.length} documento{activeDocuments.length === 1 ? '' : 's'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs">
+                {activeFolders.length} carpeta{activeFolders.length === 1 ? '' : 's'} ·{' '}
+                {activeDocuments.length} archivo{activeDocuments.length === 1 ? '' : 's'}
+              </span>
+              <div className="border-border bg-card inline-flex rounded-md border p-0.5">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={view === 'grid' ? 'secondary' : 'ghost'}
+                  aria-label="Vista de cuadrícula"
+                  aria-pressed={view === 'grid'}
+                  title="Vista de cuadrícula"
+                  onClick={() => setView('grid')}
+                >
+                  <Grid2X2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={view === 'list' ? 'secondary' : 'ghost'}
+                  aria-label="Vista de lista"
+                  aria-pressed={view === 'list'}
+                  title="Vista de lista"
+                  onClick={() => setView('list')}
+                >
+                  <List className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
           </div>
           <Button
             type="button"
@@ -665,120 +816,214 @@ export function PersistentDocuments({
             aria-describedby="document-move-help"
             onClick={() => {
               if (draggedDocumentId) void moveDocument(draggedDocumentId, null)
-              else
-                toast.info('Usa el botón Mover de un documento para elegir la raíz como destino.')
+              else if (draggedFolderId) void moveFolder(draggedFolderId, null)
+              else toast.info('Usa Mover en un archivo o carpeta para elegir la raíz como destino.')
             }}
             onDragOver={(event) => {
               event.preventDefault()
               setDragTargetFolderId(null)
             }}
             onDragLeave={() => setDragTargetFolderId(undefined)}
-            onDrop={(event) => dropDocument(event, null)}
+            onDrop={(event) => dropItem(event, null)}
           >
-            Arrastra un documento aquí para moverlo a la raíz de {activeCase.referencia}.
+            Arrastra un archivo o carpeta aquí para moverlo a la raíz de {activeCase.referencia}.
           </Button>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {activeFolders.map((folder) => (
-              <Card
-                className={`border-primary/30 cursor-pointer transition-colors ${dragTargetFolderId === folder.id ? 'border-primary bg-primary/5 ring-primary/30 ring-2' : 'hover:bg-muted/40'}`}
-                key={folder.id}
-                onDragOver={(event) => {
-                  event.preventDefault()
-                  setDragTargetFolderId(folder.id)
-                }}
-                onDragLeave={() => setDragTargetFolderId(undefined)}
-                onDrop={(event) => dropDocument(event, folder.id)}
-              >
-                <button
-                  type="button"
-                  className="focus-visible:ring-ring w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-offset-2"
-                  onClick={() => setLocation({ caseId, folderId: folder.id })}
-                  aria-label={`Abrir carpeta ${folder.name}`}
-                >
-                  <CardContent className="flex items-center gap-3 pt-5">
-                    <FolderOpen className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{folder.name}</p>
-                      <p className="text-muted-foreground text-xs">
-                        Suelta aquí para mover documentos
-                      </p>
+          {view === 'grid' ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {activeFolders.map((folder) => {
+                const tone = folderTone(folder.id)
+                const fileCount = documentCountByFolder.get(folder.id) ?? 0
+                const childCount = childFolderCountByFolder.get(folder.id) ?? 0
+                return (
+                  <Card
+                    className={`cursor-grab overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${dragTargetFolderId === folder.id ? 'border-primary bg-primary/5 ring-primary/30 ring-2' : 'hover:border-primary/40'} ${draggedFolderId === folder.id ? 'opacity-50' : ''}`}
+                    draggable
+                    key={folder.id}
+                    onDragStart={(event) => beginFolderDrag(event, folder.id)}
+                    onDragEnd={endDrag}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      setDragTargetFolderId(folder.id)
+                    }}
+                    onDragLeave={() => setDragTargetFolderId(undefined)}
+                    onDrop={(event) => dropItem(event, folder.id)}
+                  >
+                    <button
+                      type="button"
+                      className="focus-visible:ring-ring w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-offset-2"
+                      onClick={() => setLocation({ caseId, folderId: folder.id })}
+                      aria-label={`Abrir carpeta ${folder.name}`}
+                    >
+                      <CardContent className="space-y-3 pt-5">
+                        <div className={`inline-flex rounded-xl p-3 ${tone}`}>
+                          <FolderOpen className="h-7 w-7" aria-hidden="true" />
+                        </div>
+                        <div>
+                          <p className="truncate font-medium">{folder.name}</p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {fileCount} archivo{fileCount === 1 ? '' : 's'} · {childCount}{' '}
+                            subcarpeta
+                            {childCount === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          Arrastra aquí archivos o carpetas
+                        </p>
+                      </CardContent>
+                    </button>
+                    <div className="border-border border-t px-4 py-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={movingFolderId !== null}
+                        onClick={() => openFolderMoveDialog(folder)}
+                      >
+                        <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover carpeta
+                      </Button>
                     </div>
-                  </CardContent>
-                </button>
-              </Card>
-            ))}
-          </div>
-          <div className="space-y-2">
-            {activeDocuments.map((doc) => (
-              <Card
-                className={draggedDocumentId === doc.id ? 'ring-primary/30 opacity-50 ring-2' : ''}
-                draggable
-                key={doc.id}
-                onDragStart={(event) => beginDocumentDrag(event, doc.id)}
-                onDragEnd={() => {
-                  setDraggedDocumentId(null)
-                  setDragTargetFolderId(undefined)
-                }}
-                aria-describedby="document-move-help"
-              >
-                <CardContent className="flex items-center justify-between gap-3 pt-5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <GripVertical
-                      className="text-muted-foreground h-5 w-5 shrink-0"
-                      aria-hidden="true"
-                    />
-                    <FileText className="text-muted-foreground h-5 w-5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{doc.original_name}</p>
-                      <p className="text-muted-foreground text-xs">
-                        v{doc.version} · {formatSize(doc.size_bytes)} · {doc.category}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Badge>{doc.confidentiality}</Badge>
+                  </Card>
+                )
+              })}
+              {activeDocuments.map((doc) => {
+                const visual = documentVisual(doc)
+                return (
+                  <Card
+                    className={`overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md ${draggedDocumentId === doc.id ? 'ring-primary/30 opacity-50 ring-2' : ''}`}
+                    draggable
+                    key={doc.id}
+                    onDragStart={(event) => beginDocumentDrag(event, doc.id)}
+                    onDragEnd={endDrag}
+                    aria-describedby="document-move-help"
+                  >
+                    <CardContent className="space-y-4 pt-5">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <GripVertical
+                            className="text-muted-foreground h-5 w-5 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <div className={`rounded-xl p-3 ${visual.tone}`}>
+                            <visual.Icon className="h-6 w-6" aria-hidden="true" />
+                          </div>
+                        </div>
+                        <Badge variant="outline">{visual.label}</Badge>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium" title={doc.original_name}>
+                          {doc.original_name}
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          v{doc.version} · {formatSize(doc.size_bytes)} · {doc.category}
+                        </p>
+                      </div>
+                      <DocumentActions
+                        document={doc}
+                        uploading={uploading}
+                        moving={movingDocumentId !== null}
+                        archiving={archivingDocumentId !== null}
+                        onMove={openMoveDialog}
+                        onUploadVersion={uploadVersion}
+                        onDownload={download}
+                        onArchive={setDocumentToArchive}
+                      />
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <ul className="divide-y rounded-lg border" aria-label="Documentos en lista">
+              {activeFolders.map((folder) => {
+                const tone = folderTone(folder.id)
+                const fileCount = documentCountByFolder.get(folder.id) ?? 0
+                return (
+                  <li className="flex items-center" key={folder.id}>
+                    <button
+                      type="button"
+                      className={`focus-visible:ring-ring flex w-full items-center gap-3 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-inset ${dragTargetFolderId === folder.id ? 'bg-primary/5' : 'hover:bg-muted/50'}`}
+                      draggable
+                      onClick={() => setLocation({ caseId, folderId: folder.id })}
+                      onDragStart={(event) => beginFolderDrag(event, folder.id)}
+                      onDragEnd={endDrag}
+                      onDragOver={(event) => {
+                        event.preventDefault()
+                        setDragTargetFolderId(folder.id)
+                      }}
+                      onDragLeave={() => setDragTargetFolderId(undefined)}
+                      onDrop={(event) => dropItem(event, folder.id)}
+                      aria-label={`Abrir carpeta ${folder.name}`}
+                    >
+                      <span className={`rounded-lg p-2 ${tone}`}>
+                        <FolderOpen className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{folder.name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          Carpeta · {fileCount} archivo{fileCount === 1 ? '' : 's'}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground hidden text-xs sm:block">
+                        Suelta aquí archivos o carpetas
+                      </span>
+                    </button>
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => openMoveDialog(doc)}
-                      disabled={movingDocumentId !== null}
+                      variant="ghost"
+                      disabled={movingFolderId !== null}
+                      onClick={() => openFolderMoveDialog(folder)}
                     >
                       <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
                     </Button>
-                    <label
-                      className={`border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium ${uploading || doc.content_status !== 'validated' ? 'pointer-events-none opacity-50' : ''}`}
+                  </li>
+                )
+              })}
+              {activeDocuments.map((doc) => {
+                const visual = documentVisual(doc)
+                return (
+                  <li
+                    className={`hover:bg-muted/50 flex flex-wrap items-center gap-3 px-4 py-3 transition-colors ${draggedDocumentId === doc.id ? 'bg-primary/5 opacity-50' : ''}`}
+                    key={doc.id}
+                    aria-describedby="document-move-help"
+                  >
+                    <button
+                      type="button"
+                      draggable
+                      className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+                      aria-label={`Arrastrar ${doc.original_name}`}
+                      onDragStart={(event) => beginDocumentDrag(event, doc.id)}
+                      onDragEnd={endDrag}
                     >
-                      <Upload className="h-4 w-4" /> Nueva versión
-                      <input
-                        className="sr-only"
-                        type="file"
-                        accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-                        onChange={(event) => void uploadVersion(doc, event)}
-                        disabled={uploading || doc.content_status !== 'validated'}
-                      />
-                    </label>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={doc.content_status !== 'validated'}
-                      onClick={() => void download(doc)}
-                      aria-label={`Descargar ${doc.original_name}`}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={archivingDocumentId !== null}
-                      onClick={() => setDocumentToArchive(doc)}
-                      aria-label={`Archivar ${doc.original_name}`}
-                    >
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <GripVertical className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <span className={`rounded-lg p-2 ${visual.tone}`}>
+                      <visual.Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium" title={doc.original_name}>
+                        {doc.original_name}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {visual.label} · {formatSize(doc.size_bytes)} · v{doc.version} ·{' '}
+                        {formatDocumentDate(doc.updated_at)}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{doc.confidentiality}</Badge>
+                    <DocumentActions
+                      document={doc}
+                      uploading={uploading}
+                      moving={movingDocumentId !== null}
+                      archiving={archivingDocumentId !== null}
+                      onMove={openMoveDialog}
+                      onUploadVersion={uploadVersion}
+                      onDownload={download}
+                      onArchive={setDocumentToArchive}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          <div className="space-y-2">
             {!activeFolders.length && !activeDocuments.length ? (
               <div className="border-border bg-muted/30 rounded-lg border border-dashed p-8 text-center">
                 <FolderOpen className="text-muted-foreground mx-auto h-7 w-7" aria-hidden="true" />
@@ -917,6 +1162,77 @@ export function PersistentDocuments({
         </DialogContent>
       </Dialog>
       <Dialog
+        open={folderToMove !== null}
+        onOpenChange={(open) => {
+          if (!open && movingFolderId === null) setFolderToMove(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mover carpeta</DialogTitle>
+            <DialogDescription>
+              {folderToMove
+                ? `Elige la nueva ubicación para “${folderToMove.name}”. Sus archivos y subcarpetas se conservarán.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="folder-move-destination">Destino</Label>
+              <select
+                id="folder-move-destination"
+                value={moveTargetFolderId}
+                onChange={(event) => setMoveTargetFolderId(event.target.value)}
+                className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 text-sm focus-visible:ring-2"
+              >
+                <option value="root">Raíz del expediente</option>
+                {folderDestinationOptions
+                  .filter(
+                    (folder) =>
+                      !folderToMove || !isDescendantFolder(folderRows, folderToMove.id, folder.id),
+                  )
+                  .map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.label}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="bg-muted/60 text-muted-foreground flex gap-2 rounded-md p-3 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              No se permiten ciclos ni mover una carpeta a otro expediente.
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={movingFolderId !== null}
+                onClick={() => setFolderToMove(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !folderToMove ||
+                  movingFolderId !== null ||
+                  (folderToMove.parent_id ?? 'root') === moveTargetFolderId
+                }
+                onClick={() => {
+                  if (folderToMove)
+                    void moveFolder(
+                      folderToMove.id,
+                      moveTargetFolderId === 'root' ? null : moveTargetFolderId,
+                    )
+                }}
+              >
+                {movingFolderId ? 'Moviendo…' : 'Confirmar movimiento'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={documentToArchive !== null}
         onOpenChange={(open) => {
           if (!open && archivingDocumentId === null) setDocumentToArchive(null)
@@ -960,6 +1276,120 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   return `${Math.ceil(bytes / 1024)} KB`
 }
+
+function folderTone(value: string) {
+  const hash = Array.from(value).reduce((total, character) => total + character.charCodeAt(0), 0)
+  return FOLDER_TONES[hash % FOLDER_TONES.length]
+}
+
+function isDescendantFolder(
+  folders: DocumentFolderRow[],
+  folderId: string,
+  candidateParentId: string,
+) {
+  let currentFolderId: string | null = candidateParentId
+  const visited = new Set<string>()
+  while (currentFolderId && !visited.has(currentFolderId)) {
+    if (currentFolderId === folderId) return true
+    visited.add(currentFolderId)
+    currentFolderId = folders.find((folder) => folder.id === currentFolderId)?.parent_id ?? null
+  }
+  return false
+}
+
+function documentVisual(document: CaseDocumentRow) {
+  if (document.mime_type === 'application/pdf')
+    return { Icon: FileText, label: 'PDF', tone: 'bg-rose-500/15 text-rose-700 dark:text-rose-300' }
+  if (document.mime_type.includes('spreadsheetml'))
+    return {
+      Icon: FileSpreadsheet,
+      label: 'Hoja de cálculo',
+      tone: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+    }
+  if (document.mime_type.includes('wordprocessingml'))
+    return {
+      Icon: FileType2,
+      label: 'Documento',
+      tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+    }
+  if (document.mime_type.startsWith('image/'))
+    return {
+      Icon: FileImage,
+      label: 'Imagen',
+      tone: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+    }
+  return { Icon: FileText, label: 'Archivo', tone: 'bg-muted text-muted-foreground' }
+}
+
+function formatDocumentDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? 'Sin fecha'
+    : date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function DocumentActions({
+  document,
+  uploading,
+  moving,
+  archiving,
+  onMove,
+  onUploadVersion,
+  onDownload,
+  onArchive,
+}: {
+  document: CaseDocumentRow
+  uploading: boolean
+  moving: boolean
+  archiving: boolean
+  onMove: (document: CaseDocumentRow) => void
+  onUploadVersion: (
+    document: CaseDocumentRow,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>
+  onDownload: (document: CaseDocumentRow) => Promise<void>
+  onArchive: (document: CaseDocumentRow) => void
+}) {
+  const canUseContent = document.content_status === 'validated'
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant="outline" onClick={() => onMove(document)} disabled={moving}>
+        <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
+      </Button>
+      <label
+        className={`border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium ${uploading || !canUseContent ? 'pointer-events-none opacity-50' : ''}`}
+      >
+        <Upload className="h-4 w-4" aria-hidden="true" /> Nueva versión
+        <input
+          className="sr-only"
+          type="file"
+          accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+          onChange={(event) => void onUploadVersion(document, event)}
+          disabled={uploading || !canUseContent}
+        />
+      </label>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={!canUseContent}
+        onClick={() => void onDownload(document)}
+        aria-label={`Descargar ${document.original_name}`}
+      >
+        <Download className="h-4 w-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={archiving}
+        onClick={() => onArchive(document)}
+        aria-label={`Archivar ${document.original_name}`}
+      >
+        <Archive className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 async function sha256(file: File) {
   const bytes = await file.arrayBuffer()
   const digest = await crypto.subtle.digest('SHA-256', bytes)
