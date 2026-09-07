@@ -1,85 +1,85 @@
-import { KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { KeyRound, LoaderCircle, ShieldCheck } from 'lucide-react'
+import { type FormEvent, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { getSupabaseBrowserClient } from "@/shared/infrastructure/supabase";
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
-type PendingFactor = { id: string; qrCode: string };
+type PendingFactor = { id: string; qrCode: string }
 
 export function MfaTotpCard() {
-  const [loading, setLoading] = useState(true);
-  const [verified, setVerified] = useState(false);
-  const [pending, setPending] = useState<PendingFactor | null>(null);
-  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(true)
+  const [verified, setVerified] = useState(false)
+  const [pending, setPending] = useState<PendingFactor | null>(null)
+  const [code, setCode] = useState('')
 
   const refresh = async () => {
-    const client = getSupabaseBrowserClient();
-    if (!client) return;
+    const client = getSupabaseBrowserClient()
+    if (!client) return
     const [factors, assurance] = await Promise.all([
       client.auth.mfa.listFactors(),
       client.auth.mfa.getAuthenticatorAssuranceLevel(),
-    ]);
-    if (factors.error || assurance.error) throw factors.error ?? assurance.error;
-    const factor = factors.data.totp.find((item) => item.status === "verified");
-    setVerified(Boolean(factor && assurance.data.currentLevel === "aal2"));
-    setPending(null);
-  };
+    ])
+    if (factors.error || assurance.error) throw factors.error ?? assurance.error
+    const factor = factors.data.totp.find((item) => item.status === 'verified')
+    setVerified(Boolean(factor && assurance.data.currentLevel === 'aal2'))
+    setPending(null)
+  }
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Loads the remote MFA session state.
     void refresh()
-      .catch(() => toast.error("No se ha podido consultar el estado de MFA."))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => toast.error('No se ha podido consultar el estado de MFA.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const startEnrollment = async () => {
-    const client = getSupabaseBrowserClient();
-    if (!client) return;
-    setLoading(true);
+    const client = getSupabaseBrowserClient()
+    if (!client) return
+    setLoading(true)
     try {
       const { data, error } = await client.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "LEX Authenticator",
-        issuer: "LEX",
-      });
-      if (error || !data.totp?.qr_code) throw error ?? new Error("No se ha generado el código QR.");
-      setPending({ id: data.id, qrCode: data.totp.qr_code });
+        factorType: 'totp',
+        friendlyName: 'LEX Authenticator',
+        issuer: 'LEX',
+      })
+      if (error || !data.totp?.qr_code) throw error ?? new Error('No se ha generado el código QR.')
+      setPending({ id: data.id, qrCode: data.totp.qr_code })
     } catch {
-      toast.error("No se ha podido iniciar la configuración de MFA.");
+      toast.error('No se ha podido iniciar la configuración de MFA.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const verify = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!pending || code.trim().length !== 6) return;
-    const client = getSupabaseBrowserClient();
-    if (!client) return;
-    setLoading(true);
+    event.preventDefault()
+    if (!pending || code.trim().length !== 6) return
+    const client = getSupabaseBrowserClient()
+    if (!client) return
+    setLoading(true)
     try {
-      const challenge = await client.auth.mfa.challenge({ factorId: pending.id });
-      if (challenge.error || !challenge.data) throw challenge.error;
+      const challenge = await client.auth.mfa.challenge({ factorId: pending.id })
+      if (challenge.error || !challenge.data) throw challenge.error
       const result = await client.auth.mfa.verify({
         factorId: pending.id,
         challengeId: challenge.data.id,
         code: code.trim(),
-      });
-      if (result.error) throw result.error;
-      await client.auth.refreshSession();
-      setVerified(true);
-      setPending(null);
-      setCode("");
-      toast.success("MFA activado para esta sesión.");
+      })
+      if (result.error) throw result.error
+      await client.auth.refreshSession()
+      setVerified(true)
+      setPending(null)
+      setCode('')
+      toast.success('MFA activado para esta sesión.')
     } catch {
-      toast.error("El código de verificación no es válido.");
+      toast.error('El código de verificación no es válido.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <Card className="border-border/80 shadow-sm">
@@ -111,7 +111,7 @@ export function MfaTotpCard() {
               pattern="[0-9]{6}"
               required
               value={code}
-              onChange={(event) => setCode(event.target.value.replace(/[^0-9]/g, ""))}
+              onChange={(event) => setCode(event.target.value.replace(/[^0-9]/g, ''))}
               placeholder="Código de seis dígitos"
             />
             <Button className="w-full" disabled={loading} type="submit">
@@ -139,5 +139,5 @@ export function MfaTotpCard() {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

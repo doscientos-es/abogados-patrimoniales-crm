@@ -130,7 +130,10 @@ export function Field({
   editControl?: ReactNode
   /** Valor alternativo que necesita el control durante la edición. */
   editValue?: string
-  inputProps?: Omit<ComponentProps<typeof Input>, 'aria-label' | 'defaultValue' | 'onChange' | 'value'>
+  inputProps?: Omit<
+    ComponentProps<typeof Input>,
+    'aria-label' | 'defaultValue' | 'onChange' | 'value'
+  >
 }) {
   const editing = useFichaEdit()
   const editableValue = typeof value === 'string' || value === undefined

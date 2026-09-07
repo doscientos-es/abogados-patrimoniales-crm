@@ -1,64 +1,64 @@
-import { PopoverContent, PopoverTrigger } from "@doscientos/ui";
-import { KeyRound, LoaderCircle, LogIn, LogOut, Scale } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
-import { toast } from "sonner";
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
+import { KeyRound, LoaderCircle, LogIn, LogOut, Scale } from 'lucide-react'
+import { type FormEvent, type ReactNode, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 import {
   signInWithPassword,
   signOut,
   updatePassword,
   useAuthSession,
-} from "../application/auth-session";
-import { useActiveMembership } from "../application/membership";
+} from '../application/auth-session'
+import { useActiveMembership } from '../application/membership'
 
 export function AccessGate({ children }: { children: ReactNode }) {
-  const session = useAuthSession();
-  const membership = useActiveMembership(session.user?.id);
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
 
-  if (session.status === "unconfigured") return <ConfigurationRequired />;
-  if (session.status === "loading")
+  if (session.status === 'unconfigured') return <ConfigurationRequired />
+  if (session.status === 'loading')
     return (
       <Centered>
         <LoaderCircle className="h-5 w-5 animate-spin" />
       </Centered>
-    );
-  if (session.status === "signed-out") return <SignInForm />;
+    )
+  if (session.status === 'signed-out') return <SignInForm />
   if (membership.isLoading)
     return (
       <Centered>
         <LoaderCircle className="h-5 w-5 animate-spin" />
       </Centered>
-    );
+    )
   if (membership.isError)
     return (
       <Centered>
         <p>No se ha podido comprobar tu acceso. Inténtalo de nuevo.</p>
       </Centered>
-    );
-  if (!membership.data) return <InvitationRequired />;
-  return <>{children}</>;
+    )
+  if (!membership.data) return <InvitationRequired />
+  return <>{children}</>
 }
 
 export function AccountMenu() {
-  const session = useAuthSession();
-  const [sending, setSending] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState("");
+  const session = useAuthSession()
+  const [sending, setSending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [password, setPassword] = useState('')
 
-  if (session.status !== "signed-in") return null;
+  if (session.status !== 'signed-in') return null
 
-  const email = session.user.email ?? "Cuenta sin correo";
-  const localPart = email.split("@")[0] ?? "";
+  const email = session.user.email ?? 'Cuenta sin correo'
+  const localPart = email.split('@')[0] ?? ''
   const initials = localPart
     .split(/[._-]+/)
     .filter(Boolean)
     .map((part) => part[0]?.toUpperCase())
-    .join("")
-    .slice(0, 2);
+    .join('')
+    .slice(0, 2)
 
   return (
     <PopoverTrigger>
@@ -72,7 +72,7 @@ export function AccountMenu() {
           <span className="text-muted-foreground block">Sesión activa</span>
         </span>
         <span className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-          {initials || "CU"}
+          {initials || 'CU'}
         </span>
       </Button>
       <PopoverContent placement="bottom end" className="w-72 p-2">
@@ -92,20 +92,20 @@ export function AccountMenu() {
           <form
             className="space-y-2 px-2 py-2"
             onSubmit={(event) => {
-              event.preventDefault();
+              event.preventDefault()
               if (password.length < 8) {
-                toast.error("La contraseña debe tener al menos ocho caracteres.");
-                return;
+                toast.error('La contraseña debe tener al menos ocho caracteres.')
+                return
               }
-              setSending(true);
+              setSending(true)
               void updatePassword(password)
                 .then(() => {
-                  setPassword("");
-                  setShowPassword(false);
-                  toast.success("Contraseña actualizada.");
+                  setPassword('')
+                  setShowPassword(false)
+                  toast.success('Contraseña actualizada.')
                 })
-                .catch(() => toast.error("No se ha podido actualizar la contraseña."))
-                .finally(() => setSending(false));
+                .catch(() => toast.error('No se ha podido actualizar la contraseña.'))
+                .finally(() => setSending(false))
             }}
           >
             <Input
@@ -128,31 +128,31 @@ export function AccountMenu() {
           size="sm"
           variant="ghost"
           onClick={() => {
-            setSending(true);
+            setSending(true)
             void signOut()
-              .catch(() => toast.error("No se ha podido cerrar la sesión."))
-              .finally(() => setSending(false));
+              .catch(() => toast.error('No se ha podido cerrar la sesión.'))
+              .finally(() => setSending(false))
           }}
         >
           <LogOut className="h-4 w-4" />
-          {sending ? "Cerrando sesión…" : "Cerrar sesión"}
+          {sending ? 'Cerrando sesión…' : 'Cerrar sesión'}
         </Button>
       </PopoverContent>
     </PopoverTrigger>
-  );
+  )
 }
 
 function SignInForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [sending, setSending] = useState(false);
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [sending, setSending] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSending(true);
+    event.preventDefault()
+    setSending(true)
     void signInWithPassword(email.trim(), password)
-      .catch(() => toast.error("Correo o contraseña no válidos."))
-      .finally(() => setSending(false));
-  };
+      .catch(() => toast.error('Correo o contraseña no válidos.'))
+      .finally(() => setSending(false))
+  }
   return (
     <Centered>
       <Card className="w-full max-w-md">
@@ -183,13 +183,13 @@ function SignInForm() {
             />
             <Button className="w-full" disabled={sending} type="submit">
               <LogIn className="h-4 w-4" />
-              {sending ? "Accediendo…" : "Acceder"}
+              {sending ? 'Accediendo…' : 'Acceder'}
             </Button>
           </form>
         </CardContent>
       </Card>
     </Centered>
-  );
+  )
 }
 
 function InvitationRequired() {
@@ -204,7 +204,7 @@ function InvitationRequired() {
         </CardHeader>
       </Card>
     </Centered>
-  );
+  )
 }
 
 function ConfigurationRequired() {
@@ -219,7 +219,7 @@ function ConfigurationRequired() {
         </CardHeader>
       </Card>
     </Centered>
-  );
+  )
 }
 
 function Centered({ children }: { children: ReactNode }) {
@@ -227,5 +227,5 @@ function Centered({ children }: { children: ReactNode }) {
     <div className="bg-background text-muted-foreground flex min-h-screen items-center justify-center p-4 text-center text-sm">
       {children}
     </div>
-  );
+  )
 }

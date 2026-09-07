@@ -112,8 +112,8 @@ import {
   useActualizarEstadoContacto,
   useContacto,
 } from '@/features/contactos'
-import { operacionesDelContacto } from '@/features/contactos/application/contact-related-operations'
 import { valorFechaParaInput } from '@/features/contactos/application/contact-form-values'
+import { operacionesDelContacto } from '@/features/contactos/application/contact-related-operations'
 import { NuevaTareaDialog, useOportunidades } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import { useFacturas } from '@/features/facturacion/infrastructure/supabase-facturas'
@@ -177,13 +177,7 @@ function FichaPage() {
         facturas: facturasQuery.data ?? [],
         tareas: tareasQuery.data ?? [],
       }),
-    [
-      expedientesQuery.data,
-      facturasQuery.data,
-      id,
-      oportunidadesQuery.data,
-      tareasQuery.data,
-    ],
+    [expedientesQuery.data, facturasQuery.data, id, oportunidadesQuery.data, tareasQuery.data],
   )
   const cargandoOperaciones =
     expedientesQuery.isPending ||
@@ -678,7 +672,6 @@ function TabResumen({
           <NotasDelContacto contacto={contacto} resumen />
         </CardContent>
       </Card>
-
     </>
   )
 }
@@ -826,7 +819,9 @@ function TabGenerales({
               editControl={
                 <Select
                   value={contacto.relacion}
-                  onValueChange={(relacion) => onChange({ relacion: relacion as Contacto['relacion'] })}
+                  onValueChange={(relacion) =>
+                    onChange({ relacion: relacion as Contacto['relacion'] })
+                  }
                 >
                   <SelectTrigger className="mt-1" aria-label="Relación con el despacho">
                     <SelectValue />

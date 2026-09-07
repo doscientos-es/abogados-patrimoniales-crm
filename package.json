@@ -1,6 +1,10 @@
 {
   "name": "abogados-patrimoniales-crm",
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22.18"
+  },
   "sideEffects": false,
   "scripts": {
     "dev": "vite dev",
@@ -14,12 +18,11 @@
     "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "quality": "pnpm format:check && pnpm lint && pnpm typecheck",
+    "check": "pnpm quality && pnpm structure:check && pnpm test && pnpm build",
     "test": "vitest run"
   },
   "dependencies": {
-    "@doscientos/billing": "link:..\\..\\modules\\billing",
     "@doscientos/ui": "^0.1.29",
-    "@doscientos/verifactu": "link:..\\..\\modules\\verifactu",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",
