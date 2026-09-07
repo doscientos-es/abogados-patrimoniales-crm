@@ -6,6 +6,7 @@
 
 - Build, TypeScript y 13 pruebas unitarias pasan; no hay pruebas E2E.
 - La puerta de lint estaba rota con 31 errores y no existía CI.
+- El control estructural conserva una línea base explícita de nueve incumplimientos legacy y bloquea regresiones.
 - Supabase productivo está activo y tiene aplicadas las 34 migraciones versionadas del repositorio.
 - Hay autenticación, membresía por despacho, MFA, RLS y Storage privado, pero faltan cierres de revisión.
 - El código todavía mezcla repositorios Supabase con semillas y stores operativos en `localStorage`.
