@@ -10,17 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ActuacionesRouteImport } from './routes/actuaciones'
-import { Route as AlertasRouteImport } from './routes/alertas'
 import { Route as CalendarioRouteImport } from './routes/calendario'
-import { Route as ComunicacionesRouteImport } from './routes/comunicaciones'
 import { Route as ConfiguracionRouteImport } from './routes/configuracion'
 import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
-import { Route as EjecucionesRouteImport } from './routes/ejecuciones'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as NotasRouteImport } from './routes/notas'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as ContactosIndexRouteImport } from './routes/contactos.index'
 import { Route as ContactosIdRouteImport } from './routes/contactos.$id'
@@ -31,31 +26,15 @@ import { Route as OportunidadesIndexRouteImport } from './routes/oportunidades.i
 import { Route as OportunidadesIdRouteImport } from './routes/oportunidades.$id'
 import { Route as OportunidadesNuevaRouteImport } from './routes/oportunidades.nueva'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
-import { Route as PresupuestosIdRouteImport } from './routes/presupuestos.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ActuacionesRoute = ActuacionesRouteImport.update({
-  id: '/actuaciones',
-  path: '/actuaciones',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AlertasRoute = AlertasRouteImport.update({
-  id: '/alertas',
-  path: '/alertas',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CalendarioRoute = CalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ComunicacionesRoute = ComunicacionesRouteImport.update({
-  id: '/comunicaciones',
-  path: '/comunicaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracionRoute = ConfiguracionRouteImport.update({
@@ -73,11 +52,6 @@ const DocumentosRoute = DocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EjecucionesRoute = EjecucionesRouteImport.update({
-  id: '/ejecuciones',
-  path: '/ejecuciones',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FacturacionRoute = FacturacionRouteImport.update({
   id: '/facturacion',
   path: '/facturacion',
@@ -86,11 +60,6 @@ const FacturacionRoute = FacturacionRouteImport.update({
 const NotasRoute = NotasRouteImport.update({
   id: '/notas',
   path: '/notas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TareasRoute = TareasRouteImport.update({
@@ -143,32 +112,21 @@ const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
   path: '/presupuestos/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PresupuestosIdRoute = PresupuestosIdRouteImport.update({
-  id: '/presupuestos/$id',
-  path: '/presupuestos/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/actuaciones': typeof ActuacionesRoute
-  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
-  '/comunicaciones': typeof ComunicacionesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
-  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
-  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
-  '/presupuestos/$id': typeof PresupuestosIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
@@ -176,24 +134,18 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/actuaciones': typeof ActuacionesRoute
-  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
-  '/comunicaciones': typeof ComunicacionesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
-  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
-  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
-  '/presupuestos/$id': typeof PresupuestosIdRoute
   '/contactos': typeof ContactosIndexRoute
   '/expedientes': typeof ExpedientesIndexRoute
   '/oportunidades': typeof OportunidadesIndexRoute
@@ -202,24 +154,18 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/actuaciones': typeof ActuacionesRoute
-  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
-  '/comunicaciones': typeof ComunicacionesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
-  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/notas': typeof NotasRoute
-  '/onboarding': typeof OnboardingRoute
   '/tareas': typeof TareasRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
-  '/presupuestos/$id': typeof PresupuestosIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
@@ -229,24 +175,18 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/actuaciones'
-    | '/alertas'
     | '/calendario'
-    | '/comunicaciones'
     | '/configuracion'
     | '/crm'
     | '/documentos'
-    | '/ejecuciones'
     | '/facturacion'
     | '/notas'
-    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
-    | '/presupuestos/$id'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
@@ -254,24 +194,18 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/actuaciones'
-    | '/alertas'
     | '/calendario'
-    | '/comunicaciones'
     | '/configuracion'
     | '/crm'
     | '/documentos'
-    | '/ejecuciones'
     | '/facturacion'
     | '/notas'
-    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
-    | '/presupuestos/$id'
     | '/contactos'
     | '/expedientes'
     | '/oportunidades'
@@ -279,24 +213,18 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/actuaciones'
-    | '/alertas'
     | '/calendario'
-    | '/comunicaciones'
     | '/configuracion'
     | '/crm'
     | '/documentos'
-    | '/ejecuciones'
     | '/facturacion'
     | '/notas'
-    | '/onboarding'
     | '/tareas'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
-    | '/presupuestos/$id'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
@@ -305,24 +233,18 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ActuacionesRoute: typeof ActuacionesRoute
-  AlertasRoute: typeof AlertasRoute
   CalendarioRoute: typeof CalendarioRoute
-  ComunicacionesRoute: typeof ComunicacionesRoute
   ConfiguracionRoute: typeof ConfiguracionRoute
   CrmRoute: typeof CrmRoute
   DocumentosRoute: typeof DocumentosRoute
-  EjecucionesRoute: typeof EjecucionesRoute
   FacturacionRoute: typeof FacturacionRoute
   NotasRoute: typeof NotasRoute
-  OnboardingRoute: typeof OnboardingRoute
   TareasRoute: typeof TareasRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
   ExpedientesIdRoute: typeof ExpedientesIdRoute
   OportunidadesIdRoute: typeof OportunidadesIdRoute
   OportunidadesNuevaRoute: typeof OportunidadesNuevaRoute
-  PresupuestosIdRoute: typeof PresupuestosIdRoute
   ContactosIndexRoute: typeof ContactosIndexRoute
   ExpedientesIndexRoute: typeof ExpedientesIndexRoute
   OportunidadesIndexRoute: typeof OportunidadesIndexRoute
@@ -338,32 +260,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/actuaciones': {
-      id: '/actuaciones'
-      path: '/actuaciones'
-      fullPath: '/actuaciones'
-      preLoaderRoute: typeof ActuacionesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/alertas': {
-      id: '/alertas'
-      path: '/alertas'
-      fullPath: '/alertas'
-      preLoaderRoute: typeof AlertasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/calendario': {
       id: '/calendario'
       path: '/calendario'
       fullPath: '/calendario'
       preLoaderRoute: typeof CalendarioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/comunicaciones': {
-      id: '/comunicaciones'
-      path: '/comunicaciones'
-      fullPath: '/comunicaciones'
-      preLoaderRoute: typeof ComunicacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracion': {
@@ -387,13 +288,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ejecuciones': {
-      id: '/ejecuciones'
-      path: '/ejecuciones'
-      fullPath: '/ejecuciones'
-      preLoaderRoute: typeof EjecucionesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/facturacion': {
       id: '/facturacion'
       path: '/facturacion'
@@ -406,13 +300,6 @@ declare module '@tanstack/react-router' {
       path: '/notas'
       fullPath: '/notas'
       preLoaderRoute: typeof NotasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tareas': {
@@ -485,36 +372,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/presupuestos/$id': {
-      id: '/presupuestos/$id'
-      path: '/presupuestos/$id'
-      fullPath: '/presupuestos/$id'
-      preLoaderRoute: typeof PresupuestosIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ActuacionesRoute: ActuacionesRoute,
-  AlertasRoute: AlertasRoute,
   CalendarioRoute: CalendarioRoute,
-  ComunicacionesRoute: ComunicacionesRoute,
   ConfiguracionRoute: ConfiguracionRoute,
   CrmRoute: CrmRoute,
   DocumentosRoute: DocumentosRoute,
-  EjecucionesRoute: EjecucionesRoute,
   FacturacionRoute: FacturacionRoute,
   NotasRoute: NotasRoute,
-  OnboardingRoute: OnboardingRoute,
   TareasRoute: TareasRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,
   ExpedientesIdRoute: ExpedientesIdRoute,
   OportunidadesIdRoute: OportunidadesIdRoute,
   OportunidadesNuevaRoute: OportunidadesNuevaRoute,
-  PresupuestosIdRoute: PresupuestosIdRoute,
   ContactosIndexRoute: ContactosIndexRoute,
   ExpedientesIndexRoute: ExpedientesIndexRoute,
   OportunidadesIndexRoute: OportunidadesIndexRoute,

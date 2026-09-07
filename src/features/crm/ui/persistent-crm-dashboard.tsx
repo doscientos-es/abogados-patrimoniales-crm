@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useOportunidades } from '@/features/crm'
 import { useTareasPersistentes } from '@/features/tareas'
+import { isOlderThan } from '@/shared/lib/time-status'
 
 import { OPPORTUNITY_STAGE_LABELS, OPPORTUNITY_STAGES } from '../application'
-
-const STALLED_BEFORE = Date.now() - 14 * 86_400_000
 
 export function PersistentCrmDashboard() {
   const session = useAuthSession()
@@ -35,7 +34,7 @@ export function PersistentCrmDashboard() {
   const opportunitiesWithTask = new Set(openTasks.map((task) => task.oportunidadId).filter(Boolean))
   const active = opportunities.filter((item) => !['won', 'lost'].includes(item.fase))
   const withoutAction = active.filter((item) => !opportunitiesWithTask.has(item.id))
-  const stalled = active.filter((item) => new Date(item.actualizada).getTime() <= STALLED_BEFORE)
+  const stalled = active.filter((item) => isOlderThan(item.actualizada, 14 * 86_400_000))
   const won = opportunities.filter((item) => item.fase === 'won')
   const conversion = opportunities.length
     ? Math.round((won.length / opportunities.length) * 100)

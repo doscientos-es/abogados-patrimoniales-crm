@@ -1,4 +1,3 @@
-import { Construction } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -71,15 +70,6 @@ export function StatTile({
   )
 }
 
-export function PendingBadge({ label = 'Pendiente de desarrollo' }: { label?: string }) {
-  return (
-    <span className="border-warning/60 bg-warning/10 text-warning-foreground inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs font-medium">
-      <Construction className="h-3.5 w-3.5" />
-      {label}
-    </span>
-  )
-}
-
 export function PendingPanel({ title, description }: { title: string; description?: string }) {
   return (
     <div className="border-border bg-muted/40 rounded-lg border border-dashed p-6 text-center">
@@ -87,9 +77,6 @@ export function PendingPanel({ title, description }: { title: string; descriptio
       {description ? (
         <p className="text-muted-foreground mx-auto mt-1 max-w-xl text-sm">{description}</p>
       ) : null}
-      <div className="mt-3 flex justify-center">
-        <PendingBadge />
-      </div>
     </div>
   )
 }

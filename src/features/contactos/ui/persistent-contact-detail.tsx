@@ -40,17 +40,9 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
     return (
       <PendingPanel title="Contacto no disponible" description="Necesitas una membresía activa." />
     )
-  const queries = [
-    contactQuery,
-    casesQuery,
-    opportunitiesQuery,
-    tasksQuery,
-    invoicesQuery,
-    notesQuery,
-  ]
-  if (queries.some((query) => query.isPending))
-    return <PendingPanel title="Cargando contacto" description="Consultando sus relaciones…" />
-  if (queries.some((query) => query.isError))
+  if (contactQuery.isPending)
+    return <PendingPanel title="Cargando contacto" description="Consultando su ficha…" />
+  if (contactQuery.isError)
     return (
       <PendingPanel
         title="No se pudo cargar el contacto"
@@ -163,7 +155,12 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
         </CardContent>
       </Card>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Related title="Expedientes" empty="Sin expedientes.">
+        <Related
+          title="Expedientes"
+          empty="Sin expedientes."
+          loading={casesQuery.isPending}
+          error={casesQuery.isError}
+        >
           {cases.map((item) => (
             <Link
               key={item.id}
@@ -175,7 +172,12 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
             </Link>
           ))}
         </Related>
-        <Related title="Leads" empty="Sin Leads.">
+        <Related
+          title="Leads"
+          empty="Sin Leads."
+          loading={opportunitiesQuery.isPending}
+          error={opportunitiesQuery.isError}
+        >
           {opportunities.map((item) => (
             <Link
               key={item.id}
@@ -187,23 +189,61 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
             </Link>
           ))}
         </Related>
-        <Related title="Tareas" empty="Sin tareas relacionadas.">
+        <Related
+          title="Tareas"
+          empty="Sin tareas relacionadas."
+          loading={tasksQuery.isPending}
+          error={tasksQuery.isError}
+        >
           {tasks.slice(0, 8).map((item) => (
-            <div key={item.id} className="flex justify-between border-b py-2 text-sm">
-              <span>{item.titulo}</span>
-              <Badge variant="outline">{item.estado}</Badge>
-            </div>
+            item.expedienteId ? (
+              <Link
+                key={item.id}
+                to="/expedientes/$id"
+                params={{ id: item.expedienteId }}
+                className="flex justify-between border-b py-2 text-sm hover:underline"
+              >
+                <span>{item.titulo}</span>
+                <Badge variant="outline">{item.estado}</Badge>
+              </Link>
+            ) : item.oportunidadId ? (
+              <Link
+                key={item.id}
+                to="/oportunidades/$id"
+                params={{ id: item.oportunidadId }}
+                className="flex justify-between border-b py-2 text-sm hover:underline"
+              >
+                <span>{item.titulo}</span>
+                <Badge variant="outline">{item.estado}</Badge>
+              </Link>
+            ) : null
           ))}
         </Related>
-        <Related title="Facturación" empty="Sin facturas.">
+        <Related
+          title="Facturación"
+          empty="Sin facturas."
+          loading={invoicesQuery.isPending}
+          error={invoicesQuery.isError}
+        >
           {invoices.map((item) => (
-            <div key={item.id} className="flex justify-between border-b py-2 text-sm">
+            <Link
+              key={item.id}
+              to="/expedientes/$id"
+              params={{ id: item.asuntoId }}
+              className="flex justify-between border-b py-2 text-sm hover:underline"
+            >
               <span>{item.referencia}</span>
               <span>{formatCurrency(item.importePendiente, item.moneda)} pendiente</span>
-            </div>
+            </Link>
           ))}
         </Related>
-        <Related title="Notas internas" empty="Sin notas." wide>
+        <Related
+          title="Notas internas"
+          empty="Sin notas."
+          loading={notesQuery.isPending}
+          error={notesQuery.isError}
+          wide
+        >
           {notes.slice(0, 8).map((item) => (
             <article key={item.id} className="border-b py-3">
               <p className="text-sm font-medium">{item.titulo || 'Nota interna'}</p>
@@ -239,11 +279,15 @@ function Related({
   title,
   empty,
   wide,
+  loading = false,
+  error = false,
   children,
 }: {
   title: string
   empty: string
   wide?: boolean
+  loading?: boolean
+  error?: boolean
   children: React.ReactNode
 }) {
   const present = Array.isArray(children) ? children.length > 0 : Boolean(children)
@@ -253,7 +297,17 @@ function Related({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {present ? children : <p className="text-muted-foreground text-sm">{empty}</p>}
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Cargando relaciones…</p>
+        ) : error ? (
+          <p className="text-destructive text-sm">
+            No se pudo cargar esta relación. Reinténtalo más tarde.
+          </p>
+        ) : present ? (
+          children
+        ) : (
+          <p className="text-muted-foreground text-sm">{empty}</p>
+        )}
       </CardContent>
     </Card>
   )

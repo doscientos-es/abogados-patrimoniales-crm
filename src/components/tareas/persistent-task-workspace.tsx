@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -219,6 +220,26 @@ function TaskCard({
           {task.venceEn ? new Date(task.venceEn).toLocaleString('es-ES') : 'Sin fecha'} ·{' '}
           {task.prioridad}
         </p>
+        <div className="flex flex-wrap gap-2">
+          {task.expedienteId ? (
+            <Link
+              to="/expedientes/$id"
+              params={{ id: task.expedienteId }}
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              Abrir expediente
+            </Link>
+          ) : null}
+          {task.oportunidadId ? (
+            <Link
+              to="/oportunidades/$id"
+              params={{ id: task.oportunidadId }}
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              Abrir Lead
+            </Link>
+          ) : null}
+        </div>
         {task.validacion === 'Propuesto' && canValidate ? (
           <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
             <Input

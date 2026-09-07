@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
-import { SectionHeader, StatTile, StatusBadge } from '@/components/common'
+import { PendingPanel, SectionHeader, StatTile, StatusBadge } from '@/components/common'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -64,6 +64,16 @@ function FacturacionPage() {
     [facturas],
   )
 
+  if (session.status === 'loading' || membership.isPending)
+    return <PendingPanel title="Cargando facturación" description="Consultando el despacho…" />
+  if (session.status !== 'signed-in' || !membership.data?.firmId)
+    return (
+      <PendingPanel
+        title="Facturación no disponible"
+        description="Necesitas una sesión y una membresía activa."
+      />
+    )
+
   return (
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader title="Facturación" subtitle="Facturas y cobros por expediente." />
@@ -94,7 +104,15 @@ function FacturacionPage() {
               {facturas.map((f) => (
                 <TableRow key={f.id}>
                   <TableCell className="font-medium">{f.referencia}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.cliente}</TableCell>
+                  <TableCell>
+                    <Link
+                      to="/contactos/$id"
+                      params={{ id: f.contactoId }}
+                      className="text-primary hover:underline"
+                    >
+                      {f.cliente}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Link
                       to="/expedientes/$id"
@@ -112,7 +130,7 @@ function FacturacionPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {membership.isLoading || facturasQuery.isLoading ? (
+              {facturasQuery.isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
                     Cargando facturas…
@@ -126,8 +144,7 @@ function FacturacionPage() {
                   </TableCell>
                 </TableRow>
               ) : null}
-              {!membership.isLoading &&
-              !facturasQuery.isLoading &&
+              {!facturasQuery.isLoading &&
               !facturasQuery.isError &&
               !facturas.length ? (
                 <TableRow>

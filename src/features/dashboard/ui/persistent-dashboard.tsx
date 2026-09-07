@@ -8,10 +8,9 @@ import { OPPORTUNITY_STAGE_LABELS, useOportunidades } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import { formatCurrency, useFacturas } from '@/features/facturacion'
 import { useTareasPersistentes } from '@/features/tareas'
+import { isOverdue } from '@/shared/lib/time-status'
 
-const CURRENT_TIME = Date.now()
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
-const overdue = (dueAt: string | null) => Boolean(dueAt && new Date(dueAt).getTime() < CURRENT_TIME)
 
 export function PersistentDashboard() {
   const session = useAuthSession()
@@ -43,7 +42,7 @@ export function PersistentDashboard() {
   const invoices = invoicesQuery.data ?? []
   const pendingTasks = tasks.filter((task) => openTask(task.estado))
   const urgentTasks = pendingTasks
-    .filter((task) => task.critico || overdue(task.venceEn))
+    .filter((task) => task.critico || isOverdue(task.venceEn))
     .sort((a, b) => (a.venceEn ?? '9999').localeCompare(b.venceEn ?? '9999'))
   const activeOpportunities = opportunities.filter((item) => !['won', 'lost'].includes(item.fase))
   const activeCases = cases.filter((item) => !item.fechaCierre)
@@ -76,7 +75,7 @@ export function PersistentDashboard() {
               className="flex justify-between gap-3 border-b py-3 last:border-0"
             >
               <span className="min-w-0 truncate text-sm font-medium">{task.titulo}</span>
-              <Badge variant={overdue(task.venceEn) ? 'destructive' : 'secondary'}>
+              <Badge variant={isOverdue(task.venceEn) ? 'destructive' : 'secondary'}>
                 {task.venceEn ? new Date(task.venceEn).toLocaleDateString('es-ES') : 'Crítica'}
               </Badge>
             </Link>

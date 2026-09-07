@@ -39,6 +39,33 @@ export function PersistentCaseDetail({
       <SectionHeader
         title={`${item.referencia} · ${item.titulo}`}
         subtitle={`${item.naturaleza} · ${item.area || 'Sin área'}`}
+        actions={
+          <>
+            <Link
+              to="/contactos/$id"
+              params={{ id: item.contactoPrincipalId }}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Contacto principal
+            </Link>
+            {item.oportunidadId ? (
+              <Link
+                to="/oportunidades/$id"
+                params={{ id: item.oportunidadId }}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Lead de origen
+              </Link>
+            ) : null}
+            <Link
+              to="/documentos"
+              search={{ case: item.id }}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Documentos
+            </Link>
+          </>
+        }
       />
       <Card>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
