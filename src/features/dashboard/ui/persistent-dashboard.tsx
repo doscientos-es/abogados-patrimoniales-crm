@@ -1,13 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Clock3,
-  Euro,
-  FolderOpen,
-  Plus,
-} from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle2, HandCoins, Plus, UsersRound } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -24,24 +16,32 @@ import {
   type ExpedientePersistido,
 } from '@/features/expedientes'
 import { formatCurrency, useFacturas, type FacturaResumen } from '@/features/facturacion'
+import { useOnboardings, type OnboardingPersistido } from '@/features/onboarding'
 import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
 import { isOverdue } from '@/shared/lib/time-status'
 
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
 const PENDING_INVOICE_STATUSES = ['draft', 'cancelled', 'paid']
 const UPCOMING_WINDOW_MS = 14 * 86_400_000
-type DashboardRoute = '/tareas' | '/calendario' | '/oportunidades' | '/expedientes' | '/facturacion'
+type DashboardRoute =
+  | '/tareas'
+  | '/calendario'
+  | '/oportunidades'
+  | '/expedientes'
+  | '/facturacion'
+  | '/onboarding'
 
 type DashboardData = {
   tasks: TareaPersistida[]
   opportunities: OportunidadResumen[]
   cases: ExpedientePersistido[]
   invoices: FacturaResumen[]
+  onboardings: OnboardingPersistido[]
   activities: ActuacionPersistida[]
 }
 
 export function buildDashboardMetrics(
-  { tasks, opportunities, cases, invoices, activities }: DashboardData,
+  { tasks, opportunities, cases, invoices, onboardings, activities }: DashboardData,
   now = Date.now(),
 ) {
   const openTasks = tasks.filter((task) => openTask(task.estado))
@@ -90,6 +90,7 @@ export function buildDashboardMetrics(
     preparationQuotes: activeOpportunities.filter((item) => item.fase === 'quote'),
     validationQuotes: activeOpportunities.filter((item) => item.fase === 'validation'),
     sentQuotes: activeOpportunities.filter((item) => item.fase === 'engagement'),
+    pendingProformas: onboardings.filter((item) => item.fase === 'proforma'),
     pendingInvoices,
     pendingAmount: pendingInvoices.reduce((total, item) => total + item.importePendiente, 0),
     casesWithOverdueTask: new Set(
@@ -112,6 +113,7 @@ export function PersistentDashboard() {
   const opportunitiesQuery = useOportunidades(firmId)
   const casesQuery = useExpedientesPersistentes(firmId)
   const invoicesQuery = useFacturas(firmId)
+  const onboardingsQuery = useOnboardings(firmId)
   const contactsQuery = useContactos(firmId)
   const activitiesQuery = useActuacionesRecientes(firmId)
   const [dashboardTime] = useState(() => Date.now())
@@ -128,6 +130,7 @@ export function PersistentDashboard() {
     opportunitiesQuery,
     casesQuery,
     invoicesQuery,
+    onboardingsQuery,
     contactsQuery,
     activitiesQuery,
   ]
@@ -144,6 +147,7 @@ export function PersistentDashboard() {
       opportunities: opportunitiesQuery.data ?? [],
       cases: casesQuery.data ?? [],
       invoices: invoicesQuery.data ?? [],
+      onboardings: onboardingsQuery.data ?? [],
       activities: activitiesQuery.data ?? [],
     },
     dashboardTime,
@@ -185,7 +189,7 @@ export function PersistentDashboard() {
   ].filter((risk) => risk.value > 0)
 
   return (
-    <main className="mx-auto max-w-[1400px] space-y-5">
+    <main className="mx-auto max-w-350 space-y-5">
       <SectionHeader
         title="Panel de inicio"
         meta={formatLongDate(dashboardTime)}
@@ -196,48 +200,7 @@ export function PersistentDashboard() {
           </Link>
         }
       />
-      <section aria-label="Resumen operativo" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <OverviewMetric
-          icon={Clock3}
-          label="Trabajo pendiente"
-          value={dashboard.openTasks.length}
-          hint={metricHint(dashboard.overdueTasks.length, 'tarea vencida', 'tareas vencidas')}
-          tone={dashboard.overdueTasks.length > 0 ? 'riesgo' : 'aviso'}
-          to="/tareas"
-        />
-        <OverviewMetric
-          icon={FolderOpen}
-          label="Expedientes activos"
-          value={dashboard.activeCases.length}
-          hint={metricHint(
-            dashboard.casesWithOverdueTask.size,
-            'expediente con tarea vencida',
-            'expedientes con tareas vencidas',
-          )}
-          tone={dashboard.casesWithOverdueTask.size > 0 ? 'riesgo' : 'exito'}
-          to="/expedientes"
-        />
-        <OverviewMetric
-          icon={AlertTriangle}
-          label="Oportunidades activas"
-          value={dashboard.activeOpportunities.length}
-          hint={metricHint(
-            dashboard.leadsWithoutFollowUp.length,
-            'oportunidad sin seguimiento',
-            'oportunidades sin seguimiento',
-          )}
-          tone={dashboard.leadsWithoutFollowUp.length > 0 ? 'aviso' : 'info'}
-          to="/oportunidades"
-        />
-        <OverviewMetric
-          icon={Euro}
-          label="Cobros pendientes"
-          value={dashboard.pendingInvoices.length}
-          hint={formatCurrency(dashboard.pendingAmount, 'EUR')}
-          tone={dashboard.pendingInvoices.length > 0 ? 'aviso' : 'exito'}
-          to="/facturacion"
-        />
-      </section>
+      <DashboardControl dashboard={dashboard} />
       <div className="grid gap-4 lg:grid-cols-3">
         <DashboardCard
           className="lg:col-span-2"
@@ -410,45 +373,204 @@ export function PersistentDashboard() {
   )
 }
 
-function OverviewMetric({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-  to,
-}: {
-  icon: typeof Clock3
+type MetricTone = 'neutro' | 'exito' | 'aviso' | 'riesgo' | 'info'
+
+type ControlMetric = {
   label: string
   value: number
-  hint: string
-  tone: 'neutro' | 'exito' | 'aviso' | 'riesgo' | 'info'
   to: DashboardRoute
+  tone: MetricTone
+}
+
+function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDashboardMetrics> }) {
+  const groups: Array<{ title: string; icon: typeof CalendarDays; metrics: ControlMetric[] }> = [
+    {
+      title: 'Trabajo diario',
+      icon: CalendarDays,
+      metrics: [
+        {
+          label: 'Tareas pendientes',
+          value: dashboard.openTasks.length,
+          to: '/tareas',
+          tone: 'aviso',
+        },
+        {
+          label: 'Tareas vencidas',
+          value: dashboard.overdueTasks.length,
+          to: '/tareas',
+          tone: 'riesgo',
+        },
+        {
+          label: 'Actuaciones de hoy',
+          value: dashboard.todayEvents.length,
+          to: '/calendario',
+          tone: 'info',
+        },
+        {
+          label: 'Próximas citas',
+          value: dashboard.upcomingEvents.length,
+          to: '/calendario',
+          tone: 'neutro',
+        },
+      ],
+    },
+    {
+      title: 'Captación',
+      icon: UsersRound,
+      metrics: [
+        {
+          label: 'Fechas críticas',
+          value: dashboard.criticalDeadlines.length,
+          to: '/calendario',
+          tone: 'riesgo',
+        },
+        {
+          label: 'Leads nuevos',
+          value: dashboard.newLeads.length,
+          to: '/oportunidades',
+          tone: 'info',
+        },
+        {
+          label: 'Sin seguimiento',
+          value: dashboard.leadsWithoutFollowUp.length,
+          to: '/oportunidades',
+          tone: 'aviso',
+        },
+        {
+          label: 'Expedientes activos',
+          value: dashboard.activeCases.length,
+          to: '/expedientes',
+          tone: 'exito',
+        },
+      ],
+    },
+    {
+      title: 'Onboarding y cobros',
+      icon: HandCoins,
+      metrics: [
+        {
+          label: 'Pendientes de elaboración',
+          value: dashboard.preparationQuotes.length,
+          to: '/oportunidades',
+          tone: 'aviso',
+        },
+        {
+          label: 'Pendientes de validación',
+          value: dashboard.validationQuotes.length,
+          to: '/oportunidades',
+          tone: 'riesgo',
+        },
+        {
+          label: 'Enviados sin respuesta',
+          value: dashboard.sentQuotes.length,
+          to: '/oportunidades',
+          tone: 'info',
+        },
+        {
+          label: 'Proformas pendientes',
+          value: dashboard.pendingProformas.length,
+          to: '/onboarding',
+          tone: 'aviso',
+        },
+        {
+          label: 'Expedientes con actuación vencida',
+          value: dashboard.casesWithOverdueTask.size,
+          to: '/expedientes',
+          tone: 'riesgo',
+        },
+      ],
+    },
+  ]
+
+  return (
+    <section aria-label="Centro de control operativo">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b pb-4">
+          <CardTitle className="font-serif text-lg">Centro de control</CardTitle>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Prioridades del despacho agrupadas por flujo de trabajo.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            {groups.map((group) => (
+              <MetricGroup key={group.title} {...group} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+function MetricGroup({
+  title,
+  icon: Icon,
+  metrics,
+}: {
+  title: string
+  icon: typeof CalendarDays
+  metrics: ControlMetric[]
 }) {
+  return (
+    <div className="p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-md">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <h2 className="text-sm font-semibold">{title}</h2>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {metrics.map((metric, index) => (
+          <CompactMetric
+            key={metric.label}
+            {...metric}
+            className={
+              metrics.length % 2 && index === metrics.length - 1 ? 'col-span-2' : undefined
+            }
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CompactMetric({
+  label,
+  value,
+  tone,
+  to,
+  className,
+}: ControlMetric & { className?: string | undefined }) {
   const toneClass = {
-    neutro: 'border-l-border text-foreground',
-    exito: 'border-l-success text-success',
-    aviso: 'border-l-warning text-warning-foreground',
-    riesgo: 'border-l-destructive text-destructive',
-    info: 'border-l-primary text-primary',
+    neutro: 'border-border',
+    exito: 'border-success/40 hover:border-success',
+    aviso: 'border-warning/40 hover:border-warning',
+    riesgo: 'border-destructive/40 hover:border-destructive',
+    info: 'border-primary/40 hover:border-primary',
+  }[tone]
+  const valueClass = {
+    neutro: 'text-foreground',
+    exito: 'text-success',
+    aviso: 'text-warning-foreground',
+    riesgo: 'text-destructive',
+    info: 'text-primary',
   }[tone]
   return (
     <Link
       to={to}
-      className={`bg-card hover:bg-muted/50 focus-visible:ring-ring group flex min-h-22 items-center gap-3 rounded-lg border border-l-[3px] px-3.5 py-3 transition-colors outline-none focus-visible:ring-2 ${toneClass}`}
+      className={`hover:bg-muted/70 focus-visible:ring-ring group bg-background/50 min-w-0 rounded-md border px-3 py-2.5 transition-colors outline-none focus-visible:ring-2 ${toneClass} ${className ?? ''}`}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="min-w-0">
-        <span className="text-muted-foreground block text-[11px] font-medium tracking-wide uppercase">
-          {label}
-        </span>
-        <span className="text-muted-foreground mt-1 block text-xs">{hint}</span>
+      <span className="flex items-start justify-between gap-2">
+        <span className="text-muted-foreground min-w-0 text-xs leading-4 font-medium">{label}</span>
+        <ArrowRight
+          className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          aria-hidden="true"
+        />
       </span>
-      <span className="ml-auto font-serif text-2xl font-semibold tabular-nums">{value}</span>
-      <ArrowRight
-        className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden="true"
-      />
+      <span className={`mt-1 block font-serif text-2xl font-semibold tabular-nums ${valueClass}`}>
+        {value}
+      </span>
       <span className="sr-only">Ver listado de {label}</span>
     </Link>
   )

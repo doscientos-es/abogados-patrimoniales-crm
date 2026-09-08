@@ -247,173 +247,171 @@ function LeadsPersistidos({
           </>
         }
       />
-      <Card className="mb-4">
-        <CardContent className="space-y-2 p-3">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
-            <label htmlFor="lead-search" className="relative min-w-0">
-              <span className="sr-only">Buscar Leads</span>
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                id="lead-search"
-                value={filters.query}
-                onChange={(event) => setFilter('query', event.target.value)}
-                placeholder="Buscar código, contacto o asunto…"
-                className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 !pl-10 shadow-none"
-              />
-            </label>
-            <PopoverTrigger>
-              <Button
-                className="border-border/80 bg-background hover:bg-muted/60 h-9 gap-1.5 px-3 font-normal shadow-none"
-                size="sm"
-                variant="outline"
-              >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-                Filtros
-                {activeFilters.length ? (
-                  <span className="bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
-                    {activeFilters.length}
-                  </span>
-                ) : null}
-              </Button>
-              <PopoverContent
-                placement="bottom end"
-                className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
-              >
-                <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold">Filtros de Leads</p>
-                    <p className="text-muted-foreground text-xs">Acota el tablero comercial</p>
-                  </div>
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    {activeFilters.length ? `${activeFilters.length} activos` : 'Sin filtros'}
-                  </span>
+      <div className="border-border/80 mb-5 space-y-2 border-b pb-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
+          <label htmlFor="lead-search" className="relative min-w-0">
+            <span className="sr-only">Buscar Leads</span>
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              id="lead-search"
+              value={filters.query}
+              onChange={(event) => setFilter('query', event.target.value)}
+              placeholder="Buscar código, contacto o asunto…"
+              className="border-border/80 bg-card focus-visible:bg-background h-9 !pl-10 shadow-none"
+            />
+          </label>
+          <PopoverTrigger>
+            <Button
+              className="border-border/80 bg-background hover:bg-muted/60 h-9 gap-1.5 px-3 font-normal shadow-none"
+              size="sm"
+              variant="outline"
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              Filtros
+              {activeFilters.length ? (
+                <span className="bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+                  {activeFilters.length}
+                </span>
+              ) : null}
+            </Button>
+            <PopoverContent
+              placement="bottom end"
+              className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
+            >
+              <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold">Filtros de Leads</p>
+                  <p className="text-muted-foreground text-xs">Acota el tablero comercial</p>
                 </div>
-                <div className="grid gap-4 p-4 sm:grid-cols-2">
-                  <FilterField label="Responsable">
-                    <LeadFilter
-                      label="Filtrar por responsable"
-                      value={filters.responsableId}
-                      onValueChange={(value) => setFilter('responsableId', value)}
-                    >
-                      <SelectItem value={ALL_LEAD_FILTER}>Todos los responsables</SelectItem>
-                      <SelectItem value={UNASSIGNED_LEAD_FILTER}>Sin asignar</SelectItem>
-                      {miembros.map((miembro) => (
-                        <SelectItem key={miembro.id} value={miembro.id}>
-                          {miembro.nombre}
-                        </SelectItem>
-                      ))}
-                    </LeadFilter>
-                  </FilterField>
-                  <FilterField label="Fase">
-                    <LeadFilter
-                      label="Filtrar por fase"
-                      value={filters.fase}
-                      onValueChange={(value) => setFilter('fase', value)}
-                    >
-                      <SelectItem value={ALL_LEAD_FILTER}>Todas las fases</SelectItem>
-                      {OPPORTUNITY_STAGES.map((fase) => (
-                        <SelectItem key={fase} value={fase}>
-                          {OPPORTUNITY_STAGE_LABELS[fase]}
-                        </SelectItem>
-                      ))}
-                    </LeadFilter>
-                  </FilterField>
-                  <FilterField label="Estado operativo">
-                    <LeadFilter
-                      label="Filtrar por estado operativo"
-                      value={filters.estadoOperativo}
-                      onValueChange={(value) => setFilter('estadoOperativo', value)}
-                    >
-                      <SelectItem value={ALL_LEAD_FILTER}>Todos los estados operativos</SelectItem>
-                      <SelectItem value={EMPTY_LEAD_FILTER}>Sin estado operativo</SelectItem>
-                      {estadosOperativos.map((estado) => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado}
-                        </SelectItem>
-                      ))}
-                    </LeadFilter>
-                  </FilterField>
-                  <FilterField label="Origen">
-                    <LeadFilter
-                      label="Filtrar por origen"
-                      value={filters.origen}
-                      onValueChange={(value) => setFilter('origen', value)}
-                    >
-                      <SelectItem value={ALL_LEAD_FILTER}>Todos los orígenes</SelectItem>
-                      <SelectItem value={EMPTY_LEAD_FILTER}>Sin origen</SelectItem>
-                      {origenes.map((origen) => (
-                        <SelectItem key={origen} value={origen}>
-                          {origen}
-                        </SelectItem>
-                      ))}
-                    </LeadFilter>
-                  </FilterField>
-                  <FilterField label="Prioridad">
-                    <LeadFilter
-                      label="Filtrar por prioridad"
-                      value={filters.prioridad}
-                      onValueChange={(value) => setFilter('prioridad', value)}
-                    >
-                      <SelectItem value={ALL_LEAD_FILTER}>Todas las prioridades</SelectItem>
-                      <SelectItem value="Alta">Alta</SelectItem>
-                      <SelectItem value="Media">Media</SelectItem>
-                      <SelectItem value="Baja">Baja</SelectItem>
-                    </LeadFilter>
-                  </FilterField>
-                </div>
-                {activeFilters.length ? (
-                  <div className="border-border border-t px-4 py-2.5">
-                    <Button
-                      className="text-muted-foreground hover:text-foreground h-8 w-full"
-                      size="sm"
-                      variant="ghost"
-                      onClick={clearFilters}
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden="true" /> Restablecer filtros
-                    </Button>
-                  </div>
-                ) : null}
-              </PopoverContent>
-            </PopoverTrigger>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-muted-foreground text-xs">
-              {filtradas.length} {filtradas.length === 1 ? 'Lead' : 'Leads'}
-              {modo === 'kanban'
-                ? ' · Arrastra las tarjetas para cambiar de fase'
-                : ' en la vista actual'}
-            </p>
-            {activeFilters.length ? (
-              <>
-                <span className="bg-border h-3 w-px" aria-hidden="true" />
-                {activeFilters.map((filter) => (
-                  <button
-                    key={filter.label}
-                    type="button"
-                    onClick={filter.onRemove}
-                    className="border-border bg-muted/35 hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 text-xs transition-colors"
-                    aria-label={`Quitar filtro ${filter.label}: ${filter.value}`}
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {activeFilters.length ? `${activeFilters.length} activos` : 'Sin filtros'}
+                </span>
+              </div>
+              <div className="grid gap-4 p-4 sm:grid-cols-2">
+                <FilterField label="Responsable">
+                  <LeadFilter
+                    label="Filtrar por responsable"
+                    value={filters.responsableId}
+                    onValueChange={(value) => setFilter('responsableId', value)}
                   >
-                    <span className="text-muted-foreground">{filter.label}:</span>
-                    <span className="max-w-32 truncate font-medium">{filter.value}</span>
-                    <X className="text-muted-foreground h-3 w-3 shrink-0" aria-hidden="true" />
-                  </button>
-                ))}
+                    <SelectItem value={ALL_LEAD_FILTER}>Todos los responsables</SelectItem>
+                    <SelectItem value={UNASSIGNED_LEAD_FILTER}>Sin asignar</SelectItem>
+                    {miembros.map((miembro) => (
+                      <SelectItem key={miembro.id} value={miembro.id}>
+                        {miembro.nombre}
+                      </SelectItem>
+                    ))}
+                  </LeadFilter>
+                </FilterField>
+                <FilterField label="Fase">
+                  <LeadFilter
+                    label="Filtrar por fase"
+                    value={filters.fase}
+                    onValueChange={(value) => setFilter('fase', value)}
+                  >
+                    <SelectItem value={ALL_LEAD_FILTER}>Todas las fases</SelectItem>
+                    {OPPORTUNITY_STAGES.map((fase) => (
+                      <SelectItem key={fase} value={fase}>
+                        {OPPORTUNITY_STAGE_LABELS[fase]}
+                      </SelectItem>
+                    ))}
+                  </LeadFilter>
+                </FilterField>
+                <FilterField label="Estado operativo">
+                  <LeadFilter
+                    label="Filtrar por estado operativo"
+                    value={filters.estadoOperativo}
+                    onValueChange={(value) => setFilter('estadoOperativo', value)}
+                  >
+                    <SelectItem value={ALL_LEAD_FILTER}>Todos los estados operativos</SelectItem>
+                    <SelectItem value={EMPTY_LEAD_FILTER}>Sin estado operativo</SelectItem>
+                    {estadosOperativos.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </LeadFilter>
+                </FilterField>
+                <FilterField label="Origen">
+                  <LeadFilter
+                    label="Filtrar por origen"
+                    value={filters.origen}
+                    onValueChange={(value) => setFilter('origen', value)}
+                  >
+                    <SelectItem value={ALL_LEAD_FILTER}>Todos los orígenes</SelectItem>
+                    <SelectItem value={EMPTY_LEAD_FILTER}>Sin origen</SelectItem>
+                    {origenes.map((origen) => (
+                      <SelectItem key={origen} value={origen}>
+                        {origen}
+                      </SelectItem>
+                    ))}
+                  </LeadFilter>
+                </FilterField>
+                <FilterField label="Prioridad">
+                  <LeadFilter
+                    label="Filtrar por prioridad"
+                    value={filters.prioridad}
+                    onValueChange={(value) => setFilter('prioridad', value)}
+                  >
+                    <SelectItem value={ALL_LEAD_FILTER}>Todas las prioridades</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Baja">Baja</SelectItem>
+                  </LeadFilter>
+                </FilterField>
+              </div>
+              {activeFilters.length ? (
+                <div className="border-border border-t px-4 py-2.5">
+                  <Button
+                    className="text-muted-foreground hover:text-foreground h-8 w-full"
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearFilters}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" /> Restablecer filtros
+                  </Button>
+                </div>
+              ) : null}
+            </PopoverContent>
+          </PopoverTrigger>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="text-muted-foreground text-xs">
+            {filtradas.length} {filtradas.length === 1 ? 'Lead' : 'Leads'}
+            {modo === 'kanban'
+              ? ' · Arrastra las tarjetas para cambiar de fase'
+              : ' en la vista actual'}
+          </p>
+          {activeFilters.length ? (
+            <>
+              <span className="bg-border h-3 w-px" aria-hidden="true" />
+              {activeFilters.map((filter) => (
                 <button
+                  key={filter.label}
                   type="button"
-                  onClick={clearFilters}
-                  className="text-muted-foreground hover:text-foreground h-6 px-1 text-xs transition-colors"
+                  onClick={filter.onRemove}
+                  className="border-border bg-muted/35 hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 text-xs transition-colors"
+                  aria-label={`Quitar filtro ${filter.label}: ${filter.value}`}
                 >
-                  Limpiar todo
+                  <span className="text-muted-foreground">{filter.label}:</span>
+                  <span className="max-w-32 truncate font-medium">{filter.value}</span>
+                  <X className="text-muted-foreground h-3 w-3 shrink-0" aria-hidden="true" />
                 </button>
-              </>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-muted-foreground hover:text-foreground h-6 px-1 text-xs transition-colors"
+              >
+                Limpiar todo
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
       {error ? (
         <p className="text-destructive mb-4 text-sm">No se han podido cargar los Leads.</p>
       ) : null}
@@ -506,7 +504,7 @@ function LeadFilter({
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>{children}</SelectContent>
+      <SelectContent className="z-[60]">{children}</SelectContent>
     </Select>
   )
 }

@@ -60,4 +60,15 @@ describe('GlobalSearch', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/oportunidades/opportunity-1' })
   })
+
+  it('finds matching application modules while searching', () => {
+    render(<GlobalSearch />)
+
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const input = screen.getByRole('textbox', { name: 'Buscar en todo LEX' })
+    fireEvent.change(input, { target: { value: 'CRM' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /crm.*cockpit comercial/i }))
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/crm' })
+  })
 })

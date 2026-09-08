@@ -96,6 +96,10 @@ describe('buildDashboardMetrics', () => {
           { id: 'closed-case', fechaCierre: '2026-08-01' },
         ] as never,
         invoices: [invoice(), invoice({ id: 'paid', estadoCodigo: 'paid', importePendiente: 0 })],
+        onboardings: [
+          { id: 'onboarding-1', fase: 'proforma' },
+          { id: 'onboarding-2', fase: 'payment' },
+        ] as never,
         activities: [],
       },
       new Date('2026-08-05T10:00:00Z').getTime(),
@@ -126,6 +130,7 @@ describe('buildDashboardMetrics', () => {
     expect(metrics.preparationQuotes).toHaveLength(1)
     expect(metrics.validationQuotes).toHaveLength(1)
     expect(metrics.sentQuotes).toHaveLength(1)
+    expect(metrics.pendingProformas).toHaveLength(1)
     expect(metrics.activeCases).toHaveLength(1)
     expect(metrics.casesWithOverdueTask.size).toBe(1)
     expect(metrics.pendingAmount).toBe(1000)

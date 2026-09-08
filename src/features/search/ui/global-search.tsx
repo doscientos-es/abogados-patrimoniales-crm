@@ -30,6 +30,7 @@ const STORAGE_PREFIX = 'lex-global-search:v1:'
 
 const MODULES: PaletteItem[] = [
   { id: 'home', entity_type: 'module', title: 'Inicio', subtitle: 'Panel general', href: '/' },
+  { id: 'crm', entity_type: 'module', title: 'CRM', subtitle: 'Cockpit comercial', href: '/crm' },
   {
     id: 'contacts',
     entity_type: 'module',
@@ -234,8 +235,17 @@ export function GlobalSearch() {
     [stored],
   )
   const hasSearch = term.trim().length >= 2
+  const matchingModules = useMemo(() => {
+    const normalizedTerm = term.trim().toLocaleLowerCase()
+    return MODULES.filter((module) =>
+      `${module.title} ${module.subtitle}`.toLocaleLowerCase().includes(normalizedTerm),
+    )
+  }, [term])
   const groups = hasSearch
-    ? [{ label: 'Resultados', items: results.data ?? [] }]
+    ? [
+        ...(matchingModules.length ? [{ label: 'Ir a', items: matchingModules }] : []),
+        { label: 'Resultados', items: results.data ?? [] },
+      ]
     : [
         ...(recent.length ? [{ label: 'Recientes', items: recent }] : []),
         ...(frequent.length ? [{ label: 'Más visitados', items: frequent }] : []),

@@ -4,7 +4,7 @@ import type {
   AbrirExpedienteDesdeOnboardingInput,
   CrearOnboardingInput,
   OnboardingPersistido,
-} from '@/features/onboarding/application'
+} from '@/features/onboarding/application/onboarding-types'
 import {
   getSupabaseBrowserClient,
   type OnboardingRow,
