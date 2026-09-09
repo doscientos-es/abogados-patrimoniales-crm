@@ -74,6 +74,11 @@ describe('PersistentCasesPage', () => {
       screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' }),
     ).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: 'Propuesta o borrador' })).toBeTruthy()
+    expect(screen.queryByLabelText('Mover EXP-001 a otra fase')).toBeNull()
+    expect(
+      screen.queryByText('Trabajo técnico, decisión, preparación y seguimiento activo.'),
+    ).toBeNull()
+    expect(screen.queryByText('Propuesta, entrega y formalización.')).toBeNull()
   })
 
   it('filters the control board through nature tabs', () => {

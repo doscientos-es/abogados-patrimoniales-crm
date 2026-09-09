@@ -121,7 +121,7 @@ describe('PersistentCaseDetail', () => {
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
-    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(3)
+    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))
     expect(screen.getByText('Escritura.pdf')).toBeTruthy()
@@ -167,7 +167,7 @@ describe('PersistentCaseDetail', () => {
     expect(screen.getByText('Requiere confirmación')).toBeTruthy()
   })
 
-  it('opens the edit form in a dialog from the summary', () => {
+  it('opens the edit form in a dialog from the operational header', () => {
     renderDetail()
     expect(screen.queryByText('Editor del expediente')).toBeNull()
 

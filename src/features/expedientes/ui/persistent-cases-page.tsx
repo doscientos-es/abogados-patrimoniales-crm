@@ -332,37 +332,27 @@ export function PersistentCasesPage({
         className="overflow-x-auto pb-2"
       >
         <div className="grid min-w-340 grid-cols-5 grid-rows-[auto_1fr] gap-x-4 gap-y-3">
-          <header className="col-span-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/70 dark:bg-sky-950/30">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-sky-600" />
-              <h2 className="font-serif text-lg font-semibold">F3 · CASEWORK</h2>
-              <Badge variant="secondary">
-                {
-                  filtered.filter(
-                    (item) => caseMegaphase(caseControlColumn(item)) === 'F3 · CASEWORK',
-                  ).length
-                }
-              </Badge>
-            </div>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Trabajo técnico, decisión, preparación y seguimiento activo.
-            </p>
+          <header className="col-span-4 flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 dark:border-sky-900/70 dark:bg-sky-950/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-600" />
+            <h2 className="text-sm font-semibold">F3 · CASEWORK</h2>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+              {
+                filtered.filter(
+                  (item) => caseMegaphase(caseControlColumn(item)) === 'F3 · CASEWORK',
+                ).length
+              }
+            </Badge>
           </header>
-          <header className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-900/70 dark:bg-violet-950/30">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-violet-600" />
-              <h2 className="font-serif text-lg font-semibold">F4 · DELIVERY</h2>
-              <Badge variant="secondary">
-                {
-                  filtered.filter(
-                    (item) => caseMegaphase(caseControlColumn(item)) === 'F4 · DELIVERY',
-                  ).length
-                }
-              </Badge>
-            </div>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Propuesta, entrega y formalización.
-            </p>
+          <header className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 dark:border-violet-900/70 dark:bg-violet-950/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-600" />
+            <h2 className="text-sm font-semibold">F4 · DELIVERY</h2>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+              {
+                filtered.filter(
+                  (item) => caseMegaphase(caseControlColumn(item)) === 'F4 · DELIVERY',
+                ).length
+              }
+            </Badge>
           </header>
           {CASE_CONTROL_COLUMNS.map((column) => (
             <CaseColumn
@@ -437,7 +427,6 @@ function CaseColumn({
             alerts={caseAlerts(item, tasks, activities, now)}
             lastMovement={caseLastMovement(item, activities)}
             moving={moving}
-            onMove={onMove}
           />
         ))}
         {!items.length ? (
@@ -457,7 +446,6 @@ function CaseCard({
   alerts,
   lastMovement,
   moving,
-  onMove,
 }: {
   item: ExpedientePersistido
   contactName: string
@@ -465,7 +453,6 @@ function CaseCard({
   alerts: string[]
   lastMovement: string
   moving: boolean
-  onMove: (item: ExpedientePersistido, column: CaseControlColumnId) => Promise<void>
 }) {
   const currentColumn = caseControlColumn(item)
   return (
@@ -521,19 +508,6 @@ function CaseCard({
             {alerts.length > 2 ? <p>+{alerts.length - 2} alertas</p> : null}
           </div>
         ) : null}
-        <select
-          aria-label={`Mover ${item.referencia} a otra fase`}
-          value={currentColumn}
-          disabled={moving}
-          onChange={(event) => void onMove(item, event.target.value as CaseControlColumnId)}
-          className="border-input bg-background h-8 w-full rounded-md border px-2 text-xs"
-        >
-          {CASE_CONTROL_COLUMNS.map((column) => (
-            <option key={column.id} value={column.id}>
-              {column.megafase} · {column.title}
-            </option>
-          ))}
-        </select>
       </CardContent>
     </Card>
   )
