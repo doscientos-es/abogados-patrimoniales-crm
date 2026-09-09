@@ -49,6 +49,7 @@ type TaskFilterStatus = 'all' | TareaPersistida['estado'] | 'En espera'
 type TaskBoardColumnId = 'pending' | 'in-progress' | 'waiting'
 
 const AGENDA_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const AGENDA_HOURS = Array.from({ length: 12 }, (_, index) => index + 8)
 
 const TASK_BOARD_COLUMNS: ReadonlyArray<{
   id: TaskBoardColumnId
@@ -98,17 +99,26 @@ export function sortTasksForAgenda(tasks: TareaPersistida[]) {
   })
 }
 
-function monthStart(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), 1)
+function weekStart(value: Date) {
+  const date = new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7))
+  return date
 }
 
-function shiftMonth(value: Date, amount: number) {
-  return new Date(value.getFullYear(), value.getMonth() + amount, 1)
+function shiftWeek(value: Date, amount: number) {
+  const date = new Date(value)
+  date.setDate(date.getDate() + amount * 7)
+  return date
 }
 
 function calendarDateKey(value: string) {
   const date = new Date(value)
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+}
+
+export function calendarSlotHour(value: string) {
+  const hour = new Date(value).getHours()
+  return Math.min(Math.max(hour, AGENDA_HOURS[0]), AGENDA_HOURS.at(-1) ?? 19)
 }
 
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
@@ -154,7 +164,7 @@ export function PersistentTaskWorkspace() {
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [view, setView] = useState<TaskView>('kanban')
-  const [calendarMonth, setCalendarMonth] = useState(() => monthStart(new Date()))
+  const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
   const caseNames = useMemo(
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
@@ -368,10 +378,15 @@ export function PersistentTaskWorkspace() {
       {view === 'calendar' ? (
         <TaskCalendar
           tasks={orderedVisible}
-          month={calendarMonth}
-          onPreviousMonth={() => setCalendarMonth((current) => shiftMonth(current, -1))}
-          onNextMonth={() => setCalendarMonth((current) => shiftMonth(current, 1))}
-          onCurrentMonth={() => setCalendarMonth(monthStart(new Date()))}
+          week={calendarWeek}
+          members={members.data ?? []}
+          statusFilter={statusFilter}
+          assigneeFilter={assigneeFilter}
+          onStatusFilterChange={setStatusFilter}
+          onAssigneeFilterChange={setAssigneeFilter}
+          onPreviousWeek={() => setCalendarWeek((current) => shiftWeek(current, -1))}
+          onNextWeek={() => setCalendarWeek((current) => shiftWeek(current, 1))}
+          onCurrentWeek={() => setCalendarWeek(weekStart(new Date()))}
         />
       ) : view === 'kanban' ? (
         <TaskKanban
@@ -406,33 +421,52 @@ export function PersistentTaskWorkspace() {
 
 function TaskCalendar({
   tasks,
-  month,
-  onPreviousMonth,
-  onNextMonth,
-  onCurrentMonth,
+  week,
+  members,
+  statusFilter,
+  assigneeFilter,
+  onStatusFilterChange,
+  onAssigneeFilterChange,
+  onPreviousWeek,
+  onNextWeek,
+  onCurrentWeek,
 }: {
   tasks: TareaPersistida[]
-  month: Date
-  onPreviousMonth: () => void
-  onNextMonth: () => void
-  onCurrentMonth: () => void
+  week: Date
+  members: { id: string; nombre: string }[]
+  statusFilter: TaskFilterStatus
+  assigneeFilter: string
+  onStatusFilterChange: (value: TaskFilterStatus) => void
+  onAssigneeFilterChange: (value: string) => void
+  onPreviousWeek: () => void
+  onNextWeek: () => void
+  onCurrentWeek: () => void
 }) {
-  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1)
-  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  const leadingDays = (firstDay.getDay() + 6) % 7
-  const gridDays = Math.ceil((leadingDays + daysInMonth) / 7) * 7
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(week)
+    day.setDate(day.getDate() + index)
+    return day
+  })
   const today = new Date()
-  const itemsByDay = new Map<string, TareaPersistida[]>()
+  const weekEnd = new Date(week)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+  const itemsBySlot = new Map<string, TareaPersistida[]>()
   const undated = tasks.filter((task) => !task.venceEn)
 
   tasks.forEach((task) => {
     if (!task.venceEn) return
     const taskDate = new Date(task.venceEn)
-    if (taskDate.getFullYear() !== month.getFullYear() || taskDate.getMonth() !== month.getMonth())
-      return
-    const key = calendarDateKey(task.venceEn)
-    itemsByDay.set(key, [...(itemsByDay.get(key) ?? []), task])
+    if (Number.isNaN(taskDate.getTime()) || taskDate < week || taskDate >= weekEnd) return
+    const hour = calendarSlotHour(task.venceEn)
+    const key = `${calendarDateKey(task.venceEn)}-${hour}`
+    itemsBySlot.set(key, [...(itemsBySlot.get(key) ?? []), task])
   })
+
+  const weekLabel = new Intl.DateTimeFormat('es-ES', {
+    day: 'numeric',
+    month: 'short',
+  })
+  const weekRange = `${weekLabel.format(weekDays[0])} – ${weekLabel.format(weekDays[6])}`
 
   return (
     <section aria-label="Calendario de tareas y plazos" className="space-y-4">
@@ -444,91 +478,124 @@ function TaskCalendar({
                 <CalendarDays className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <h2 className="text-base font-semibold capitalize">
-                  {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(
-                    month,
-                  )}
-                </h2>
-                <p className="text-muted-foreground text-xs">Plazos y tareas ordenados por fecha</p>
+                <h2 className="text-base font-semibold capitalize">{weekRange}</h2>
+                <p className="text-muted-foreground text-xs">Vista semanal · horario local</p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Filtrar calendario por estado"
+                value={statusFilter}
+                onChange={(event) => onStatusFilterChange(event.target.value as TaskFilterStatus)}
+                className="border-input bg-background h-8 rounded-md border px-2 text-xs shadow-sm"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En curso">En curso</option>
+                <option value="En espera">En espera</option>
+                <option value="Completada">Completada</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+              <select
+                aria-label="Filtrar calendario por responsable"
+                value={assigneeFilter}
+                onChange={(event) => onAssigneeFilterChange(event.target.value)}
+                className="border-input bg-background h-8 max-w-44 rounded-md border px-2 text-xs shadow-sm"
+              >
+                <option value="all">Todos los responsables</option>
+                <option value="">Sin asignar</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.nombre}
+                  </option>
+                ))}
+              </select>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={onPreviousMonth}
-                aria-label="Mes anterior"
+                onClick={onPreviousWeek}
+                aria-label="Semana anterior"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={onCurrentMonth}>
+              <Button type="button" variant="outline" size="sm" onClick={onCurrentWeek}>
                 Hoy
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={onNextMonth}
-                aria-label="Mes siguiente"
+                onClick={onNextWeek}
+                aria-label="Semana siguiente"
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </header>
-          <div className="overflow-x-auto">
-            <div className="min-w-[720px]">
-              <div className="bg-muted/45 grid grid-cols-7 border-b">
-                {AGENDA_WEEKDAYS.map((day) => (
-                  <p
-                    key={day}
-                    className="text-muted-foreground px-3 py-2 text-center text-[11px] font-semibold tracking-wide uppercase"
+          <div className="max-h-[44rem] overflow-auto">
+            <div className="grid min-w-[760px] grid-cols-[3.5rem_repeat(7,minmax(7.5rem,1fr))]">
+              <div className="bg-muted/45 sticky top-0 z-20 border-b" />
+              {weekDays.map((day, index) => {
+                const isToday = day.toDateString() === today.toDateString()
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className="bg-muted/45 sticky top-0 z-20 border-b border-l px-2 py-2 text-center"
                   >
-                    {day}
-                  </p>
-                ))}
-              </div>
-              <div className="grid grid-cols-7">
-                {Array.from({ length: gridDays }, (_, index) => {
-                  const dayNumber = index - leadingDays + 1
-                  const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth
-                  const date = new Date(month.getFullYear(), month.getMonth(), dayNumber)
-                  const dayTasks = isCurrentMonth
-                    ? (itemsByDay.get(calendarDateKey(date.toISOString())) ?? [])
-                    : []
-                  const isToday = isCurrentMonth && date.toDateString() === today.toDateString()
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                      {AGENDA_WEEKDAYS[index]}
+                    </p>
+                    <span
+                      className={`mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${isToday ? 'bg-primary text-primary-foreground shadow-sm' : ''}`}
+                    >
+                      {day.getDate()}
+                    </span>
+                  </div>
+                )
+              })}
+              {AGENDA_HOURS.flatMap((hour) => [
+                <div
+                  key={`hour-${hour}`}
+                  className="text-muted-foreground -mt-2 border-b pr-2 text-right text-[10px] font-medium"
+                >
+                  {String(hour).padStart(2, '0')}:00
+                </div>,
+                ...weekDays.map((day) => {
+                  const slotTasks =
+                    itemsBySlot.get(`${calendarDateKey(day.toISOString())}-${hour}`) ?? []
                   return (
                     <div
-                      key={`${month.getFullYear()}-${month.getMonth()}-${dayNumber}`}
-                      className={`min-h-36 border-r border-b p-2 ${isCurrentMonth ? 'bg-card' : 'bg-muted/25'}`}
+                      key={`${day.toISOString()}-${hour}`}
+                      className="min-h-15 border-b border-l p-1"
                     >
-                      {isCurrentMonth ? (
-                        <span
-                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
-                        >
-                          {dayNumber}
-                        </span>
-                      ) : null}
-                      <div className="mt-1.5 space-y-1">
-                        {dayTasks.slice(0, 3).map((task) => (
+                      <div className="space-y-1">
+                        {slotTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`truncate rounded-md border px-1.5 py-1 text-[11px] font-medium ${TASK_PRIORITY_CLASS[task.prioridad]}`}
-                            title={task.titulo}
+                            title={`${formatTaskDate(task.venceEn)} · ${task.titulo}`}
+                            className={`truncate rounded-md border px-1.5 py-1 text-[11px] font-semibold shadow-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
                           >
+                            <span className="mr-1 opacity-75">
+                              {new Intl.DateTimeFormat('es-ES', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }).format(new Date(task.venceEn ?? ''))}
+                            </span>
                             {task.titulo}
                           </div>
                         ))}
-                        {dayTasks.length > 3 ? (
-                          <p className="text-muted-foreground px-1 text-[11px] font-medium">
-                            +{dayTasks.length - 3} más
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   )
-                })}
+                }),
+              ])}
+              <div className="text-muted-foreground border-b pr-2 text-right text-[10px] font-medium">
+                20:00
               </div>
+              {weekDays.map((day) => (
+                <div key={`${day.toISOString()}-end`} className="border-b border-l" />
+              ))}
             </div>
           </div>
         </CardContent>

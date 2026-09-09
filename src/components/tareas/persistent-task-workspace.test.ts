@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  calendarSlotHour,
   canMoveTaskInBoard,
   sortTasksForAgenda,
   taskBoardColumn,
@@ -71,5 +72,13 @@ describe('sortTasksForAgenda', () => {
     ])
 
     expect(ordered.map((item) => item.id)).toEqual(['critical', 'normal'])
+  })
+})
+
+describe('calendarSlotHour', () => {
+  it('keeps events in the visible timetable and groups outside hours at its edges', () => {
+    expect(calendarSlotHour('2026-09-10T10:30:00')).toBe(10)
+    expect(calendarSlotHour('2026-09-10T06:30:00')).toBe(8)
+    expect(calendarSlotHour('2026-09-10T22:30:00')).toBe(19)
   })
 })
