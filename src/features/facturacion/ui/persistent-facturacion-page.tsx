@@ -18,30 +18,26 @@ import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   ESTADO_FACTURA_LABEL,
+  etiquetaEstadoEconomicoProvisional,
   facturasRectificadas,
+  formatCurrency,
+  formatDate,
   puedeDescartarse,
   puedeEditarse,
   puedeEmitirse,
   puedeRectificarse,
   puedeRegistrarCobro,
+  resumenEconomicoProvisional,
   resumenFacturacion,
   TIPO_FACTURA_LABEL,
-} from '@/features/facturacion/application/factura-ciclo'
-import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
-import {
-  etiquetaEstadoEconomicoProvisional,
-  resumenEconomicoProvisional,
-} from '@/features/facturacion/application/provisional-onboardings'
-import {
-  formatCurrency,
-  formatDate,
   useDescartarBorradorFactura,
   useEmitirFactura,
   useFacturas,
   useGuardarBorradorFactura,
   useRectificarFactura,
   useRegistrarCobroFactura,
-} from '@/features/facturacion/infrastructure/supabase-facturas'
+  type FacturaPersistida,
+} from '@/features/facturacion/application'
 import {
   BorradorFacturaDialog,
   EmitirFacturaDialog,

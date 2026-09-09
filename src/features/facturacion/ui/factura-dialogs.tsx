@@ -15,18 +15,16 @@ import { Textarea } from '@/components/ui/textarea'
 import type { ExpedientePersistido } from '@/features/expedientes/application/case-types'
 import {
   calcularTotales,
+  formatCurrency,
   METODO_COBRO_LABEL,
   METODOS_COBRO,
   validarBorrador,
-} from '@/features/facturacion/application/factura-ciclo'
-import type {
-  FacturaPersistida,
-  GuardarBorradorInput,
-  LineaFacturaBorrador,
-  MetodoCobro,
-  RegistrarCobroInput,
-} from '@/features/facturacion/application/factura-types'
-import { formatCurrency } from '@/features/facturacion/infrastructure/supabase-facturas'
+  type FacturaPersistida,
+  type GuardarBorradorInput,
+  type LineaFacturaBorrador,
+  type MetodoCobro,
+  type RegistrarCobroInput,
+} from '@/features/facturacion/application'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 
