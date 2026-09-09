@@ -147,8 +147,6 @@ describe('PersistentCasesPage', () => {
     })
 
     expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
-    expect(
-      screen.getByRole('button', { name: 'Quitar filtro Responsable: Laura García' }),
-    ).toBeTruthy()
+    expect(screen.getByText('1 activos')).toBeTruthy()
   })
 })
