@@ -134,15 +134,17 @@ describe('PersistentCaseDetail', () => {
     expect(
       screen.getByText(/Frentes autónomos del expediente: cada uno con objetivo propio/i),
     ).toBeTruthy()
-    expect(screen.getByRole('button', { name: /vista mapa/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /vista mapa/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /vista tarjetas/i })).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Orden de líneas' })).toBeTruthy()
-    expect(screen.getByRole('combobox', { name: 'Nivel de detalle de línea' })).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Estado de línea' })).toBeTruthy()
     expect(screen.getByText('Nueva línea')).toBeTruthy()
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Prioridad de línea' }), {
       target: { value: 'Baja' },
     })
     expect(screen.getByText('Ninguna línea coincide con los filtros aplicados.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Restablecer filtros' })).toBeTruthy()
   })
 
   it('shows active internal notes linked to the expediente below the header', () => {

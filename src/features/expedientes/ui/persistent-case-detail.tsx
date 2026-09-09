@@ -8,9 +8,7 @@ import {
   CheckSquare2,
   FileText,
   History,
-  LayoutGrid,
   Layers3,
-  Map as MapIcon,
   Pencil,
   ShieldAlert,
   UsersRound,
@@ -516,11 +514,9 @@ function DetailSection({
   )
 }
 
-type WorkstreamView = 'map' | 'cards'
 type WorkstreamSituation = 'all' | 'with-target' | 'without-target'
 type WorkstreamOrder = 'manual' | 'title' | 'target'
 type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
-type WorkstreamDisplay = 'full' | 'compact'
 
 function WorkstreamsSection({
   lineas,
@@ -533,13 +529,11 @@ function WorkstreamsSection({
   expedienteReferencia: string
   createForm: ReactNode
 }) {
-  const [view, setView] = useState<WorkstreamView>('cards')
   const [status, setStatus] = useState('all')
   const [situation, setSituation] = useState<WorkstreamSituation>('all')
   const [assignee, setAssignee] = useState('all')
   const [priority, setPriority] = useState('all')
   const [additionalFilter, setAdditionalFilter] = useState<WorkstreamAdditionalFilter>('all')
-  const [display, setDisplay] = useState<WorkstreamDisplay>('full')
   const [order, setOrder] = useState<WorkstreamOrder>('manual')
   const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))]
   const visible = lineas
@@ -562,6 +556,16 @@ function WorkstreamsSection({
       return first.orden - second.orden
     })
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
+  const hasActiveFilters = [status, situation, assignee, priority, additionalFilter].some(
+    (value) => value !== 'all',
+  )
+  const resetFilters = () => {
+    setStatus('all')
+    setSituation('all')
+    setAssignee('all')
+    setPriority('all')
+    setAdditionalFilter('all')
+  }
 
   return (
     <DetailSection
@@ -577,26 +581,7 @@ function WorkstreamsSection({
       }
     >
       <div className="border-border/80 bg-muted/20 flex flex-wrap items-center gap-2 rounded-lg border p-3">
-        <div className="bg-background flex rounded-md border p-0.5" aria-label="Vista de líneas">
-          <Button
-            type="button"
-            variant={view === 'map' ? 'secondary' : 'ghost'}
-            size="sm"
-            aria-pressed={view === 'map'}
-            onClick={() => setView('map')}
-          >
-            <MapIcon className="h-4 w-4" aria-hidden="true" /> Vista mapa
-          </Button>
-          <Button
-            type="button"
-            variant={view === 'cards' ? 'secondary' : 'ghost'}
-            size="sm"
-            aria-pressed={view === 'cards'}
-            onClick={() => setView('cards')}
-          >
-            <LayoutGrid className="h-4 w-4" aria-hidden="true" /> Vista tarjetas
-          </Button>
-        </div>
+        <span className="text-muted-foreground px-1 text-xs font-medium">Filtros</span>
         <WorkstreamSelect ariaLabel="Estado de línea" value={status} onChange={setStatus}>
           <option value="all">Todos los estados</option>
           {statuses.map((option) => (
@@ -637,14 +622,6 @@ function WorkstreamsSection({
           <option value="nested">Sublíneas</option>
         </WorkstreamSelect>
         <WorkstreamSelect
-          ariaLabel="Nivel de detalle de línea"
-          value={display}
-          onChange={(value) => setDisplay(value as WorkstreamDisplay)}
-        >
-          <option value="full">Ficha completa</option>
-          <option value="compact">Ficha compacta</option>
-        </WorkstreamSelect>
-        <WorkstreamSelect
           ariaLabel="Orden de líneas"
           value={order}
           onChange={(value) => setOrder(value as WorkstreamOrder)}
@@ -653,21 +630,21 @@ function WorkstreamsSection({
           <option value="title">Título</option>
           <option value="target">Fecha objetivo</option>
         </WorkstreamSelect>
+        {hasActiveFilters ? (
+          <Button type="button" variant="ghost" size="sm" onClick={resetFilters}>
+            Restablecer filtros
+          </Button>
+        ) : null}
       </div>
-      {view === 'cards' ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {visible.map((line) => (
-            <WorkstreamCard
-              key={line.id}
-              line={line}
-              memberName={memberNames.get(line.asignadoId ?? '')}
-              compact={display === 'compact'}
-            />
-          ))}
-        </div>
-      ) : (
-        <WorkstreamMap lines={visible} memberNames={memberNames} compact={display === 'compact'} />
-      )}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {visible.map((line) => (
+          <WorkstreamCard
+            key={line.id}
+            line={line}
+            memberName={memberNames.get(line.asignadoId ?? '')}
+          />
+        ))}
+      </div>
       {!visible.length ? (
         <EmptyState message="Ninguna línea coincide con los filtros aplicados." />
       ) : null}
@@ -685,32 +662,6 @@ function WorkstreamsSection({
         </CardContent>
       </Card>
     </DetailSection>
-  )
-}
-
-function WorkstreamMap({
-  lines,
-  memberNames,
-  compact,
-}: {
-  lines: LineaPersistida[]
-  memberNames: Map<string, string>
-  compact: boolean
-}) {
-  return (
-    <div
-      className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
-      aria-label="Mapa de líneas de trabajo"
-    >
-      {lines.map((line) => (
-        <WorkstreamCard
-          key={line.id}
-          line={line}
-          memberName={memberNames.get(line.asignadoId ?? '')}
-          compact={compact}
-        />
-      ))}
-    </div>
   )
 }
 
@@ -742,11 +693,9 @@ function WorkstreamSelect({
 function WorkstreamCard({
   line,
   memberName,
-  compact = false,
 }: {
   line: LineaPersistida
   memberName: string | undefined
-  compact?: boolean
 }) {
   return (
     <Card>
@@ -754,21 +703,17 @@ function WorkstreamCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-medium">{line.titulo}</p>
-            {!compact ? (
-              <p className="text-muted-foreground mt-1 text-sm">
-                {line.descripcion || line.tipo || 'Sin descripción'}
-              </p>
-            ) : null}
+            <p className="text-muted-foreground mt-1 text-sm">
+              {line.descripcion || line.tipo || 'Sin descripción'}
+            </p>
           </div>
           <Badge variant="outline">{line.estado}</Badge>
         </div>
-        {!compact ? (
-          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span>Responsable: {memberName ?? 'Sin asignar'}</span>
-            <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
-            <span>Prioridad: {line.prioridad}</span>
-          </div>
-        ) : null}
+        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <span>Responsable: {memberName ?? 'Sin asignar'}</span>
+          <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
+          <span>Prioridad: {line.prioridad}</span>
+        </div>
       </CardContent>
     </Card>
   )
