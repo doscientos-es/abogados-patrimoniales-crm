@@ -28,16 +28,25 @@ const caseworkCase = {
   fase: 'Diagnóstico – Objetivos – Estrategia',
   estadoOperativo: 'pending',
   prioridad: 'Media',
-  asignadoId: 'member-1',
+  asignadoId: 'member-2',
   proximaAccion: '',
   actualizadoEn: '2026-09-08T10:00:00Z',
 } as never
 
 const judicialCase = {
-  ...caseworkCase,
   id: 'judicial-1',
   referencia: 'EXP-002',
+  contactoPrincipalId: 'contact-1',
+  titulo: 'Reclamación de legítima',
+  area: 'Sucesiones',
   naturaleza: 'Judicial',
+  estadoGeneral: 'active',
+  fase: 'Diagnóstico – Objetivos – Estrategia',
+  estadoOperativo: 'pending',
+  prioridad: 'Media',
+  asignadoId: 'member-1',
+  proximaAccion: '',
+  actualizadoEn: '2026-09-08T10:00:00Z',
 } as never
 
 afterEach(cleanup)
@@ -81,14 +90,42 @@ describe('PersistentCasesPage', () => {
       />,
     )
 
-    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('2 expedientes')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Judicial' }))
 
-    expect(screen.getByRole('tab', { name: 'Judicial' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Judicial' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('1 expediente')).toBeTruthy()
     expect(screen.getByText('EXP-002')).toBeTruthy()
     expect(screen.queryByText('EXP-001')).toBeNull()
+  })
+
+  it('toggles a quick filter on and off', () => {
+    render(
+      <PersistentCasesPage
+        expedientes={[caseworkCase, judicialCase]}
+        contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
+        miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
+        tareas={[]}
+        actuaciones={[]}
+        usuarioId="member-1"
+        moving={false}
+        onMove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    const mineToggle = screen.getByRole('button', { name: 'Mis expedientes' })
+    expect(mineToggle.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(mineToggle)
+
+    expect(mineToggle.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('1 expediente')).toBeTruthy()
+
+    fireEvent.click(mineToggle)
+
+    expect(mineToggle.getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByText('2 expedientes')).toBeTruthy()
   })
 })

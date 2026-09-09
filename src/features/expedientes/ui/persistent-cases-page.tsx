@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, Bookmark, GripVertical, Search } from 'lucide-react'
+import { AlertTriangle, GripVertical, Search } from 'lucide-react'
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
-import { toast } from 'sonner'
 
 import { SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
@@ -70,7 +69,6 @@ export function PersistentCasesPage({
   const [assignee, setAssignee] = useState('all')
   const [status, setStatus] = useState('all')
   const [dependency, setDependency] = useState('all')
-  const [saved, setSaved] = useState(false)
   const now = useMemo(() => Date.now(), [])
   const contactNames = useMemo(
     () => new Map(contactos.map((item) => [item.id, item.nombre])),
@@ -110,14 +108,6 @@ export function PersistentCasesPage({
     )
   })
 
-  const saveCurrentView = () => {
-    window.localStorage.setItem(
-      'lex-case-control-view',
-      JSON.stringify({ nature, quickFilter, assignee, status, dependency }),
-    )
-    setSaved(true)
-    toast.success('Vista actual guardada en este navegador.')
-  }
   const moveToColumn = async (item: ExpedientePersistido, column: CaseControlColumnId) => {
     if (caseControlColumn(item) !== column) await onMove(item, casePhaseForColumn(column))
   }
@@ -153,28 +143,20 @@ export function PersistentCasesPage({
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtros rápidos">
         {QUICK_FILTERS.map(([value, label]) => (
           <Button
             key={value}
             type="button"
             size="sm"
-            variant={quickFilter === value ? 'secondary' : 'outline'}
+            variant={quickFilter === value ? 'default' : 'outline'}
+            aria-pressed={quickFilter === value}
+            className="rounded-full"
             onClick={() => setQuickFilter(quickFilter === value ? 'all' : value)}
           >
             {label}
           </Button>
         ))}
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="ml-auto gap-1.5"
-          onClick={saveCurrentView}
-        >
-          <Bookmark className="h-4 w-4" />
-          {saved ? 'Vista guardada' : 'Guardar vista actual'}
-        </Button>
       </div>
       <div className="bg-card flex flex-wrap gap-2 rounded-xl border p-3">
         <div className="relative min-w-52 flex-1">
@@ -211,11 +193,6 @@ export function PersistentCasesPage({
           {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'}
         </Badge>
       </div>
-      <p className="text-muted-foreground rounded-md border border-dashed px-4 py-3 text-xs leading-5">
-        <strong className="text-foreground">Lectura:</strong> las bandas agrupan las megafases y
-        cada subcolumna representa una fase operativa. Arrastra un expediente entre ellas para
-        actualizar su recorrido.
-      </p>
       <section
         id="case-control-board"
         role="tabpanel"
