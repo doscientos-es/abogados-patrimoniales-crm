@@ -1,13 +1,24 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import type { AnchorHTMLAttributes } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { AnchorHTMLAttributes, ReactNode } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
+    to,
     params: _params,
     search: _search,
+    children,
     ...props
-  }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} />,
+  }: {
+    to: string
+    params?: unknown
+    search?: unknown
+    children?: ReactNode
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }))
 
 import { PersistentCaseDetail } from './persistent-case-detail'
@@ -105,17 +116,19 @@ function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe('PersistentCaseDetail', () => {
+  afterEach(cleanup)
+
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
-    expect(screen.getByText('Firma de hoja de encargo')).toBeTruthy()
+    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(2)
 
-    fireEvent.click(screen.getByRole('tab', { name: /documentos 1/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))
     expect(screen.getByText('Escritura.pdf')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Abrir gestor documental' }).getAttribute('href')).toBe(
       '/documentos',
     )
 
-    fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo 1/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
     expect(screen.getByText('Due diligence')).toBeTruthy()
     expect(screen.getByText('Nueva línea')).toBeTruthy()
   })
@@ -123,11 +136,13 @@ describe('PersistentCaseDetail', () => {
   it('creates a task associated with the displayed expediente', () => {
     const onCreateTask = vi.fn().mockResolvedValue(undefined)
     renderDetail(onCreateTask)
-    fireEvent.click(screen.getByRole('tab', { name: /tareas 1/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /tareas\s*1/i }))
     fireEvent.change(screen.getByLabelText('Título de tarea'), {
       target: { value: 'Enviar borrador' },
     })
-    fireEvent.submit(screen.getByRole('button', { name: 'Añadir tarea' }).closest('form')!)
+    const form = screen.getByRole('button', { name: 'Añadir tarea' }).closest('form')
+    if (!form) throw new Error('No se encontró el formulario de alta de tarea.')
+    fireEvent.submit(form)
 
     expect(onCreateTask).toHaveBeenCalledWith(
       expect.objectContaining({ expedienteId: 'case-1', titulo: 'Enviar borrador' }),

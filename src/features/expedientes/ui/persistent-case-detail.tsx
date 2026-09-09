@@ -19,7 +19,12 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import type { MiembroDespacho } from '@/features/crm'
-import { caseAlerts, caseDependency, caseLastMovement, relativeDays } from '@/features/expedientes'
+import {
+  caseAlerts,
+  caseDependency,
+  caseLastMovement,
+  relativeDays,
+} from '@/features/expedientes/application/case-control'
 import type {
   ActuacionPersistida,
   EventoExpediente,

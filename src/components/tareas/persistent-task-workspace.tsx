@@ -1,7 +1,14 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
-import { CalendarClock, LayoutDashboard, Plus, Search, SlidersHorizontal } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import {
+  CalendarClock,
+  GripVertical,
+  LayoutDashboard,
+  Plus,
+  Search,
+  SlidersHorizontal,
+} from 'lucide-react'
+import { useMemo, useState, type DragEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
@@ -45,12 +52,49 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   { id: 'waiting', title: 'En espera', description: 'Plazos pendientes de validación' },
 ]
 
+const TASK_COLUMN_STYLES: Record<TaskBoardColumnId, { panel: string; dot: string; count: string }> = {
+  pending: {
+    panel: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/25',
+    dot: 'bg-amber-500',
+    count: 'border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
+  },
+  'in-progress': {
+    panel: 'border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25',
+    dot: 'bg-sky-500',
+    count: 'border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200',
+  },
+  waiting: {
+    panel: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-900/70 dark:bg-violet-950/25',
+    dot: 'bg-violet-500',
+    count: 'border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200',
+  },
+}
+
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
 export function taskBoardColumn(task: TareaPersistida): TaskBoardColumnId | null {
   if (task.validacion === 'Propuesto') return 'waiting'
   if (task.estado === 'Pendiente') return 'pending'
   if (task.estado === 'En curso') return 'in-progress'
   return null
+}
+
+export function taskStatusForBoardColumn(
+  column: TaskBoardColumnId,
+): TareaPersistida['estado'] | null {
+  if (column === 'pending') return 'Pendiente'
+  if (column === 'in-progress') return 'En curso'
+  return null
+}
+
+export function canMoveTaskInBoard(task: TareaPersistida, target: TaskBoardColumnId) {
+  const current = taskBoardColumn(task)
+  return Boolean(
+    current &&
+      current !== 'waiting' &&
+      target !== 'waiting' &&
+      current !== target &&
+      taskStatusForBoardColumn(target),
+  )
 }
 
 export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | 'calendar' }) {
@@ -162,120 +206,118 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
           />
         }
       />
-      <Card className="border-border/80 shadow-sm">
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
-          <label htmlFor="task-search" className="relative min-w-56 flex-1">
-            <span className="sr-only">Buscar tareas y plazos</span>
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="task-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por título, detalle o expediente…"
-              className="bg-muted/20 h-9 pl-10 shadow-none"
-            />
-          </label>
-          <PopoverTrigger>
-            <Button type="button" variant="outline" size="sm" className="h-9 shadow-none">
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              Filtros
-              {activeFilterCount ? (
-                <span className="bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
-                  {activeFilterCount}
-                </span>
-              ) : null}
-            </Button>
-            <PopoverContent
-              placement="bottom end"
-              className="border-border/80 w-[min(26rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
-            >
-              <div className="border-b px-4 py-3">
-                <p className="text-sm font-semibold">Filtros de tareas</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Acota por tipo, responsable, prioridad o estado.
-                </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="task-search" className="relative min-w-56 flex-1">
+          <span className="sr-only">Buscar tareas y plazos</span>
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            id="task-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar por título, detalle o expediente…"
+            className="bg-muted/20 h-9 !pl-11 shadow-none"
+          />
+        </label>
+        <PopoverTrigger>
+          <Button type="button" variant="outline" size="sm" className="h-9 shadow-none">
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            Filtros
+            {activeFilterCount ? (
+              <span className="bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </Button>
+          <PopoverContent
+            placement="bottom end"
+            className="border-border/80 w-[min(26rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
+          >
+            <div className="border-b px-4 py-3">
+              <p className="text-sm font-semibold">Filtros de tareas</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Acota por tipo, responsable, prioridad o estado.
+              </p>
+            </div>
+            <div className="grid gap-4 p-4 sm:grid-cols-2">
+              <FilterSelect
+                label="Tipo"
+                value={typeFilter}
+                onChange={(value) => setTypeFilter(value as typeof typeFilter)}
+                options={[
+                  ['all', 'Todos los tipos'],
+                  ['Tarea', 'Tarea'],
+                  ['Recordatorio', 'Recordatorio'],
+                  ['Evento', 'Evento'],
+                  ['Plazo', 'Plazo'],
+                ]}
+              />
+              <FilterSelect
+                label="Responsable"
+                value={assigneeFilter}
+                onChange={setAssigneeFilter}
+                options={[
+                  ['all', 'Todos los responsables'],
+                  ['', 'Sin asignar'],
+                  ...(members.data ?? []).map((member) => [member.id, member.nombre]),
+                ]}
+              />
+              <FilterSelect
+                label="Prioridad"
+                value={priorityFilter}
+                onChange={(value) => setPriorityFilter(value as typeof priorityFilter)}
+                options={[
+                  ['all', 'Cualquier prioridad'],
+                  ['Alta', 'Alta'],
+                  ['Media', 'Media'],
+                  ['Baja', 'Baja'],
+                ]}
+              />
+              <FilterSelect
+                label="Estado"
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value as TaskFilterStatus)}
+                options={[
+                  ['all', 'Todos los estados'],
+                  ['Pendiente', 'Pendiente'],
+                  ['En curso', 'En curso'],
+                  ['En espera', 'En espera de validación'],
+                  ['Completada', 'Completada'],
+                  ['Cancelada', 'Cancelada'],
+                ]}
+              />
+            </div>
+            {activeFilterCount ? (
+              <div className="border-t px-4 py-2.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={clearFilters}
+                >
+                  Limpiar filtros
+                </Button>
               </div>
-              <div className="grid gap-4 p-4 sm:grid-cols-2">
-                <FilterSelect
-                  label="Tipo"
-                  value={typeFilter}
-                  onChange={(value) => setTypeFilter(value as typeof typeFilter)}
-                  options={[
-                    ['all', 'Todos los tipos'],
-                    ['Tarea', 'Tarea'],
-                    ['Recordatorio', 'Recordatorio'],
-                    ['Evento', 'Evento'],
-                    ['Plazo', 'Plazo'],
-                  ]}
-                />
-                <FilterSelect
-                  label="Responsable"
-                  value={assigneeFilter}
-                  onChange={setAssigneeFilter}
-                  options={[
-                    ['all', 'Todos los responsables'],
-                    ['', 'Sin asignar'],
-                    ...(members.data ?? []).map((member) => [member.id, member.nombre]),
-                  ]}
-                />
-                <FilterSelect
-                  label="Prioridad"
-                  value={priorityFilter}
-                  onChange={(value) => setPriorityFilter(value as typeof priorityFilter)}
-                  options={[
-                    ['all', 'Cualquier prioridad'],
-                    ['Alta', 'Alta'],
-                    ['Media', 'Media'],
-                    ['Baja', 'Baja'],
-                  ]}
-                />
-                <FilterSelect
-                  label="Estado"
-                  value={statusFilter}
-                  onChange={(value) => setStatusFilter(value as TaskFilterStatus)}
-                  options={[
-                    ['all', 'Todos los estados'],
-                    ['Pendiente', 'Pendiente'],
-                    ['En curso', 'En curso'],
-                    ['En espera', 'En espera de validación'],
-                    ['Completada', 'Completada'],
-                    ['Cancelada', 'Cancelada'],
-                  ]}
-                />
-              </div>
-              {activeFilterCount ? (
-                <div className="border-t px-4 py-2.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={clearFilters}
-                  >
-                    Limpiar filtros
-                  </Button>
-                </div>
-              ) : null}
-            </PopoverContent>
-          </PopoverTrigger>
-          <Badge variant="secondary" className="h-9 px-3 tabular-nums">
-            {visible.length} {visible.length === 1 ? 'elemento' : 'elementos'}
-          </Badge>
-          <div className="ml-auto">
-            <ViewSwitch
-              value={view}
-              onChange={(value) => setView(value as TaskView)}
-              options={[
-                { id: 'kanban', label: 'Kanban' },
-                { id: 'list', label: 'Lista' },
-              ]}
-            />
-          </div>
-        </CardContent>
-      </Card>
+            ) : null}
+          </PopoverContent>
+        </PopoverTrigger>
+        <Badge variant="secondary" className="h-9 px-3 tabular-nums">
+          {visible.length} {visible.length === 1 ? 'elemento' : 'elementos'}
+        </Badge>
+        <div className="ml-auto">
+          <ViewSwitch
+            value={view}
+            onChange={(value) => setView(value as TaskView)}
+            options={[
+              { id: 'kanban', label: 'Kanban' },
+              { id: 'list', label: 'Lista' },
+            ]}
+          />
+        </div>
+      </div>
       {view === 'kanban' ? (
         <TaskKanban
           tasks={visible}
@@ -322,19 +364,51 @@ function TaskKanban({
   ) => Promise<void>
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
+  const [dragged, setDragged] = useState<TareaPersistida | null>(null)
+  const canDropIn = (column: TaskBoardColumnId) => Boolean(dragged && canMoveTaskInBoard(dragged, column))
+  const startDrag = (event: DragEvent<HTMLElement>, task: TareaPersistida) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', task.id)
+    setDragged(task)
+  }
+  const dropInColumn = (event: DragEvent<HTMLElement>, column: TaskBoardColumnId) => {
+    event.preventDefault()
+    const status = taskStatusForBoardColumn(column)
+    if (dragged && status && canMoveTaskInBoard(dragged, column)) {
+      void onChangeStatus(dragged, status)
+    }
+    setDragged(null)
+  }
   return (
     <section aria-label="Tablero Kanban de tareas" className="overflow-x-auto pb-2">
-      <div className="grid min-w-[900px] grid-cols-3 gap-4">
+      <p id="task-drag-help" className="sr-only">
+        Arrastra una tarea entre Pendiente y En curso para actualizar su estado. Los plazos en
+        espera requieren validación profesional.
+      </p>
+      <div className="grid min-w-[960px] grid-cols-3 gap-4">
         {TASK_BOARD_COLUMNS.map((column) => {
           const items = tasks.filter((task) => taskBoardColumn(task) === column.id)
+          const styles = TASK_COLUMN_STYLES[column.id]
           return (
-            <section key={column.id} className="bg-muted/45 min-h-72 rounded-xl border p-3">
-              <header className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold">{column.title}</h2>
-                  <p className="text-muted-foreground mt-1 text-xs">{column.description}</p>
+            <section
+              key={column.id}
+              className={`min-h-80 rounded-2xl border p-3 shadow-sm transition-all ${styles.panel} ${canDropIn(column) ? 'ring-primary/35 scale-[1.01] ring-2' : ''}`}
+              onDragOver={(event) => {
+                if (canDropIn(column)) event.preventDefault()
+              }}
+              onDrop={(event) => dropInColumn(event, column)}
+            >
+              <header className="mb-4 flex items-start justify-between gap-3 px-1 pt-1">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${styles.dot}`} aria-hidden="true" />
+                    <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
+                  </div>
+                  <p className="text-muted-foreground mt-1.5 text-xs leading-4">
+                    {column.description}
+                  </p>
                 </div>
-                <Badge variant="secondary" className="tabular-nums">
+                <Badge className={`shrink-0 border tabular-nums ${styles.count}`}>
                   {items.length}
                 </Badge>
               </header>
@@ -348,11 +422,22 @@ function TaskKanban({
                     compact
                     onChangeStatus={onChangeStatus}
                     onValidate={onValidate}
+                    drag={
+                      canMoveTaskInBoard(task, 'pending') || canMoveTaskInBoard(task, 'in-progress')
+                        ? {
+                            onStart: (event) => startDrag(event, task),
+                            onEnd: () => setDragged(null),
+                            isDragged: dragged?.id === task.id,
+                          }
+                        : undefined
+                    }
                   />
                 ))}
                 {!items.length ? (
-                  <p className="text-muted-foreground bg-card/50 rounded-lg border border-dashed px-3 py-8 text-center text-xs">
-                    Sin elementos en esta categoría.
+                  <p className="text-muted-foreground bg-card/55 rounded-xl border border-dashed px-3 py-9 text-center text-xs">
+                    {canDropIn(column)
+                      ? 'Suelta la tarea aquí'
+                      : 'Sin elementos en esta categoría.'}
                   </p>
                 ) : null}
               </div>
@@ -372,6 +457,7 @@ function TaskCard({
   compact = false,
   onChangeStatus,
   onValidate,
+  drag,
 }: {
   task: TareaPersistida
   canValidate: boolean
@@ -384,41 +470,72 @@ function TaskCard({
     source: string,
     note: string,
   ) => Promise<void>
+  drag?: {
+    onStart: (event: DragEvent<HTMLButtonElement>) => void
+    onEnd: () => void
+    isDragged: boolean
+  }
 }) {
   const [source, setSource] = useState('')
   const [note, setNote] = useState('')
   return (
-    <Card>
+    <Card
+      className={`${compact ? 'group/task border-border/70 bg-card/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md' : ''} ${drag?.isDragged ? 'scale-[0.98] opacity-50' : ''}`}
+    >
       <CardContent className={`space-y-3 ${compact ? 'p-4' : 'pt-6'}`}>
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-medium">{task.titulo}</p>
-            {task.descripcion ? (
-              <p className="text-muted-foreground mt-1 text-sm">{task.descripcion}</p>
+          <div className="flex min-w-0 items-start gap-2">
+            {drag ? (
+              <button
+                type="button"
+                draggable={!pending}
+                disabled={pending}
+                aria-label={`Arrastrar ${task.titulo}`}
+                aria-describedby="task-drag-help"
+                onDragStart={drag.onStart}
+                onDragEnd={drag.onEnd}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground -ml-1 mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded transition-colors active:cursor-grabbing disabled:cursor-not-allowed"
+              >
+                <GripVertical className="h-4 w-4" aria-hidden="true" />
+              </button>
             ) : null}
+            <div className="min-w-0">
+              <p className="line-clamp-2 text-sm font-semibold leading-5">{task.titulo}</p>
+            {task.descripcion ? (
+                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
+                  {task.descripcion}
+                </p>
+            ) : null}
+            </div>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">
-            <Badge variant="outline">{task.tipo}</Badge>
-            <Badge variant={task.validacion === 'Propuesto' ? 'secondary' : 'outline'}>
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+              {task.tipo}
+            </Badge>
+            <Badge
+              variant={task.validacion === 'Propuesto' ? 'secondary' : 'outline'}
+              className="h-5 px-1.5 text-[10px]"
+            >
               {task.validacion === 'Propuesto' ? 'Pendiente de validar' : task.estado}
             </Badge>
             <Badge
               variant={task.critico || task.prioridad === 'Alta' ? 'destructive' : 'secondary'}
+              className="h-5 px-1.5 text-[10px]"
             >
               {task.critico ? 'Crítica' : task.prioridad}
             </Badge>
           </div>
         </div>
-        <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+        <p className="text-muted-foreground bg-muted/55 flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium">
           <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
           {task.venceEn ? new Date(task.venceEn).toLocaleString('es-ES') : 'Sin fecha'}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {task.expedienteId ? (
             <Link
               to="/expedientes/$id"
               params={{ id: task.expedienteId }}
-              className="text-primary text-sm font-medium hover:underline"
+              className="bg-primary/8 text-primary hover:bg-primary/12 rounded-md px-2 py-1 text-xs font-medium transition-colors"
             >
               Abrir expediente
             </Link>
@@ -427,7 +544,7 @@ function TaskCard({
             <Link
               to="/oportunidades/$id"
               params={{ id: task.oportunidadId }}
-              className="text-primary text-sm font-medium hover:underline"
+              className="bg-primary/8 text-primary hover:bg-primary/12 rounded-md px-2 py-1 text-xs font-medium transition-colors"
             >
               Abrir Lead
             </Link>

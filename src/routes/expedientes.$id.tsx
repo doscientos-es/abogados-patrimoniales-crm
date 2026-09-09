@@ -88,10 +88,11 @@ function FichaExpedientePersistente() {
         description="No existe o no pertenece a tu despacho."
       />
     )
+  const expediente = caseQuery.data
 
   return (
     <PersistentCaseDetail
-      expediente={caseQuery.data}
+      expediente={expediente}
       lineas={workstreams.data ?? []}
       actuaciones={activities.data ?? []}
       participantes={participants.data ?? []}
@@ -100,14 +101,14 @@ function FichaExpedientePersistente() {
       tareas={tasks.data ?? []}
       miembros={members.data ?? []}
       clienteNombre={
-        contacts.data?.find((contact) => contact.id === caseQuery.data.contactoPrincipalId)?.nombre ??
+        contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
         'Contacto principal'
       }
       taskPending={createTask.isPending}
       onCreateTask={(input) => createTask.mutateAsync(input)}
       editor={
         <CaseEditForm
-          expediente={caseQuery.data}
+          expediente={expediente}
           miembros={members.data ?? []}
           pending={updateCase.isPending}
           onSave={async (input) => {
@@ -118,7 +119,7 @@ function FichaExpedientePersistente() {
       relatedForms={{
         participant: (
           <CaseRelatedForms
-            expedienteId={caseQuery.data.id}
+            expedienteId={expediente.id}
             contactos={contacts.data ?? []}
             miembros={members.data ?? []}
             lineas={workstreams.data ?? []}
@@ -131,7 +132,7 @@ function FichaExpedientePersistente() {
         ),
         workstream: (
           <CaseRelatedForms
-            expedienteId={caseQuery.data.id}
+            expedienteId={expediente.id}
             contactos={contacts.data ?? []}
             miembros={members.data ?? []}
             lineas={workstreams.data ?? []}
@@ -144,7 +145,7 @@ function FichaExpedientePersistente() {
         ),
         activity: (
           <CaseRelatedForms
-            expedienteId={caseQuery.data.id}
+            expedienteId={expediente.id}
             contactos={contacts.data ?? []}
             miembros={members.data ?? []}
             lineas={workstreams.data ?? []}
