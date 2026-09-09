@@ -13,7 +13,6 @@ import {
   Map as MapIcon,
   Pencil,
   ShieldAlert,
-  StickyNote,
   UsersRound,
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -289,6 +288,7 @@ function CaseHeader({
               <Badge variant="outline" className="h-9 px-3 font-normal">
                 {caseDependency(expediente.estadoOperativo)}
               </Badge>
+              <CaseEditDialog editor={editor} />
               {activityForm}
             </div>
           </div>
@@ -470,7 +470,6 @@ function CaseSummary({
           </CardContent>
         </Card>
       </div>
-      <CaseEditDialog editor={null} />
     </div>
   )
 }

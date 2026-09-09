@@ -19,6 +19,7 @@ import {
   useLineasPersistentes,
   useParticipantesPersistentes,
 } from '@/features/expedientes'
+import { useNotasRemotas } from '@/features/notas'
 import { useCrearTarea, useTareasPersistentes } from '@/features/tareas'
 
 export const Route = createFileRoute('/expedientes/$id')({
@@ -44,6 +45,7 @@ function FichaExpedientePersistente() {
   const events = useEventosExpediente(firmId, id)
   const documents = useDocumentosExpediente(firmId, id)
   const tasks = useTareasPersistentes(firmId)
+  const notes = useNotasRemotas(firmId)
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
   const updateCase = useActualizarExpediente(firmId)
@@ -99,6 +101,7 @@ function FichaExpedientePersistente() {
       eventos={events.data ?? []}
       documentos={documents.data ?? []}
       tareas={tasks.data ?? []}
+      notas={notes.data ?? []}
       miembros={members.data ?? []}
       clienteNombre={
         contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
