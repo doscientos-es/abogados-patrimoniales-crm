@@ -1,12 +1,15 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
+  BellRing,
   CalendarClock,
   GripVertical,
   LayoutDashboard,
+  Link2,
   Plus,
   Search,
   SlidersHorizontal,
+  UserRound,
 } from 'lucide-react'
 import { useMemo, useState, type DragEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -51,6 +54,25 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
   { id: 'waiting', title: 'En espera', description: 'Plazos pendientes de validación' },
 ]
+
+const TASK_PRIORITY_CLASS: Record<TareaPersistida['prioridad'], string> = {
+  Alta: 'border-destructive/30 bg-destructive/10 text-destructive',
+  Media: 'border-warning/30 bg-warning/10 text-warning-foreground',
+  Baja: 'border-border bg-secondary text-secondary-foreground',
+}
+
+const formatTaskDate = (value: string | null) => {
+  if (!value) return 'Sin fecha'
+  return new Intl.DateTimeFormat('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(new Date(value))
+    .replace(',', '')
+}
 
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
 export function taskBoardColumn(task: TareaPersistida): TaskBoardColumnId | null {
@@ -99,6 +121,10 @@ export function PersistentTaskWorkspace() {
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
     [cases.data],
+  )
+  const memberNames = useMemo(
+    () => new Map((members.data ?? []).map((member) => [member.id, member.nombre])),
+    [members.data],
   )
 
   if (session.status === 'loading' || membership.isPending)
@@ -304,6 +330,8 @@ export function PersistentTaskWorkspace() {
           tasks={visible}
           canValidate={canValidate}
           pending={change.isPending || validate.isPending}
+          caseNames={caseNames}
+          memberNames={memberNames}
           onChangeStatus={changeStatus}
           onValidate={validateTask}
         />
@@ -315,6 +343,8 @@ export function PersistentTaskWorkspace() {
               task={task}
               canValidate={canValidate}
               pending={change.isPending || validate.isPending}
+              caseName={caseNames.get(task.expedienteId ?? '')}
+              assigneeName={memberNames.get(task.asignadoId ?? '')}
               onChangeStatus={changeStatus}
               onValidate={validateTask}
             />
@@ -330,12 +360,16 @@ function TaskKanban({
   tasks,
   canValidate,
   pending,
+  caseNames,
+  memberNames,
   onChangeStatus,
   onValidate,
 }: {
   tasks: TareaPersistida[]
   canValidate: boolean
   pending: boolean
+  caseNames: ReadonlyMap<string, string>
+  memberNames: ReadonlyMap<string, string>
   onChangeStatus: (task: TareaPersistida, status: TareaPersistida['estado']) => Promise<void>
   onValidate: (
     task: TareaPersistida,
@@ -367,28 +401,28 @@ function TaskKanban({
         Arrastra una tarea entre Pendiente y En curso para actualizar su estado. Los plazos en
         espera requieren validación profesional.
       </p>
-      <div className="grid min-w-[960px] grid-cols-3 gap-4">
+      <div className="grid min-w-[960px] grid-cols-3 gap-3">
         {TASK_BOARD_COLUMNS.map((column) => {
           const items = tasks.filter((task) => taskBoardColumn(task) === column.id)
           return (
             <section
               key={column.id}
-              className={`bg-muted/35 min-h-80 rounded-lg border p-3 transition-colors ${canDropIn(column.id) ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
+              className={`bg-muted/40 min-h-[34rem] rounded-md border p-2.5 transition-colors ${canDropIn(column.id) ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
               onDragOver={(event) => {
                 if (canDropIn(column.id)) event.preventDefault()
               }}
               onDrop={(event) => dropInColumn(event, column.id)}
             >
-              <header className="border-border mb-3 flex items-start justify-between gap-3 border-b px-1 pt-1 pb-3">
+              <header className="border-border mb-3 flex items-start justify-between gap-3 border-b px-1 pt-1 pb-2.5">
                 <div className="min-w-0">
-                  <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
-                  <p className="text-muted-foreground mt-1 text-xs leading-4">
+                  <h2 className="text-xs font-bold tracking-wide uppercase">{column.title}</h2>
+                  <p className="text-muted-foreground mt-1 text-[11px] leading-4">
                     {column.description}
                   </p>
                 </div>
                 <Badge
                   variant="secondary"
-                  className="h-5 min-w-5 shrink-0 px-1.5 text-[10px] tabular-nums"
+                  className="h-6 min-w-6 shrink-0 rounded-full px-2 text-xs tabular-nums"
                 >
                   {items.length}
                 </Badge>
@@ -401,6 +435,8 @@ function TaskKanban({
                     canValidate={canValidate}
                     pending={pending}
                     compact
+                    caseName={caseNames.get(task.expedienteId ?? '')}
+                    assigneeName={memberNames.get(task.asignadoId ?? '')}
                     onChangeStatus={onChangeStatus}
                     onValidate={onValidate}
                     {...(canMoveTaskInBoard(task, 'pending') ||
@@ -437,6 +473,8 @@ function TaskCard({
   canValidate,
   pending,
   compact = false,
+  caseName,
+  assigneeName,
   onChangeStatus,
   onValidate,
   drag,
@@ -445,6 +483,8 @@ function TaskCard({
   canValidate: boolean
   pending: boolean
   compact?: boolean
+  caseName?: string | undefined
+  assigneeName?: string | undefined
   onChangeStatus: (task: TareaPersistida, status: TareaPersistida['estado']) => Promise<void>
   onValidate: (
     task: TareaPersistida,
@@ -462,9 +502,9 @@ function TaskCard({
   const [note, setNote] = useState('')
   return (
     <Card
-      className={`${compact ? 'group/task border-border bg-card hover:border-foreground/20 shadow-none transition-colors hover:shadow-sm' : ''} ${drag?.isDragged ? 'opacity-50' : ''}`}
+      className={`${compact ? 'group/task border-border bg-card hover:border-primary/35 rounded-xl shadow-sm transition-all hover:shadow-md' : ''} ${drag?.isDragged ? 'opacity-50' : ''}`}
     >
-      <CardContent className={`space-y-3 ${compact ? 'p-4' : 'pt-6'}`}>
+      <CardContent className={`space-y-3 ${compact ? 'p-3.5' : 'pt-6'}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-2">
             {drag ? (
@@ -482,54 +522,64 @@ function TaskCard({
               </button>
             ) : null}
             <div className="min-w-0">
-              <p className="line-clamp-2 text-sm leading-5 font-semibold">{task.titulo}</p>
-              {task.descripcion ? (
+              <p className="line-clamp-2 text-[15px] leading-5 font-semibold">{task.titulo}</p>
+              {!compact && task.descripcion ? (
                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                   {task.descripcion}
                 </p>
               ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap justify-end gap-1">
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-              {task.tipo}
-            </Badge>
-            <Badge
-              variant={task.validacion === 'Propuesto' ? 'secondary' : 'outline'}
-              className="h-5 px-1.5 text-[10px]"
-            >
-              {task.validacion === 'Propuesto' ? 'Pendiente de validar' : task.estado}
-            </Badge>
-            <Badge
-              variant={task.critico || task.prioridad === 'Alta' ? 'destructive' : 'secondary'}
-              className="h-5 px-1.5 text-[10px]"
-            >
-              {task.critico ? 'Crítica' : task.prioridad}
-            </Badge>
-          </div>
+          <Badge
+            className={`h-6 shrink-0 rounded-full px-2 text-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
+          >
+            {task.critico ? 'Crítica' : task.prioridad}
+          </Badge>
         </div>
-        <p className="text-muted-foreground bg-muted/55 flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium">
-          <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
-          {task.venceEn ? new Date(task.venceEn).toLocaleString('es-ES') : 'Sin fecha'}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {task.expedienteId ? (
-            <Link
-              to="/expedientes/$id"
-              params={{ id: task.expedienteId }}
-              className="bg-primary/8 text-primary hover:bg-primary/12 rounded-md px-2 py-1 text-xs font-medium transition-colors"
-            >
-              Abrir expediente
-            </Link>
+        {task.expedienteId ? (
+          <Link
+            to="/expedientes/$id"
+            params={{ id: task.expedienteId }}
+            className="text-muted-foreground hover:text-primary flex min-w-0 items-center gap-1.5 text-xs transition-colors"
+          >
+            <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{caseName ?? 'Expediente vinculado'}</span>
+          </Link>
+        ) : null}
+        {task.oportunidadId && !task.expedienteId ? (
+          <Link
+            to="/oportunidades/$id"
+            params={{ id: task.oportunidadId }}
+            className="text-muted-foreground hover:text-primary flex min-w-0 items-center gap-1.5 text-xs transition-colors"
+          >
+            <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Lead vinculado</span>
+          </Link>
+        ) : null}
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+          <span className="bg-muted text-foreground flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 font-medium">
+            <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{assigneeName ?? 'Sin responsable'}</span>
+          </span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
+            <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+            {formatTaskDate(task.venceEn)}
+          </span>
+        </div>
+        <div className="border-border flex flex-wrap gap-1.5 border-t pt-2.5">
+          <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
+            {task.tipo}
+          </Badge>
+          {task.recordarEn ? (
+            <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
+              <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+              Recordatorio activo
+            </Badge>
           ) : null}
-          {task.oportunidadId ? (
-            <Link
-              to="/oportunidades/$id"
-              params={{ id: task.oportunidadId }}
-              className="bg-primary/8 text-primary hover:bg-primary/12 rounded-md px-2 py-1 text-xs font-medium transition-colors"
-            >
-              Abrir Lead
-            </Link>
+          {task.validacion === 'Propuesto' ? (
+            <Badge variant="secondary" className="h-6 px-2 text-[11px]">
+              Pendiente de validar
+            </Badge>
           ) : null}
         </div>
         {task.validacion === 'Propuesto' && canValidate ? (

@@ -3,11 +3,15 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  Bot,
   CalendarClock,
   CheckSquare2,
   FileText,
   History,
+  LayoutGrid,
   Layers3,
+  Map as MapIcon,
+  Pencil,
   UsersRound,
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -17,6 +21,13 @@ import { SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import type { MiembroDespacho } from '@/features/crm'
 import {
@@ -227,22 +238,13 @@ export function PersistentCaseDetail({
           />
         ) : null}
         {activeTab === 'workstreams' ? (
-          <DetailSection
-            title="Líneas de trabajo"
-            subtitle="Objetivos y trabajo técnico activo del expediente."
-          >
-            <div className="grid gap-3 lg:grid-cols-2">
-              {lineas.map((line) => (
-                <WorkstreamCard
-                  key={line.id}
-                  line={line}
-                  memberName={memberNames.get(line.asignadoId ?? '')}
-                />
-              ))}
-            </div>
-            {!lineas.length ? <EmptyState message="No hay líneas de trabajo activas." /> : null}
-            {relatedForms.workstream}
-          </DetailSection>
+          <WorkstreamsSection
+            lineas={lineas}
+            miembros={miembros}
+            expedienteId={item.id}
+            expedienteReferencia={item.referencia}
+            createForm={relatedForms.workstream}
+          />
         ) : null}
         {activeTab === 'participants' ? (
           <DetailSection
@@ -366,7 +368,20 @@ function CaseSummary({
           </CardContent>
         </Card>
       </div>
-      {editor}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button type="button" variant="outline" className="gap-2">
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+            Editar expediente
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar expediente</DialogTitle>
+          </DialogHeader>
+          {editor}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -374,20 +389,231 @@ function CaseSummary({
 function DetailSection({
   title,
   subtitle,
+  actions,
   children,
 }: {
   title: string
   subtitle: string
+  actions?: ReactNode
   children: ReactNode
 }) {
   return (
     <div className="space-y-4">
-      <header>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>
+        </div>
+        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
       </header>
       {children}
     </div>
+  )
+}
+
+type WorkstreamView = 'map' | 'cards'
+type WorkstreamSituation = 'all' | 'with-target' | 'without-target'
+type WorkstreamOrder = 'manual' | 'title' | 'target'
+
+function WorkstreamsSection({
+  lineas,
+  miembros,
+  expedienteId,
+  expedienteReferencia,
+  createForm,
+}: {
+  lineas: LineaPersistida[]
+  miembros: MiembroDespacho[]
+  expedienteId: string
+  expedienteReferencia: string
+  createForm: ReactNode
+}) {
+  const [view, setView] = useState<WorkstreamView>('cards')
+  const [status, setStatus] = useState('all')
+  const [situation, setSituation] = useState<WorkstreamSituation>('all')
+  const [assignee, setAssignee] = useState('all')
+  const [priority, setPriority] = useState('all')
+  const [order, setOrder] = useState<WorkstreamOrder>('manual')
+  const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))]
+  const visible = lineas
+    .filter((line) => status === 'all' || line.estado === status)
+    .filter(
+      (line) =>
+        situation === 'all' || (situation === 'with-target') === Boolean(line.fechaObjetivo),
+    )
+    .filter((line) => assignee === 'all' || line.asignadoId === assignee)
+    .filter((line) => priority === 'all' || line.prioridad === priority)
+    .sort((first, second) => {
+      if (order === 'title') return first.titulo.localeCompare(second.titulo, 'es')
+      if (order === 'target')
+        return dateValue(first.fechaObjetivo) - dateValue(second.fechaObjetivo)
+      return first.orden - second.orden
+    })
+  const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
+
+  return (
+    <DetailSection
+      title={`Líneas de trabajo · ${lineas.length} en el expediente`}
+      subtitle="Frentes autónomos del expediente: cada uno con objetivo propio, responsable, seguimiento y resultado verificable. Agrupan y relacionan el trabajo, sin sustituir a fases, actuaciones ni tareas."
+      actions={
+        <>
+          <Button type="button" variant="outline" size="sm" disabled title="Próximamente">
+            <Bot className="h-4 w-4" aria-hidden="true" /> Analizar líneas con IA
+          </Button>
+          {createForm}
+        </>
+      }
+    >
+      <div className="border-border/80 bg-muted/20 flex flex-wrap items-center gap-2 rounded-lg border p-3">
+        <div className="bg-background flex rounded-md border p-0.5" aria-label="Vista de líneas">
+          <Button
+            type="button"
+            variant={view === 'map' ? 'secondary' : 'ghost'}
+            size="sm"
+            aria-pressed={view === 'map'}
+            onClick={() => setView('map')}
+          >
+            <MapIcon className="h-4 w-4" aria-hidden="true" /> Vista mapa
+          </Button>
+          <Button
+            type="button"
+            variant={view === 'cards' ? 'secondary' : 'ghost'}
+            size="sm"
+            aria-pressed={view === 'cards'}
+            onClick={() => setView('cards')}
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" /> Vista tarjetas
+          </Button>
+        </div>
+        <WorkstreamSelect ariaLabel="Estado de línea" value={status} onChange={setStatus}>
+          <option value="all">Todos los estados</option>
+          {statuses.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </WorkstreamSelect>
+        <WorkstreamSelect
+          ariaLabel="Situación de línea"
+          value={situation}
+          onChange={(value) => setSituation(value as WorkstreamSituation)}
+        >
+          <option value="all">Toda situación</option>
+          <option value="with-target">Con fecha objetivo</option>
+          <option value="without-target">Sin fecha objetivo</option>
+        </WorkstreamSelect>
+        <WorkstreamSelect ariaLabel="Responsable de línea" value={assignee} onChange={setAssignee}>
+          <option value="all">Todos los responsables</option>
+          <option value="">Sin asignar</option>
+          {miembros.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.nombre}
+            </option>
+          ))}
+        </WorkstreamSelect>
+        <WorkstreamSelect ariaLabel="Prioridad de línea" value={priority} onChange={setPriority}>
+          <option value="all">Toda prioridad</option>
+          <option>Alta</option>
+          <option>Media</option>
+          <option>Baja</option>
+        </WorkstreamSelect>
+        <WorkstreamSelect
+          ariaLabel="Filtro adicional de línea"
+          value="all"
+          onChange={() => undefined}
+        >
+          <option value="all">Sin filtro adicional</option>
+        </WorkstreamSelect>
+        <WorkstreamSelect
+          ariaLabel="Orden de líneas"
+          value={order}
+          onChange={(value) => setOrder(value as WorkstreamOrder)}
+        >
+          <option value="manual">Orden manual</option>
+          <option value="title">Título</option>
+          <option value="target">Fecha objetivo</option>
+        </WorkstreamSelect>
+      </div>
+      {view === 'cards' ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {visible.map((line) => (
+            <WorkstreamCard
+              key={line.id}
+              line={line}
+              memberName={memberNames.get(line.asignadoId ?? '')}
+            />
+          ))}
+        </div>
+      ) : (
+        <WorkstreamMap lines={visible} memberNames={memberNames} />
+      )}
+      {!visible.length ? (
+        <EmptyState message="Ninguna línea coincide con los filtros aplicados." />
+      ) : null}
+      <Card className="border-dashed">
+        <CardHeader>
+          <CardTitle className="text-base">Documentos pendientes de asignación</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-0 text-sm">
+          <p className="text-muted-foreground">
+            Puedes asignarlos a este expediente ({expedienteReferencia}) o a cualquier otro.
+          </p>
+          <Link
+            to="/documentos"
+            search={{ case: expedienteId }}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Gestionar documentos
+          </Link>
+        </CardContent>
+      </Card>
+    </DetailSection>
+  )
+}
+
+function WorkstreamMap({
+  lines,
+  memberNames,
+}: {
+  lines: LineaPersistida[]
+  memberNames: Map<string, string>
+}) {
+  return (
+    <div
+      className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+      aria-label="Mapa de líneas de trabajo"
+    >
+      {lines.map((line) => (
+        <WorkstreamCard
+          key={line.id}
+          line={line}
+          memberName={memberNames.get(line.asignadoId ?? '')}
+        />
+      ))}
+    </div>
+  )
+}
+
+function WorkstreamSelect({
+  ariaLabel,
+  value,
+  onChange,
+  children,
+}: {
+  ariaLabel: string
+  value: string
+  onChange: (value: string) => void
+  children: ReactNode
+}) {
+  return (
+    <label className="min-w-40 flex-1 sm:flex-none">
+      <select
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm sm:w-auto"
+      >
+        {children}
+      </select>
+    </label>
   )
 }
 

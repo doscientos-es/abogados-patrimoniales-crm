@@ -130,7 +130,22 @@ describe('PersistentCaseDetail', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
     expect(screen.getByText('Due diligence')).toBeTruthy()
+    expect(
+      screen.getByText(/Frentes autónomos del expediente: cada uno con objetivo propio/i),
+    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: /vista mapa/i })).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Orden de líneas' })).toBeTruthy()
     expect(screen.getByText('Nueva línea')).toBeTruthy()
+  })
+
+  it('opens the edit form in a dialog from the summary', () => {
+    renderDetail()
+    expect(screen.queryByText('Editor del expediente')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar expediente' }))
+
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByText('Editor del expediente')).toBeTruthy()
   })
 
   it('creates a task associated with the displayed expediente', () => {
