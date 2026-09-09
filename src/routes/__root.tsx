@@ -32,7 +32,6 @@ const SECTION_LABELS = [
   ['/ejecuciones', 'Ejecuciones'],
   ['/alertas', 'Alertas y control'],
   ['/tareas', 'Tareas'],
-  ['/calendario', 'Fechas y plazos'],
   ['/documentos', 'Documentos'],
   ['/notas', 'Notas internas'],
   ['/comunicaciones', 'Comunicaciones'],

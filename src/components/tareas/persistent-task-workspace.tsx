@@ -52,23 +52,27 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   { id: 'waiting', title: 'En espera', description: 'Plazos pendientes de validación' },
 ]
 
-const TASK_COLUMN_STYLES: Record<TaskBoardColumnId, { panel: string; dot: string; count: string }> = {
-  pending: {
-    panel: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/25',
-    dot: 'bg-amber-500',
-    count: 'border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
-  },
-  'in-progress': {
-    panel: 'border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25',
-    dot: 'bg-sky-500',
-    count: 'border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200',
-  },
-  waiting: {
-    panel: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-900/70 dark:bg-violet-950/25',
-    dot: 'bg-violet-500',
-    count: 'border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200',
-  },
-}
+const TASK_COLUMN_STYLES: Record<TaskBoardColumnId, { panel: string; dot: string; count: string }> =
+  {
+    pending: {
+      panel: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/25',
+      dot: 'bg-amber-500',
+      count:
+        'border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
+    },
+    'in-progress': {
+      panel: 'border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25',
+      dot: 'bg-sky-500',
+      count:
+        'border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200',
+    },
+    waiting: {
+      panel: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-900/70 dark:bg-violet-950/25',
+      dot: 'bg-violet-500',
+      count:
+        'border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200',
+    },
+  }
 
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
 export function taskBoardColumn(task: TareaPersistida): TaskBoardColumnId | null {
@@ -90,14 +94,14 @@ export function canMoveTaskInBoard(task: TareaPersistida, target: TaskBoardColum
   const current = taskBoardColumn(task)
   return Boolean(
     current &&
-      current !== 'waiting' &&
-      target !== 'waiting' &&
-      current !== target &&
-      taskStatusForBoardColumn(target),
+    current !== 'waiting' &&
+    target !== 'waiting' &&
+    current !== target &&
+    taskStatusForBoardColumn(target),
   )
 }
 
-export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | 'calendar' }) {
+export function PersistentTaskWorkspace() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -137,7 +141,6 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
 
   const canValidate = membership.data?.role !== 'paralegal'
   const visible = (tasks.data ?? []).filter((task) => {
-    if (mode === 'calendar' && !task.venceEn) return false
     const searchable =
       `${task.titulo} ${task.descripcion} ${task.tipo} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
     const matchesStatus =
@@ -195,7 +198,7 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <SectionHeader
-        title={mode === 'tasks' ? 'Tareas y plazos' : 'Calendario unificado'}
+        title="Tareas y plazos"
         subtitle="Fechas compartidas con zona horaria, responsable y trazabilidad."
         actions={
           <TaskCreateDialog
@@ -365,7 +368,8 @@ function TaskKanban({
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
-  const canDropIn = (column: TaskBoardColumnId) => Boolean(dragged && canMoveTaskInBoard(dragged, column))
+  const canDropIn = (column: TaskBoardColumnId) =>
+    Boolean(dragged && canMoveTaskInBoard(dragged, column))
   const startDrag = (event: DragEvent<HTMLElement>, task: TareaPersistida) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', task.id)
@@ -392,11 +396,11 @@ function TaskKanban({
           return (
             <section
               key={column.id}
-              className={`min-h-80 rounded-2xl border p-3 shadow-sm transition-all ${styles.panel} ${canDropIn(column) ? 'ring-primary/35 scale-[1.01] ring-2' : ''}`}
+              className={`min-h-80 rounded-2xl border p-3 shadow-sm transition-all ${styles.panel} ${canDropIn(column.id) ? 'ring-primary/35 scale-[1.01] ring-2' : ''}`}
               onDragOver={(event) => {
-                if (canDropIn(column)) event.preventDefault()
+                if (canDropIn(column.id)) event.preventDefault()
               }}
-              onDrop={(event) => dropInColumn(event, column)}
+              onDrop={(event) => dropInColumn(event, column.id)}
             >
               <header className="mb-4 flex items-start justify-between gap-3 px-1 pt-1">
                 <div className="min-w-0">
@@ -422,20 +426,21 @@ function TaskKanban({
                     compact
                     onChangeStatus={onChangeStatus}
                     onValidate={onValidate}
-                    drag={
-                      canMoveTaskInBoard(task, 'pending') || canMoveTaskInBoard(task, 'in-progress')
-                        ? {
+                    {...(canMoveTaskInBoard(task, 'pending') ||
+                    canMoveTaskInBoard(task, 'in-progress')
+                      ? {
+                          drag: {
                             onStart: (event) => startDrag(event, task),
                             onEnd: () => setDragged(null),
                             isDragged: dragged?.id === task.id,
-                          }
-                        : undefined
-                    }
+                          },
+                        }
+                      : {})}
                   />
                 ))}
                 {!items.length ? (
                   <p className="text-muted-foreground bg-card/55 rounded-xl border border-dashed px-3 py-9 text-center text-xs">
-                    {canDropIn(column)
+                    {canDropIn(column.id)
                       ? 'Suelta la tarea aquí'
                       : 'Sin elementos en esta categoría.'}
                   </p>
@@ -494,18 +499,18 @@ function TaskCard({
                 aria-describedby="task-drag-help"
                 onDragStart={drag.onStart}
                 onDragEnd={drag.onEnd}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground -ml-1 mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded transition-colors active:cursor-grabbing disabled:cursor-not-allowed"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground mt-0.5 -ml-1 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded transition-colors active:cursor-grabbing disabled:cursor-not-allowed"
               >
                 <GripVertical className="h-4 w-4" aria-hidden="true" />
               </button>
             ) : null}
             <div className="min-w-0">
-              <p className="line-clamp-2 text-sm font-semibold leading-5">{task.titulo}</p>
-            {task.descripcion ? (
+              <p className="line-clamp-2 text-sm leading-5 font-semibold">{task.titulo}</p>
+              {task.descripcion ? (
                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                   {task.descripcion}
                 </p>
-            ) : null}
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">

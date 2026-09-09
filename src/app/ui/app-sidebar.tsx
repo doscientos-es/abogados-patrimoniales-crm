@@ -1,7 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Briefcase,
-  CalendarClock,
   CheckSquare,
   Contact,
   FileText,
@@ -40,7 +39,6 @@ const comercial = [
 const operativa = [
   { title: 'Control de expedientes', url: '/expedientes', icon: Briefcase },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
-  { title: 'Fechas y plazos', url: '/calendario', icon: CalendarClock },
 ] as const
 
 const gestion = [

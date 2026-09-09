@@ -23,13 +23,7 @@ import { isOverdue } from '@/shared/lib/time-status'
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
 const PENDING_INVOICE_STATUSES = ['draft', 'cancelled', 'paid']
 const UPCOMING_WINDOW_MS = 14 * 86_400_000
-type DashboardRoute =
-  | '/tareas'
-  | '/calendario'
-  | '/oportunidades'
-  | '/expedientes'
-  | '/facturacion'
-  | '/onboarding'
+type DashboardRoute = '/tareas' | '/oportunidades' | '/expedientes' | '/facturacion' | '/onboarding'
 
 type DashboardData = {
   tasks: TareaPersistida[]
@@ -178,7 +172,7 @@ export function PersistentDashboard() {
       label: 'Fechas críticas',
       value: dashboard.criticalDeadlines.length,
       detail: 'Plazos o hitos que requieren revisión.',
-      to: '/calendario' as const,
+      to: '/tareas' as const,
     },
     {
       label: 'Expedientes en riesgo',
@@ -403,13 +397,13 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
         {
           label: 'Actuaciones de hoy',
           value: dashboard.todayEvents.length,
-          to: '/calendario',
+          to: '/tareas',
           tone: 'info',
         },
         {
           label: 'Próximas citas',
           value: dashboard.upcomingEvents.length,
-          to: '/calendario',
+          to: '/tareas',
           tone: 'neutro',
         },
       ],
@@ -421,7 +415,7 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
         {
           label: 'Fechas críticas',
           value: dashboard.criticalDeadlines.length,
-          to: '/calendario',
+          to: '/tareas',
           tone: 'riesgo',
         },
         {

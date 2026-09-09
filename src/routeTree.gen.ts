@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ConfiguracionRouteImport } from './routes/configuracion'
 import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
@@ -31,11 +30,6 @@ import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.ind
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendarioRoute = CalendarioRouteImport.update({
-  id: '/calendario',
-  path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracionRoute = ConfiguracionRouteImport.update({
@@ -121,7 +115,6 @@ const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/calendario': typeof CalendarioRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
@@ -141,7 +134,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/calendario': typeof CalendarioRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
@@ -162,7 +154,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/calendario': typeof CalendarioRoute
   '/configuracion': typeof ConfiguracionRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
@@ -184,7 +175,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/calendario'
     | '/configuracion'
     | '/crm'
     | '/documentos'
@@ -204,7 +194,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/calendario'
     | '/configuracion'
     | '/crm'
     | '/documentos'
@@ -224,7 +213,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/calendario'
     | '/configuracion'
     | '/crm'
     | '/documentos'
@@ -245,7 +233,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CalendarioRoute: typeof CalendarioRoute
   ConfiguracionRoute: typeof ConfiguracionRoute
   CrmRoute: typeof CrmRoute
   DocumentosRoute: typeof DocumentosRoute
@@ -271,13 +258,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendario': {
-      id: '/calendario'
-      path: '/calendario'
-      fullPath: '/calendario'
-      preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracion': {
@@ -397,7 +377,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CalendarioRoute: CalendarioRoute,
   ConfiguracionRoute: ConfiguracionRoute,
   CrmRoute: CrmRoute,
   DocumentosRoute: DocumentosRoute,
