@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   calendarSlotHour,
   canMoveTaskInBoard,
+  layoutCalendarEvents,
   sortTasksForAgenda,
   taskBoardColumn,
   taskStatusForBoardColumn,
@@ -80,5 +81,41 @@ describe('calendarSlotHour', () => {
     expect(calendarSlotHour('2026-09-10T10:30:00')).toBe(10)
     expect(calendarSlotHour('2026-09-10T06:30:00')).toBe(8)
     expect(calendarSlotHour('2026-09-10T22:30:00')).toBe(19)
+  })
+})
+
+describe('layoutCalendarEvents', () => {
+  it('places overlapping events in separate columns instead of stacking them', () => {
+    const layouts = layoutCalendarEvents([
+      task({ id: 'first', titulo: 'Primero', venceEn: '2026-09-10T10:00:00' }),
+      task({ id: 'second', titulo: 'Segundo', venceEn: '2026-09-10T10:15:00' }),
+    ])
+
+    expect(layouts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          task: expect.objectContaining({ id: 'first' }),
+          column: 0,
+          columnCount: 2,
+        }),
+        expect.objectContaining({
+          task: expect.objectContaining({ id: 'second' }),
+          column: 1,
+          columnCount: 2,
+        }),
+      ]),
+    )
+  })
+
+  it('returns to the first column when events no longer overlap', () => {
+    const layouts = layoutCalendarEvents([
+      task({ id: 'first', titulo: 'Primero', venceEn: '2026-09-10T10:00:00' }),
+      task({ id: 'later', titulo: 'Después', venceEn: '2026-09-10T11:00:00' }),
+    ])
+
+    expect(layouts.map((layout) => [layout.column, layout.columnCount])).toEqual([
+      [0, 1],
+      [0, 1],
+    ])
   })
 })

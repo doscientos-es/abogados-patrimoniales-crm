@@ -49,7 +49,21 @@ type TaskFilterStatus = 'all' | TareaPersistida['estado'] | 'En espera'
 type TaskBoardColumnId = 'pending' | 'in-progress' | 'waiting'
 
 const AGENDA_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const AGENDA_HOURS = Array.from({ length: 12 }, (_, index) => index + 8)
+const AGENDA_START_HOUR = 8
+const AGENDA_END_HOUR = 20
+const AGENDA_HOURS = Array.from(
+  { length: AGENDA_END_HOUR - AGENDA_START_HOUR },
+  (_, index) => index + AGENDA_START_HOUR,
+)
+const CALENDAR_HOUR_HEIGHT = 80
+const CALENDAR_EVENT_DURATION_MINUTES = 50
+
+export type CalendarEventLayout = {
+  task: TareaPersistida
+  top: number
+  column: number
+  columnCount: number
+}
 
 const TASK_BOARD_COLUMNS: ReadonlyArray<{
   id: TaskBoardColumnId
@@ -118,7 +132,62 @@ function calendarDateKey(value: string) {
 
 export function calendarSlotHour(value: string) {
   const hour = new Date(value).getHours()
-  return Math.min(Math.max(hour, AGENDA_HOURS[0]), AGENDA_HOURS.at(-1) ?? 19)
+  return Math.min(Math.max(hour, AGENDA_START_HOUR), AGENDA_END_HOUR - 1)
+}
+
+/** Distribuye los eventos solapados en columnas, como una agenda semanal. */
+export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLayout[] {
+  const startOfDay = AGENDA_START_HOUR * 60
+  const endOfDay = AGENDA_END_HOUR * 60
+  const events = tasks
+    .filter((task): task is TareaPersistida & { venceEn: string } => Boolean(task.venceEn))
+    .map((task) => {
+      const date = new Date(task.venceEn)
+      const minutes = date.getHours() * 60 + date.getMinutes()
+      const start = Math.min(Math.max(minutes, startOfDay), endOfDay - 1)
+      return { task, start, end: Math.min(start + CALENDAR_EVENT_DURATION_MINUTES, endOfDay) }
+    })
+    .sort(
+      (first, second) =>
+        first.start - second.start || first.task.titulo.localeCompare(second.task.titulo, 'es'),
+    )
+
+  const layouts: Array<CalendarEventLayout & { end: number; group: number }> = []
+  let group = -1
+  let groupEnd = -1
+
+  for (const event of events) {
+    if (event.start >= groupEnd) {
+      group += 1
+      groupEnd = event.end
+    } else {
+      groupEnd = Math.max(groupEnd, event.end)
+    }
+    const occupiedColumns = new Set(
+      layouts
+        .filter((item) => item.group === group && item.end > event.start)
+        .map((item) => item.column),
+    )
+    let column = 0
+    while (occupiedColumns.has(column)) column += 1
+    layouts.push({
+      task: event.task,
+      top: ((event.start - startOfDay) / 60) * CALENDAR_HOUR_HEIGHT,
+      column,
+      columnCount: 1,
+      end: event.end,
+      group,
+    })
+  }
+
+  for (const item of layouts) {
+    item.columnCount = Math.max(
+      ...layouts
+        .filter((candidate) => candidate.group === item.group)
+        .map((candidate) => candidate.column + 1),
+    )
+  }
+  return layouts.map(({ end: _end, group: _group, ...layout }) => layout)
 }
 
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
@@ -450,17 +519,15 @@ function TaskCalendar({
   const today = new Date()
   const weekEnd = new Date(week)
   weekEnd.setDate(weekEnd.getDate() + 7)
-  const itemsBySlot = new Map<string, TareaPersistida[]>()
   const undated = tasks.filter((task) => !task.venceEn)
-
-  tasks.forEach((task) => {
-    if (!task.venceEn) return
+  const scheduledByDay = new Map<string, TareaPersistida[]>()
+  for (const task of tasks) {
+    if (!task.venceEn) continue
     const taskDate = new Date(task.venceEn)
-    if (Number.isNaN(taskDate.getTime()) || taskDate < week || taskDate >= weekEnd) return
-    const hour = calendarSlotHour(task.venceEn)
-    const key = `${calendarDateKey(task.venceEn)}-${hour}`
-    itemsBySlot.set(key, [...(itemsBySlot.get(key) ?? []), task])
-  })
+    if (Number.isNaN(taskDate.getTime()) || taskDate < week || taskDate >= weekEnd) continue
+    const key = calendarDateKey(task.venceEn)
+    scheduledByDay.set(key, [...(scheduledByDay.get(key) ?? []), task])
+  }
 
   const weekLabel = new Intl.DateTimeFormat('es-ES', {
     day: 'numeric',
@@ -554,47 +621,29 @@ function TaskCalendar({
                   </div>
                 )
               })}
-              {AGENDA_HOURS.flatMap((hour) => [
-                <div
-                  key={`hour-${hour}`}
-                  className="text-muted-foreground -mt-2 border-b pr-2 text-right text-[10px] font-medium"
-                >
-                  {String(hour).padStart(2, '0')}:00
-                </div>,
-                ...weekDays.map((day) => {
-                  const slotTasks =
-                    itemsBySlot.get(`${calendarDateKey(day.toISOString())}-${hour}`) ?? []
-                  return (
-                    <div
-                      key={`${day.toISOString()}-${hour}`}
-                      className="min-h-15 border-b border-l p-1"
-                    >
-                      <div className="space-y-1">
-                        {slotTasks.map((task) => (
-                          <div
-                            key={task.id}
-                            title={`${formatTaskDate(task.venceEn)} · ${task.titulo}`}
-                            className={`truncate rounded-md border px-1.5 py-1 text-[11px] font-semibold shadow-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
-                          >
-                            <span className="mr-1 opacity-75">
-                              {new Intl.DateTimeFormat('es-ES', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }).format(new Date(task.venceEn ?? ''))}
-                            </span>
-                            {task.titulo}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                }),
-              ])}
-              <div className="text-muted-foreground border-b pr-2 text-right text-[10px] font-medium">
-                20:00
+              <div
+                className="relative"
+                style={{ height: AGENDA_HOURS.length * CALENDAR_HOUR_HEIGHT }}
+              >
+                {AGENDA_HOURS.map((hour, index) => (
+                  <div
+                    key={hour}
+                    className="text-muted-foreground absolute right-0 left-0 -translate-y-2 border-b pr-2 text-right text-[10px] font-medium"
+                    style={{ top: index * CALENDAR_HOUR_HEIGHT }}
+                  >
+                    {String(hour).padStart(2, '0')}:00
+                  </div>
+                ))}
+                <div className="text-muted-foreground absolute right-0 bottom-0 left-0 translate-y-2 pr-2 text-right text-[10px] font-medium">
+                  20:00
+                </div>
               </div>
               {weekDays.map((day) => (
-                <div key={`${day.toISOString()}-end`} className="border-b border-l" />
+                <CalendarDayColumn
+                  key={day.toISOString()}
+                  day={day}
+                  tasks={scheduledByDay.get(calendarDateKey(day.toISOString())) ?? []}
+                />
               ))}
             </div>
           </div>
@@ -618,6 +667,44 @@ function TaskCalendar({
       ) : null}
       {!tasks.length ? <EmptyTasks /> : null}
     </section>
+  )
+}
+
+function CalendarDayColumn({ day, tasks }: { day: Date; tasks: TareaPersistida[] }) {
+  const layouts = layoutCalendarEvents(tasks)
+  const height = AGENDA_HOURS.length * CALENDAR_HOUR_HEIGHT
+  return (
+    <div className="relative border-l" style={{ height }}>
+      {AGENDA_HOURS.map((hour, index) => (
+        <div
+          key={hour}
+          className="pointer-events-none absolute right-0 left-0 border-b"
+          style={{ top: index * CALENDAR_HOUR_HEIGHT }}
+        />
+      ))}
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 border-b" />
+      {layouts.map(({ task, top, column, columnCount }) => (
+        <div
+          key={task.id}
+          title={`${formatTaskDate(task.venceEn)} · ${task.titulo}`}
+          className={`absolute z-10 overflow-hidden rounded-md border px-1.5 py-1 text-[11px] leading-tight font-semibold shadow-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
+          style={{
+            top: top + 2,
+            left: `calc(${(column / columnCount) * 100}% + 0.25rem)`,
+            width: `calc(${100 / columnCount}% - 0.5rem)`,
+            minHeight: CALENDAR_EVENT_DURATION_MINUTES - 4,
+          }}
+        >
+          <span className="block opacity-75">
+            {new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(
+              new Date(task.venceEn ?? ''),
+            )}
+          </span>
+          <span className="line-clamp-2 block">{task.titulo}</span>
+        </div>
+      ))}
+      <span className="sr-only">Eventos del {day.toLocaleDateString('es-ES')}</span>
+    </div>
   )
 }
 
