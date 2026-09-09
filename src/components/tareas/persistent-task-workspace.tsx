@@ -69,6 +69,11 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [view, setView] = useState<TaskView>('kanban')
+  const caseNames = useMemo(
+    () =>
+      new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
+    [cases.data],
+  )
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Cargando agenda" description="Consultando el despacho…" />
@@ -87,13 +92,10 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
     )
 
   const canValidate = membership.data?.role !== 'paralegal'
-  const caseNames = useMemo(
-    () => new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
-    [cases.data],
-  )
   const visible = (tasks.data ?? []).filter((task) => {
     if (mode === 'calendar' && !task.venceEn) return false
-    const searchable = `${task.titulo} ${task.descripcion} ${task.tipo} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
+    const searchable =
+      `${task.titulo} ${task.descripcion} ${task.tipo} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'En espera'
@@ -103,7 +105,8 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
       (!query.trim() || searchable.includes(query.trim().toLowerCase())) &&
       (typeFilter === 'all' || task.tipo === typeFilter) &&
       (priorityFilter === 'all' || task.prioridad === priorityFilter) &&
-      (assigneeFilter === 'all' || task.asignadoId === assigneeFilter) &&
+      (assigneeFilter === 'all' ||
+        (assigneeFilter === '' ? !task.asignadoId : task.asignadoId === assigneeFilter)) &&
       matchesStatus
     )
   })
@@ -245,7 +248,13 @@ export function PersistentTaskWorkspace({ mode = 'tasks' }: { mode?: 'tasks' | '
               </div>
               {activeFilterCount ? (
                 <div className="border-t px-4 py-2.5">
-                  <Button type="button" variant="ghost" size="sm" className="w-full" onClick={clearFilters}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={clearFilters}
+                  >
                     Limpiar filtros
                   </Button>
                 </div>
@@ -384,11 +393,15 @@ function TaskCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-medium">{task.titulo}</p>
-            {task.descripcion ? <p className="text-muted-foreground mt-1 text-sm">{task.descripcion}</p> : null}
+            {task.descripcion ? (
+              <p className="text-muted-foreground mt-1 text-sm">{task.descripcion}</p>
+            ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">
             <Badge variant="outline">{task.tipo}</Badge>
-            <Badge variant={task.critico || task.prioridad === 'Alta' ? 'destructive' : 'secondary'}>
+            <Badge
+              variant={task.critico || task.prioridad === 'Alta' ? 'destructive' : 'secondary'}
+            >
               {task.critico ? 'Crítica' : task.prioridad}
             </Badge>
           </div>
@@ -448,7 +461,9 @@ function TaskCard({
             </div>
           </div>
         ) : null}
-        {task.estado !== 'Completada' && task.estado !== 'Cancelada' ? (
+        {task.validacion !== 'Propuesto' &&
+        task.estado !== 'Completada' &&
+        task.estado !== 'Cancelada' ? (
           <div className="flex flex-wrap gap-2">
             {task.estado === 'Pendiente' ? (
               <Button
@@ -539,9 +554,13 @@ function TaskCreateDialog({
             Primero necesitas un expediente para poder crear y trazar una tarea.
           </div>
         ) : (
-          <form className="space-y-5 px-6 py-6" aria-busy={pending} onSubmit={(event) => void submit(event)}>
+          <form
+            className="space-y-5 px-6 py-6"
+            aria-busy={pending}
+            onSubmit={(event) => void submit(event)}
+          >
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field name="title" label="Título *" required autoFocus className="sm:col-span-2" />
+              <Field name="title" label="Título *" required className="sm:col-span-2" />
               <Field name="description" label="Descripción" className="sm:col-span-2" />
               <Select
                 name="case"
@@ -571,9 +590,17 @@ function TaskCreateDialog({
               <Select
                 name="assignee"
                 label="Responsable"
-                options={[['', 'Sin asignar'], ...members.map((member) => [member.id, member.nombre])]}
+                options={[
+                  ['', 'Sin asignar'],
+                  ...members.map((member) => [member.id, member.nombre]),
+                ]}
               />
-              <Field name="due" label="Fecha y hora" type="datetime-local" required={kind === 'Plazo'} />
+              <Field
+                name="due"
+                label="Fecha y hora"
+                type="datetime-local"
+                required={kind === 'Plazo'}
+              />
               <Field name="reminder" label="Recordatorio" type="datetime-local" />
               {kind === 'Plazo' ? (
                 <Select
@@ -590,11 +617,17 @@ function TaskCreateDialog({
               </label>
             </div>
             <DialogFooter className="gap-2 border-t pt-5 sm:justify-end">
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => setOpen(false)}
+              >
                 Cancelar
               </Button>
               <Button type="submit" disabled={pending}>
-                <Plus className="h-4 w-4" aria-hidden="true" /> {pending ? 'Creando…' : 'Crear tarea'}
+                <Plus className="h-4 w-4" aria-hidden="true" />{' '}
+                {pending ? 'Creando…' : 'Crear tarea'}
               </Button>
             </DialogFooter>
           </form>
@@ -618,7 +651,11 @@ function FilterSelect({
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={selectClassName}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={selectClassName}
+      >
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>
             {optionLabel}
@@ -630,7 +667,9 @@ function FilterSelect({
 }
 
 function EmptyTasks() {
-  return <p className="text-muted-foreground py-10 text-center text-sm">No hay elementos que mostrar.</p>
+  return (
+    <p className="text-muted-foreground py-10 text-center text-sm">No hay elementos que mostrar.</p>
+  )
 }
 
 function Field({
@@ -643,7 +682,6 @@ function Field({
   label: string
   type?: string
   required?: boolean
-  autoFocus?: boolean
   className?: string
 }) {
   return (

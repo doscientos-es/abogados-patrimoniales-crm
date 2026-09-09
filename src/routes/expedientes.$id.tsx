@@ -13,11 +13,13 @@ import {
   useCrearActuacion,
   useCrearLinea,
   useCrearParticipante,
+  useDocumentosExpediente,
   useEventosExpediente,
   useExpedientePersistente,
   useLineasPersistentes,
   useParticipantesPersistentes,
 } from '@/features/expedientes'
+import { useCrearTarea, useTareasPersistentes } from '@/features/tareas'
 
 export const Route = createFileRoute('/expedientes/$id')({
   head: ({ params }) => ({
@@ -40,13 +42,26 @@ function FichaExpedientePersistente() {
   const activities = useActuacionesPersistentes(firmId, id)
   const participants = useParticipantesPersistentes(firmId, id)
   const events = useEventosExpediente(firmId, id)
+  const documents = useDocumentosExpediente(firmId, id)
+  const tasks = useTareasPersistentes(firmId)
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
   const updateCase = useActualizarExpediente(firmId)
   const createParticipant = useCrearParticipante(firmId)
   const createWorkstream = useCrearLinea(firmId)
   const createActivity = useCrearActuacion(firmId)
-  const queries = [caseQuery, workstreams, activities, participants, events, contacts, members]
+  const createTask = useCrearTarea(firmId)
+  const queries = [
+    caseQuery,
+    workstreams,
+    activities,
+    participants,
+    events,
+    documents,
+    tasks,
+    contacts,
+    members,
+  ]
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Cargando expediente" description="Consultando tu despacho…" />
@@ -81,6 +96,11 @@ function FichaExpedientePersistente() {
       actuaciones={activities.data ?? []}
       participantes={participants.data ?? []}
       eventos={events.data ?? []}
+      documentos={documents.data ?? []}
+      tareas={tasks.data ?? []}
+      miembros={members.data ?? []}
+      taskPending={createTask.isPending}
+      onCreateTask={(input) => createTask.mutateAsync(input)}
       editor={
         <CaseEditForm
           expediente={caseQuery.data}
@@ -91,26 +111,47 @@ function FichaExpedientePersistente() {
           }}
         />
       }
-      relatedForms={
-        <CaseRelatedForms
-          expedienteId={caseQuery.data.id}
-          contactos={contacts.data ?? []}
-          miembros={members.data ?? []}
-          lineas={workstreams.data ?? []}
-          pending={
-            createParticipant.isPending || createWorkstream.isPending || createActivity.isPending
-          }
-          onParticipant={async (input) => {
-            await createParticipant.mutateAsync(input)
-          }}
-          onWorkstream={async (input) => {
-            await createWorkstream.mutateAsync(input)
-          }}
-          onActivity={async (input) => {
-            await createActivity.mutateAsync(input)
-          }}
-        />
-      }
+      relatedForms={{
+        participant: (
+          <CaseRelatedForms
+            expedienteId={caseQuery.data.id}
+            contactos={contacts.data ?? []}
+            miembros={members.data ?? []}
+            lineas={workstreams.data ?? []}
+            pending={createParticipant.isPending}
+            section="participant"
+            onParticipant={(input) => createParticipant.mutateAsync(input)}
+            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
+            onActivity={(input) => createActivity.mutateAsync(input)}
+          />
+        ),
+        workstream: (
+          <CaseRelatedForms
+            expedienteId={caseQuery.data.id}
+            contactos={contacts.data ?? []}
+            miembros={members.data ?? []}
+            lineas={workstreams.data ?? []}
+            pending={createWorkstream.isPending}
+            section="workstream"
+            onParticipant={(input) => createParticipant.mutateAsync(input)}
+            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
+            onActivity={(input) => createActivity.mutateAsync(input)}
+          />
+        ),
+        activity: (
+          <CaseRelatedForms
+            expedienteId={caseQuery.data.id}
+            contactos={contacts.data ?? []}
+            miembros={members.data ?? []}
+            lineas={workstreams.data ?? []}
+            pending={createActivity.isPending}
+            section="activity"
+            onParticipant={(input) => createParticipant.mutateAsync(input)}
+            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
+            onActivity={(input) => createActivity.mutateAsync(input)}
+          />
+        ),
+      }}
     />
   )
 }

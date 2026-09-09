@@ -14,12 +14,15 @@ import type {
   LineaPersistida,
 } from '@/features/expedientes/application/case-types'
 
+export type RelatedFormSection = 'participant' | 'workstream' | 'activity'
+
 export function CaseRelatedForms({
   expedienteId,
   contactos,
   miembros,
   lineas,
   pending,
+  section,
   onParticipant,
   onWorkstream,
   onActivity,
@@ -29,6 +32,7 @@ export function CaseRelatedForms({
   miembros: MiembroDespacho[]
   lineas: LineaPersistida[]
   pending: boolean
+  section?: RelatedFormSection
   onParticipant: (input: CrearParticipanteInput) => Promise<void>
   onWorkstream: (input: CrearLineaInput) => Promise<void>
   onActivity: (input: CrearActuacionInput) => Promise<void>
@@ -59,8 +63,9 @@ export function CaseRelatedForms({
     </>
   )
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <FormCard title="Añadir participante">
+    <div className={section ? 'max-w-3xl' : 'grid gap-4 lg:grid-cols-3'}>
+      {!section || section === 'participant' ? (
+        <FormCard title="Añadir participante">
         <form
           className="space-y-3"
           onSubmit={(event) =>
@@ -100,8 +105,10 @@ export function CaseRelatedForms({
             Añadir
           </Button>
         </form>
-      </FormCard>
-      <FormCard title="Nueva línea de trabajo">
+        </FormCard>
+      ) : null}
+      {!section || section === 'workstream' ? (
+        <FormCard title="Nueva línea de trabajo">
         <form
           className="space-y-3"
           onSubmit={(event) =>
@@ -137,8 +144,10 @@ export function CaseRelatedForms({
             Crear línea
           </Button>
         </form>
-      </FormCard>
-      <FormCard title="Nueva actuación">
+        </FormCard>
+      ) : null}
+      {!section || section === 'activity' ? (
+        <FormCard title="Nueva actuación">
         <form
           className="space-y-3"
           onSubmit={(event) =>
@@ -185,7 +194,8 @@ export function CaseRelatedForms({
             Registrar
           </Button>
         </form>
-      </FormCard>
+        </FormCard>
+      ) : null}
     </div>
   )
 }

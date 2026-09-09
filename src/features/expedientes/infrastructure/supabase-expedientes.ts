@@ -11,6 +11,7 @@ import type {
 import {
   getSupabaseBrowserClient,
   type CaseActivityRow,
+  type CaseDocumentRow,
   type CaseEventRow,
   type CaseParticipantRow,
   type CaseRow,
@@ -177,6 +178,28 @@ export function useActuacionesPersistentes(firmId: string | undefined, caseId: s
         .order('occurred_at', { ascending: false })
       if (error) throw error
       return data.map(actuacionFromRow)
+    },
+  })
+}
+
+/** Documentos vigentes del expediente, acotados en origen para la ficha operativa. */
+export function useDocumentosExpediente(firmId: string | undefined, caseId: string) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, caseId, 'documentos'],
+    enabled: Boolean(firmId && caseId),
+    queryFn: async (): Promise<CaseDocumentRow[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_documents')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .eq('is_current', true)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data
     },
   })
 }
