@@ -1,6 +1,6 @@
 import type { OportunidadResumen } from '@/features/crm'
 import type { ExpedientePersistido } from '@/features/expedientes'
-import type { FacturaResumen } from '@/features/facturacion/infrastructure/supabase-facturas'
+import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { TareaPersistida } from '@/features/tareas'
 
 const FASES_CON_PRESUPUESTO = new Set(['quote', 'validation', 'engagement', 'won'])
@@ -24,7 +24,7 @@ export function operacionesDelContacto({
   contactoId: string
   expedientes: ExpedientePersistido[]
   oportunidades: OportunidadResumen[]
-  facturas: FacturaResumen[]
+  facturas: FacturaPersistida[]
   tareas: TareaPersistida[]
 }) {
   const expedientesDelContacto = expedientes.filter(

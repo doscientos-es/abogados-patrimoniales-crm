@@ -54,7 +54,9 @@ describe('PersistentCasesPage', () => {
     expect(board.querySelector('div')?.className).toContain('grid-cols-5')
     expect(screen.getByRole('heading', { level: 2, name: 'F3 · CASEWORK' })).toBeTruthy()
     expect(screen.getByRole('heading', { level: 2, name: 'F4 · DELIVERY' })).toBeTruthy()
-    expect(screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' })).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' }),
+    ).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: 'Propuesta o borrador' })).toBeTruthy()
   })
 })

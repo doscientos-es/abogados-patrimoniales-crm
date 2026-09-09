@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { FASE_ONBOARDING_LABEL, PROXIMO_PASO, diasEnFase, esOnboardingActivo } from './onboarding-workflow'
+import {
+  FASE_ONBOARDING_LABEL,
+  PROXIMO_PASO,
+  diasEnFase,
+  esOnboardingActivo,
+} from './onboarding-workflow'
 
 describe('workflow de onboarding', () => {
   it('mantiene el orden operativo y el siguiente paso por cada fase', () => {

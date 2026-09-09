@@ -1,59 +1,55 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
   AmbitoNota,
   ConversionNota,
   DisparadorNota,
   NotaInterna,
-} from "@/features/notas/application/note-types";
-import {
-  getSupabaseBrowserClient,
-  type Json,
-  type NoteRow,
-} from "@/shared/infrastructure/supabase";
+} from '@/features/notas/application/note-types'
+import { getSupabaseBrowserClient, type Json, type NoteRow } from '@/shared/infrastructure/supabase'
 
 export type NotaRemota = NoteRow & {
-  contactIds: string[];
-  permittedUserIds: string[];
-  acknowledgedUserIds: string[];
+  contactIds: string[]
+  permittedUserIds: string[]
+  acknowledgedUserIds: string[]
   events: {
-    id: string;
-    event_type: string;
-    detail: string | null;
-    actor_id: string | null;
-    created_at: string;
-  }[];
-  actorNames: Record<string, string>;
-};
+    id: string
+    event_type: string
+    detail: string | null
+    actor_id: string | null
+    created_at: string
+  }[]
+  actorNames: Record<string, string>
+}
 
-const ambitoFromScope: Record<NotaRemota["scope"], AmbitoNota> = {
-  person: "persona",
-  case: "expediente",
-  opportunity: "oportunidad",
-  execution: "ejecucion",
-  quote: "presupuesto",
-};
+const ambitoFromScope: Record<NotaRemota['scope'], AmbitoNota> = {
+  person: 'persona',
+  case: 'expediente',
+  opportunity: 'oportunidad',
+  execution: 'ejecucion',
+  quote: 'presupuesto',
+}
 
 const dateToText = (value: string | null) =>
-  value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : undefined;
-const dateTimeToText = (value: string) => `${dateToText(value)} ${value.slice(11, 16)}`;
+  value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : undefined
+const dateTimeToText = (value: string) => `${dateToText(value)} ${value.slice(11, 16)}`
 const asObject = (value: Json): Record<string, Json | undefined> =>
-  value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 const asStrings = (value: Json | undefined): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 
 export function notaDesdeRemota(nota: NotaRemota): NotaInterna {
-  const details = asObject(nota.details);
-  const conversions = Array.isArray(details["conversions"])
-    ? (details["conversions"].filter((value) =>
-        Boolean(value && typeof value === "object"),
+  const details = asObject(nota.details)
+  const conversions = Array.isArray(details['conversions'])
+    ? (details['conversions'].filter((value) =>
+        Boolean(value && typeof value === 'object'),
       ) as ConversionNota[])
-    : [];
-  const nameFor = (id: string | null) => (id ? (nota.actorNames[id] ?? id) : "Sistema");
-  const desde = dateToText(nota.starts_on);
-  const revision = dateToText(nota.review_on);
-  const vencimiento = dateToText(nota.expires_on);
-  const posponerHasta = dateToText(nota.snoozed_until);
+    : []
+  const nameFor = (id: string | null) => (id ? (nota.actorNames[id] ?? id) : 'Sistema')
+  const desde = dateToText(nota.starts_on)
+  const revision = dateToText(nota.review_on)
+  const vencimiento = dateToText(nota.expires_on)
+  const posponerHasta = dateToText(nota.snoozed_until)
   return {
     id: nota.id,
     ambito: ambitoFromScope[nota.scope],
@@ -63,28 +59,28 @@ export function notaDesdeRemota(nota: NotaRemota): NotaInterna {
     contactos: nota.contactIds,
     ...(nota.case_id ? { expedienteId: nota.case_id } : {}),
     ...(nota.opportunity_id ? { oportunidadId: nota.opportunity_id } : {}),
-    ...(typeof details["executionId"] === "string" ? { ejecucionId: details["executionId"] } : {}),
-    ...(typeof details["quoteId"] === "string" ? { presupuestoId: details["quoteId"] } : {}),
+    ...(typeof details['executionId'] === 'string' ? { ejecucionId: details['executionId'] } : {}),
+    ...(typeof details['quoteId'] === 'string' ? { presupuestoId: details['quoteId'] } : {}),
     autor: nameFor(nota.created_by),
     creada: dateTimeToText(nota.created_at),
     ...(nota.updated_by
       ? { modificada: dateTimeToText(nota.updated_at), modificadaPor: nameFor(nota.updated_by) }
       : {}),
     estado:
-      nota.status === "active" ? "activa" : nota.status === "resolved" ? "resuelta" : "archivada",
+      nota.status === 'active' ? 'activa' : nota.status === 'resolved' ? 'resuelta' : 'archivada',
     destacada: nota.highlighted,
     critica: nota.critical,
     requiereConfirmacion: nota.requires_acknowledgement,
-    confirmaciones: nota.acknowledgedUserIds.map((usuario) => ({ usuario, fecha: "" })),
-    vigencia: nota.validity === "permanent" ? "permanente" : "temporal",
+    confirmaciones: nota.acknowledgedUserIds.map((usuario) => ({ usuario, fecha: '' })),
+    vigencia: nota.validity === 'permanent' ? 'permanente' : 'temporal',
     ...(desde ? { desde } : {}),
     ...(revision ? { revision } : {}),
     ...(vencimiento ? { vencimiento } : {}),
-    alVencer: nota.expiry_action === "archive" ? "archivar" : "confirmar",
+    alVencer: nota.expiry_action === 'archive' ? 'archivar' : 'confirmar',
     pendienteRevision: nota.review_pending,
-    disparadores: asStrings(details["triggers"]) as DisparadorNota[],
+    disparadores: asStrings(details['triggers']) as DisparadorNota[],
     ...(posponerHasta ? { posponerHasta } : {}),
-    visibilidad: nota.visibility === "team" ? "equipo" : "restringida",
+    visibilidad: nota.visibility === 'team' ? 'equipo' : 'restringida',
     autorizados: nota.permittedUserIds,
     conversiones: conversions,
     historial: nota.events.map((event) => ({
@@ -106,52 +102,52 @@ export function notaDesdeRemota(nota: NotaRemota): NotaInterna {
           resueltaEl: dateTimeToText(nota.resolved_at ?? nota.updated_at),
         }
       : {}),
-  };
+  }
 }
 
 /** Notes are always scoped by firm before ordering for the activity wall. */
 export function useNotasRemotas(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["crm", "notes", firmId],
+    queryKey: ['crm', 'notes', firmId],
     enabled: Boolean(firmId),
     queryFn: async (): Promise<NotaRemota[]> => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
 
       const { data, error } = await client
-        .from("crm_notes")
-        .select("*")
-        .eq("firm_id", firmId)
-        .order("highlighted", { ascending: false })
-        .order("critical", { ascending: false })
-        .order("updated_at", { ascending: false });
+        .from('crm_notes')
+        .select('*')
+        .eq('firm_id', firmId)
+        .order('highlighted', { ascending: false })
+        .order('critical', { ascending: false })
+        .order('updated_at', { ascending: false })
 
-      if (error) throw error;
-      if (!data.length) return [];
-      const noteIds = data.map((note) => note.id);
+      if (error) throw error
+      if (!data.length) return []
+      const noteIds = data.map((note) => note.id)
       const [contacts, permissions, acknowledgements, events] = await Promise.all([
         client
-          .from("crm_note_contacts")
-          .select("note_id, contact_id")
-          .eq("firm_id", firmId)
-          .in("note_id", noteIds),
+          .from('crm_note_contacts')
+          .select('note_id, contact_id')
+          .eq('firm_id', firmId)
+          .in('note_id', noteIds),
         client
-          .from("crm_note_permissions")
-          .select("note_id, user_id")
-          .eq("firm_id", firmId)
-          .in("note_id", noteIds),
-        client.from("crm_note_acknowledgements").select("note_id, user_id").in("note_id", noteIds),
+          .from('crm_note_permissions')
+          .select('note_id, user_id')
+          .eq('firm_id', firmId)
+          .in('note_id', noteIds),
+        client.from('crm_note_acknowledgements').select('note_id, user_id').in('note_id', noteIds),
         client
-          .from("crm_note_events")
-          .select("id, note_id, event_type, detail, actor_id, created_at")
-          .eq("firm_id", firmId)
-          .in("note_id", noteIds)
-          .order("created_at", { ascending: false }),
-      ]);
-      if (contacts.error) throw contacts.error;
-      if (permissions.error) throw permissions.error;
-      if (acknowledgements.error) throw acknowledgements.error;
-      if (events.error) throw events.error;
+          .from('crm_note_events')
+          .select('id, note_id, event_type, detail, actor_id, created_at')
+          .eq('firm_id', firmId)
+          .in('note_id', noteIds)
+          .order('created_at', { ascending: false }),
+      ])
+      if (contacts.error) throw contacts.error
+      if (permissions.error) throw permissions.error
+      if (acknowledgements.error) throw acknowledgements.error
+      if (events.error) throw events.error
       const actorIds = Array.from(
         new Set(
           [
@@ -164,14 +160,14 @@ export function useNotasRemotas(firmId: string | undefined) {
             ...events.data.map((event) => event.actor_id),
           ].filter((id): id is string => Boolean(id)),
         ),
-      );
+      )
       const actors = actorIds.length
-        ? await client.from("crm_profiles").select("id, display_name").in("id", actorIds)
-        : { data: [], error: null };
-      if (actors.error) throw actors.error;
+        ? await client.from('crm_profiles').select('id, display_name').in('id', actorIds)
+        : { data: [], error: null }
+      if (actors.error) throw actors.error
       const actorNames = Object.fromEntries(
         actors.data.map((actor) => [actor.id, actor.display_name]),
-      );
+      )
       return data.map((note) => ({
         ...note,
         contactIds: contacts.data
@@ -185,60 +181,60 @@ export function useNotasRemotas(firmId: string | undefined) {
           .map((item) => item.user_id),
         events: events.data.filter((event) => event.note_id === note.id),
         actorNames,
-      }));
+      }))
     },
-  });
+  })
 }
 
 export function useCrearNotaOportunidad(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
-      oportunidadId: string;
-      contactoId: string;
-      etiquetaOrigen: string;
-      titulo: string;
-      contenido: string;
-      destacada: boolean;
+      oportunidadId: string
+      contactoId: string
+      etiquetaOrigen: string
+      titulo: string
+      contenido: string
+      destacada: boolean
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
       if (!input.contenido.trim() || input.contenido.length > 20_000)
         throw new Error(
-          "El contenido de la nota es obligatorio y no puede superar 20.000 caracteres.",
-        );
-      const { error } = await client.rpc("crm_save_note", {
+          'El contenido de la nota es obligatorio y no puede superar 20.000 caracteres.',
+        )
+      const { error } = await client.rpc('crm_save_note', {
         target_firm_id: firmId,
         target_note_id: null,
-        event_type: "created",
-        event_detail: "Nota creada desde la ficha del Lead.",
+        event_type: 'created',
+        event_detail: 'Nota creada desde la ficha del Lead.',
         target_payload: {
-          scope: "opportunity",
+          scope: 'opportunity',
           origin_id: input.oportunidadId,
           origin_label: input.etiquetaOrigen,
           title: input.titulo.trim(),
           content: input.contenido.trim(),
-          case_id: "",
+          case_id: '',
           opportunity_id: input.oportunidadId,
-          status: "active",
+          status: 'active',
           highlighted: input.destacada,
           critical: false,
           requires_acknowledgement: false,
-          validity: "permanent",
-          starts_on: "",
-          review_on: "",
-          expires_on: "",
-          expiry_action: "confirm",
+          validity: 'permanent',
+          starts_on: '',
+          review_on: '',
+          expires_on: '',
+          expiry_action: 'confirm',
           review_pending: false,
-          snoozed_until: "",
-          visibility: "team",
-          details: { triggers: ["abrir-contacto"] },
+          snoozed_until: '',
+          visibility: 'team',
+          details: { triggers: ['abrir-contacto'] },
           contact_ids: [input.contactoId],
           permitted_user_ids: [],
         },
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["crm", "notes", firmId] }),
-  });
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
 }

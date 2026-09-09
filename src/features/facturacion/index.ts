@@ -1,5 +1,16 @@
-export { formatCurrency, formatDate, useFacturas } from './infrastructure/supabase-facturas'
-export type { FacturaResumen } from './infrastructure/supabase-facturas'
+export {
+  formatCurrency,
+  formatDate,
+  useDescartarBorradorFactura,
+  useEmitirFactura,
+  useFacturas,
+  useGuardarBorradorFactura,
+  useRectificarFactura,
+  useRegistrarCobroFactura,
+} from './infrastructure/supabase-facturas'
+export * from './application/factura-types'
+export * from './application/factura-ciclo'
+export { PersistentFacturacionPage } from './ui/persistent-facturacion-page'
 export {
   etiquetaEstadoEconomicoProvisional,
   onboardingEconomicoProvisional,

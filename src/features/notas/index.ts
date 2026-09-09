@@ -1,2 +1,2 @@
-export * from "./application";
-export * from "./infrastructure/supabase-notas";
+export * from './application'
+export * from './infrastructure/supabase-notas'

@@ -74,8 +74,9 @@ export type Database = {
       crm_note_permissions: Table<NotePermissionRow, never, never>
       crm_note_acknowledgements: Table<NoteAcknowledgementRow, never, never>
       crm_note_events: Table<NoteEventRow, never, never>
-      crm_invoices: Table<InvoiceRow, InvoiceInsert, Partial<InvoiceInsert> & { id?: string }>
-      crm_invoice_payments: Table<InvoicePaymentRow, InvoicePaymentInsert, never>
+      crm_invoices: Table<InvoiceRow, never, never>
+      crm_invoice_lines: Table<InvoiceLineRow, never, never>
+      crm_invoice_payments: Table<InvoicePaymentRow, never, never>
       crm_procedures: Table<
         ProcedureRow,
         ProcedureInsert,
@@ -337,6 +338,57 @@ export type Database = {
           new_current_position: string
         }
         Returns: CaseRow
+      }
+      crm_save_invoice_draft: {
+        Args: {
+          target_firm_id: string
+          target_invoice_id: string | null
+          target_expected_version: number
+          target_case_id: string
+          target_contact_id: string
+          new_recipient_name: string
+          new_concept: string
+          new_currency: string
+          new_issued_on: string
+          new_due_on: string | null
+          new_lines: Json
+        }
+        Returns: InvoiceRow
+      }
+      crm_issue_invoice: {
+        Args: {
+          target_invoice_id: string
+          target_expected_version: number
+          new_issued_on: string
+          new_due_on: string | null
+        }
+        Returns: InvoiceRow
+      }
+      crm_discard_invoice_draft: {
+        Args: {
+          target_invoice_id: string
+          target_expected_version: number
+          discard_reason: string
+        }
+        Returns: InvoiceRow
+      }
+      crm_register_invoice_payment: {
+        Args: {
+          target_invoice_id: string
+          new_amount: number
+          new_received_on: string
+          new_payment_method: InvoicePaymentRow['payment_method']
+          new_external_reference: string
+        }
+        Returns: InvoicePaymentRow
+      }
+      crm_create_credit_note: {
+        Args: {
+          target_invoice_id: string
+          target_expected_version: number
+          rectification_reason: string
+        }
+        Returns: InvoiceRow
       }
       crm_global_search: {
         Args: { target_firm_id: string; search_term: string }
@@ -779,6 +831,8 @@ export type InvoiceStatus =
   | 'cancelled'
   | 'written_off'
 
+export type InvoiceKind = 'standard' | 'credit_note'
+
 export type InvoiceRow = {
   id: string
   firm_id: string
@@ -786,7 +840,7 @@ export type InvoiceRow = {
   contact_id: string
   series: string
   fiscal_year: number
-  invoice_number: number
+  invoice_number: number | null
   reference: string
   recipient_name: string
   concept: string
@@ -798,6 +852,10 @@ export type InvoiceRow = {
   due_on: string | null
   paid_on: string | null
   status: InvoiceStatus
+  kind: InvoiceKind
+  rectifies_invoice_id: string | null
+  cancellation_reason: string
+  issued_at: string | null
   details: Json
   version: number
   created_by: string | null
@@ -806,26 +864,18 @@ export type InvoiceRow = {
   updated_at: string
 }
 
-export type InvoiceInsert = Omit<
-  InvoiceRow,
-  | 'id'
-  | 'reference'
-  | 'total_amount'
-  | 'version'
-  | 'created_by'
-  | 'updated_by'
-  | 'created_at'
-  | 'updated_at'
-> & {
-  series?: string
-  fiscal_year?: number
-  recipient_name?: string
-  currency?: string
-  net_amount?: number
-  tax_amount?: number
-  issued_on?: string
-  status?: InvoiceStatus
-  details?: Json
+export type InvoiceLineRow = {
+  id: string
+  firm_id: string
+  invoice_id: string
+  line_number: number
+  description: string
+  quantity: number
+  unit_price: number
+  tax_rate: number
+  net_amount: number
+  tax_amount: number
+  created_at: string
 }
 
 export type InvoicePaymentRow = {
@@ -839,13 +889,6 @@ export type InvoicePaymentRow = {
   details: Json
   created_by: string | null
   created_at: string
-}
-
-export type InvoicePaymentInsert = Omit<InvoicePaymentRow, 'id' | 'created_by' | 'created_at'> & {
-  received_on?: string
-  payment_method?: InvoicePaymentRow['payment_method']
-  external_reference?: string
-  details?: Json
 }
 
 export type ProcedureRow = {

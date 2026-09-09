@@ -15,21 +15,56 @@ export const CASE_CONTROL_COLUMNS: ReadonlyArray<{
   title: string
   description: string
 }> = [
-  { id: 'diagnosis', megafase: 'F3 · CASEWORK', title: 'Diagnóstico – Objetivos – Estrategia', description: 'Trabajo técnico del expediente.' },
-  { id: 'review', megafase: 'F3 · CASEWORK', title: 'Revisión y decisión', description: 'Contrastar la estrategia y decidir el siguiente paso.' },
-  { id: 'preparation', megafase: 'F3 · CASEWORK', title: 'Preparación y primeras actuaciones', description: 'Preparar escritos, documentación y actuaciones iniciales.' },
-  { id: 'in_progress', megafase: 'F3 · CASEWORK', title: 'En curso', description: 'Seguimiento activo de las actuaciones.' },
-  { id: 'proposal', megafase: 'F4 · DELIVERY', title: 'Propuesta o borrador', description: 'Entrega, propuesta y formalización.' },
+  {
+    id: 'diagnosis',
+    megafase: 'F3 · CASEWORK',
+    title: 'Diagnóstico – Objetivos – Estrategia',
+    description: 'Trabajo técnico del expediente.',
+  },
+  {
+    id: 'review',
+    megafase: 'F3 · CASEWORK',
+    title: 'Revisión y decisión',
+    description: 'Contrastar la estrategia y decidir el siguiente paso.',
+  },
+  {
+    id: 'preparation',
+    megafase: 'F3 · CASEWORK',
+    title: 'Preparación y primeras actuaciones',
+    description: 'Preparar escritos, documentación y actuaciones iniciales.',
+  },
+  {
+    id: 'in_progress',
+    megafase: 'F3 · CASEWORK',
+    title: 'En curso',
+    description: 'Seguimiento activo de las actuaciones.',
+  },
+  {
+    id: 'proposal',
+    megafase: 'F4 · DELIVERY',
+    title: 'Propuesta o borrador',
+    description: 'Entrega, propuesta y formalización.',
+  },
 ]
 
 const DAY_MS = 86_400_000
 
-export function caseControlColumn(expediente: Pick<ExpedientePersistido, 'fase'>): CaseControlColumnId {
+export function caseControlColumn(
+  expediente: Pick<ExpedientePersistido, 'fase'>,
+): CaseControlColumnId {
   const phase = expediente.fase.trim().toLocaleLowerCase('es')
-  if (phase.includes('propuesta') || phase.includes('borrador') || phase.includes('delivery')) return 'proposal'
-  if (phase.includes('revisión') || phase.includes('revision') || phase.includes('decisión')) return 'review'
-  if (phase.includes('preparación') || phase.includes('preparacion') || phase.includes('primeras actuaciones')) return 'preparation'
-  if (phase.includes('curso') || phase.includes('ejecución') || phase.includes('ejecucion')) return 'in_progress'
+  if (phase.includes('propuesta') || phase.includes('borrador') || phase.includes('delivery'))
+    return 'proposal'
+  if (phase.includes('revisión') || phase.includes('revision') || phase.includes('decisión'))
+    return 'review'
+  if (
+    phase.includes('preparación') ||
+    phase.includes('preparacion') ||
+    phase.includes('primeras actuaciones')
+  )
+    return 'preparation'
+  if (phase.includes('curso') || phase.includes('ejecución') || phase.includes('ejecucion'))
+    return 'in_progress'
   return 'diagnosis'
 }
 
@@ -43,8 +78,14 @@ export function caseMegaphase(column: CaseControlColumnId) {
 
 export function caseDependency(status: string) {
   const normalized = status.trim().toLocaleLowerCase('es')
-  if (!normalized || normalized === 'pending' || normalized === 'pendiente') return 'Debemos actuar nosotros'
-  if (normalized.includes('tercero') || normalized.includes('contrario') || normalized.includes('espera')) return 'En espera de tercero'
+  if (!normalized || normalized === 'pending' || normalized === 'pendiente')
+    return 'Debemos actuar nosotros'
+  if (
+    normalized.includes('tercero') ||
+    normalized.includes('contrario') ||
+    normalized.includes('espera')
+  )
+    return 'En espera de tercero'
   if (normalized.includes('ejecución') || normalized.includes('ejecucion')) return 'En ejecución'
   if (normalized === 'active') return 'Debemos actuar nosotros'
   return status

@@ -32,7 +32,11 @@ const onboardingFromRow = (row: OnboardingRow): OnboardingPersistido => ({
   version: row.version,
 })
 
-const updateCache = (queryClient: ReturnType<typeof useQueryClient>, firmId: string, item: OnboardingPersistido) => {
+const updateCache = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  firmId: string,
+  item: OnboardingPersistido,
+) => {
   queryClient.setQueryData<OnboardingPersistido[]>(['onboardings', firmId], (items) =>
     items?.map((current) => (current.id === item.id ? item : current)),
   )
@@ -89,7 +93,15 @@ export function useCrearOnboarding(firmId: string | undefined) {
 export function useActualizarSiguienteAccion(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, version, siguienteAccion }: { id: string; version: number; siguienteAccion: string }) => {
+    mutationFn: async ({
+      id,
+      version,
+      siguienteAccion,
+    }: {
+      id: string
+      version: number
+      siguienteAccion: string
+    }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const { data, error } = await client.rpc('crm_update_onboarding_action', {
@@ -97,7 +109,8 @@ export function useActualizarSiguienteAccion(firmId: string | undefined) {
         target_expected_version: version,
         new_next_action: siguienteAccion,
       })
-      if (error?.code === '40001') throw new Error('Otro usuario modificó el onboarding. Recarga antes de guardar.')
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó el onboarding. Recarga antes de guardar.')
       if (error) throw error
       return onboardingFromRow(data)
     },
@@ -126,7 +139,8 @@ export function useTransicionarOnboarding(firmId: string | undefined) {
         scheduled_at: input.programado ?? null,
         new_engagement_mode: input.modalidad ?? null,
       })
-      if (error?.code === '40001') throw new Error('Otro usuario modificó el onboarding. Recarga antes de avanzar.')
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó el onboarding. Recarga antes de avanzar.')
       if (error) throw error
       return onboardingFromRow(data)
     },
@@ -137,7 +151,11 @@ export function useTransicionarOnboarding(firmId: string | undefined) {
 export function useRegistrarComunicacionOnboarding(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { onboardingId: string; tipo: 'email_draft' | 'phone_call'; resumen: string }) => {
+    mutationFn: async (input: {
+      onboardingId: string
+      tipo: 'email_draft' | 'phone_call'
+      resumen: string
+    }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const { error } = await client.rpc('crm_log_onboarding_communication', {
@@ -169,7 +187,10 @@ export function useAbrirExpedienteDesdeOnboarding(firmId: string | undefined) {
         new_next_action: input.siguienteAccion,
         new_current_position: input.dondeEstamos,
       })
-      if (error?.code === '40001') throw new Error('Otro usuario modificó el onboarding. Recarga antes de abrir el expediente.')
+      if (error?.code === '40001')
+        throw new Error(
+          'Otro usuario modificó el onboarding. Recarga antes de abrir el expediente.',
+        )
       if (error) throw error
       return data
     },

@@ -11,7 +11,11 @@ export function onboardingEconomicoProvisional(
   onboarding: OnboardingPersistido,
 ): OnboardingEconomicoProvisional | null {
   if (onboarding.fase === 'proforma')
-    return { ...onboarding, estadoEconomico: 'proforma_sent', fechaEstado: onboarding.proformaEnviada }
+    return {
+      ...onboarding,
+      estadoEconomico: 'proforma_sent',
+      fechaEstado: onboarding.proformaEnviada,
+    }
   if (onboarding.fase === 'payment')
     return {
       ...onboarding,

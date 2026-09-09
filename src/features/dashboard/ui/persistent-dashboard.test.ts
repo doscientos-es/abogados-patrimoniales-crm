@@ -59,8 +59,7 @@ const invoice = (overrides = {}) =>
     moneda: 'EUR',
     emision: '2026-08-01',
     ejercicio: 2026,
-    estado: 'Emitida',
-    estadoCodigo: 'issued',
+    estado: 'issued',
     ...overrides,
   }) as never
 
@@ -95,7 +94,7 @@ describe('buildDashboardMetrics', () => {
           { id: 'case-1', fechaCierre: null },
           { id: 'closed-case', fechaCierre: '2026-08-01' },
         ] as never,
-        invoices: [invoice(), invoice({ id: 'paid', estadoCodigo: 'paid', importePendiente: 0 })],
+        invoices: [invoice(), invoice({ id: 'paid', estado: 'paid', importePendiente: 0 })],
         onboardings: [
           { id: 'onboarding-1', fase: 'proforma' },
           { id: 'onboarding-2', fase: 'payment' },

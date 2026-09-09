@@ -15,7 +15,7 @@ import {
   type ActuacionPersistida,
   type ExpedientePersistido,
 } from '@/features/expedientes'
-import { formatCurrency, useFacturas, type FacturaResumen } from '@/features/facturacion'
+import { formatCurrency, useFacturas, type FacturaPersistida } from '@/features/facturacion'
 import { useOnboardings, type OnboardingPersistido } from '@/features/onboarding'
 import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
 import { isOverdue } from '@/shared/lib/time-status'
@@ -35,7 +35,7 @@ type DashboardData = {
   tasks: TareaPersistida[]
   opportunities: OportunidadResumen[]
   cases: ExpedientePersistido[]
-  invoices: FacturaResumen[]
+  invoices: FacturaPersistida[]
   onboardings: OnboardingPersistido[]
   activities: ActuacionPersistida[]
 }
@@ -49,7 +49,7 @@ export function buildDashboardMetrics(
   const activeOpportunities = opportunities.filter((item) => !['won', 'lost'].includes(item.fase))
   const activeCases = cases.filter((item) => !item.fechaCierre)
   const pendingInvoices = invoices.filter(
-    (item) => !PENDING_INVOICE_STATUSES.includes(item.estadoCodigo) && item.importePendiente > 0,
+    (item) => !PENDING_INVOICE_STATUSES.includes(item.estado) && item.importePendiente > 0,
   )
   const opportunityIdsWithTask = new Set(
     openTasks.map((task) => task.oportunidadId).filter((id): id is string => Boolean(id)),
