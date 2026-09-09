@@ -12,12 +12,13 @@ import {
   Layers3,
   Map as MapIcon,
   Pencil,
+  ShieldAlert,
+  StickyNote,
   UsersRound,
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
-import { SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +31,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import type { MiembroDespacho } from '@/features/crm'
+import type { NotaRemota } from '@/features/notas'
 import {
   caseAlerts,
   caseDependency,
@@ -81,6 +83,7 @@ export function PersistentCaseDetail({
   onCreateTask,
   editor,
   relatedForms,
+  notas = [],
 }: {
   expediente: ExpedientePersistido
   lineas: LineaPersistida[]
@@ -95,6 +98,7 @@ export function PersistentCaseDetail({
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   editor: ReactNode
   relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode }
+  notas?: NotaRemota[]
 }) {
   const [activeTab, setActiveTab] = useState<CaseDetailTab>('summary')
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
@@ -117,81 +121,16 @@ export function PersistentCaseDetail({
       <Link to="/expedientes" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
         <ArrowLeft className="h-4 w-4" /> Volver
       </Link>
-      <SectionHeader
-        title={`${item.referencia} · ${item.titulo}`}
-        subtitle={`${item.naturaleza} · ${item.area || 'Sin área'}`}
-        actions={
-          <>
-            <Link
-              to="/contactos/$id"
-              params={{ id: item.contactoPrincipalId }}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              Contacto principal
-            </Link>
-            {item.oportunidadId ? (
-              <Link
-                to="/oportunidades/$id"
-                params={{ id: item.oportunidadId }}
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Lead de origen
-              </Link>
-            ) : null}
-            <Link
-              to="/documentos"
-              search={{ case: item.id }}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              Documentos
-            </Link>
-          </>
-        }
+      <CaseHeader
+        expediente={item}
+        memberName={memberNames.get(item.asignadoId ?? '')}
+        lastMovement={lastMovement}
+        openTaskCount={openTasks.length}
+        alerts={alerts}
+        editor={editor}
+        activityForm={relatedForms.activity}
+        notas={notas}
       />
-      <Card className="border-primary/15 bg-muted/20">
-        <CardContent className="grid gap-5 pt-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">{item.fase}</Badge>
-              <Badge variant="outline">{item.estadoGeneral}</Badge>
-              <Badge variant="outline">{item.prioridad}</Badge>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Situación operativa
-              </p>
-              <p className="mt-1 text-lg font-semibold">{caseDependency(item.estadoOperativo)}</p>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              Responsable: {memberNames.get(item.asignadoId ?? '') ?? 'Sin asignar'} · Último
-              movimiento: {relativeDays(lastMovement)}
-            </p>
-          </div>
-          <div className="border-primary/20 bg-background rounded-lg border p-4">
-            <p className="text-sm font-semibold">¿Qué hay que hacer ahora?</p>
-            <p className="mt-1 text-sm">{item.proximaAccion || 'Definir siguiente acción'}</p>
-            <p className="text-muted-foreground mt-2 text-xs">
-              {openTasks.length
-                ? `${openTasks.length} tarea${openTasks.length === 1 ? '' : 's'} abierta${openTasks.length === 1 ? '' : 's'} vinculada${openTasks.length === 1 ? '' : 's'}.`
-                : 'Sin tarea abierta vinculada.'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {alerts.length ? (
-        <section aria-label="Alertas del expediente" className="space-y-2">
-          {alerts.map((alert) => (
-            <div
-              key={alert}
-              className="border-destructive/30 bg-destructive/5 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-            >
-              <AlertTriangle className="text-destructive h-4 w-4 shrink-0" />
-              {alert}
-            </div>
-          ))}
-        </section>
-      ) : null}
 
       <div
         className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2"
@@ -234,7 +173,6 @@ export function PersistentCaseDetail({
             tareas={openTasks}
             actuaciones={actuaciones}
             documentos={documentos}
-            editor={editor}
           />
         ) : null}
         {activeTab === 'workstreams' ? (
@@ -276,7 +214,6 @@ export function PersistentCaseDetail({
               ))}
             </div>
             {!actuaciones.length ? <EmptyState message="No hay actuaciones registradas." /> : null}
-            {relatedForms.activity}
           </DetailSection>
         ) : null}
         {activeTab === 'documents' ? (
@@ -297,6 +234,174 @@ export function PersistentCaseDetail({
   )
 }
 
+function CaseHeader({
+  expediente,
+  memberName,
+  lastMovement,
+  openTaskCount,
+  alerts,
+  editor,
+  activityForm,
+  notas,
+}: {
+  expediente: ExpedientePersistido
+  memberName: string | undefined
+  lastMovement: string
+  openTaskCount: number
+  alerts: string[]
+  editor: ReactNode
+  activityForm: ReactNode
+  notas: NotaRemota[]
+}) {
+  const caseNotes = notas.filter(
+    (note) => note.scope === 'case' && note.case_id === expediente.id && note.status === 'active',
+  )
+  return (
+    <>
+      <Card className="border-border/80 shadow-sm">
+        <CardContent className="space-y-3 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <h1 className="text-lg font-bold tracking-tight sm:text-xl">
+                {expediente.referencia} · {expediente.titulo}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {expediente.naturaleza} · {expediente.area || 'Sin área'} ·{' '}
+                {expediente.tipoAsunto || 'Sin tipo de asunto'}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {alerts.some((alert) => alert.startsWith('Sin actuaciones'))
+                  ? 'Situación: no consta ninguna actuación registrada'
+                  : `Situación: última actuación ${relativeDays(lastMovement)}`}
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <Badge variant="secondary">CASEWORK</Badge>
+                <Badge variant="outline">{expediente.naturaleza}</Badge>
+                <Badge variant={expediente.prioridad === 'Alta' ? 'destructive' : 'outline'}>
+                  {expediente.prioridad}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Badge variant="outline" className="h-9 max-w-56 truncate px-3 font-normal">
+                {expediente.fase}
+              </Badge>
+              <Badge variant="outline" className="h-9 px-3 font-normal">
+                {caseDependency(expediente.estadoOperativo)}
+              </Badge>
+              {activityForm}
+            </div>
+          </div>
+          <div className="bg-muted/35 space-y-2 rounded-md border p-3 text-xs sm:p-4">
+            <p className="text-foreground">
+              Fase operativa: <strong>{expediente.fase}</strong> · Estado:{' '}
+              <strong>{expediente.estadoGeneral}</strong> · Depende de:{' '}
+              <strong>{caseDependency(expediente.estadoOperativo)}</strong>
+            </p>
+            <p className="text-muted-foreground">
+              Responsable: <strong className="text-foreground">{memberName ?? 'Sin asignar'}</strong> ·
+              Último movimiento: <strong className="text-foreground">{relativeDays(lastMovement)}</strong>
+            </p>
+            <p className="text-muted-foreground">
+              Próxima acción:{' '}
+              <strong className="text-foreground">
+                {expediente.proximaAccion || 'Sin siguiente acción definida'}
+              </strong>
+            </p>
+            <div className="border-destructive/35 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  <strong className="text-destructive block text-[11px] uppercase">
+                    {expediente.proximaAccion ? 'Siguiente acción' : 'Sin siguiente acción'}
+                  </strong>
+                  <span className="text-muted-foreground">
+                    {openTaskCount
+                      ? `${openTaskCount} tarea${openTaskCount === 1 ? '' : 's'} abierta${openTaskCount === 1 ? '' : 's'} vinculada${openTaskCount === 1 ? '' : 's'}.`
+                      : '¿Qué hay que hacer ahora para que este asunto avance?'}
+                  </span>
+                </span>
+              </div>
+              <CaseEditDialog editor={editor} compact />
+            </div>
+          </div>
+          {alerts.length ? (
+            <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs">
+              {alerts.map((alert) => (
+                <span key={alert} className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                  {alert}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+      <CaseNotes notes={caseNotes} />
+    </>
+  )
+}
+
+function CaseNotes({ notes }: { notes: NotaRemota[] }) {
+  if (!notes.length) return null
+  return (
+    <section aria-label="Notas internas del expediente" className="border-destructive/35 rounded-lg border p-3">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <ShieldAlert className="text-destructive h-4 w-4" aria-hidden="true" />
+          Notas internas del expediente a tener en cuenta ({notes.length})
+        </h2>
+        <Link to="/notas" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          Abrir notas
+        </Link>
+      </header>
+      <div className="mt-3 space-y-2">
+        {notes.map((note) => (
+          <article key={note.id} className="border-primary/30 bg-primary/5 rounded-md border px-3 py-2.5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
+                  {note.critical ? 'Nota del expediente · advertencia crítica' : 'Nota del expediente'}
+                </p>
+                <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
+              </div>
+              <div className="flex gap-1.5">
+                {note.requires_acknowledgement ? (
+                  <Badge variant="outline">Requiere confirmación</Badge>
+                ) : null}
+                {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
+              </div>
+            </div>
+            <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
+            <p className="text-muted-foreground mt-2 text-xs">
+              {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} · {formatDate(note.created_at, true)}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compact?: boolean }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant={compact ? 'default' : 'outline'} size={compact ? 'sm' : 'default'}>
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+          {compact ? 'Definir siguiente acción' : 'Editar expediente'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar expediente</DialogTitle>
+        </DialogHeader>
+        {editor}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function CaseSummary({
   expediente,
   lastMovement,
@@ -305,7 +410,6 @@ function CaseSummary({
   tareas,
   actuaciones,
   documentos,
-  editor,
 }: {
   expediente: ExpedientePersistido
   lastMovement: string
@@ -314,7 +418,6 @@ function CaseSummary({
   tareas: TareaPersistida[]
   actuaciones: ActuacionPersistida[]
   documentos: CaseDocumentRow[]
-  editor: ReactNode
 }) {
   return (
     <div className="space-y-4">
@@ -367,20 +470,7 @@ function CaseSummary({
           </CardContent>
         </Card>
       </div>
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button type="button" variant="outline" className="gap-2">
-            <Pencil className="h-4 w-4" aria-hidden="true" />
-            Editar expediente
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar expediente</DialogTitle>
-          </DialogHeader>
-          {editor}
-        </DialogContent>
-      </Dialog>
+      <CaseEditDialog editor={null} />
     </div>
   )
 }

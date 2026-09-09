@@ -189,17 +189,20 @@ export function PersistentCasesPage({
           )
         })}
       </div>
-      <div className="border-border/80 bg-card space-y-2 rounded-xl border p-3 shadow-sm">
+      <div className="border-border/80 space-y-2 border-b pb-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
           <label htmlFor="case-search" className="relative min-w-0">
             <span className="sr-only">Buscar expedientes</span>
-            <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
             <Input
               id="case-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar expediente, referencia o cliente…"
-              className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 pl-9 shadow-none"
+              className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 pl-11! shadow-none"
             />
           </label>
           <PopoverTrigger>
@@ -328,7 +331,7 @@ export function PersistentCasesPage({
         aria-label="Kanban de control de expedientes"
         className="overflow-x-auto pb-2"
       >
-        <div className="grid min-w-[1360px] grid-cols-5 grid-rows-[auto_1fr] gap-x-4 gap-y-3">
+        <div className="grid min-w-340 grid-cols-5 grid-rows-[auto_1fr] gap-x-4 gap-y-3">
           <header className="col-span-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/70 dark:bg-sky-950/30">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-sky-600" />
