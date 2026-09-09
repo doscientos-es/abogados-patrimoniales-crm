@@ -73,6 +73,7 @@ describe('PersistentCasesPage', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' }),
     ).toBeTruthy()
+    expect(screen.getByText('Planificación sucesoria').closest('[draggable="true"]')).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: 'Propuesta o borrador' })).toBeTruthy()
     expect(screen.queryByLabelText('Mover EXP-001 a otra fase')).toBeNull()
     expect(

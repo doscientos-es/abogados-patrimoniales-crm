@@ -453,28 +453,33 @@ function CaseCard({
     <Card
       draggable={!moving}
       onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
-      className="bg-card hover:border-primary/40 cursor-grab shadow-sm transition active:cursor-grabbing"
+      className="bg-card hover:border-primary/40 cursor-grab overflow-hidden shadow-sm transition active:cursor-grabbing"
     >
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-muted-foreground flex items-center gap-1 text-xs font-semibold">
+      <CardContent className="space-y-2.5 px-3 pt-2.5 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground bg-muted/60 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold">
             <GripVertical className="h-3.5 w-3.5" />
             {item.referencia}
           </span>
-          <Badge variant={item.prioridad === 'Alta' ? 'destructive' : 'secondary'}>
+          <Badge
+            variant={item.prioridad === 'Alta' ? 'destructive' : 'secondary'}
+            className="h-5 px-1.5 text-[10px]"
+          >
             {item.prioridad}
           </Badge>
         </div>
         <Link to="/expedientes/$id" params={{ id: item.id }} className="block">
-          <h3 className="line-clamp-2 text-sm font-semibold hover:underline">{item.titulo}</h3>
-          <p className="text-muted-foreground mt-1 truncate text-sm">{contactName}</p>
+          <h3 className="line-clamp-2 text-sm leading-5 font-semibold hover:underline">
+            {item.titulo}
+          </h3>
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">{contactName}</p>
         </Link>
         <div className="flex flex-wrap gap-1">
           <Badge variant="outline">{caseMegaphase(currentColumn)}</Badge>
           <Badge variant="outline">{item.naturaleza}</Badge>
           <Badge variant="secondary">{casePhaseForColumn(currentColumn)}</Badge>
         </div>
-        <div className="space-y-1 border-y py-2 text-xs leading-5">
+        <div className="space-y-0.5 border-y py-1.5 text-xs leading-4">
           <p>
             <span className="text-muted-foreground">Responsable:</span> {assigneeName}
           </p>
