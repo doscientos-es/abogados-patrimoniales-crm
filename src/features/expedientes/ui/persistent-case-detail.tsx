@@ -241,7 +241,6 @@ export function PersistentCaseDetail({
           <WorkstreamsSection
             lineas={lineas}
             miembros={miembros}
-            expedienteId={item.id}
             expedienteReferencia={item.referencia}
             createForm={relatedForms.workstream}
           />
@@ -414,17 +413,17 @@ function DetailSection({
 type WorkstreamView = 'map' | 'cards'
 type WorkstreamSituation = 'all' | 'with-target' | 'without-target'
 type WorkstreamOrder = 'manual' | 'title' | 'target'
+type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
+type WorkstreamDisplay = 'full' | 'compact'
 
 function WorkstreamsSection({
   lineas,
   miembros,
-  expedienteId,
   expedienteReferencia,
   createForm,
 }: {
   lineas: LineaPersistida[]
   miembros: MiembroDespacho[]
-  expedienteId: string
   expedienteReferencia: string
   createForm: ReactNode
 }) {
@@ -433,6 +432,8 @@ function WorkstreamsSection({
   const [situation, setSituation] = useState<WorkstreamSituation>('all')
   const [assignee, setAssignee] = useState('all')
   const [priority, setPriority] = useState('all')
+  const [additionalFilter, setAdditionalFilter] = useState<WorkstreamAdditionalFilter>('all')
+  const [display, setDisplay] = useState<WorkstreamDisplay>('full')
   const [order, setOrder] = useState<WorkstreamOrder>('manual')
   const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))]
   const visible = lineas
@@ -443,6 +444,11 @@ function WorkstreamsSection({
     )
     .filter((line) => assignee === 'all' || line.asignadoId === assignee)
     .filter((line) => priority === 'all' || line.prioridad === priority)
+    .filter(
+      (line) =>
+        additionalFilter === 'all' ||
+        (additionalFilter === 'root' ? !line.parentId : Boolean(line.parentId)),
+    )
     .sort((first, second) => {
       if (order === 'title') return first.titulo.localeCompare(second.titulo, 'es')
       if (order === 'target')
@@ -517,10 +523,20 @@ function WorkstreamsSection({
         </WorkstreamSelect>
         <WorkstreamSelect
           ariaLabel="Filtro adicional de línea"
-          value="all"
-          onChange={() => undefined}
+          value={additionalFilter}
+          onChange={(value) => setAdditionalFilter(value as WorkstreamAdditionalFilter)}
         >
           <option value="all">Sin filtro adicional</option>
+          <option value="root">Líneas principales</option>
+          <option value="nested">Sublíneas</option>
+        </WorkstreamSelect>
+        <WorkstreamSelect
+          ariaLabel="Nivel de detalle de línea"
+          value={display}
+          onChange={(value) => setDisplay(value as WorkstreamDisplay)}
+        >
+          <option value="full">Ficha completa</option>
+          <option value="compact">Ficha compacta</option>
         </WorkstreamSelect>
         <WorkstreamSelect
           ariaLabel="Orden de líneas"
@@ -539,11 +555,12 @@ function WorkstreamsSection({
               key={line.id}
               line={line}
               memberName={memberNames.get(line.asignadoId ?? '')}
+              compact={display === 'compact'}
             />
           ))}
         </div>
       ) : (
-        <WorkstreamMap lines={visible} memberNames={memberNames} />
+        <WorkstreamMap lines={visible} memberNames={memberNames} compact={display === 'compact'} />
       )}
       {!visible.length ? (
         <EmptyState message="Ninguna línea coincide con los filtros aplicados." />
@@ -556,11 +573,7 @@ function WorkstreamsSection({
           <p className="text-muted-foreground">
             Puedes asignarlos a este expediente ({expedienteReferencia}) o a cualquier otro.
           </p>
-          <Link
-            to="/documentos"
-            search={{ case: expedienteId }}
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
+          <Link to="/documentos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
             Gestionar documentos
           </Link>
         </CardContent>
@@ -572,9 +585,11 @@ function WorkstreamsSection({
 function WorkstreamMap({
   lines,
   memberNames,
+  compact,
 }: {
   lines: LineaPersistida[]
   memberNames: Map<string, string>
+  compact: boolean
 }) {
   return (
     <div
@@ -586,6 +601,7 @@ function WorkstreamMap({
           key={line.id}
           line={line}
           memberName={memberNames.get(line.asignadoId ?? '')}
+          compact={compact}
         />
       ))}
     </div>
@@ -620,9 +636,11 @@ function WorkstreamSelect({
 function WorkstreamCard({
   line,
   memberName,
+  compact = false,
 }: {
   line: LineaPersistida
   memberName: string | undefined
+  compact?: boolean
 }) {
   return (
     <Card>
@@ -630,17 +648,21 @@ function WorkstreamCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-medium">{line.titulo}</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {line.descripcion || line.tipo || 'Sin descripción'}
-            </p>
+            {!compact ? (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {line.descripcion || line.tipo || 'Sin descripción'}
+              </p>
+            ) : null}
           </div>
           <Badge variant="outline">{line.estado}</Badge>
         </div>
-        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <span>Responsable: {memberName ?? 'Sin asignar'}</span>
-          <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
-          <span>Prioridad: {line.prioridad}</span>
-        </div>
+        {!compact ? (
+          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span>Responsable: {memberName ?? 'Sin asignar'}</span>
+            <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
+            <span>Prioridad: {line.prioridad}</span>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

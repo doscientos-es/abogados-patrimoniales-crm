@@ -477,22 +477,18 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
   ]
 
   return (
-    <section aria-label="Centro de control operativo">
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b pb-4">
-          <CardTitle className="font-serif text-lg">Centro de control</CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Prioridades del despacho agrupadas por flujo de trabajo.
-          </p>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-            {groups.map((group) => (
-              <MetricGroup key={group.title} {...group} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+    <section aria-label="Centro de control operativo" className="border-b pb-4">
+      <div className="mb-3">
+        <h2 className="font-serif text-lg">Centro de control</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Prioridades del despacho agrupadas por flujo de trabajo.
+        </p>
+      </div>
+      <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+        {groups.map((group) => (
+          <MetricGroup key={group.title} {...group} />
+        ))}
+      </div>
     </section>
   )
 }
@@ -507,42 +503,21 @@ function MetricGroup({
   metrics: ControlMetric[]
 }) {
   return (
-    <div className="p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-md">
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <h2 className="text-sm font-semibold">{title}</h2>
+    <div className="py-4 lg:px-5 lg:first:pl-0 lg:last:pr-0">
+      <div className="text-muted-foreground mb-2 flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+        <h3 className="text-xs font-semibold tracking-wide uppercase">{title}</h3>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {metrics.map((metric, index) => (
-          <CompactMetric
-            key={metric.label}
-            {...metric}
-            className={
-              metrics.length % 2 && index === metrics.length - 1 ? 'col-span-2' : undefined
-            }
-          />
+      <div className="divide-y" role="list">
+        {metrics.map((metric) => (
+          <CompactMetric key={metric.label} {...metric} />
         ))}
       </div>
     </div>
   )
 }
 
-function CompactMetric({
-  label,
-  value,
-  tone,
-  to,
-  className,
-}: ControlMetric & { className?: string | undefined }) {
-  const toneClass = {
-    neutro: 'border-border',
-    exito: 'border-success/40 hover:border-success',
-    aviso: 'border-warning/40 hover:border-warning',
-    riesgo: 'border-destructive/40 hover:border-destructive',
-    info: 'border-primary/40 hover:border-primary',
-  }[tone]
+function CompactMetric({ label, value, tone, to }: ControlMetric) {
   const valueClass = {
     neutro: 'text-foreground',
     exito: 'text-success',
@@ -553,18 +528,17 @@ function CompactMetric({
   return (
     <Link
       to={to}
-      className={`hover:bg-muted/70 focus-visible:ring-ring group bg-background/50 min-w-0 rounded-md border px-3 py-2.5 transition-colors outline-none focus-visible:ring-2 ${toneClass} ${className ?? ''}`}
+      role="listitem"
+      className="hover:bg-muted/50 focus-visible:ring-ring group -mx-1 flex min-w-0 items-center gap-2 rounded-sm px-1 py-2 transition-colors outline-none focus-visible:ring-2"
     >
-      <span className="flex items-start justify-between gap-2">
-        <span className="text-muted-foreground min-w-0 text-xs leading-4 font-medium">{label}</span>
-        <ArrowRight
-          className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-          aria-hidden="true"
-        />
+      <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs font-medium">
+        {label}
       </span>
-      <span className={`mt-1 block font-serif text-2xl font-semibold tabular-nums ${valueClass}`}>
-        {value}
-      </span>
+      <span className={`font-serif text-lg font-semibold tabular-nums ${valueClass}`}>{value}</span>
+      <ArrowRight
+        className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        aria-hidden="true"
+      />
       <span className="sr-only">Ver listado de {label}</span>
     </Link>
   )

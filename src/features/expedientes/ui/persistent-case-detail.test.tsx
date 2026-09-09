@@ -135,7 +135,13 @@ describe('PersistentCaseDetail', () => {
     ).toBeTruthy()
     expect(screen.getByRole('button', { name: /vista mapa/i })).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Orden de líneas' })).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Nivel de detalle de línea' })).toBeTruthy()
     expect(screen.getByText('Nueva línea')).toBeTruthy()
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Prioridad de línea' }), {
+      target: { value: 'Baja' },
+    })
+    expect(screen.getByText('Ninguna línea coincide con los filtros aplicados.')).toBeTruthy()
   })
 
   it('opens the edit form in a dialog from the summary', () => {
