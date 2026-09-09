@@ -11,9 +11,10 @@ function toAuthenticatedUser(user: { id: string; email?: string | null }): Authe
 export async function getCurrentAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   const client = getSupabaseBrowserClient()
   if (!client) return null
-  const { data, error } = await client.auth.getSession()
+  // getSession() only reads local storage; getUser() verifies the access token with Auth.
+  const { data, error } = await client.auth.getUser()
   if (error) throw error
-  return data.session ? toAuthenticatedUser(data.session.user) : null
+  return data.user ? toAuthenticatedUser(data.user) : null
 }
 
 export function subscribeToAuthStateChanges(listener: (user: AuthenticatedUser | null) => void) {

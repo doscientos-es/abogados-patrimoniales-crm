@@ -2,7 +2,10 @@ import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
   BellRing,
+  CalendarDays,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
   LayoutDashboard,
   Link2,
@@ -41,9 +44,11 @@ import {
   type TareaPersistida,
 } from '@/features/tareas'
 
-type TaskView = 'kanban' | 'list'
+type TaskView = 'calendar' | 'kanban' | 'list'
 type TaskFilterStatus = 'all' | TareaPersistida['estado'] | 'En espera'
 type TaskBoardColumnId = 'pending' | 'in-progress' | 'waiting'
+
+const AGENDA_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 const TASK_BOARD_COLUMNS: ReadonlyArray<{
   id: TaskBoardColumnId
@@ -72,6 +77,38 @@ const formatTaskDate = (value: string | null) => {
   })
     .format(new Date(value))
     .replace(',', '')
+}
+
+function taskDateValue(value: string | null) {
+  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
+}
+
+/** Orden cronológico estable para que las acciones más próximas nunca queden ocultas. */
+export function sortTasksForAgenda(tasks: TareaPersistida[]) {
+  return [...tasks].sort((first, second) => {
+    const dueDifference = taskDateValue(first.venceEn) - taskDateValue(second.venceEn)
+    if (dueDifference) return dueDifference
+    if (first.critico !== second.critico) return first.critico ? -1 : 1
+    const priorityDifference =
+      ({ Alta: 0, Media: 1, Baja: 2 }[first.prioridad] ?? 3) -
+      ({ Alta: 0, Media: 1, Baja: 2 }[second.prioridad] ?? 3)
+    if (priorityDifference) return priorityDifference
+    return first.titulo.localeCompare(second.titulo, 'es')
+  })
+}
+
+function monthStart(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1)
+}
+
+function shiftMonth(value: Date, amount: number) {
+  return new Date(value.getFullYear(), value.getMonth() + amount, 1)
+}
+
+function calendarDateKey(value: string) {
+  const date = new Date(value)
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
 }
 
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
@@ -117,6 +154,7 @@ export function PersistentTaskWorkspace() {
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [view, setView] = useState<TaskView>('kanban')
+  const [calendarMonth, setCalendarMonth] = useState(() => monthStart(new Date()))
   const caseNames = useMemo(
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
@@ -161,6 +199,7 @@ export function PersistentTaskWorkspace() {
       matchesStatus
     )
   })
+  const orderedVisible = sortTasksForAgenda(visible)
   const activeFilterCount = [typeFilter, priorityFilter, assigneeFilter, statusFilter].filter(
     (value) => value !== 'all',
   ).length
@@ -312,22 +351,31 @@ export function PersistentTaskWorkspace() {
           </PopoverContent>
         </PopoverTrigger>
         <Badge variant="secondary" className="h-9 px-3 tabular-nums">
-          {visible.length} {visible.length === 1 ? 'elemento' : 'elementos'}
+          {orderedVisible.length} {orderedVisible.length === 1 ? 'elemento' : 'elementos'}
         </Badge>
         <div className="ml-auto">
           <ViewSwitch
             value={view}
             onChange={(value) => setView(value as TaskView)}
             options={[
+              { id: 'calendar', label: 'Calendario' },
               { id: 'kanban', label: 'Kanban' },
               { id: 'list', label: 'Lista' },
             ]}
           />
         </div>
       </div>
-      {view === 'kanban' ? (
+      {view === 'calendar' ? (
+        <TaskCalendar
+          tasks={orderedVisible}
+          month={calendarMonth}
+          onPreviousMonth={() => setCalendarMonth((current) => shiftMonth(current, -1))}
+          onNextMonth={() => setCalendarMonth((current) => shiftMonth(current, 1))}
+          onCurrentMonth={() => setCalendarMonth(monthStart(new Date()))}
+        />
+      ) : view === 'kanban' ? (
         <TaskKanban
-          tasks={visible}
+          tasks={orderedVisible}
           canValidate={canValidate}
           pending={change.isPending || validate.isPending}
           caseNames={caseNames}
@@ -337,7 +385,7 @@ export function PersistentTaskWorkspace() {
         />
       ) : (
         <section aria-label="Lista de tareas" className="space-y-3">
-          {visible.map((task) => (
+          {orderedVisible.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -349,10 +397,160 @@ export function PersistentTaskWorkspace() {
               onValidate={validateTask}
             />
           ))}
-          {!visible.length ? <EmptyTasks /> : null}
+          {!orderedVisible.length ? <EmptyTasks /> : null}
         </section>
       )}
     </main>
+  )
+}
+
+function TaskCalendar({
+  tasks,
+  month,
+  onPreviousMonth,
+  onNextMonth,
+  onCurrentMonth,
+}: {
+  tasks: TareaPersistida[]
+  month: Date
+  onPreviousMonth: () => void
+  onNextMonth: () => void
+  onCurrentMonth: () => void
+}) {
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1)
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+  const leadingDays = (firstDay.getDay() + 6) % 7
+  const gridDays = Math.ceil((leadingDays + daysInMonth) / 7) * 7
+  const today = new Date()
+  const itemsByDay = new Map<string, TareaPersistida[]>()
+  const undated = tasks.filter((task) => !task.venceEn)
+
+  tasks.forEach((task) => {
+    if (!task.venceEn) return
+    const taskDate = new Date(task.venceEn)
+    if (taskDate.getFullYear() !== month.getFullYear() || taskDate.getMonth() !== month.getMonth())
+      return
+    const key = calendarDateKey(task.venceEn)
+    itemsByDay.set(key, [...(itemsByDay.get(key) ?? []), task])
+  })
+
+  return (
+    <section aria-label="Calendario de tareas y plazos" className="space-y-4">
+      <Card className="border-border/80 overflow-hidden shadow-sm">
+        <CardContent className="p-0">
+          <header className="from-primary/10 via-background flex flex-wrap items-center justify-between gap-3 border-b bg-linear-to-r to-transparent px-4 py-4 sm:px-5">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-xl">
+                <CalendarDays className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold capitalize">
+                  {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(
+                    month,
+                  )}
+                </h2>
+                <p className="text-muted-foreground text-xs">Plazos y tareas ordenados por fecha</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onPreviousMonth}
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={onCurrentMonth}>
+                Hoy
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onNextMonth}
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </header>
+          <div className="overflow-x-auto">
+            <div className="min-w-[720px]">
+              <div className="bg-muted/45 grid grid-cols-7 border-b">
+                {AGENDA_WEEKDAYS.map((day) => (
+                  <p
+                    key={day}
+                    className="text-muted-foreground px-3 py-2 text-center text-[11px] font-semibold tracking-wide uppercase"
+                  >
+                    {day}
+                  </p>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {Array.from({ length: gridDays }, (_, index) => {
+                  const dayNumber = index - leadingDays + 1
+                  const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth
+                  const date = new Date(month.getFullYear(), month.getMonth(), dayNumber)
+                  const dayTasks = isCurrentMonth
+                    ? (itemsByDay.get(calendarDateKey(date.toISOString())) ?? [])
+                    : []
+                  const isToday = isCurrentMonth && date.toDateString() === today.toDateString()
+                  return (
+                    <div
+                      key={`${month.getFullYear()}-${month.getMonth()}-${dayNumber}`}
+                      className={`min-h-36 border-r border-b p-2 ${isCurrentMonth ? 'bg-card' : 'bg-muted/25'}`}
+                    >
+                      {isCurrentMonth ? (
+                        <span
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                        >
+                          {dayNumber}
+                        </span>
+                      ) : null}
+                      <div className="mt-1.5 space-y-1">
+                        {dayTasks.slice(0, 3).map((task) => (
+                          <div
+                            key={task.id}
+                            className={`truncate rounded-md border px-1.5 py-1 text-[11px] font-medium ${TASK_PRIORITY_CLASS[task.prioridad]}`}
+                            title={task.titulo}
+                          >
+                            {task.titulo}
+                          </div>
+                        ))}
+                        {dayTasks.length > 3 ? (
+                          <p className="text-muted-foreground px-1 text-[11px] font-medium">
+                            +{dayTasks.length - 3} más
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      {undated.length ? (
+        <Card className="border-dashed">
+          <CardContent className="p-4">
+            <p className="text-muted-foreground mb-2 text-xs font-medium">
+              Sin fecha asignada ({undated.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {undated.map((task) => (
+                <Badge key={task.id} variant="secondary">
+                  {task.titulo}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+      {!tasks.length ? <EmptyTasks /> : null}
+    </section>
   )
 }
 
