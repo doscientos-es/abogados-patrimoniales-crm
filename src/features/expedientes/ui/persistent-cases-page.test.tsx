@@ -79,6 +79,8 @@ describe('PersistentCasesPage', () => {
       screen.queryByText('Trabajo técnico, decisión, preparación y seguimiento activo.'),
     ).toBeNull()
     expect(screen.queryByText('Propuesta, entrega y formalización.')).toBeNull()
+    expect(screen.queryByText('Trabajo técnico del expediente.')).toBeNull()
+    expect(screen.queryByText('Entrega, propuesta y formalización.')).toBeNull()
   })
 
   it('filters the control board through nature tabs', () => {

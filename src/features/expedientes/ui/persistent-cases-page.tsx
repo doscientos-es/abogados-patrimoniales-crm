@@ -359,7 +359,6 @@ export function PersistentCasesPage({
               key={column.id}
               column={column.id}
               title={column.title}
-              description={column.description}
               items={filtered.filter((item) => caseControlColumn(item) === column.id)}
               contactNames={contactNames}
               memberNames={memberNames}
@@ -380,7 +379,6 @@ export function PersistentCasesPage({
 function CaseColumn({
   column,
   title,
-  description,
   items,
   contactNames,
   memberNames,
@@ -393,7 +391,6 @@ function CaseColumn({
 }: {
   column: CaseControlColumnId
   title: string
-  description: string
   items: ExpedientePersistido[]
   contactNames: Map<string, string>
   memberNames: Map<string, string>
@@ -410,11 +407,8 @@ function CaseColumn({
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onDrop(event, column)}
     >
-      <header className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="text-muted-foreground mt-1 text-xs leading-4">{description}</p>
-        </div>
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">{title}</h3>
         <Badge variant="secondary">{items.length}</Badge>
       </header>
       <div className="space-y-3">
