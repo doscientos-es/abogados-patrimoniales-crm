@@ -91,17 +91,17 @@ describe('PersistentCasesPage', () => {
     )
 
     expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('2 expedientes')).toBeTruthy()
+    expect(screen.getByText('2 expedientes en la vista actual')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Judicial' }))
 
     expect(screen.getByRole('tab', { name: 'Judicial' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('1 expediente')).toBeTruthy()
+    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
     expect(screen.getByText('EXP-002')).toBeTruthy()
     expect(screen.queryByText('EXP-001')).toBeNull()
   })
 
-  it('toggles a quick filter on and off', () => {
+  it('applies and removes a quick view', () => {
     render(
       <PersistentCasesPage
         expedientes={[caseworkCase, judicialCase]}
@@ -115,17 +115,13 @@ describe('PersistentCasesPage', () => {
       />,
     )
 
-    const mineToggle = screen.getByRole('button', { name: 'Mis expedientes' })
-    expect(mineToggle.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.change(screen.getByLabelText('Vista rápida'), { target: { value: 'mine' } })
 
-    fireEvent.click(mineToggle)
+    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
+    expect(screen.getByText('Vista:')).toBeTruthy()
 
-    expect(mineToggle.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText('1 expediente')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar filtro Vista: Mis expedientes' }))
 
-    fireEvent.click(mineToggle)
-
-    expect(mineToggle.getAttribute('aria-pressed')).toBe('false')
-    expect(screen.getByText('2 expedientes')).toBeTruthy()
+    expect(screen.getByText('2 expedientes en la vista actual')).toBeTruthy()
   })
 })

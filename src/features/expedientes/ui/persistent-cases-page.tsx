@@ -1,5 +1,6 @@
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, GripVertical, Search } from 'lucide-react'
+import { AlertTriangle, GripVertical, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
 
 import { SectionHeader } from '@/components/common'
@@ -27,8 +28,11 @@ import type {
 import type { TareaPersistida } from '@/features/tareas/application/task-types'
 
 type QuickFilter = 'all' | 'mine' | 'waiting' | 'action' | 'execution' | 'alerts'
+type CaseNature = 'all' | 'Judicial' | 'Extrajudicial'
+type ActiveFilter = { label: string; value: string; onRemove: () => void }
 
-const QUICK_FILTERS: ReadonlyArray<[QuickFilter, string]> = [
+const QUICK_VIEWS: ReadonlyArray<[QuickFilter, string]> = [
+  ['all', 'Todas las vistas'],
   ['mine', 'Mis expedientes'],
   ['waiting', 'En espera de tercero'],
   ['action', 'Debemos actuar nosotros'],
@@ -64,7 +68,7 @@ export function PersistentCasesPage({
   actions?: ReactNode
 }) {
   const [query, setQuery] = useState('')
-  const [nature, setNature] = useState<'all' | 'Judicial' | 'Extrajudicial'>('all')
+  const [nature, setNature] = useState<CaseNature>('all')
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
   const [assignee, setAssignee] = useState('all')
   const [status, setStatus] = useState('all')
@@ -86,6 +90,28 @@ export function PersistentCasesPage({
     () => [...new Set(expedientes.map((item) => caseDependency(item.estadoOperativo)))].sort(),
     [expedientes],
   )
+  const activeFilters = [
+    quickFilter !== 'all' && {
+      label: 'Vista',
+      value: quickViewLabel(quickFilter),
+      onRemove: () => setQuickFilter('all'),
+    },
+    assignee !== 'all' && {
+      label: 'Responsable',
+      value: memberNames.get(assignee) ?? 'Usuario no disponible',
+      onRemove: () => setAssignee('all'),
+    },
+    status !== 'all' && {
+      label: 'Estado',
+      value: status,
+      onRemove: () => setStatus('all'),
+    },
+    dependency !== 'all' && {
+      label: 'Dependencia',
+      value: dependency,
+      onRemove: () => setDependency('all'),
+    },
+  ].filter((filter): filter is ActiveFilter => Boolean(filter))
   const filtered = expedientes.filter((item) => {
     const text =
       `${item.referencia} ${item.titulo} ${item.area} ${contactNames.get(item.contactoPrincipalId) ?? ''}`.toLowerCase()
@@ -108,6 +134,14 @@ export function PersistentCasesPage({
     )
   })
 
+  const clearFilters = () => {
+    setQuery('')
+    setQuickFilter('all')
+    setAssignee('all')
+    setStatus('all')
+    setDependency('all')
+  }
+
   const moveToColumn = async (item: ExpedientePersistido, column: CaseControlColumnId) => {
     if (caseControlColumn(item) !== column) await onMove(item, casePhaseForColumn(column))
   }
@@ -127,71 +161,158 @@ export function PersistentCasesPage({
         actions={actions}
       />
       <div className="border-border/80 flex items-center gap-1 border-b px-3 pt-2.5" role="tablist">
-        {CASE_NATURE_TABS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`case-nature-tab-${value.toLowerCase()}`}
-            aria-controls="case-control-board"
-            aria-selected={nature === value}
-            tabIndex={nature === value ? 0 : -1}
-            onClick={() => setNature(value)}
-            className={caseNatureTabClass(nature === value)}
-          >
-            {label}
-          </button>
-        ))}
+        {CASE_NATURE_TABS.map(({ value, label }) => {
+          const count =
+            value === 'all'
+              ? expedientes.length
+              : expedientes.filter((item) => item.naturaleza === value).length
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`case-nature-tab-${value.toLowerCase()}`}
+              aria-controls="case-control-board"
+              aria-selected={nature === value}
+              tabIndex={nature === value ? 0 : -1}
+              onClick={() => setNature(value)}
+              className={caseNatureTabClass(nature === value)}
+            >
+              {label}
+              <span aria-hidden="true" className="text-muted-foreground ml-1.5 text-xs tabular-nums">
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtros rápidos">
-        {QUICK_FILTERS.map(([value, label]) => (
-          <Button
-            key={value}
-            type="button"
-            size="sm"
-            variant={quickFilter === value ? 'default' : 'outline'}
-            aria-pressed={quickFilter === value}
-            className="rounded-full"
-            onClick={() => setQuickFilter(quickFilter === value ? 'all' : value)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
-      <div className="bg-card flex flex-wrap gap-2 rounded-xl border p-3">
-        <div className="relative min-w-52 flex-1">
+      <div className="border-border/80 bg-card space-y-2 rounded-xl border p-3 shadow-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
+          <label htmlFor="case-search" className="relative min-w-0">
+            <span className="sr-only">Buscar expedientes</span>
           <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
           <Input
+            id="case-search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar expediente…"
-            className="pl-9"
+            placeholder="Buscar expediente, referencia o cliente…"
+            className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 pl-9 shadow-none"
           />
+          </label>
+          <PopoverTrigger>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-border/80 bg-background hover:bg-muted/60 h-9 gap-1.5 px-3 font-normal shadow-none"
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              Filtros
+              {activeFilters.length ? (
+                <span className="bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+                  {activeFilters.length}
+                </span>
+              ) : null}
+            </Button>
+            <PopoverContent
+              placement="bottom end"
+              className="border-border/80 w-[min(26rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
+            >
+              <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold">Filtros de expedientes</p>
+                  <p className="text-muted-foreground text-xs">Acota el tablero por sus datos</p>
+                </div>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {activeFilters.length ? `${activeFilters.length} activos` : 'Sin filtros'}
+                </span>
+              </div>
+              <div className="grid gap-4 p-4 sm:grid-cols-2">
+                <FilterField label="Responsable">
+                  <ControlSelect
+                    ariaLabel="Filtrar por responsable"
+                    value={assignee}
+                    onChange={setAssignee}
+                    options={[
+                      ['all', 'Todos los responsables'],
+                      ...miembros.map((item) => [item.id, item.nombre]),
+                    ]}
+                  />
+                </FilterField>
+                <FilterField label="Estado">
+                  <ControlSelect
+                    ariaLabel="Filtrar por estado"
+                    value={status}
+                    onChange={setStatus}
+                    options={[['all', 'Cualquier estado'], ...statusOptions.map((item) => [item, item])]}
+                  />
+                </FilterField>
+                <FilterField label="Dependencia">
+                  <ControlSelect
+                    ariaLabel="Filtrar por dependencia"
+                    value={dependency}
+                    onChange={setDependency}
+                    options={[
+                      ['all', 'Cualquier dependencia'],
+                      ...dependencyOptions.map((item) => [item, item]),
+                    ]}
+                  />
+                </FilterField>
+              </div>
+              {activeFilters.length ? (
+                <div className="border-border border-t px-4 py-2.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground h-8 w-full"
+                    onClick={clearFilters}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" /> Restablecer filtros
+                  </Button>
+                </div>
+              ) : null}
+            </PopoverContent>
+          </PopoverTrigger>
         </div>
-        <ControlSelect
-          value={assignee}
-          onChange={setAssignee}
-          options={[
-            ['all', 'Todos los responsables'],
-            ...miembros.map((item) => [item.id, item.nombre]),
-          ]}
-        />
-        <ControlSelect
-          value={status}
-          onChange={setStatus}
-          options={[['all', 'Cualquier estado'], ...statusOptions.map((item) => [item, item])]}
-        />
-        <ControlSelect
-          value={dependency}
-          onChange={setDependency}
-          options={[
-            ['all', 'Cualquier dependencia'],
-            ...dependencyOptions.map((item) => [item, item]),
-          ]}
-        />
-        <Badge variant="secondary" className="h-9 px-3">
-          {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ControlSelect
+            ariaLabel="Vista rápida"
+            value={quickFilter}
+            onChange={(value) => setQuickFilter(value as QuickFilter)}
+            options={QUICK_VIEWS.map(([value, label]) => [value, `Vista: ${label}`])}
+            className="border-border/80 bg-background hover:bg-muted/60 h-8 w-auto min-w-44 text-xs font-medium shadow-none"
+          />
+          <span className="bg-border h-3 w-px" aria-hidden="true" />
+          <p className="text-muted-foreground text-xs">
+            {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'} en la vista actual
+          </p>
+          {activeFilters.length ? (
+            <>
+              <span className="bg-border h-3 w-px" aria-hidden="true" />
+              {activeFilters.map((filter) => (
+                <button
+                  key={filter.label}
+                  type="button"
+                  onClick={filter.onRemove}
+                  className="border-border bg-muted/35 hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 text-xs transition-colors"
+                  aria-label={`Quitar filtro ${filter.label}: ${filter.value}`}
+                >
+                  <span className="text-muted-foreground">{filter.label}:</span>
+                  <span className="max-w-32 truncate font-medium">{filter.value}</span>
+                  <X className="text-muted-foreground h-3 w-3 shrink-0" aria-hidden="true" />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-muted-foreground hover:text-foreground h-6 px-1 text-xs transition-colors"
+              >
+                Limpiar filtros
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
       <section
         id="case-control-board"
@@ -412,16 +533,21 @@ function ControlSelect({
   value,
   onChange,
   options,
+  ariaLabel,
+  className,
 }: {
   value: string
   onChange: (value: string) => void
   options: string[][]
+  ariaLabel: string
+  className?: string
 }) {
   return (
     <select
+      aria-label={ariaLabel}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+      className={className ?? 'border-input bg-background h-9 w-full rounded-md border px-3 text-sm'}
     >
       {options.map(([optionValue, label]) => (
         <option key={optionValue} value={optionValue}>
@@ -430,6 +556,19 @@ function ControlSelect({
       ))}
     </select>
   )
+}
+
+function FilterField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+function quickViewLabel(value: QuickFilter) {
+  return QUICK_VIEWS.find(([filter]) => filter === value)?.[1] ?? 'Vista personalizada'
 }
 
 function caseNatureTabClass(active: boolean) {
