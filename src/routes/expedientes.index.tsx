@@ -73,7 +73,6 @@ function ExpedientesPersistentesRoute() {
       miembros={members.data ?? []}
       tareas={tasks.data ?? []}
       actuaciones={activities.data ?? []}
-      usuarioId={session.user.id}
       moving={updateCase.isPending}
       onMove={async (expediente, fase) => {
         await updateCase.mutateAsync({

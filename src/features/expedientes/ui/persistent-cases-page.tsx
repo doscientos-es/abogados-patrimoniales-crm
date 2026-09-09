@@ -27,18 +27,8 @@ import type {
 } from '@/features/expedientes/application/case-types'
 import type { TareaPersistida } from '@/features/tareas/application/task-types'
 
-type QuickFilter = 'all' | 'mine' | 'waiting' | 'action' | 'execution' | 'alerts'
 type CaseNature = 'all' | 'Judicial' | 'Extrajudicial'
 type ActiveFilter = { label: string; value: string; onRemove: () => void }
-
-const QUICK_VIEWS: ReadonlyArray<[QuickFilter, string]> = [
-  ['all', 'Todas las vistas'],
-  ['mine', 'Mis expedientes'],
-  ['waiting', 'En espera de tercero'],
-  ['action', 'Debemos actuar nosotros'],
-  ['execution', 'En ejecución'],
-  ['alerts', 'Con alertas'],
-]
 
 const CASE_NATURE_TABS = [
   { value: 'all', label: 'Todos' },
@@ -52,7 +42,6 @@ export function PersistentCasesPage({
   miembros,
   tareas,
   actuaciones,
-  usuarioId,
   moving,
   onMove,
   actions,
@@ -62,14 +51,12 @@ export function PersistentCasesPage({
   miembros: MiembroDespacho[]
   tareas: TareaPersistida[]
   actuaciones: ActuacionPersistida[]
-  usuarioId: string
   moving: boolean
   onMove: (expediente: ExpedientePersistido, fase: string) => Promise<void>
   actions?: ReactNode
 }) {
   const [query, setQuery] = useState('')
   const [nature, setNature] = useState<CaseNature>('all')
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
   const [assignee, setAssignee] = useState('all')
   const [status, setStatus] = useState('all')
   const [dependency, setDependency] = useState('all')
@@ -91,11 +78,6 @@ export function PersistentCasesPage({
     [expedientes],
   )
   const activeFilters = [
-    quickFilter !== 'all' && {
-      label: 'Vista',
-      value: quickViewLabel(quickFilter),
-      onRemove: () => setQuickFilter('all'),
-    },
     assignee !== 'all' && {
       label: 'Responsable',
       value: memberNames.get(assignee) ?? 'Usuario no disponible',
@@ -115,28 +97,18 @@ export function PersistentCasesPage({
   const filtered = expedientes.filter((item) => {
     const text =
       `${item.referencia} ${item.titulo} ${item.area} ${contactNames.get(item.contactoPrincipalId) ?? ''}`.toLowerCase()
-    const alerts = caseAlerts(item, tareas, actuaciones, now)
     const itemDependency = caseDependency(item.estadoOperativo)
-    const quickMatches =
-      quickFilter === 'all' ||
-      (quickFilter === 'mine' && item.asignadoId === usuarioId) ||
-      (quickFilter === 'waiting' && itemDependency === 'En espera de tercero') ||
-      (quickFilter === 'action' && itemDependency === 'Debemos actuar nosotros') ||
-      (quickFilter === 'execution' && itemDependency === 'En ejecución') ||
-      (quickFilter === 'alerts' && alerts.length > 0)
     return (
       (!query.trim() || text.includes(query.trim().toLowerCase())) &&
       (nature === 'all' || item.naturaleza === nature) &&
       (assignee === 'all' || item.asignadoId === assignee) &&
       (status === 'all' || item.estadoGeneral === status) &&
-      (dependency === 'all' || itemDependency === dependency) &&
-      quickMatches
+      (dependency === 'all' || itemDependency === dependency)
     )
   })
 
   const clearFilters = () => {
     setQuery('')
-    setQuickFilter('all')
     setAssignee('all')
     setStatus('all')
     setDependency('all')
@@ -284,45 +256,30 @@ export function PersistentCasesPage({
             </PopoverContent>
           </PopoverTrigger>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <ControlSelect
-            ariaLabel="Vista rápida"
-            value={quickFilter}
-            onChange={(value) => setQuickFilter(value as QuickFilter)}
-            options={QUICK_VIEWS.map(([value, label]) => [value, `Vista: ${label}`])}
-            className="border-border/80 bg-background hover:bg-muted/60 h-8 w-auto min-w-44 text-xs font-medium shadow-none"
-          />
-          <span className="bg-border h-3 w-px" aria-hidden="true" />
-          <p className="text-muted-foreground text-xs">
-            {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'} en la vista
-            actual
-          </p>
-          {activeFilters.length ? (
-            <>
-              <span className="bg-border h-3 w-px" aria-hidden="true" />
-              {activeFilters.map((filter) => (
-                <button
-                  key={filter.label}
-                  type="button"
-                  onClick={filter.onRemove}
-                  className="border-border bg-muted/35 hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 text-xs transition-colors"
-                  aria-label={`Quitar filtro ${filter.label}: ${filter.value}`}
-                >
-                  <span className="text-muted-foreground">{filter.label}:</span>
-                  <span className="max-w-32 truncate font-medium">{filter.value}</span>
-                  <X className="text-muted-foreground h-3 w-3 shrink-0" aria-hidden="true" />
-                </button>
-              ))}
+        {activeFilters.length ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {activeFilters.map((filter) => (
               <button
+                key={filter.label}
                 type="button"
-                onClick={clearFilters}
-                className="text-muted-foreground hover:text-foreground h-6 px-1 text-xs transition-colors"
+                onClick={filter.onRemove}
+                className="border-border bg-muted/35 hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 text-xs transition-colors"
+                aria-label={`Quitar filtro ${filter.label}: ${filter.value}`}
               >
-                Limpiar filtros
+                <span className="text-muted-foreground">{filter.label}:</span>
+                <span className="max-w-32 truncate font-medium">{filter.value}</span>
+                <X className="text-muted-foreground h-3 w-3 shrink-0" aria-hidden="true" />
               </button>
-            </>
-          ) : null}
-        </div>
+            ))}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-muted-foreground hover:text-foreground h-6 px-1 text-xs transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        ) : null}
       </div>
       <section
         id="case-control-board"
@@ -477,7 +434,6 @@ function CaseCard({
         <div className="flex flex-wrap gap-1">
           <Badge variant="outline">{caseMegaphase(currentColumn)}</Badge>
           <Badge variant="outline">{item.naturaleza}</Badge>
-          <Badge variant="secondary">{casePhaseForColumn(currentColumn)}</Badge>
         </div>
         <div className="space-y-0.5 border-y py-1.5 text-xs leading-4">
           <p>
@@ -550,10 +506,6 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
       {children}
     </label>
   )
-}
-
-function quickViewLabel(value: QuickFilter) {
-  return QUICK_VIEWS.find(([filter]) => filter === value)?.[1] ?? 'Vista personalizada'
 }
 
 function caseNatureTabClass(active: boolean) {

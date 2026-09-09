@@ -60,7 +60,6 @@ describe('PersistentCasesPage', () => {
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
         tareas={[]}
         actuaciones={[]}
-        usuarioId="member-1"
         moving={false}
         onMove={vi.fn().mockResolvedValue(undefined)}
       />,
@@ -73,9 +72,13 @@ describe('PersistentCasesPage', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' }),
     ).toBeTruthy()
-    expect(screen.getByText('Planificación sucesoria').closest('[draggable="true"]')).toBeTruthy()
+    const caseCard = screen.getByText('Planificación sucesoria').closest('[draggable="true"]')
+    expect(caseCard).toBeTruthy()
+    expect(caseCard?.textContent).not.toContain('Diagnóstico – Objetivos – Estrategia')
     expect(screen.getByRole('heading', { level: 3, name: 'Propuesta o borrador' })).toBeTruthy()
     expect(screen.queryByLabelText('Mover EXP-001 a otra fase')).toBeNull()
+    expect(screen.queryByLabelText('Vista rápida')).toBeNull()
+    expect(screen.queryByText('1 expediente en la vista actual')).toBeNull()
     expect(
       screen.queryByText('Trabajo técnico, decisión, preparación y seguimiento activo.'),
     ).toBeNull()
@@ -92,45 +95,18 @@ describe('PersistentCasesPage', () => {
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
         tareas={[]}
         actuaciones={[]}
-        usuarioId="member-1"
         moving={false}
         onMove={vi.fn().mockResolvedValue(undefined)}
       />,
     )
 
     expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('2 expedientes en la vista actual')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Judicial' }))
 
     expect(screen.getByRole('tab', { name: 'Judicial' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
     expect(screen.getByText('EXP-002')).toBeTruthy()
     expect(screen.queryByText('EXP-001')).toBeNull()
-  })
-
-  it('applies and removes a quick view', () => {
-    render(
-      <PersistentCasesPage
-        expedientes={[caseworkCase, judicialCase]}
-        contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
-        miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
-        tareas={[]}
-        actuaciones={[]}
-        usuarioId="member-1"
-        moving={false}
-        onMove={vi.fn().mockResolvedValue(undefined)}
-      />,
-    )
-
-    fireEvent.change(screen.getByLabelText('Vista rápida'), { target: { value: 'mine' } })
-
-    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
-    expect(screen.getByText('Vista:')).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar filtro Vista: Mis expedientes' }))
-
-    expect(screen.getByText('2 expedientes en la vista actual')).toBeTruthy()
   })
 
   it('applies a detailed filter from the filter panel', () => {
@@ -141,7 +117,6 @@ describe('PersistentCasesPage', () => {
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
         tareas={[]}
         actuaciones={[]}
-        usuarioId="member-1"
         moving={false}
         onMove={vi.fn().mockResolvedValue(undefined)}
       />,
@@ -154,7 +129,8 @@ describe('PersistentCasesPage', () => {
       target: { value: 'member-1' },
     })
 
-    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
+    expect(screen.getByText('EXP-002')).toBeTruthy()
+    expect(screen.queryByText('EXP-001')).toBeNull()
     expect(screen.getByText('1 activos')).toBeTruthy()
   })
 })
