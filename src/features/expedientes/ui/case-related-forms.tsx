@@ -66,134 +66,134 @@ export function CaseRelatedForms({
     <div className={section ? 'max-w-3xl' : 'grid gap-4 lg:grid-cols-3'}>
       {!section || section === 'participant' ? (
         <FormCard title="Añadir participante">
-        <form
-          className="space-y-3"
-          onSubmit={(event) =>
-            void execute(
-              event,
-              async (data) =>
-                onParticipant({
-                  expedienteId,
-                  contactoId: formText(data, 'contacto') || null,
-                  nombre: formText(data, 'nombre'),
-                  rol: formText(data, 'rol'),
-                  confidencialidad: formText(
-                    data,
-                    'confidencialidad',
-                  ) as CrearParticipanteInput['confidencialidad'],
-                }),
-              'Participante añadido.',
-            )
-          }
-        >
-          <Field name="nombre" label="Nombre" required />
-          <Field name="rol" label="Rol" required />
-          <NativeSelect name="contacto" label="Contacto vinculado">
-            <option value="">Sin vincular</option>
-            {contactos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect name="confidencialidad" label="Confidencialidad">
-            <option>Normal</option>
-            <option>Restringida</option>
-            <option>Confidencial</option>
-          </NativeSelect>
-          <Button type="submit" size="sm" disabled={pending}>
-            Añadir
-          </Button>
-        </form>
+          <form
+            className="space-y-3"
+            onSubmit={(event) =>
+              void execute(
+                event,
+                async (data) =>
+                  onParticipant({
+                    expedienteId,
+                    contactoId: formText(data, 'contacto') || null,
+                    nombre: formText(data, 'nombre'),
+                    rol: formText(data, 'rol'),
+                    confidencialidad: formText(
+                      data,
+                      'confidencialidad',
+                    ) as CrearParticipanteInput['confidencialidad'],
+                  }),
+                'Participante añadido.',
+              )
+            }
+          >
+            <Field name="nombre" label="Nombre" required />
+            <Field name="rol" label="Rol" required />
+            <NativeSelect name="contacto" label="Contacto vinculado">
+              <option value="">Sin vincular</option>
+              {contactos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </NativeSelect>
+            <NativeSelect name="confidencialidad" label="Confidencialidad">
+              <option>Normal</option>
+              <option>Restringida</option>
+              <option>Confidencial</option>
+            </NativeSelect>
+            <Button type="submit" size="sm" disabled={pending}>
+              Añadir
+            </Button>
+          </form>
         </FormCard>
       ) : null}
       {!section || section === 'workstream' ? (
         <FormCard title="Nueva línea de trabajo">
-        <form
-          className="space-y-3"
-          onSubmit={(event) =>
-            void execute(
-              event,
-              async (data) =>
-                onWorkstream({
-                  expedienteId,
-                  titulo: formText(data, 'titulo'),
-                  tipo: formText(data, 'tipo'),
-                  descripcion: formText(data, 'descripcion'),
-                  prioridad: formText(data, 'prioridad') as CrearLineaInput['prioridad'],
-                  asignadoId: formText(data, 'asignado') || null,
-                  fechaObjetivo: formText(data, 'objetivo') || null,
-                }),
-              'Línea creada.',
-            )
-          }
-        >
-          <Field name="titulo" label="Título" required />
-          <Field name="tipo" label="Tipo" />
-          <Field name="descripcion" label="Descripción" />
-          <NativeSelect name="prioridad" label="Prioridad">
-            <option>Media</option>
-            <option>Alta</option>
-            <option>Baja</option>
-          </NativeSelect>
-          <NativeSelect name="asignado" label="Responsable">
-            {assignees}
-          </NativeSelect>
-          <Field name="objetivo" label="Fecha objetivo" type="date" />
-          <Button type="submit" size="sm" disabled={pending}>
-            Crear línea
-          </Button>
-        </form>
+          <form
+            className="space-y-3"
+            onSubmit={(event) =>
+              void execute(
+                event,
+                async (data) =>
+                  onWorkstream({
+                    expedienteId,
+                    titulo: formText(data, 'titulo'),
+                    tipo: formText(data, 'tipo'),
+                    descripcion: formText(data, 'descripcion'),
+                    prioridad: formText(data, 'prioridad') as CrearLineaInput['prioridad'],
+                    asignadoId: formText(data, 'asignado') || null,
+                    fechaObjetivo: formText(data, 'objetivo') || null,
+                  }),
+                'Línea creada.',
+              )
+            }
+          >
+            <Field name="titulo" label="Título" required />
+            <Field name="tipo" label="Tipo" />
+            <Field name="descripcion" label="Descripción" />
+            <NativeSelect name="prioridad" label="Prioridad">
+              <option>Media</option>
+              <option>Alta</option>
+              <option>Baja</option>
+            </NativeSelect>
+            <NativeSelect name="asignado" label="Responsable">
+              {assignees}
+            </NativeSelect>
+            <Field name="objetivo" label="Fecha objetivo" type="date" />
+            <Button type="submit" size="sm" disabled={pending}>
+              Crear línea
+            </Button>
+          </form>
         </FormCard>
       ) : null}
       {!section || section === 'activity' ? (
         <FormCard title="Nueva actuación">
-        <form
-          className="space-y-3"
-          onSubmit={(event) =>
-            void execute(
-              event,
-              async (data) =>
-                onActivity({
-                  expedienteId,
-                  lineaId: formText(data, 'linea') || null,
-                  tipo: formText(data, 'tipo'),
-                  titulo: formText(data, 'titulo'),
-                  descripcion: formText(data, 'descripcion'),
-                  asignadoId: formText(data, 'asignado') || null,
-                  resultado: formText(data, 'resultado'),
-                  proximaAccion: formText(data, 'proxima'),
-                  horas: Number(data.get('horas') || 0),
-                  facturable: data.get('facturable') === 'on',
-                }),
-              'Actuación registrada.',
-            )
-          }
-        >
-          <Field name="titulo" label="Título" required />
-          <Field name="tipo" label="Tipo" required />
-          <Field name="descripcion" label="Descripción" />
-          <NativeSelect name="linea" label="Línea">
-            <option value="">General</option>
-            {lineas.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.titulo}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect name="asignado" label="Responsable">
-            {assignees}
-          </NativeSelect>
-          <Field name="resultado" label="Resultado" />
-          <Field name="proxima" label="Próxima acción" />
-          <Field name="horas" label="Horas" type="number" min="0" step="0.25" />
-          <label className="flex items-center gap-2 text-sm">
-            <input name="facturable" type="checkbox" /> Facturable
-          </label>
-          <Button type="submit" size="sm" disabled={pending}>
-            Registrar
-          </Button>
-        </form>
+          <form
+            className="space-y-3"
+            onSubmit={(event) =>
+              void execute(
+                event,
+                async (data) =>
+                  onActivity({
+                    expedienteId,
+                    lineaId: formText(data, 'linea') || null,
+                    tipo: formText(data, 'tipo'),
+                    titulo: formText(data, 'titulo'),
+                    descripcion: formText(data, 'descripcion'),
+                    asignadoId: formText(data, 'asignado') || null,
+                    resultado: formText(data, 'resultado'),
+                    proximaAccion: formText(data, 'proxima'),
+                    horas: Number(data.get('horas') || 0),
+                    facturable: data.get('facturable') === 'on',
+                  }),
+                'Actuación registrada.',
+              )
+            }
+          >
+            <Field name="titulo" label="Título" required />
+            <Field name="tipo" label="Tipo" required />
+            <Field name="descripcion" label="Descripción" />
+            <NativeSelect name="linea" label="Línea">
+              <option value="">General</option>
+              {lineas.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.titulo}
+                </option>
+              ))}
+            </NativeSelect>
+            <NativeSelect name="asignado" label="Responsable">
+              {assignees}
+            </NativeSelect>
+            <Field name="resultado" label="Resultado" />
+            <Field name="proxima" label="Próxima acción" />
+            <Field name="horas" label="Horas" type="number" min="0" step="0.25" />
+            <label className="flex items-center gap-2 text-sm">
+              <input name="facturable" type="checkbox" /> Facturable
+            </label>
+            <Button type="submit" size="sm" disabled={pending}>
+              Registrar
+            </Button>
+          </form>
         </FormCard>
       ) : null}
     </div>

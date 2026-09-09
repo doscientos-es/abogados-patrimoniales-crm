@@ -399,6 +399,9 @@ function TaskCard({
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">
             <Badge variant="outline">{task.tipo}</Badge>
+            <Badge variant={task.validacion === 'Propuesto' ? 'secondary' : 'outline'}>
+              {task.validacion === 'Propuesto' ? 'Pendiente de validar' : task.estado}
+            </Badge>
             <Badge
               variant={task.critico || task.prioridad === 'Alta' ? 'destructive' : 'secondary'}
             >

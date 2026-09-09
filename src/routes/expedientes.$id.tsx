@@ -99,6 +99,10 @@ function FichaExpedientePersistente() {
       documentos={documents.data ?? []}
       tareas={tasks.data ?? []}
       miembros={members.data ?? []}
+      clienteNombre={
+        contacts.data?.find((contact) => contact.id === caseQuery.data.contactoPrincipalId)?.nombre ??
+        'Contacto principal'
+      }
       taskPending={createTask.isPending}
       onCreateTask={(input) => createTask.mutateAsync(input)}
       editor={
