@@ -52,28 +52,6 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   { id: 'waiting', title: 'En espera', description: 'Plazos pendientes de validación' },
 ]
 
-const TASK_COLUMN_STYLES: Record<TaskBoardColumnId, { panel: string; dot: string; count: string }> =
-  {
-    pending: {
-      panel: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/25',
-      dot: 'bg-amber-500',
-      count:
-        'border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
-    },
-    'in-progress': {
-      panel: 'border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25',
-      dot: 'bg-sky-500',
-      count:
-        'border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200',
-    },
-    waiting: {
-      panel: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-900/70 dark:bg-violet-950/25',
-      dot: 'bg-violet-500',
-      count:
-        'border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200',
-    },
-  }
-
 /** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
 export function taskBoardColumn(task: TareaPersistida): TaskBoardColumnId | null {
   if (task.validacion === 'Propuesto') return 'waiting'
@@ -392,31 +370,30 @@ function TaskKanban({
       <div className="grid min-w-[960px] grid-cols-3 gap-4">
         {TASK_BOARD_COLUMNS.map((column) => {
           const items = tasks.filter((task) => taskBoardColumn(task) === column.id)
-          const styles = TASK_COLUMN_STYLES[column.id]
           return (
             <section
               key={column.id}
-              className={`min-h-80 rounded-2xl border p-3 shadow-sm transition-all ${styles.panel} ${canDropIn(column.id) ? 'ring-primary/35 scale-[1.01] ring-2' : ''}`}
+              className={`bg-muted/35 min-h-80 rounded-lg border p-3 transition-colors ${canDropIn(column.id) ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
               onDragOver={(event) => {
                 if (canDropIn(column.id)) event.preventDefault()
               }}
               onDrop={(event) => dropInColumn(event, column.id)}
             >
-              <header className="mb-4 flex items-start justify-between gap-3 px-1 pt-1">
+              <header className="border-border mb-3 flex items-start justify-between gap-3 border-b px-1 pt-1 pb-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${styles.dot}`} aria-hidden="true" />
-                    <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
-                  </div>
-                  <p className="text-muted-foreground mt-1.5 text-xs leading-4">
+                  <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
+                  <p className="text-muted-foreground mt-1 text-xs leading-4">
                     {column.description}
                   </p>
                 </div>
-                <Badge className={`shrink-0 border tabular-nums ${styles.count}`}>
+                <Badge
+                  variant="secondary"
+                  className="h-5 min-w-5 shrink-0 px-1.5 text-[10px] tabular-nums"
+                >
                   {items.length}
                 </Badge>
               </header>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {items.map((task) => (
                   <TaskCard
                     key={task.id}
@@ -439,7 +416,7 @@ function TaskKanban({
                   />
                 ))}
                 {!items.length ? (
-                  <p className="text-muted-foreground bg-card/55 rounded-xl border border-dashed px-3 py-9 text-center text-xs">
+                  <p className="text-muted-foreground rounded-md border border-dashed bg-transparent px-3 py-9 text-center text-xs">
                     {canDropIn(column.id)
                       ? 'Suelta la tarea aquí'
                       : 'Sin elementos en esta categoría.'}
@@ -485,7 +462,7 @@ function TaskCard({
   const [note, setNote] = useState('')
   return (
     <Card
-      className={`${compact ? 'group/task border-border/70 bg-card/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md' : ''} ${drag?.isDragged ? 'scale-[0.98] opacity-50' : ''}`}
+      className={`${compact ? 'group/task border-border bg-card hover:border-foreground/20 shadow-none transition-colors hover:shadow-sm' : ''} ${drag?.isDragged ? 'opacity-50' : ''}`}
     >
       <CardContent className={`space-y-3 ${compact ? 'p-4' : 'pt-6'}`}>
         <div className="flex items-start justify-between gap-2">

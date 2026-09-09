@@ -174,26 +174,33 @@ export function PersistentOnboardingPage() {
           No se han podido cargar los onboardings. Puedes reintentar la página.
         </p>
       ) : null}
-      {vista === 'kanban' ? (
-        <section aria-label="Kanban de Onboarding" className="overflow-x-auto pb-4">
-          <div className="grid min-w-max auto-cols-[21rem] grid-flow-col gap-4">
-            {FASES_ONBOARDING.map((fase) => {
-              const columnItems = items.filter((item) => item.fase === fase)
-              return (
-                <OnboardingColumn key={fase} fase={fase} items={columnItems} loading={isLoading} />
-              )
-            })}
-          </div>
-        </section>
+      {isLoading || items.length ? (
+        vista === 'kanban' ? (
+          <section aria-label="Kanban de Onboarding" className="overflow-x-auto pb-4">
+            <div className="grid min-w-max auto-cols-[21rem] grid-flow-col gap-4">
+              {FASES_ONBOARDING.map((fase) => {
+                const columnItems = items.filter((item) => item.fase === fase)
+                return (
+                  <OnboardingColumn
+                    key={fase}
+                    fase={fase}
+                    items={columnItems}
+                    loading={isLoading}
+                  />
+                )
+              })}
+            </div>
+          </section>
+        ) : (
+          <OnboardingList
+            items={items}
+            contactosPorId={contactosPorId}
+            miembrosPorId={miembrosPorId}
+          />
+        )
       ) : (
-        <OnboardingList
-          items={items}
-          contactosPorId={contactosPorId}
-          miembrosPorId={miembrosPorId}
-        />
+        <EmptyOnboarding hasOnboardings={Boolean(onboardings.data?.length)} />
       )}
-
-      {!isLoading && !items.length ? <EmptyOnboarding /> : null}
       <p className="text-muted-foreground mt-5 rounded-md border border-dashed px-4 py-3 text-xs leading-5">
         <strong className="text-foreground">Estados provisionales:</strong> «Proforma enviada» y
         «Pago confirmado» quedan registrados y auditados como confirmaciones manuales. Puedes
@@ -524,7 +531,7 @@ function CreateOnboardingDialog({
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Plus className="h-4 w-4" />
-          Iniciar Onboarding / Registrar proforma enviada
+          Registrar proforma
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
@@ -1000,14 +1007,17 @@ function OnboardingList({
   )
 }
 
-function EmptyOnboarding() {
+function EmptyOnboarding({ hasOnboardings }: { hasOnboardings: boolean }) {
   return (
     <div className="border-border bg-card mt-2 rounded-xl border border-dashed px-6 py-14 text-center">
       <ClipboardCheck className="text-muted-foreground mx-auto h-8 w-8" />
-      <h2 className="mt-3 font-serif text-lg font-semibold">Todavía no hay onboardings</h2>
+      <h2 className="mt-3 font-serif text-lg font-semibold">
+        {hasOnboardings ? 'No hay onboardings con estos filtros' : 'Todavía no hay onboardings'}
+      </h2>
       <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">
-        Inicia uno al enviar una proforma para no perder el seguimiento de pago y el inicio formal
-        del encargo.
+        {hasOnboardings
+          ? 'Prueba a cambiar los filtros para ver otros registros.'
+          : 'Registra una proforma para no perder el seguimiento de pago y el inicio formal del encargo.'}
       </p>
     </div>
   )
