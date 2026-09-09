@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import type { MiembroDespacho } from '@/features/crm'
-import type { NotaRemota } from '@/features/notas'
 import {
   caseAlerts,
   caseDependency,
@@ -44,6 +43,7 @@ import type {
   LineaPersistida,
   ParticipantePersistido,
 } from '@/features/expedientes/application/case-types'
+import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
@@ -299,8 +299,9 @@ function CaseHeader({
               <strong>{caseDependency(expediente.estadoOperativo)}</strong>
             </p>
             <p className="text-muted-foreground">
-              Responsable: <strong className="text-foreground">{memberName ?? 'Sin asignar'}</strong> ·
-              Último movimiento: <strong className="text-foreground">{relativeDays(lastMovement)}</strong>
+              Responsable:{' '}
+              <strong className="text-foreground">{memberName ?? 'Sin asignar'}</strong> · Último
+              movimiento: <strong className="text-foreground">{relativeDays(lastMovement)}</strong>
             </p>
             <p className="text-muted-foreground">
               Próxima acción:{' '}
@@ -310,7 +311,10 @@ function CaseHeader({
             </p>
             <div className="border-destructive/35 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <AlertTriangle
+                  className="text-destructive mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
                 <span>
                   <strong className="text-destructive block text-[11px] uppercase">
                     {expediente.proximaAccion ? 'Siguiente acción' : 'Sin siguiente acción'}
@@ -345,7 +349,10 @@ function CaseHeader({
 function CaseNotes({ notes }: { notes: NotaRemota[] }) {
   if (!notes.length) return null
   return (
-    <section aria-label="Notas internas del expediente" className="border-destructive/35 rounded-lg border p-3">
+    <section
+      aria-label="Notas internas del expediente"
+      className="border-destructive/35 rounded-lg border p-3"
+    >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <ShieldAlert className="text-destructive h-4 w-4" aria-hidden="true" />
@@ -357,11 +364,16 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
       </header>
       <div className="mt-3 space-y-2">
         {notes.map((note) => (
-          <article key={note.id} className="border-primary/30 bg-primary/5 rounded-md border px-3 py-2.5">
+          <article
+            key={note.id}
+            className="border-primary/30 bg-primary/5 rounded-md border px-3 py-2.5"
+          >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
-                  {note.critical ? 'Nota del expediente · advertencia crítica' : 'Nota del expediente'}
+                  {note.critical
+                    ? 'Nota del expediente · advertencia crítica'
+                    : 'Nota del expediente'}
                 </p>
                 <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
               </div>
@@ -374,7 +386,8 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
             </div>
             <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
             <p className="text-muted-foreground mt-2 text-xs">
-              {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} · {formatDate(note.created_at, true)}
+              {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} ·{' '}
+              {formatDate(note.created_at, true)}
             </p>
           </article>
         ))}
@@ -387,7 +400,11 @@ function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compac
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant={compact ? 'default' : 'outline'} size={compact ? 'sm' : 'default'}>
+        <Button
+          type="button"
+          variant={compact ? 'default' : 'outline'}
+          size={compact ? 'sm' : 'default'}
+        >
           <Pencil className="h-4 w-4" aria-hidden="true" />
           {compact ? 'Definir siguiente acción' : 'Editar expediente'}
         </Button>

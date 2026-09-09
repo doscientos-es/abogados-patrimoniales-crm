@@ -45,7 +45,7 @@ const expediente = {
   actualizadoEn: '2026-08-07T09:15:00Z',
 } as never
 
-function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined)) {
+function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined), notas = [] as never[]) {
   return render(
     <PersistentCaseDetail
       expediente={expediente}
@@ -106,6 +106,7 @@ function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined)) {
       taskPending={false}
       onCreateTask={onCreateTask}
       editor={<div>Editor del expediente</div>}
+      notas={notas}
       relatedForms={{
         participant: <div>Alta de interviniente</div>,
         workstream: <div>Nueva línea</div>,
@@ -120,7 +121,7 @@ describe('PersistentCaseDetail', () => {
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
-    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(2)
+    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(3)
 
     fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))
     expect(screen.getByText('Escritura.pdf')).toBeTruthy()
@@ -142,6 +143,28 @@ describe('PersistentCaseDetail', () => {
       target: { value: 'Baja' },
     })
     expect(screen.getByText('Ninguna línea coincide con los filtros aplicados.')).toBeTruthy()
+  })
+
+  it('shows active internal notes linked to the expediente below the header', () => {
+    renderDetail(undefined, [
+      {
+        id: 'note-1',
+        scope: 'case',
+        case_id: 'case-1',
+        status: 'active',
+        title: 'Confidencialidad familiar',
+        content: 'No facilitar información a familiares sin autorización.',
+        critical: true,
+        requires_acknowledgement: true,
+        created_at: '2026-08-05T09:15:00Z',
+        created_by: 'member-1',
+        actorNames: { 'member-1': 'Marta Solé' },
+      },
+    ] as never)
+
+    expect(screen.getByText(/Notas internas del expediente a tener en cuenta \(1\)/)).toBeTruthy()
+    expect(screen.getByText('Confidencialidad familiar')).toBeTruthy()
+    expect(screen.getByText('Requiere confirmación')).toBeTruthy()
   })
 
   it('opens the edit form in a dialog from the summary', () => {
