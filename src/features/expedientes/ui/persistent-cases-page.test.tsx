@@ -124,4 +124,31 @@ describe('PersistentCasesPage', () => {
 
     expect(screen.getByText('2 expedientes en la vista actual')).toBeTruthy()
   })
+
+  it('applies a detailed filter from the filter panel', () => {
+    render(
+      <PersistentCasesPage
+        expedientes={[caseworkCase, judicialCase]}
+        contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
+        miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
+        tareas={[]}
+        actuaciones={[]}
+        usuarioId="member-1"
+        moving={false}
+        onMove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filtros' }))
+    expect(screen.getByText('Filtros de expedientes')).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Filtrar por responsable'), {
+      target: { value: 'member-1' },
+    })
+
+    expect(screen.getByText('1 expediente en la vista actual')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Quitar filtro Responsable: Laura García' }),
+    ).toBeTruthy()
+  })
 })

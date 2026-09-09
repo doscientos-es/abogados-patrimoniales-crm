@@ -179,7 +179,10 @@ export function PersistentCasesPage({
               className={caseNatureTabClass(nature === value)}
             >
               {label}
-              <span aria-hidden="true" className="text-muted-foreground ml-1.5 text-xs tabular-nums">
+              <span
+                aria-hidden="true"
+                className="text-muted-foreground ml-1.5 text-xs tabular-nums"
+              >
                 {count}
               </span>
             </button>
@@ -190,14 +193,14 @@ export function PersistentCasesPage({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
           <label htmlFor="case-search" className="relative min-w-0">
             <span className="sr-only">Buscar expedientes</span>
-          <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
-          <Input
-            id="case-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar expediente, referencia o cliente…"
-            className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 pl-9 shadow-none"
-          />
+            <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
+            <Input
+              id="case-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar expediente, referencia o cliente…"
+              className="border-border/80 bg-muted/20 focus-visible:bg-background h-9 pl-9 shadow-none"
+            />
           </label>
           <PopoverTrigger>
             <Button
@@ -244,7 +247,10 @@ export function PersistentCasesPage({
                     ariaLabel="Filtrar por estado"
                     value={status}
                     onChange={setStatus}
-                    options={[['all', 'Cualquier estado'], ...statusOptions.map((item) => [item, item])]}
+                    options={[
+                      ['all', 'Cualquier estado'],
+                      ...statusOptions.map((item) => [item, item]),
+                    ]}
                   />
                 </FilterField>
                 <FilterField label="Dependencia">
@@ -285,7 +291,8 @@ export function PersistentCasesPage({
           />
           <span className="bg-border h-3 w-px" aria-hidden="true" />
           <p className="text-muted-foreground text-xs">
-            {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'} en la vista actual
+            {filtered.length} {filtered.length === 1 ? 'expediente' : 'expedientes'} en la vista
+            actual
           </p>
           {activeFilters.length ? (
             <>
@@ -547,7 +554,9 @@ function ControlSelect({
       aria-label={ariaLabel}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className={className ?? 'border-input bg-background h-9 w-full rounded-md border px-3 text-sm'}
+      className={
+        className ?? 'border-input bg-background h-9 w-full rounded-md border px-3 text-sm'
+      }
     >
       {options.map(([optionValue, label]) => (
         <option key={optionValue} value={optionValue}>
