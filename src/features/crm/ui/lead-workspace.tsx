@@ -9,17 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import type { OportunidadPersistida } from '@/features/crm/application'
 import {
   useActualizarDetallesOportunidad,
   useEventosOportunidad,
   useRegistrarComunicacionOportunidad,
-} from '@/features/crm/infrastructure/supabase-oportunidades'
+  type OportunidadPersistida,
+} from '@/features/crm'
 import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
-import {
-  useCrearOnboarding,
-  useOnboardings,
-} from '@/features/onboarding/infrastructure/supabase-onboardings'
+import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import { useCambiarEstadoTarea, useCrearTarea, useTareasPersistentes } from '@/features/tareas'
 import type { Json } from '@/shared/infrastructure/supabase'
 

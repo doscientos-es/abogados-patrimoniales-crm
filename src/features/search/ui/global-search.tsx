@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { cn } from '@/lib/utils'
 
-import { type GlobalSearchResult, useGlobalSearch } from '../infrastructure/supabase-global-search'
+import { type GlobalSearchResult, useGlobalSearch } from '../application'
 
 type PaletteItem = Pick<GlobalSearchResult, 'id' | 'entity_type' | 'title' | 'subtitle' | 'href'>
 type StoredItem = PaletteItem & { selectedAt: number; visits: number }
