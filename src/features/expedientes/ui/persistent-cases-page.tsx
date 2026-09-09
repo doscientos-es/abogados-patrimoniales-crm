@@ -37,6 +37,12 @@ const QUICK_FILTERS: ReadonlyArray<[QuickFilter, string]> = [
   ['alerts', 'Con alertas'],
 ]
 
+const CASE_NATURE_TABS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'Extrajudicial', label: 'Extrajudicial' },
+  { value: 'Judicial', label: 'Judicial' },
+] as const
+
 export function PersistentCasesPage({
   expedientes,
   contactos,
@@ -130,17 +136,21 @@ export function PersistentCasesPage({
         subtitle="Supervisión y seguimiento del recorrido de los expedientes judiciales y extrajudiciales del despacho."
         actions={actions}
       />
-      <div className="flex flex-wrap items-center gap-2 border-b pb-3">
-        {(['Extrajudicial', 'Judicial', 'all'] as const).map((value) => (
-          <Button
+      <div className="border-border/80 flex items-center gap-1 border-b px-3 pt-2.5" role="tablist">
+        {CASE_NATURE_TABS.map(({ value, label }) => (
+          <button
             key={value}
             type="button"
-            size="sm"
-            variant={nature === value ? 'default' : 'ghost'}
+            role="tab"
+            id={`case-nature-tab-${value.toLowerCase()}`}
+            aria-controls="case-control-board"
+            aria-selected={nature === value}
+            tabIndex={nature === value ? 0 : -1}
             onClick={() => setNature(value)}
+            className={caseNatureTabClass(nature === value)}
           >
-            {value === 'all' ? 'Todos — vista general' : value}
-          </Button>
+            {label}
+          </button>
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -206,7 +216,13 @@ export function PersistentCasesPage({
         cada subcolumna representa una fase operativa. Arrastra un expediente entre ellas para
         actualizar su recorrido.
       </p>
-      <section aria-label="Kanban de control de expedientes" className="overflow-x-auto pb-2">
+      <section
+        id="case-control-board"
+        role="tabpanel"
+        aria-labelledby={`case-nature-tab-${nature.toLowerCase()}`}
+        aria-label="Kanban de control de expedientes"
+        className="overflow-x-auto pb-2"
+      >
         <div className="grid min-w-[1360px] grid-cols-5 grid-rows-[auto_1fr] gap-x-4 gap-y-3">
           <header className="col-span-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/70 dark:bg-sky-950/30">
             <div className="flex items-center gap-2">
@@ -437,4 +453,12 @@ function ControlSelect({
       ))}
     </select>
   )
+}
+
+function caseNatureTabClass(active: boolean) {
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
+    active
+      ? 'border-primary text-primary'
+      : 'border-transparent text-muted-foreground hover:text-foreground'
+  }`
 }

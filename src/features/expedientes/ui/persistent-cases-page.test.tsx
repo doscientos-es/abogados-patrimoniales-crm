@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -33,6 +33,13 @@ const caseworkCase = {
   actualizadoEn: '2026-09-08T10:00:00Z',
 } as never
 
+const judicialCase = {
+  ...caseworkCase,
+  id: 'judicial-1',
+  referencia: 'EXP-002',
+  naturaleza: 'Judicial',
+} as never
+
 afterEach(cleanup)
 
 describe('PersistentCasesPage', () => {
@@ -58,5 +65,30 @@ describe('PersistentCasesPage', () => {
       screen.getByRole('heading', { level: 3, name: 'Diagnóstico – Objetivos – Estrategia' }),
     ).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: 'Propuesta o borrador' })).toBeTruthy()
+  })
+
+  it('filters the control board through nature tabs', () => {
+    render(
+      <PersistentCasesPage
+        expedientes={[caseworkCase, judicialCase]}
+        contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
+        miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
+        tareas={[]}
+        actuaciones={[]}
+        usuarioId="member-1"
+        moving={false}
+        onMove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('2 expedientes')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Judicial' }))
+
+    expect(screen.getByRole('tab', { name: 'Judicial' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('1 expediente')).toBeTruthy()
+    expect(screen.getByText('EXP-002')).toBeTruthy()
+    expect(screen.queryByText('EXP-001')).toBeNull()
   })
 })
