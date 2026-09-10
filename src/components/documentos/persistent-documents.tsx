@@ -22,6 +22,7 @@ import {
 import {
   useMemo,
   useState,
+  useEffect,
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
@@ -147,6 +148,7 @@ export function PersistentDocuments({
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const [view, setView] = useState<DocumentView>('grid')
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
   const { caseId, folderId } = location ?? internalLocation
   const setLocation = (nextLocation: DocumentLocation) => {
     if (onLocationChange) onLocationChange(nextLocation)
@@ -186,6 +188,23 @@ export function PersistentDocuments({
   })
   const folderRows = folders.data ?? EMPTY_FOLDERS
   const documentRows = docs.data ?? EMPTY_DOCUMENTS
+  useEffect(() => {
+    let cancelled = false
+    const imageDocuments = documentRows.filter((document) => document.mime_type.startsWith('image/'))
+    if (!imageDocuments.length) {
+      setPreviewUrls({})
+      return () => { cancelled = true }
+    }
+    const c = getSupabaseBrowserClient()
+    if (!c) return undefined
+    void Promise.all(imageDocuments.map(async (document) => {
+      const { data } = await c.storage.from('case-documents').createSignedUrl(document.storage_path, 300)
+      return [document.id, data?.signedUrl] as const
+    })).then((entries) => {
+      if (!cancelled) setPreviewUrls(Object.fromEntries(entries.filter((entry): entry is [string, string] => Boolean(entry[1]))))
+    })
+    return () => { cancelled = true }
+  }, [documentRows])
   const documentCountByCase = useMemo(() => {
     const counts = new Map<string, number>()
     for (const document of documentRows)
@@ -930,8 +949,12 @@ export function PersistentDocuments({
                             className="text-muted-foreground h-5 w-5 shrink-0"
                             aria-hidden="true"
                           />
-                          <div className={`rounded-xl p-3 ${visual.tone}`}>
-                            <visual.Icon className="h-6 w-6" aria-hidden="true" />
+                          <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}>
+                            {doc.mime_type.startsWith('image/') && previewUrls[doc.id] ? (
+                              <img src={previewUrls[doc.id]} alt={`Vista previa de ${doc.original_name}`} className="h-full w-full object-cover" />
+                            ) : (
+                              <visual.Icon className="h-6 w-6" aria-hidden="true" />
+                            )}
                           </div>
                         </div>
                         <Badge variant="outline">{visual.label}</Badge>
@@ -1024,8 +1047,12 @@ export function PersistentDocuments({
                     >
                       <GripVertical className="h-5 w-5" aria-hidden="true" />
                     </button>
-                    <span className={`rounded-lg p-2 ${visual.tone}`}>
-                      <visual.Icon className="h-5 w-5" aria-hidden="true" />
+                    <span className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}>
+                      {doc.mime_type.startsWith('image/') && previewUrls[doc.id] ? (
+                        <img src={previewUrls[doc.id]} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <visual.Icon className="h-5 w-5" aria-hidden="true" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium" title={doc.original_name}>
@@ -1381,12 +1408,13 @@ function DocumentActions({
 }) {
   const canUseContent = document.content_status === 'validated'
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="outline" onClick={() => onMove(document)} disabled={moving}>
+    <div className="border-border/70 bg-muted/20 flex flex-wrap items-center gap-1.5 rounded-xl border p-1.5">
+      <Button size="sm" variant="secondary" className="h-9 flex-1 justify-center" onClick={() => onMove(document)} disabled={moving}>
         <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
       </Button>
       <label
-        className={`border-input bg-background inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium ${uploading || !canUseContent ? 'pointer-events-none opacity-50' : ''}`}
+        className={`border-input bg-background hover:bg-accent inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors ${uploading || !canUseContent ? 'pointer-events-none opacity-50' : ''}`}
+        title="Subir una nueva versión"
       >
         <Upload className="h-4 w-4" aria-hidden="true" /> Nueva versión
         <input
@@ -1400,20 +1428,24 @@ function DocumentActions({
       <Button
         size="sm"
         variant="outline"
+        className="h-9 px-2.5"
         disabled={!canUseContent}
         onClick={() => void onDownload(document)}
         aria-label={`Descargar ${document.original_name}`}
+        title="Descargar"
       >
-        <Download className="h-4 w-4" />
+        <Download className="h-4 w-4" aria-hidden="true" /> <span className="sr-only">Descargar</span>
       </Button>
       <Button
         size="sm"
-        variant="outline"
+        variant="ghost"
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 px-2.5"
         disabled={archiving}
         onClick={() => onArchive(document)}
         aria-label={`Archivar ${document.original_name}`}
+        title="Archivar"
       >
-        <Archive className="h-4 w-4" />
+        <Archive className="h-4 w-4" aria-hidden="true" /> <span className="sr-only">Archivar</span>
       </Button>
     </div>
   )

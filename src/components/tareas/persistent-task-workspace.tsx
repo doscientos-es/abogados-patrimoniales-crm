@@ -9,7 +9,6 @@ import {
   GripVertical,
   LayoutDashboard,
   Link2,
-  Pencil,
   Plus,
   Search,
   SlidersHorizontal,
@@ -29,7 +28,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -264,6 +262,7 @@ export function PersistentTaskWorkspace() {
     )
 
   const canValidate = membership.data?.role !== 'paralegal'
+  const canEditTasks = membership.data?.role !== 'paralegal'
   const visible = (tasks.data ?? []).filter((task) => {
     const searchable =
       `${task.titulo} ${task.descripcion} ${task.tipo} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
@@ -479,6 +478,7 @@ export function PersistentTaskWorkspace() {
           onChangeStatus={changeStatus}
           onValidate={validateTask}
           onEdit={editTask}
+          canEdit={canEditTasks}
         />
       ) : (
         <section aria-label="Lista de tareas" className="space-y-3">
@@ -493,6 +493,7 @@ export function PersistentTaskWorkspace() {
               onChangeStatus={changeStatus}
               onValidate={validateTask}
               onEdit={editTask}
+              canEdit={canEditTasks}
             />
           ))}
           {!orderedVisible.length ? <EmptyTasks /> : null}
@@ -731,6 +732,7 @@ function TaskKanban({
   onChangeStatus,
   onValidate,
   onEdit,
+  canEdit,
 }: {
   tasks: TareaPersistida[]
   canValidate: boolean
@@ -745,6 +747,7 @@ function TaskKanban({
     note: string,
   ) => Promise<void>
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
+  canEdit: boolean
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
@@ -808,6 +811,7 @@ function TaskKanban({
                     onChangeStatus={onChangeStatus}
                     onValidate={onValidate}
                     onEdit={onEdit}
+                    canEdit={canEdit}
                     {...(canMoveTaskInBoard(task, 'pending') ||
                     canMoveTaskInBoard(task, 'in-progress')
                       ? {
@@ -847,6 +851,7 @@ function TaskCard({
   onChangeStatus,
   onValidate,
   onEdit,
+  canEdit,
   drag,
 }: {
   task: TareaPersistida
@@ -863,6 +868,7 @@ function TaskCard({
     note: string,
   ) => Promise<void>
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
+  canEdit: boolean
   drag?: {
     onStart: (event: DragEvent<HTMLButtonElement>) => void
     onEnd: () => void
@@ -917,7 +923,18 @@ function TaskCard({
               </button>
             ) : null}
             <div className="min-w-0">
-              <p className="line-clamp-2 text-[15px] leading-5 font-semibold">{task.titulo}</p>
+              {canEdit ? (
+                <button
+                  type="button"
+                  className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
+                  onClick={() => setEditOpen(true)}
+                  aria-label={`Editar tarea: ${task.titulo}`}
+                >
+                  {task.titulo}
+                </button>
+              ) : (
+                <p className="line-clamp-2 text-[15px] leading-5 font-semibold">{task.titulo}</p>
+              )}
               {!compact && task.descripcion ? (
                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                   {task.descripcion}
@@ -1033,11 +1050,6 @@ function TaskCard({
           </div>
         ) : null}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogTrigger asChild>
-            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs">
-              <Pencil className="h-3.5 w-3.5" /> Editar
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar tarea</DialogTitle>
