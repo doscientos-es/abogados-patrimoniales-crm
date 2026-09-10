@@ -333,24 +333,13 @@ function CrmMetric({ label, value, tone }: { label: string; value: number; tone:
     <Link
       to="/oportunidades"
       search={{ vista: 'todas', abrir: '' }}
-      className="group bg-card hover:border-primary/40 hover:bg-muted/50 rounded-lg border p-3.5 shadow-sm transition-colors"
+      className="group bg-card hover:border-primary/40 hover:bg-muted/50 flex min-h-20 items-center justify-between gap-3 rounded-lg border px-3.5 py-3 transition-colors"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${toneClass}`}
-        >
-          {value}
-        </span>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${toneClass}`}>{value}</span>
       </div>
-      <p className="mt-2 font-serif text-3xl font-semibold tabular-nums">{value}</p>
-      <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-        Ver Leads
-        <ArrowRight
-          className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100"
-          aria-hidden="true"
-        />
-      </p>
+      <ArrowRight className="text-muted-foreground h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
     </Link>
   )
 }

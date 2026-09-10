@@ -166,6 +166,51 @@ export function useCambiarEstadoTarea(firmId: string | undefined) {
   })
 }
 
+export function useEditarTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      task,
+      titulo,
+      descripcion,
+      prioridad,
+      venceEn,
+      recordarEn,
+      asignadoId,
+    }: {
+      task: TareaPersistida
+      titulo: string
+      descripcion: string
+      prioridad: TareaPersistida['prioridad']
+      venceEn: string | null
+      recordarEn: string | null
+      asignadoId: string | null
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!titulo.trim()) throw new Error('El título es obligatorio.')
+      const { data, error } = await client.rpc('crm_update_task', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        new_title: titulo.trim(),
+        new_description: descripcion.trim(),
+        new_status: statusToDb[task.estado],
+        new_priority: priorityToDb[prioridad],
+        new_due_at: venceEn,
+        new_reminder_at: recordarEn,
+        new_assigned_to: asignadoId,
+      })
+      if (error?.code === '40001') throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: (task) =>
+      queryClient.setQueryData<TareaPersistida[]>(['tareas', firmId], (items) =>
+        items?.map((item) => (item.id === task.id ? task : item)),
+      ),
+  })
+}
+
 export function useValidarPlazo(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({

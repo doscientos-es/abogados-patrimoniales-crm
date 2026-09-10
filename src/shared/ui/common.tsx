@@ -9,7 +9,7 @@ export function UserAvatar({ name, seed = name, size = 'md' }: { name: string; s
   const firstHue = Math.abs(hash) % 360
   const secondHue = (firstHue + 55 + (Math.abs(hash >> 3) % 80)) % 360
   return (
-    <span className={cn('text-primary-foreground flex shrink-0 items-center justify-center rounded-xl font-semibold shadow-sm ring-1 ring-black/5', size === 'sm' && 'size-8 text-[11px]', size === 'md' && 'size-10 text-xs', size === 'lg' && 'size-11 text-sm')} style={{ background: `linear-gradient(135deg, hsl(${firstHue} 62% 42%), hsl(${secondHue} 68% 58%))` }} aria-label={`Avatar de ${name || 'usuario'}`}>
+    <span className={cn('text-primary-foreground flex shrink-0 items-center justify-center rounded-full font-semibold', size === 'sm' && 'size-8 text-[11px]', size === 'md' && 'size-10 text-xs', size === 'lg' && 'size-11 text-sm')} style={{ background: `linear-gradient(135deg, hsl(${firstHue} 62% 42%), hsl(${secondHue} 68% 58%))` }} aria-label={`Avatar de ${name || 'usuario'}`}>
       {initials || 'U'}
     </span>
   )

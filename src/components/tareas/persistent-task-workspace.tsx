@@ -9,6 +9,7 @@ import {
   GripVertical,
   LayoutDashboard,
   Link2,
+  Pencil,
   Plus,
   Search,
   SlidersHorizontal,
@@ -38,6 +39,7 @@ import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   useCambiarEstadoTarea,
   useCrearTarea,
+  useEditarTarea,
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
@@ -226,6 +228,7 @@ export function PersistentTaskWorkspace() {
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
   const change = useCambiarEstadoTarea(firmId)
+  const edit = useEditarTarea(firmId)
   const validate = useValidarPlazo(firmId)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CrearTareaInput['tipo']>('all')
@@ -314,6 +317,15 @@ export function PersistentTaskWorkspace() {
       toast.success(decision === 'Validado' ? 'Plazo validado.' : 'Plazo rechazado.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo validar el plazo.')
+    }
+  }
+  const editTask = async (input: Parameters<typeof edit.mutateAsync>[0]) => {
+    try {
+      await edit.mutateAsync(input)
+      toast.success('Tarea actualizada.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar la tarea.')
+      throw error
     }
   }
 
@@ -466,6 +478,7 @@ export function PersistentTaskWorkspace() {
           memberNames={memberNames}
           onChangeStatus={changeStatus}
           onValidate={validateTask}
+          onEdit={editTask}
         />
       ) : (
         <section aria-label="Lista de tareas" className="space-y-3">
@@ -479,6 +492,7 @@ export function PersistentTaskWorkspace() {
               assigneeName={memberNames.get(task.asignadoId ?? '')}
               onChangeStatus={changeStatus}
               onValidate={validateTask}
+              onEdit={editTask}
             />
           ))}
           {!orderedVisible.length ? <EmptyTasks /> : null}
@@ -716,6 +730,7 @@ function TaskKanban({
   memberNames,
   onChangeStatus,
   onValidate,
+  onEdit,
 }: {
   tasks: TareaPersistida[]
   canValidate: boolean
@@ -729,6 +744,7 @@ function TaskKanban({
     source: string,
     note: string,
   ) => Promise<void>
+  onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
@@ -791,6 +807,7 @@ function TaskKanban({
                     assigneeName={memberNames.get(task.asignadoId ?? '')}
                     onChangeStatus={onChangeStatus}
                     onValidate={onValidate}
+                    onEdit={onEdit}
                     {...(canMoveTaskInBoard(task, 'pending') ||
                     canMoveTaskInBoard(task, 'in-progress')
                       ? {
@@ -829,6 +846,7 @@ function TaskCard({
   assigneeName,
   onChangeStatus,
   onValidate,
+  onEdit,
   drag,
 }: {
   task: TareaPersistida
@@ -844,6 +862,7 @@ function TaskCard({
     source: string,
     note: string,
   ) => Promise<void>
+  onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
   drag?: {
     onStart: (event: DragEvent<HTMLButtonElement>) => void
     onEnd: () => void
@@ -852,6 +871,30 @@ function TaskCard({
 }) {
   const [source, setSource] = useState('')
   const [note, setNote] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState(task.titulo)
+  const [editDescription, setEditDescription] = useState(task.descripcion)
+  const [editPriority, setEditPriority] = useState(task.prioridad)
+  const [editDue, setEditDue] = useState(task.venceEn?.slice(0, 16) ?? '')
+  const [editBusy, setEditBusy] = useState(false)
+  const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setEditBusy(true)
+    try {
+      await onEdit({
+        task,
+        titulo: editTitle,
+        descripcion: editDescription,
+        prioridad: editPriority,
+        venceEn: editDue ? new Date(editDue).toISOString() : null,
+        recordarEn: task.recordarEn,
+        asignadoId: task.asignadoId,
+      })
+      setEditOpen(false)
+    } finally {
+      setEditBusy(false)
+    }
+  }
   return (
     <Card
       className={`${compact ? 'group/task border-border bg-card hover:border-primary/35 rounded-xl shadow-sm transition-all hover:shadow-md' : ''} ${drag?.isDragged ? 'opacity-50' : ''}`}
@@ -989,6 +1032,28 @@ function TaskCard({
             </Button>
           </div>
         ) : null}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogTrigger asChild>
+            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs">
+              <Pencil className="h-3.5 w-3.5" /> Editar
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar tarea</DialogTitle>
+              <DialogDescription>Actualiza la información operativa de esta tarea.</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={(event) => void submitEdit(event)}>
+              <div className="space-y-1.5"><Label htmlFor={`edit-title-${task.id}`}>Título</Label><Input id={`edit-title-${task.id}`} value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required maxLength={240} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`edit-description-${task.id}`}>Descripción</Label><Input id={`edit-description-${task.id}`} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5"><Label htmlFor={`edit-priority-${task.id}`}>Prioridad</Label><select id={`edit-priority-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editPriority} onChange={(event) => setEditPriority(event.target.value as TareaPersistida['prioridad'])}><option>Baja</option><option>Media</option><option>Alta</option></select></div>
+                <div className="space-y-1.5"><Label htmlFor={`edit-due-${task.id}`}>Vencimiento</Label><Input id={`edit-due-${task.id}`} type="datetime-local" value={editDue} onChange={(event) => setEditDue(event.target.value)} /></div>
+              </div>
+              <DialogFooter><Button type="submit" disabled={editBusy}>{editBusy ? 'Guardando…' : 'Guardar cambios'}</Button></DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

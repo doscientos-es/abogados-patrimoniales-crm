@@ -125,22 +125,22 @@ export function PersistentFacturacionPage() {
         }
       />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatTile label="Emitido en el año" value={formatCurrency(resumen.emitido, 'EUR')} />
-        <StatTile label="Cobrado" value={formatCurrency(resumen.cobrado, 'EUR')} tono="exito" />
+        <StatTile compact label="Emitido en el año" value={formatCurrency(resumen.emitido, 'EUR')} />
+        <StatTile compact label="Cobrado" value={formatCurrency(resumen.cobrado, 'EUR')} tono="exito" />
         <StatTile
           label="Pendiente de cobro"
           value={formatCurrency(resumen.pendiente, 'EUR')}
-          tono={resumen.pendiente ? 'aviso' : 'neutro'}
+          tono={resumen.pendiente ? 'aviso' : 'neutro'} compact
         />
         <StatTile
           label="Borradores"
           value={String(resumen.borradores)}
-          tono={resumen.borradores ? 'aviso' : 'neutro'}
+          tono={resumen.borradores ? 'aviso' : 'neutro'} compact
         />
         <StatTile
           label="Proformas pendientes"
           value={String(provisionales.proformasPendientes.length)}
-          tono={provisionales.proformasPendientes.length ? 'aviso' : 'neutro'}
+          tono={provisionales.proformasPendientes.length ? 'aviso' : 'neutro'} compact
         />
       </div>
       <Card className="mb-4">
