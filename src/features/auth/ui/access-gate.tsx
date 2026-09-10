@@ -293,9 +293,14 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
   const [sending, setSending] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (password.length < 8)
-      return void toast.error('La contraseña debe tener al menos ocho caracteres.')
-    if (password !== confirmation) return void toast.error('Las contraseñas no coinciden.')
+    if (password.length < 8) {
+      toast.error('La contraseña debe tener al menos ocho caracteres.')
+      return
+    }
+    if (password !== confirmation) {
+      toast.error('Las contraseñas no coinciden.')
+      return
+    }
     setSending(true)
     void updatePassword(password)
       .then(() => {

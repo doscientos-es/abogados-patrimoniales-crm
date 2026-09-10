@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
+import { Eye, FileDown, Printer } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -40,6 +41,33 @@ const lineaVacia = (): LineaEditable => ({
   precioUnitario: 0,
   tipoIva: 21,
 })
+
+export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }) {
+  const printInvoice = () => {
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000')
+    if (!printWindow) {
+      toast.error('El navegador ha bloqueado la ventana de impresión.')
+      return
+    }
+    const rows = factura.lineas
+      .map(
+        (linea) =>
+          `<tr><td>${escapeHtml(linea.descripcion)}</td><td>${linea.cantidad}</td><td>${formatCurrency(linea.precioUnitario, factura.moneda)}</td><td>${formatCurrency(linea.baseImponible + linea.cuotaIva, factura.moneda)}</td></tr>`,
+      )
+      .join('')
+    printWindow.document.write(`<!doctype html><html lang="es"><head><title>${escapeHtml(factura.referencia)}</title><style>body{font-family:Arial,sans-serif;color:#202833;max-width:820px;margin:48px auto;padding:0 24px}header{display:flex;justify-content:space-between;border-bottom:2px solid #202833;padding-bottom:24px;margin-bottom:32px}h1{font-size:28px;margin:0 0 8px}p{color:#667085;margin:4px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;margin-bottom:32px}.meta strong{display:block;color:#202833;margin-top:3px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:12px 8px}th{font-size:12px;text-transform:uppercase;color:#667085}.totals{margin:28px 0 0 auto;width:260px}.total{font-size:20px;font-weight:bold;border-top:2px solid #202833;padding-top:12px;margin-top:12px;display:flex;justify-content:space-between}@media print{body{margin:0}}</style></head><body><header><div><img src="${window.location.origin}/logo-lex.svg" alt="LEX" style="width:72px;height:72px;object-fit:contain"><p>Gestión jurídica patrimonial</p></div><div style="text-align:right"><h1>${escapeHtml(factura.referencia)}</h1><p>${escapeHtml(ESTADO_FACTURA_LABEL[factura.estado])}</p></div></header><div class="meta"><div>Cliente<strong>${escapeHtml(factura.cliente)}</strong></div><div>Expediente<strong>${escapeHtml(factura.asuntoReferencia)}</strong></div><div>Fecha<strong>${escapeHtml(formatDate(factura.emision))}</strong></div><div>Vencimiento<strong>${escapeHtml(factura.vencimiento ? formatDate(factura.vencimiento) : '—')}</strong></div></div><h2>${escapeHtml(factura.concepto)}</h2><table><thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div>Base imponible: ${formatCurrency(factura.baseImponible, factura.moneda)}</div><div>IVA: ${formatCurrency(factura.cuotaIva, factura.moneda)}</div><div class="total"><span>Total</span><span>${formatCurrency(factura.importeTotal, factura.moneda)}</span></div></div></body></html>`)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+  }
+  return (
+    <DialogShell trigger={<Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"><Eye className="h-3.5 w-3.5" /> Ver</Button>} title={`Vista previa · ${factura.referencia}`} description="Revisa la factura y usa Imprimir para guardarla como PDF." wide render={() => <div className="space-y-5"><div className="flex items-start justify-between border-b pb-4"><div><img src="/logo-lex.svg" alt="LEX" className="h-14 w-14 object-contain" /><p className="text-muted-foreground mt-2 text-xs">Gestión jurídica patrimonial</p></div><div className="text-right"><p className="font-serif text-2xl font-semibold">{factura.referencia}</p><p className="text-muted-foreground text-sm">{ESTADO_FACTURA_LABEL[factura.estado]}</p></div></div><div className="grid gap-3 text-sm sm:grid-cols-2"><div><p className="text-muted-foreground text-xs">Cliente</p><p className="font-medium">{factura.cliente}</p></div><div><p className="text-muted-foreground text-xs">Expediente</p><p className="font-medium">{factura.asuntoReferencia}</p></div><div><p className="text-muted-foreground text-xs">Emisión</p><p>{formatDate(factura.emision)}</p></div><div><p className="text-muted-foreground text-xs">Vencimiento</p><p>{factura.vencimiento ? formatDate(factura.vencimiento) : '—'}</p></div></div><div><p className="font-medium">{factura.concepto}</p><div className="mt-3 overflow-hidden rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50 text-left text-xs uppercase"><tr><th className="p-3">Descripción</th><th className="p-3">Ud.</th><th className="p-3 text-right">Total</th></tr></thead><tbody>{factura.lineas.map((linea) => <tr key={linea.id} className="border-t"><td className="p-3">{linea.descripcion}</td><td className="p-3">{linea.cantidad}</td><td className="p-3 text-right">{formatCurrency(linea.baseImponible + linea.cuotaIva, factura.moneda)}</td></tr>)}</tbody></table></div></div><div className="ml-auto w-full max-w-xs space-y-1 text-right text-sm"><p>Base imponible: {formatCurrency(factura.baseImponible, factura.moneda)}</p><p>IVA: {formatCurrency(factura.cuotaIva, factura.moneda)}</p><p className="border-t pt-2 text-lg font-semibold">Total: {formatCurrency(factura.importeTotal, factura.moneda)}</p></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={printInvoice}><Printer className="h-4 w-4" /> Imprimir / Guardar PDF</Button><Button type="button" onClick={printInvoice}><FileDown className="h-4 w-4" /> Descargar PDF</Button></div></div>} />
+  )
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character)
+}
 
 function DialogShell({
   trigger,
