@@ -1,5 +1,14 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { ArrowLeft, KeyRound, LoaderCircle, LogIn, LogOut, ShieldCheck } from 'lucide-react'
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+} from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -160,6 +169,7 @@ function SignInForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [sending, setSending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSending(true)
@@ -238,13 +248,13 @@ function SignInForm() {
               {mode === 'signin' ? (
                 <label className="block space-y-1.5" htmlFor="sign-in-password">
                   <span className="text-sm font-medium">Contraseña</span>
-                  <Input
+                  <PasswordInput
                     id="sign-in-password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={setPassword}
+                    autoComplete="current-password"
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((visible) => !visible)}
                     placeholder="Tu contraseña"
                   />
                 </label>
@@ -291,6 +301,8 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [sending, setSending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (password.length < 8) {
@@ -327,28 +339,28 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
           <form className="space-y-4" onSubmit={(event) => void submit(event)}>
             <label className="block space-y-1.5" htmlFor="invite-password">
               <span className="text-sm font-medium">Contraseña</span>
-              <Input
+              <PasswordInput
                 id="invite-password"
-                type="password"
                 autoComplete="new-password"
-                minLength={8}
-                required
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={setPassword}
+                visible={showPassword}
+                onToggle={() => setShowPassword((visible) => !visible)}
                 placeholder="Mínimo 8 caracteres"
+                minLength={8}
               />
             </label>
             <label className="block space-y-1.5" htmlFor="invite-password-confirmation">
               <span className="text-sm font-medium">Repite la contraseña</span>
-              <Input
+              <PasswordInput
                 id="invite-password-confirmation"
-                type="password"
                 autoComplete="new-password"
-                minLength={8}
-                required
                 value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
+                onChange={setConfirmation}
+                visible={showConfirmation}
+                onToggle={() => setShowConfirmation((visible) => !visible)}
                 placeholder="Vuelve a escribirla"
+                minLength={8}
               />
             </label>
             <Button className="h-10 w-full" disabled={sending} type="submit">
@@ -357,6 +369,51 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
           </form>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  onToggle,
+  visible,
+  autoComplete,
+  placeholder,
+  minLength,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  onToggle: () => void
+  visible: boolean
+  autoComplete: string
+  placeholder: string
+  minLength?: number
+}) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={visible ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        required
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="pr-11"
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-pressed={visible}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
     </div>
   )
 }
