@@ -21,6 +21,7 @@ describe('getCurrentAuthenticatedUser', () => {
     await expect(getCurrentAuthenticatedUser()).resolves.toEqual({
       id: 'user-1',
       email: 'abogada@example.com',
+      displayName: null,
     })
     expect(mocks.getUser).toHaveBeenCalledOnce()
   })

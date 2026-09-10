@@ -22,6 +22,7 @@ import {
 const createInputSchema = z.object({
   contactId: z.string().uuid(),
   title: z.string().trim().min(1).max(300),
+  area: z.string().trim().max(160).optional(),
   source: z.string().trim().max(160).optional(),
   description: z.string().trim().max(20_000).optional(),
   details: z.unknown(),
@@ -107,6 +108,7 @@ function toInsert(firmId: string, input: CrearOportunidadInput): OpportunityInse
     firm_id: firmId,
     contact_id: input.contactId,
     title: input.title,
+    area: input.area ?? '',
     stage: 'entry',
     substage: 'Sin revisar',
     priority: 'medium',

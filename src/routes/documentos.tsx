@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { PersistentDocuments } from '@/components/documentos/persistent-documents'
@@ -5,6 +6,7 @@ import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
 import { CaseCreateDialog, useCrearExpediente } from '@/features/expedientes'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 type DocumentsSearch = { doc?: string; case?: string; folder?: string }
 
@@ -44,6 +46,23 @@ function PersistentDocumentsRoute() {
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
   const createCase = useCrearExpediente(firmId)
+  const practiceAreas = useQuery({
+    queryKey: ['crm', 'practice-areas', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_practice_areas')
+        .select('name')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('sort_order')
+        .order('name')
+      if (error) throw error
+      return data.map((item) => item.name)
+    },
+  })
 
   const updateLocation = (location: { caseId: string | null; folderId: string | null }) => {
     void navigate({
@@ -71,6 +90,7 @@ function PersistentDocumentsRoute() {
           <CaseCreateDialog
             contactos={contacts.data ?? []}
             miembros={members.data ?? []}
+            practiceAreas={practiceAreas.data ?? []}
             pending={createCase.isPending}
             onCreate={(input) => createCase.mutateAsync(input)}
             onCreated={(caseId) => updateLocation({ caseId, folderId: null })}

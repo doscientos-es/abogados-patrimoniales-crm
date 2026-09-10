@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -14,6 +15,7 @@ import {
   useExpedientesPersistentes,
 } from '@/features/expedientes'
 import { useTareasPersistentes } from '@/features/tareas'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/expedientes/')({
   head: () => ({
@@ -38,6 +40,23 @@ function ExpedientesPersistentesRoute() {
   const updateCase = useActualizarExpediente(firmId)
   const tasks = useTareasPersistentes(firmId)
   const activities = useActuacionesDespacho(firmId)
+  const practiceAreas = useQuery({
+    queryKey: ['crm', 'practice-areas', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_practice_areas')
+        .select('name')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('sort_order')
+        .order('name')
+      if (error) throw error
+      return data.map((item) => item.name)
+    },
+  })
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Cargando expedientes" description="Consultando tu despacho…" />
@@ -98,6 +117,7 @@ function ExpedientesPersistentesRoute() {
         <CaseCreateDialog
           contactos={contacts.data ?? []}
           miembros={members.data ?? []}
+          practiceAreas={practiceAreas.data ?? []}
           pending={createCase.isPending}
           onCreate={(input) => createCase.mutateAsync(input)}
           onCreated={(id) => navigate({ to: '/expedientes/$id', params: { id } })}

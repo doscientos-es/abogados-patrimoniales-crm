@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 
 import { PendingPanel } from '@/components/common'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
@@ -21,6 +22,7 @@ import {
 } from '@/features/expedientes'
 import { useNotasRemotas } from '@/features/notas'
 import { useCrearTarea, useTareasPersistentes } from '@/features/tareas'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/expedientes/$id')({
   head: ({ params }) => ({
@@ -48,6 +50,23 @@ function FichaExpedientePersistente() {
   const notes = useNotasRemotas(firmId)
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
+  const titleTemplates = useQuery({
+    queryKey: ['task-title-templates', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const supabase = getSupabaseBrowserClient()
+      if (!supabase) throw new Error('Supabase no está configurado.')
+      const { data, error } = await supabase
+        .from('crm_task_title_templates')
+        .select('title')
+        .eq('firm_id', firmId!)
+        .eq('archived', false)
+        .order('sort_order')
+        .order('title')
+      if (error) throw error
+      return data.map((row) => row.title)
+    },
+  })
   const updateCase = useActualizarExpediente(firmId)
   const createParticipant = useCrearParticipante(firmId)
   const createWorkstream = useCrearLinea(firmId)
@@ -102,6 +121,7 @@ function FichaExpedientePersistente() {
       documentos={documents.data ?? []}
       tareas={tasks.data ?? []}
       notas={notes.data ?? []}
+      taskTitleTemplates={titleTemplates.data ?? []}
       miembros={members.data ?? []}
       clienteNombre={
         contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??

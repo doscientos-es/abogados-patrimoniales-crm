@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
@@ -12,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useCrearOportunidad } from '@/features/crm'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/nueva')({
   head: () => ({
@@ -32,6 +34,24 @@ function NuevaOportunidadPage() {
   const contacts = useContactos(firmId)
   const createOpportunity = useCrearOportunidad(firmId)
   const [contactId, setContactId] = useState('')
+  const areas = useQuery({
+    queryKey: ['crm', 'practice-areas', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_practice_areas')
+        .select('name')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .is('parent_id', null)
+        .order('sort_order')
+        .order('name')
+      if (error) throw error
+      return data.map((item) => item.name)
+    },
+  })
 
   if (session.status === 'loading' || membership.isPending || contacts.isPending)
     return <PendingPanel title="Cargando alta" description="Consultando contactos del despacho…" />
@@ -62,6 +82,7 @@ function NuevaOportunidadPage() {
       const opportunity = await createOpportunity.mutateAsync({
         contactId,
         title,
+        area: formText(form, 'area'),
         source: formText(form, 'source'),
         description: formText(form, 'description'),
         details: {},
@@ -107,6 +128,20 @@ function NuevaOportunidadPage() {
               </select>
             </div>
             <Field name="title" label="Título" maxLength={300} required />
+            <div className="space-y-1.5">
+              <Label htmlFor="lead-area">Materia</Label>
+              <Input
+                id="lead-area"
+                name="area"
+                list="lead-area-options"
+                placeholder="Ej. Sucesiones"
+              />
+              <datalist id="lead-area-options">
+                {(areas.data ?? []).map((item) => (
+                  <option key={item} value={item} />
+                ))}
+              </datalist>
+            </div>
             <Field name="source" label="Origen" maxLength={160} />
             <div className="space-y-1.5">
               <Label htmlFor="lead-description">Descripción inicial</Label>

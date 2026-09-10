@@ -92,9 +92,29 @@ export type Database = {
       crm_opportunity_events: Table<OpportunityEventRow, OpportunityEventInsert, never>
       crm_onboardings: Table<OnboardingRow, OnboardingInsert, never>
       crm_onboarding_events: Table<OnboardingEventRow, never, never>
+      crm_task_labels: Table<
+        TaskLabelRow,
+        TaskLabelInsert,
+        Partial<TaskLabelInsert> & { id?: string }
+      >
+      crm_task_title_templates: Table<
+        TaskTitleTemplateRow,
+        TaskTitleTemplateInsert,
+        Partial<TaskTitleTemplateInsert> & { id?: string }
+      >
+      crm_practice_areas: Table<
+        PracticeAreaRow,
+        PracticeAreaInsert,
+        Partial<PracticeAreaInsert> & { id?: string }
+      >
+      crm_task_label_assignments: Table<TaskLabelAssignmentRow, TaskLabelAssignmentInsert, never>
     }
     Views: Record<never, never>
     Functions: {
+      crm_merge_task_labels: {
+        Args: { source_label_id: string; target_label_id: string }
+        Returns: undefined
+      }
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
       crm_queue_drive_sync: {
         Args: { target_document_id: string; target_operation: 'upload' | 'move' | 'archive' }
@@ -422,6 +442,51 @@ export type Database = {
 }
 
 export type MemberRole = 'owner' | 'admin' | 'lawyer' | 'paralegal'
+
+export type TaskLabelRow = {
+  id: string
+  firm_id: string
+  name: string
+  color: string
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+export type TaskLabelInsert = { firm_id: string; name: string; color?: string; archived?: boolean }
+export type TaskTitleTemplateRow = {
+  id: string
+  firm_id: string
+  title: string
+  archived: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+export type TaskTitleTemplateInsert = {
+  firm_id: string
+  title: string
+  archived?: boolean
+  sort_order?: number
+}
+export type PracticeAreaRow = {
+  id: string
+  firm_id: string
+  parent_id: string | null
+  name: string
+  archived: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+export type PracticeAreaInsert = {
+  firm_id: string
+  parent_id?: string | null
+  name: string
+  archived?: boolean
+  sort_order?: number
+}
+export type TaskLabelAssignmentRow = { label_id: string; task_id: string; created_at: string }
+export type TaskLabelAssignmentInsert = { label_id: string; task_id: string }
 export type MemberStatus = 'invited' | 'active' | 'disabled'
 export type FirmSettingsRow = {
   firm_id: string

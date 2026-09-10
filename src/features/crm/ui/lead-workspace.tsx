@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { CalendarPlus, Check, ClipboardCheck, MessageSquarePlus, NotebookPen } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
@@ -18,7 +19,7 @@ import {
 import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import { useCambiarEstadoTarea, useCrearTarea, useTareasPersistentes } from '@/features/tareas'
-import type { Json } from '@/shared/infrastructure/supabase'
+import { getSupabaseBrowserClient, type Json } from '@/shared/infrastructure/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const asRecord = (value: Json): Record<string, Json | undefined> =>
@@ -46,6 +47,37 @@ export function LeadWorkspace({
   const createNote = useCrearNotaOportunidad(firmId)
   const logCommunication = useRegistrarComunicacionOportunidad(firmId)
   const createOnboarding = useCrearOnboarding(firmId)
+  const taskTitles = useQuery({
+    queryKey: ['crm', 'task-title-templates', firmId],
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client) return []
+      const { data, error } = await client
+        .from('crm_task_title_templates')
+        .select('title')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('sort_order')
+        .order('title')
+      if (error) throw error
+      return data.map((item) => item.title)
+    },
+  })
+  const taskLabels = useQuery({
+    queryKey: ['crm', 'task-labels', firmId],
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client) return []
+      const { data, error } = await client
+        .from('crm_task_labels')
+        .select('id,name,color')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('name')
+      if (error) throw error
+      return data
+    },
+  })
   const details = asRecord(opportunity.detalles)
   const initial = asRecord(details['informacionInicial'] ?? {})
   const role = asRecord(details['rolContacto'] ?? {})
@@ -60,6 +92,7 @@ export function LeadWorkspace({
   )
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDue, setTaskDue] = useState('')
+  const [taskLabelId, setTaskLabelId] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [noteHighlighted, setNoteHighlighted] = useState(false)
@@ -106,7 +139,7 @@ export function LeadWorkspace({
   const addTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     try {
-      await createTask.mutateAsync({
+      const task = await createTask.mutateAsync({
         expedienteId: null,
         oportunidadId: opportunity.id,
         tipo: 'Tarea',
@@ -119,8 +152,18 @@ export function LeadWorkspace({
         critico: false,
         asignadoId: opportunity.asignadoId,
       })
+      if (taskLabelId) {
+        const client = getSupabaseBrowserClient()
+        if (client) {
+          const { error } = await client
+            .from('crm_task_label_assignments')
+            .insert({ label_id: taskLabelId, task_id: task.id })
+          if (error) throw error
+        }
+      }
       setTaskTitle('')
       setTaskDue('')
+      setTaskLabelId('')
       toast.success('Tarea creada.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
@@ -321,14 +364,35 @@ export function LeadWorkspace({
             className="grid gap-2 border-t pt-3 sm:grid-cols-[1fr_auto_auto]"
             onSubmit={(event) => void addTask(event)}
           >
-            <Input
-              aria-label="Título de tarea"
-              value={taskTitle}
-              onChange={(event) => setTaskTitle(event.target.value)}
-              placeholder="Nueva tarea"
-              required
-              maxLength={240}
-            />
+            <div>
+              <Input
+                aria-label="Título de tarea"
+                value={taskTitle}
+                onChange={(event) => setTaskTitle(event.target.value)}
+                placeholder="Nueva tarea"
+                required
+                maxLength={240}
+                list="lead-task-title-suggestions"
+              />
+              <datalist id="lead-task-title-suggestions">
+                {(taskTitles.data ?? []).map((title) => (
+                  <option key={title} value={title} />
+                ))}
+              </datalist>
+            </div>
+            <select
+              aria-label="Etiqueta de tarea"
+              value={taskLabelId}
+              onChange={(event) => setTaskLabelId(event.target.value)}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="">Sin etiqueta</option>
+              {(taskLabels.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
             <Input
               aria-label="Fecha prevista"
               value={taskDue}

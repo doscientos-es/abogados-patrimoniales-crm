@@ -34,6 +34,7 @@ export function CaseCreateDialog({
   onCreate,
   onCreated,
   trigger,
+  practiceAreas,
 }: {
   contactos: Pick<ContactoPersistido, 'id' | 'nombre'>[]
   miembros: MiembroDespacho[]
@@ -41,6 +42,7 @@ export function CaseCreateDialog({
   onCreate: (input: CrearExpedienteInput) => Promise<{ id: string }>
   onCreated?: (id: string) => void | Promise<void>
   trigger?: ReactNode
+  practiceAreas?: string[]
 }) {
   const [open, setOpen] = useState(false)
   const [contactoId, setContactoId] = useState('')
@@ -201,7 +203,20 @@ export function CaseCreateDialog({
                 />
               </summary>
               <div className="grid gap-4 border-t px-4 py-4 sm:grid-cols-2">
-                <Field label="Área de práctica" name="area" placeholder="Ej. Sucesiones" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="case-create-area">Área de práctica</Label>
+                  <Input
+                    id="case-create-area"
+                    name="area"
+                    list="case-create-area-options"
+                    placeholder="Ej. Sucesiones"
+                  />
+                  <datalist id="case-create-area-options">
+                    {(practiceAreas ?? []).map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
+                </div>
                 <Field label="Tipo de asunto" name="tipo" placeholder="Ej. Herencia" />
                 <SelectField
                   label="Responsable"

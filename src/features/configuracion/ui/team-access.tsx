@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { getSupabaseBrowserClient, type MemberRole } from '@/shared/infrastructure/supabase'
 
 type Member = { userId: string; role: MemberRole; status: string; displayName: string }
@@ -175,9 +176,10 @@ export function TeamAccess({
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={submit}>
-            <label className="block space-y-1.5 text-sm font-medium">
+            <Label htmlFor="invite-name" className="block space-y-1.5 text-sm font-medium">
               Nombre completo
               <Input
+                id="invite-name"
                 autoComplete="name"
                 required
                 minLength={2}
@@ -185,10 +187,11 @@ export function TeamAccess({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="María García"
               />
-            </label>
-            <label className="block space-y-1.5 text-sm font-medium">
+            </Label>
+            <Label htmlFor="invite-email" className="block space-y-1.5 text-sm font-medium">
               Correo profesional
               <Input
+                id="invite-email"
                 type="email"
                 autoComplete="email"
                 required
@@ -196,11 +199,12 @@ export function TeamAccess({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nombre@despacho.es"
               />
-            </label>
-            <label className="block space-y-1.5 text-sm font-medium">
+            </Label>
+            <Label htmlFor="invite-password" className="block space-y-1.5 text-sm font-medium">
               Contraseña
               <div className="relative">
                 <Input
+                  id="invite-password"
                   className="pr-10"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
@@ -222,7 +226,7 @@ export function TeamAccess({
               <span className="text-muted-foreground block text-xs font-normal">
                 Usa al menos 8 caracteres. No se envía por email.
               </span>
-            </label>
+            </Label>
             <label className="block space-y-1.5 text-sm font-medium">
               Rol
               <select
