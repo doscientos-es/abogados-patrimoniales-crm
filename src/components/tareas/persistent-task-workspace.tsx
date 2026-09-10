@@ -28,9 +28,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
@@ -235,6 +237,7 @@ export function PersistentTaskWorkspace() {
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [view, setView] = useState<TaskView>('kanban')
   const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
+  const [calendarEditTask, setCalendarEditTask] = useState<TareaPersistida | null>(null)
   const caseNames = useMemo(
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
@@ -459,14 +462,10 @@ export function PersistentTaskWorkspace() {
         <TaskCalendar
           tasks={orderedVisible}
           week={calendarWeek}
-          members={members.data ?? []}
-          statusFilter={statusFilter}
-          assigneeFilter={assigneeFilter}
-          onStatusFilterChange={setStatusFilter}
-          onAssigneeFilterChange={setAssigneeFilter}
           onPreviousWeek={() => setCalendarWeek((current) => shiftWeek(current, -1))}
           onNextWeek={() => setCalendarWeek((current) => shiftWeek(current, 1))}
           onCurrentWeek={() => setCalendarWeek(weekStart(new Date()))}
+          onEdit={(task) => setCalendarEditTask(task)}
         />
       ) : view === 'kanban' ? (
         <TaskKanban
@@ -479,6 +478,7 @@ export function PersistentTaskWorkspace() {
           onValidate={validateTask}
           onEdit={editTask}
           canEdit={canEditTasks}
+          memberOptions={members.data ?? []}
         />
       ) : (
         <section aria-label="Lista de tareas" className="space-y-3">
@@ -494,11 +494,30 @@ export function PersistentTaskWorkspace() {
               onValidate={validateTask}
               onEdit={editTask}
               canEdit={canEditTasks}
+              memberOptions={members.data ?? []}
             />
           ))}
           {!orderedVisible.length ? <EmptyTasks /> : null}
         </section>
       )}
+      {calendarEditTask ? (
+        <div className="hidden">
+          <TaskCard
+            task={calendarEditTask}
+            canValidate={canValidate}
+            pending={change.isPending || validate.isPending}
+            caseName={caseNames.get(calendarEditTask.expedienteId ?? '')}
+            assigneeName={memberNames.get(calendarEditTask.asignadoId ?? '')}
+            onChangeStatus={changeStatus}
+            onValidate={validateTask}
+            onEdit={editTask}
+            canEdit={canEditTasks}
+            memberOptions={members.data ?? []}
+            initialEditOpen
+            onEditClose={() => setCalendarEditTask(null)}
+          />
+        </div>
+      ) : null}
     </main>
   )
 }
@@ -506,25 +525,17 @@ export function PersistentTaskWorkspace() {
 function TaskCalendar({
   tasks,
   week,
-  members,
-  statusFilter,
-  assigneeFilter,
-  onStatusFilterChange,
-  onAssigneeFilterChange,
   onPreviousWeek,
   onNextWeek,
   onCurrentWeek,
+  onEdit,
 }: {
   tasks: TareaPersistida[]
   week: Date
-  members: { id: string; nombre: string }[]
-  statusFilter: TaskFilterStatus
-  assigneeFilter: string
-  onStatusFilterChange: (value: TaskFilterStatus) => void
-  onAssigneeFilterChange: (value: string) => void
   onPreviousWeek: () => void
   onNextWeek: () => void
   onCurrentWeek: () => void
+  onEdit: (task: TareaPersistida) => void
 }) {
   const weekDays = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(week)
@@ -561,37 +572,10 @@ function TaskCalendar({
               </div>
               <div>
                 <h2 className="text-base font-semibold capitalize">{weekRange}</h2>
-                <p className="text-muted-foreground text-xs">Vista semanal · horario local</p>
+                <p className="text-muted-foreground text-xs">Vista semanal · usa los filtros generales de Tareas</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label="Filtrar calendario por estado"
-                value={statusFilter}
-                onChange={(event) => onStatusFilterChange(event.target.value as TaskFilterStatus)}
-                className="border-input bg-background h-8 rounded-md border px-2 text-xs shadow-sm"
-              >
-                <option value="all">Todos los estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="En curso">En curso</option>
-                <option value="En espera">En espera</option>
-                <option value="Completada">Completada</option>
-                <option value="Cancelada">Cancelada</option>
-              </select>
-              <select
-                aria-label="Filtrar calendario por responsable"
-                value={assigneeFilter}
-                onChange={(event) => onAssigneeFilterChange(event.target.value)}
-                className="border-input bg-background h-8 max-w-44 rounded-md border px-2 text-xs shadow-sm"
-              >
-                <option value="all">Todos los responsables</option>
-                <option value="">Sin asignar</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.nombre}
-                  </option>
-                ))}
-              </select>
               <Button
                 type="button"
                 variant="ghost"
@@ -658,6 +642,7 @@ function TaskCalendar({
                   key={day.toISOString()}
                   day={day}
                   tasks={scheduledByDay.get(calendarDateKey(day.toISOString())) ?? []}
+                  onEdit={onEdit}
                 />
               ))}
             </div>
@@ -685,7 +670,7 @@ function TaskCalendar({
   )
 }
 
-function CalendarDayColumn({ day, tasks }: { day: Date; tasks: TareaPersistida[] }) {
+function CalendarDayColumn({ day, tasks, onEdit }: { day: Date; tasks: TareaPersistida[]; onEdit: (task: TareaPersistida) => void }) {
   const layouts = layoutCalendarEvents(tasks)
   const height = AGENDA_HOURS.length * CALENDAR_HOUR_HEIGHT
   return (
@@ -699,7 +684,10 @@ function CalendarDayColumn({ day, tasks }: { day: Date; tasks: TareaPersistida[]
       ))}
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 border-b" />
       {layouts.map(({ task, top, column, columnCount }) => (
-        <div
+        <button
+          type="button"
+          onClick={() => onEdit(task)}
+          aria-label={`Editar tarea: ${task.titulo}`}
           key={task.id}
           title={`${formatTaskDate(task.venceEn)} · ${task.titulo}`}
           className={`absolute z-10 overflow-hidden rounded-md border px-1.5 py-1 text-[11px] leading-tight font-semibold shadow-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
@@ -716,7 +704,7 @@ function CalendarDayColumn({ day, tasks }: { day: Date; tasks: TareaPersistida[]
             )}
           </span>
           <span className="line-clamp-2 block">{task.titulo}</span>
-        </div>
+        </button>
       ))}
       <span className="sr-only">Eventos del {day.toLocaleDateString('es-ES')}</span>
     </div>
@@ -733,6 +721,7 @@ function TaskKanban({
   onValidate,
   onEdit,
   canEdit,
+  memberOptions,
 }: {
   tasks: TareaPersistida[]
   canValidate: boolean
@@ -748,6 +737,7 @@ function TaskKanban({
   ) => Promise<void>
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
   canEdit: boolean
+  memberOptions: Array<{ id: string; nombre: string }>
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
@@ -812,6 +802,7 @@ function TaskKanban({
                     onValidate={onValidate}
                     onEdit={onEdit}
                     canEdit={canEdit}
+                    memberOptions={memberOptions}
                     {...(canMoveTaskInBoard(task, 'pending') ||
                     canMoveTaskInBoard(task, 'in-progress')
                       ? {
@@ -852,7 +843,10 @@ function TaskCard({
   onValidate,
   onEdit,
   canEdit,
+  memberOptions,
   drag,
+  initialEditOpen = false,
+  onEditClose,
 }: {
   task: TareaPersistida
   canValidate: boolean
@@ -869,18 +863,23 @@ function TaskCard({
   ) => Promise<void>
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
   canEdit: boolean
+  memberOptions: Array<{ id: string; nombre: string }>
   drag?: {
     onStart: (event: DragEvent<HTMLButtonElement>) => void
     onEnd: () => void
     isDragged: boolean
   }
+  initialEditOpen?: boolean
+  onEditClose?: () => void
 }) {
   const [source, setSource] = useState('')
   const [note, setNote] = useState('')
-  const [editOpen, setEditOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(initialEditOpen ?? false)
   const [editTitle, setEditTitle] = useState(task.titulo)
   const [editDescription, setEditDescription] = useState(task.descripcion)
   const [editPriority, setEditPriority] = useState(task.prioridad)
+  const [editStatus, setEditStatus] = useState(task.estado)
+  const [editAssignee, setEditAssignee] = useState(task.asignadoId ?? '')
   const [editDue, setEditDue] = useState(task.venceEn?.slice(0, 16) ?? '')
   const [editBusy, setEditBusy] = useState(false)
   const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
@@ -892,9 +891,10 @@ function TaskCard({
         titulo: editTitle,
         descripcion: editDescription,
         prioridad: editPriority,
+        estado: editStatus,
         venceEn: editDue ? new Date(editDue).toISOString() : null,
         recordarEn: task.recordarEn,
-        asignadoId: task.asignadoId,
+        asignadoId: editAssignee || null,
       })
       setEditOpen(false)
     } finally {
@@ -1049,18 +1049,26 @@ function TaskCard({
             </Button>
           </div>
         ) : null}
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+        <Dialog
+          open={editOpen}
+          onOpenChange={(open) => {
+            setEditOpen(open)
+            if (!open) onEditClose?.()
+          }}
+        >
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Editar tarea</DialogTitle>
               <DialogDescription>Actualiza la información operativa de esta tarea.</DialogDescription>
             </DialogHeader>
             <form className="space-y-4" onSubmit={(event) => void submitEdit(event)}>
               <div className="space-y-1.5"><Label htmlFor={`edit-title-${task.id}`}>Título</Label><Input id={`edit-title-${task.id}`} value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required maxLength={240} /></div>
-              <div className="space-y-1.5"><Label htmlFor={`edit-description-${task.id}`}>Descripción</Label><Input id={`edit-description-${task.id}`} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`edit-description-${task.id}`}>Descripción</Label><Textarea id={`edit-description-${task.id}`} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} rows={5} placeholder="Añade contexto, instrucciones o próximos pasos" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor={`edit-priority-${task.id}`}>Prioridad</Label><select id={`edit-priority-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editPriority} onChange={(event) => setEditPriority(event.target.value as TareaPersistida['prioridad'])}><option>Baja</option><option>Media</option><option>Alta</option></select></div>
                 <div className="space-y-1.5"><Label htmlFor={`edit-due-${task.id}`}>Vencimiento</Label><Input id={`edit-due-${task.id}`} type="datetime-local" value={editDue} onChange={(event) => setEditDue(event.target.value)} /></div>
+                <div className="space-y-1.5"><Label htmlFor={`edit-status-${task.id}`}>Estado / columna</Label><select id={`edit-status-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editStatus} onChange={(event) => setEditStatus(event.target.value as TareaPersistida['estado'])}><option>Pendiente</option><option>En curso</option><option>Completada</option><option>Cancelada</option></select></div>
+                <div className="space-y-1.5"><Label htmlFor={`edit-assignee-${task.id}`}>Responsable</Label><select id={`edit-assignee-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editAssignee} onChange={(event) => setEditAssignee(event.target.value)}><option value="">Sin responsable</option>{memberOptions.map((member) => <option key={member.id} value={member.id}>{member.nombre}</option>)}</select></div>
               </div>
               <DialogFooter><Button type="submit" disabled={editBusy}>{editBusy ? 'Guardando…' : 'Guardar cambios'}</Button></DialogFooter>
             </form>

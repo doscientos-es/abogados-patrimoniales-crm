@@ -173,6 +173,7 @@ export function useEditarTarea(firmId: string | undefined) {
       task,
       titulo,
       descripcion,
+      estado,
       prioridad,
       venceEn,
       recordarEn,
@@ -181,6 +182,7 @@ export function useEditarTarea(firmId: string | undefined) {
       task: TareaPersistida
       titulo: string
       descripcion: string
+      estado: TareaPersistida['estado']
       prioridad: TareaPersistida['prioridad']
       venceEn: string | null
       recordarEn: string | null
@@ -194,7 +196,7 @@ export function useEditarTarea(firmId: string | undefined) {
         target_expected_version: task.version,
         new_title: titulo.trim(),
         new_description: descripcion.trim(),
-        new_status: statusToDb[task.estado],
+        new_status: statusToDb[estado],
         new_priority: priorityToDb[prioridad],
         new_due_at: venceEn,
         new_reminder_at: recordarEn,

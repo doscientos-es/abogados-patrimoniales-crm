@@ -75,6 +75,13 @@ const FOLDER_TONES = [
 const EMPTY_DOCUMENTS: CaseDocumentRow[] = []
 const EMPTY_FOLDERS: DocumentFolderRow[] = []
 
+function isImageDocument(document: CaseDocumentRow) {
+  return (
+    document.mime_type.toLowerCase().startsWith('image/') ||
+    /\.(jpe?g|png)$/i.test(document.original_name)
+  )
+}
+
 type PersistentDocumentsProps = {
   location?: DocumentLocation
   onLocationChange?: (location: DocumentLocation) => void
@@ -190,7 +197,7 @@ export function PersistentDocuments({
   const documentRows = docs.data ?? EMPTY_DOCUMENTS
   useEffect(() => {
     let cancelled = false
-    const imageDocuments = documentRows.filter((document) => document.mime_type.startsWith('image/'))
+    const imageDocuments = documentRows.filter(isImageDocument)
     if (!imageDocuments.length) {
       setPreviewUrls({})
       return () => { cancelled = true }
@@ -950,7 +957,7 @@ export function PersistentDocuments({
                             aria-hidden="true"
                           />
                           <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}>
-                            {doc.mime_type.startsWith('image/') && previewUrls[doc.id] ? (
+                            {isImageDocument(doc) && previewUrls[doc.id] ? (
                               <img src={previewUrls[doc.id]} alt={`Vista previa de ${doc.original_name}`} className="h-full w-full object-cover" />
                             ) : (
                               <visual.Icon className="h-6 w-6" aria-hidden="true" />
@@ -1048,7 +1055,7 @@ export function PersistentDocuments({
                       <GripVertical className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <span className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}>
-                      {doc.mime_type.startsWith('image/') && previewUrls[doc.id] ? (
+                      {isImageDocument(doc) && previewUrls[doc.id] ? (
                         <img src={previewUrls[doc.id]} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <visual.Icon className="h-5 w-5" aria-hidden="true" />
@@ -1100,7 +1107,7 @@ export function PersistentDocuments({
           if (!open) setFolderError(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Nueva carpeta</DialogTitle>
             <DialogDescription>
@@ -1151,7 +1158,7 @@ export function PersistentDocuments({
           if (!open && movingDocumentId === null) setDocumentToMove(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Mover documento</DialogTitle>
             <DialogDescription>
@@ -1223,7 +1230,7 @@ export function PersistentDocuments({
           if (!open && movingFolderId === null) setFolderToMove(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Mover carpeta</DialogTitle>
             <DialogDescription>
@@ -1294,12 +1301,12 @@ export function PersistentDocuments({
           if (!open && archivingDocumentId === null) setDocumentToArchive(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Archivar documento</DialogTitle>
             <DialogDescription>
               {documentToArchive
-                ? `“${documentToArchive.original_name}” y todas sus versiones dejarán de estar disponibles. El archivo se conservará de forma privada para auditoría.`
+                ? `“${documentToArchive.original_name}” y todas sus versiones dejarán de estar disponibles en la carpeta activa. Se conservarán para auditoría.`
                 : ''}
             </DialogDescription>
           </DialogHeader>
@@ -1368,7 +1375,7 @@ function documentVisual(document: CaseDocumentRow) {
       label: 'Documento',
       tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
     }
-  if (document.mime_type.startsWith('image/'))
+  if (isImageDocument(document))
     return {
       Icon: FileImage,
       label: 'Imagen',
