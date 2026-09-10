@@ -6,7 +6,6 @@ import {
   FileText,
   Gauge,
   Handshake,
-  Landmark,
   MessageSquareText,
   Receipt,
   Settings,
@@ -74,8 +73,8 @@ export function AppSidebar({ open }: { open: boolean }) {
       <div className="flex h-full w-(--sidebar-width) flex-col">
         <SidebarHeader className="border-sidebar-border border-b">
           <Link to="/" className="flex items-center gap-2 px-2 py-1.5">
-            <span className="bg-sidebar-primary text-sidebar-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
-              <Landmark className="h-4 w-4" />
+            <span className="bg-sidebar-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-1.5">
+              <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />
             </span>
             <span className="min-w-0 group-data-[collapsible=icon]:hidden">
               <span className="text-sidebar-foreground block truncate font-serif text-sm font-semibold tracking-wide">

@@ -108,6 +108,7 @@ export function PersistentFacturacionPage() {
       <SectionHeader
         title="Facturación"
         subtitle="Borradores, facturas emitidas, cobros y rectificativas por expediente."
+        logo
         actions={
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => exportInvoicesCsv(facturas)}>

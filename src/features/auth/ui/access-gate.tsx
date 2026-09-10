@@ -1,5 +1,5 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { ArrowLeft, KeyRound, LoaderCircle, LogIn, LogOut, Scale, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, KeyRound, LoaderCircle, LogIn, LogOut, ShieldCheck } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -19,6 +19,9 @@ import { useActiveMembership } from '../application/membership'
 export function AccessGate({ children }: { children: ReactNode }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
+  const [inviteFlow, setInviteFlow] = useState(
+    () => typeof window !== 'undefined' && /(?:^|&)type=invite(?:&|$)/.test(window.location.hash),
+  )
 
   if (session.status === 'unconfigured') return <ConfigurationRequired />
   if (session.status === 'loading')
@@ -41,6 +44,15 @@ export function AccessGate({ children }: { children: ReactNode }) {
       </Centered>
     )
   if (!membership.data) return <InvitationRequired />
+  if (inviteFlow)
+    return (
+      <SetInvitePassword
+        onComplete={() => {
+          window.history.replaceState({}, document.title, window.location.pathname)
+          setInviteFlow(false)
+        }}
+      />
+    )
   return <>{children}</>
 }
 
@@ -174,7 +186,11 @@ function SignInForm() {
           <div>
             <div className="mb-10 flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-                <Scale className="h-5 w-5" />
+                <img
+                  src="/logo-lex.svg"
+                  alt="LEX"
+                  className="h-full w-full object-contain brightness-0 invert"
+                />
               </span>
               <span className="font-serif text-2xl font-semibold">LEX</span>
             </div>
@@ -194,7 +210,7 @@ function SignInForm() {
         <Card className="rounded-none border-0 shadow-none">
           <CardHeader className="p-7 pb-4 sm:p-10 sm:pb-5">
             <div className="bg-primary/10 text-primary mb-5 flex h-10 w-10 items-center justify-center rounded-xl md:hidden">
-              <Scale className="h-5 w-5" />
+              <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />
             </div>
             <CardTitle className="font-serif text-2xl text-balance">
               {mode === 'reset' ? 'Recupera tu acceso' : 'Bienvenido a LEX'}
@@ -267,6 +283,75 @@ function SignInForm() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
+
+function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
+  const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [sending, setSending] = useState(false)
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (password.length < 8)
+      return void toast.error('La contraseña debe tener al menos ocho caracteres.')
+    if (password !== confirmation) return void toast.error('Las contraseñas no coinciden.')
+    setSending(true)
+    void updatePassword(password)
+      .then(() => {
+        toast.success('Contraseña creada. Ya puedes empezar a trabajar en LEX.')
+        onComplete()
+      })
+      .catch(() => toast.error('No se ha podido crear la contraseña. Solicita un nuevo enlace.'))
+      .finally(() => setSending(false))
+  }
+  return (
+    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <Card className="w-full max-w-md shadow-xl shadow-slate-900/10">
+        <CardHeader className="p-7 pb-4 sm:p-9 sm:pb-5">
+          <div className="bg-primary/10 mb-5 flex h-12 w-12 items-center justify-center rounded-xl p-2">
+            <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />
+          </div>
+          <CardTitle className="font-serif text-2xl text-balance">Crea tu contraseña</CardTitle>
+          <CardDescription className="mt-2 leading-5 text-pretty">
+            Tu invitación está lista. Define una contraseña para acceder al espacio de trabajo del
+            despacho.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-7 pt-2 sm:p-9 sm:pt-3">
+          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+            <label className="block space-y-1.5" htmlFor="invite-password">
+              <span className="text-sm font-medium">Contraseña</span>
+              <Input
+                id="invite-password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Mínimo 8 caracteres"
+              />
+            </label>
+            <label className="block space-y-1.5" htmlFor="invite-password-confirmation">
+              <span className="text-sm font-medium">Repite la contraseña</span>
+              <Input
+                id="invite-password-confirmation"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                placeholder="Vuelve a escribirla"
+              />
+            </label>
+            <Button className="h-10 w-full" disabled={sending} type="submit">
+              {sending ? 'Guardando…' : 'Entrar en LEX'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

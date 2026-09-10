@@ -7,16 +7,21 @@ export function SectionHeader({
   subtitle,
   actions,
   meta,
+  logo = false,
 }: {
   title: string
   subtitle?: string
   actions?: ReactNode
   meta?: ReactNode
+  logo?: boolean
 }) {
   return (
     <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
       <div className="min-w-0">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {logo ? (
+            <img src="/logo-lex.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
+          ) : null}
           <h1 className="text-foreground min-w-0 truncate font-serif text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
             {title}
           </h1>
