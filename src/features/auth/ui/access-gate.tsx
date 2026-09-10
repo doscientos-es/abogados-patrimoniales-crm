@@ -12,6 +12,7 @@ import {
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 
+import { UserAvatar } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -75,12 +76,6 @@ export function AccountMenu() {
 
   const email = session.user.email ?? 'Cuenta sin correo'
   const displayName = session.user.displayName ?? email.split('@')[0] ?? 'Cuenta'
-  const initials = displayName
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-    .slice(0, 2)
 
   return (
     <PopoverTrigger>
@@ -93,9 +88,7 @@ export function AccountMenu() {
           <span className="text-foreground block truncate font-medium">{displayName}</span>
           <span className="text-muted-foreground block truncate">{email}</span>
         </span>
-        <span className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-          {initials || 'CU'}
-        </span>
+        <UserAvatar name={displayName} seed={session.user.id || email} size="sm" />
       </Button>
       <PopoverContent placement="bottom end" className="w-72 p-2">
         <div className="border-border border-b px-2 py-2.5">

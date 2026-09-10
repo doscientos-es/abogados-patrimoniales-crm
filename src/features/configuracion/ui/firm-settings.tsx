@@ -3,6 +3,7 @@ import { Building2, CheckCircle2, KeyRound, LoaderCircle, Save } from "lucide-re
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { UserAvatar } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -313,7 +314,7 @@ export function FirmSettings() {
           <Card className="border-border/80 shadow-sm">
             <CardHeader>
               <div className="flex items-start gap-3">
-                <ProfileAvatar name={profileName} seed={session.user?.id ?? profileEmail} />
+                <UserAvatar name={profileName} seed={session.user?.id ?? profileEmail} size="lg" />
                 <div>
                   <CardTitle className="text-base">Mi perfil</CardTitle>
                   <CardDescription className="mt-1">
@@ -393,33 +394,6 @@ export function FirmSettings() {
         </div>
       ) : null}
     </div>
-  );
-}
-
-function ProfileAvatar({ name, seed }: { name: string; seed: string }) {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-  let hash = 0;
-  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) | 0;
-  const firstHue = Math.abs(hash) % 360;
-  const secondHue = (firstHue + 55 + (Math.abs(hash >> 3) % 80)) % 360;
-
-  return (
-    <span
-      className="text-primary-foreground flex size-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold shadow-sm ring-1 ring-black/5"
-      style={{
-        background: `linear-gradient(135deg, hsl(${firstHue} 62% 42%), hsl(${secondHue} 68% 58%))`,
-      }}
-      aria-label={`Avatar de ${name || "usuario"}`}
-    >
-      {initials || "U"}
-    </span>
   );
 }
 

@@ -3,6 +3,7 @@ import { Eye, EyeOff, MailPlus, UserRoundCog } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
+import { UserAvatar } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -113,15 +114,18 @@ export function TeamAccess({
             className="border-border flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
             key={member.userId}
           >
-            <div>
-              <p className="text-sm font-medium">{member.displayName}</p>
-              <Badge variant="secondary">
-                {member.status === 'active'
-                  ? 'Activo'
-                  : member.status === 'disabled'
-                    ? 'Desactivado'
-                    : 'Pendiente'}
-              </Badge>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <UserAvatar name={member.displayName} seed={member.userId} size="sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{member.displayName}</p>
+                <Badge variant="secondary">
+                  {member.status === 'active'
+                    ? 'Activo'
+                    : member.status === 'disabled'
+                      ? 'Desactivado'
+                      : 'Pendiente'}
+                </Badge>
+              </div>
             </div>
             {canManage &&
             member.role !== 'owner' &&
