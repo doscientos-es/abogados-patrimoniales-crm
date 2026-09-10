@@ -185,7 +185,7 @@ export function PersistentDashboard() {
   return (
     <main className="mx-auto max-w-350 space-y-5">
       <SectionHeader
-        title="Panel de inicio"
+        title="Inicio"
         meta={formatLongDate(dashboardTime)}
         subtitle={summary}
         actions={
@@ -479,10 +479,7 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
   return (
     <section aria-label="Centro de control operativo" className="border-b pb-4">
       <div className="mb-3">
-        <h2 className="font-serif text-lg text-balance">Centro de control</h2>
-        <p className="text-muted-foreground mt-0.5 text-sm">
-          Prioridades del despacho agrupadas por flujo de trabajo.
-        </p>
+        <h2 className="font-serif text-lg">Resumen</h2>
       </div>
       <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
         {groups.map((group) => (
@@ -594,24 +591,16 @@ function metricHint(value: number, singular: string, plural: string) {
 
 function dashboardSummary(dashboard: ReturnType<typeof buildDashboardMetrics>) {
   if (dashboard.overdueTasks.length > 0)
-    return metricHint(
-      dashboard.overdueTasks.length,
-      'tarea vencida requiere atención.',
-      'tareas vencidas requieren atención.',
-    )
+    return metricHint(dashboard.overdueTasks.length, 'tarea vencida', 'tareas vencidas')
   if (dashboard.criticalDeadlines.length > 0)
-    return metricHint(
-      dashboard.criticalDeadlines.length,
-      'fecha crítica requiere revisión.',
-      'fechas críticas requieren revisión.',
-    )
+    return metricHint(dashboard.criticalDeadlines.length, 'fecha crítica', 'fechas críticas')
   if (dashboard.leadsWithoutFollowUp.length > 0)
     return metricHint(
       dashboard.leadsWithoutFollowUp.length,
-      'oportunidad está sin seguimiento.',
-      'oportunidades están sin seguimiento.',
+      'oportunidad sin seguimiento',
+      'oportunidades sin seguimiento',
     )
-  return 'No hay incidencias prioritarias. Revisa el trabajo planificado del despacho.'
+  return 'Sin incidencias prioritarias'
 }
 
 function taskAttentionScore(task: TareaPersistida, now: number) {

@@ -1,11 +1,18 @@
 import { useMutation } from '@tanstack/react-query'
-import { MailPlus, UserRoundCog } from 'lucide-react'
+import { Eye, EyeOff, MailPlus, UserRoundCog } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { getSupabaseBrowserClient, type MemberRole } from '@/shared/infrastructure/supabase'
 
@@ -31,6 +38,10 @@ export function TeamAccess({
   onChanged: () => void
 }) {
   const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [open, setOpen] = useState(false)
   const [role, setRole] = useState<MemberRole>('lawyer')
   const canManage = actorRole === 'owner' || actorRole === 'admin'
   const assignableRoles: MemberRole[] =
@@ -40,17 +51,19 @@ export function TeamAccess({
       const client = getSupabaseBrowserClient()
       if (!client) throw new Error('Supabase no está configurado en este entorno.')
       const { error } = await client.functions.invoke('invite-firm-member', {
-        body: { email, firmId, role },
+        body: { name, email, password, firmId, role },
       })
       if (error) throw error
     },
     onSuccess: () => {
+      setName('')
       setEmail('')
+      setPassword('')
+      setOpen(false)
       onChanged()
       toast.success('Invitación enviada.')
     },
-    onError: () =>
-      toast.error('No se ha podido enviar la invitación. Verifica MFA y los permisos.'),
+    onError: () => toast.error('No se ha podido crear el acceso. Revisa los datos y tus permisos.'),
   })
   const changeMember = useMutation({
     mutationFn: async (change: Change) => {
@@ -68,11 +81,11 @@ export function TeamAccess({
       onChanged()
       toast.success('Acceso actualizado.')
     },
-    onError: () => toast.error('No se ha podido actualizar el acceso. Verifica MFA y permisos.'),
+    onError: () => toast.error('No se ha podido actualizar el acceso. Revisa tus permisos.'),
   })
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (canManage) invite.mutate()
+    if (canManage && name.trim().length >= 2 && password.length >= 8) invite.mutate()
   }
 
   return (
@@ -83,38 +96,16 @@ export function TeamAccess({
           <div>
             <CardTitle className="text-base">Accesos del equipo</CardTitle>
             <CardDescription className="mt-1">
-              Invita y administra miembros; las acciones requieren MFA.
+              Gestiona quién puede acceder al despacho y con qué rol.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {canManage ? (
-          <form className="flex flex-wrap gap-2" onSubmit={submit}>
-            <Input
-              className="min-w-48 flex-1"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="correo@despacho.es"
-            />
-            <select
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              value={role}
-              onChange={(event) => setRole(event.target.value as MemberRole)}
-            >
-              {assignableRoles.map((item) => (
-                <option key={item} value={item}>
-                  {ROLE_LABELS[item]}
-                </option>
-              ))}
-            </select>
-            <Button disabled={invite.isPending} type="submit">
-              <MailPlus className="h-4 w-4" />
-              Invitar
-            </Button>
-          </form>
+          <Button type="button" onClick={() => setOpen(true)}>
+            <MailPlus className="h-4 w-4" /> Invitar a un nuevo miembro
+          </Button>
         ) : null}
         {members.map((member) => (
           <div
@@ -174,6 +165,89 @@ export function TeamAccess({
           </div>
         ))}
       </CardContent>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo miembro</DialogTitle>
+            <DialogDescription>
+              Crea un acceso listo para usar. Comparte la contraseña con la persona por un canal
+              seguro.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={submit}>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Nombre completo
+              <Input
+                autoComplete="name"
+                required
+                minLength={2}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="María García"
+              />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Correo profesional
+              <Input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nombre@despacho.es"
+              />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Contraseña
+              <div className="relative">
+                <Input
+                  className="pr-10"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 p-1"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <span className="text-muted-foreground block text-xs font-normal">
+                Usa al menos 8 caracteres. No se envía por email.
+              </span>
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Rol
+              <select
+                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                value={role}
+                onChange={(e) => setRole(e.target.value as MemberRole)}
+              >
+                {assignableRoles.map((item) => (
+                  <option key={item} value={item}>
+                    {ROLE_LABELS[item]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button disabled={invite.isPending} type="submit">
+                {invite.isPending ? 'Creando…' : 'Crear acceso'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

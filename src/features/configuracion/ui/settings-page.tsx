@@ -5,10 +5,7 @@ import { FirmSettings } from './firm-settings'
 export function SettingsPage() {
   return (
     <div className="mx-auto max-w-300">
-      <SectionHeader
-        title="Configuración"
-        subtitle="Datos del despacho, perfil, seguridad y equipo."
-      />
+      <SectionHeader title="Configuración" subtitle="Despacho, perfil y accesos." />
       <FirmSettings />
     </div>
   )

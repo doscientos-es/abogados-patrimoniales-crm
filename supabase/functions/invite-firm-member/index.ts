@@ -15,24 +15,13 @@ function json(body: Record<string, string>, status = 200) {
   })
 }
 
-function assuranceLevel(token: string) {
-  try {
-    const payload = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
-    const paddedPayload = payload?.padEnd(Math.ceil(payload.length / 4) * 4, '=')
-    return paddedPayload ? (JSON.parse(atob(paddedPayload)) as { aal?: string }).aal : undefined
-  } catch {
-    return undefined
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   const authorization = req.headers.get('Authorization')
   const token = authorization?.replace(/^Bearer\s+/i, '')
-  if (!authorization || !token || assuranceLevel(token) !== 'aal2')
-    return json({ error: 'MFA required' }, 403)
+  if (!authorization || !token) return json({ error: 'Unauthorized' }, 401)
 
   const url = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
@@ -41,10 +30,12 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const password = typeof body.password === 'string' ? body.password : ''
     const firmId = typeof body.firmId === 'string' ? body.firmId : ''
     const role = typeof body.role === 'string' ? body.role : ''
-    if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254 || !firmId || !roles.has(role)) {
+    if (name.length < 2 || name.length > 160 || !/^\S+@\S+\.\S+$/.test(email) || email.length > 254 || password.length < 8 || !firmId || !roles.has(role)) {
       return json({ error: 'Invalid invitation data' }, 400)
     }
 
@@ -66,21 +57,22 @@ Deno.serve(async (req) => {
       return json({ error: 'Forbidden' }, 403)
     if (role === 'admin' && membership.role !== 'owner') return json({ error: 'Forbidden' }, 403)
 
-    const siteUrl = Deno.env.get('SITE_URL')
-    const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { display_name: email.split('@')[0] },
-      ...(siteUrl ? { redirectTo: siteUrl } : {}),
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { display_name: name },
     })
-    if (inviteError || !invite.user) return json({ error: 'Could not create invitation' }, 400)
+    if (createError || !created.user) return json({ error: 'Could not create member' }, 400)
 
     const { error: memberError } = await admin.from('crm_firm_members').insert({
       firm_id: firmId,
-      user_id: invite.user.id,
+      user_id: created.user.id,
       role,
       status: 'invited',
     })
     if (memberError) {
-      await admin.auth.admin.deleteUser(invite.user.id)
+      await admin.auth.admin.deleteUser(created.user.id)
       return json({ error: 'Could not create invitation' }, 400)
     }
     return json({ success: 'Invitation sent' })

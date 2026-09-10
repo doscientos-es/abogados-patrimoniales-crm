@@ -81,7 +81,7 @@ export function AppSidebar({ open }: { open: boolean }) {
                 LEX
               </span>
               <span className="text-sidebar-foreground/60 block truncate text-[11px]">
-                CRM para abogados patrimoniales
+                Gestión integral del despacho
               </span>
             </span>
           </Link>

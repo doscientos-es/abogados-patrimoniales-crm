@@ -1,6 +1,7 @@
 export type AuthenticatedUser = Readonly<{
   id: string
   email: string | null
+  displayName: string | null
 }>
 
 export type AuthSessionState =

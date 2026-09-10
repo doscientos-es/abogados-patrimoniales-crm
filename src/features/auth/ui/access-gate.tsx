@@ -74,9 +74,9 @@ export function AccountMenu() {
   if (session.status !== 'signed-in') return null
 
   const email = session.user.email ?? 'Cuenta sin correo'
-  const localPart = email.split('@')[0] ?? ''
-  const initials = localPart
-    .split(/[._-]+/)
+  const displayName = session.user.displayName ?? email.split('@')[0] ?? 'Cuenta'
+  const initials = displayName
+    .split(/[\s._-]+/)
     .filter(Boolean)
     .map((part) => part[0]?.toUpperCase())
     .join('')
@@ -90,8 +90,8 @@ export function AccountMenu() {
         variant="ghost"
       >
         <span className="hidden min-w-0 text-right text-xs leading-tight lg:block">
-          <span className="text-foreground block truncate font-medium">{email}</span>
-          <span className="text-muted-foreground block">Sesión activa</span>
+          <span className="text-foreground block truncate font-medium">{displayName}</span>
+          <span className="text-muted-foreground block truncate">{email}</span>
         </span>
         <span className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
           {initials || 'CU'}
@@ -99,8 +99,8 @@ export function AccountMenu() {
       </Button>
       <PopoverContent placement="bottom end" className="w-72 p-2">
         <div className="border-border border-b px-2 py-2.5">
-          <p className="text-foreground text-sm font-medium">{email}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">Sesión activa</p>
+          <p className="text-foreground text-sm font-medium">{displayName}</p>
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">{email}</p>
         </div>
         <Button
           className="mt-1 w-full justify-start"

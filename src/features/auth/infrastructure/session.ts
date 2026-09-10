@@ -4,8 +4,19 @@ import type { AuthenticatedUser } from '../application/auth-types'
 
 export const isAuthProviderConfigured = isSupabaseConfigured
 
-function toAuthenticatedUser(user: { id: string; email?: string | null }): AuthenticatedUser {
-  return { id: user.id, email: user.email ?? null }
+function toAuthenticatedUser(user: {
+  id: string
+  email?: string | null
+  user_metadata?: { display_name?: unknown; full_name?: unknown } | null
+}): AuthenticatedUser {
+  const metadata = user.user_metadata
+  const displayName =
+    typeof metadata?.display_name === 'string'
+      ? metadata.display_name.trim()
+      : typeof metadata?.full_name === 'string'
+        ? metadata.full_name.trim()
+        : ''
+  return { id: user.id, email: user.email ?? null, displayName: displayName || null }
 }
 
 export async function getCurrentAuthenticatedUser(): Promise<AuthenticatedUser | null> {
