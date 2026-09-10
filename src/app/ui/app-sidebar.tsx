@@ -7,6 +7,7 @@ import {
   Gauge,
   Handshake,
   Landmark,
+  MessageSquareText,
   Receipt,
   Settings,
   Sparkles,
@@ -43,6 +44,7 @@ const operativa = [
 
 const gestion = [
   { title: 'Documentos', url: '/documentos', icon: FileText },
+  { title: 'Comunicaciones', url: '/comunicaciones', icon: MessageSquareText },
   { title: 'Facturación y cobros', url: '/facturacion', icon: Receipt },
 ] as const
 

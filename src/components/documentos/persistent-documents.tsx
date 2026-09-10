@@ -99,6 +99,22 @@ function actionErrorMessage(error: unknown, fallback: string) {
   return `${fallback} Vuelve a intentarlo. Si continúa, contacta con soporte.`
 }
 
+async function queueDriveSync(
+  client: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
+  documentId: string,
+  operation: 'upload' | 'move' | 'archive',
+) {
+  const { data, error } = await client.rpc('crm_queue_drive_sync', {
+    target_document_id: documentId,
+    target_operation: operation,
+  })
+  if (error) {
+    // The CRM remains usable if the optional Drive integration is not configured yet.
+    return
+  }
+  if (data?.id) void client.functions.invoke('sync-drive-document', { body: { jobId: data.id } })
+}
+
 export function PersistentDocuments({
   location,
   onLocationChange,
@@ -223,7 +239,7 @@ export function PersistentDocuments({
             <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <div className="space-y-3">
               <div>
-                <h1 className="font-serif text-xl font-semibold">
+                <h1 className="font-serif text-xl font-semibold text-balance">
                   No se pudieron cargar los documentos
                 </h1>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -318,6 +334,7 @@ export function PersistentDocuments({
         content_checksum: hash,
       })
       if (done.error) throw done.error
+      void queueDriveSync(c, id, 'upload')
       await qc.invalidateQueries({ queryKey: ['documents', firmId] })
       await qc.invalidateQueries({ queryKey: ['document-folders', firmId] })
       toast.success(
@@ -489,6 +506,7 @@ export function PersistentDocuments({
         target_folder_id: targetFolderId,
       })
       if (error) throw error
+      void queueDriveSync(c, documentId, 'move')
       await qc.invalidateQueries({ queryKey: ['documents', firmId] })
       toast.success(`Documento movido a ${destination}.`)
       setStatusMessage(`Documento movido a ${destination}.`)
@@ -527,6 +545,8 @@ export function PersistentDocuments({
         target_parent_id: targetParentId,
       })
       if (error) throw error
+      const movedDocuments = documentRows.filter((item) => item.folder_id === folderId)
+      for (const document of movedDocuments) void queueDriveSync(c, document.id, 'move')
       await qc.invalidateQueries({ queryKey: ['document-folders', firmId] })
       toast.success(`Carpeta movida a ${destination}.`)
       setStatusMessage(`Carpeta movida a ${destination}.`)
@@ -556,6 +576,7 @@ export function PersistentDocuments({
         target_expected_version: document.version,
       })
       if (error) throw error
+      void queueDriveSync(c, document.id, 'archive')
       await qc.invalidateQueries({ queryKey: ['documents', firmId] })
       toast.success(`Documento “${document.original_name}” archivado.`)
       setStatusMessage(`Documento “${document.original_name}” archivado.`)
@@ -695,7 +716,10 @@ export function PersistentDocuments({
         <section className="space-y-3" aria-labelledby="document-case-list-title">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h1 id="document-case-list-title" className="font-serif text-lg font-semibold">
+              <h1
+                id="document-case-list-title"
+                className="font-serif text-lg font-semibold text-balance"
+              >
                 Expedientes
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -770,7 +794,10 @@ export function PersistentDocuments({
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h2 id="document-location-title" className="font-serif text-lg font-semibold">
+              <h2
+                id="document-location-title"
+                className="font-serif text-lg font-semibold text-balance"
+              >
                 {folderPath.at(-1)?.name ?? activeCase.referencia}
               </h2>
               <p id="document-move-help" className="text-muted-foreground mt-1 text-sm">

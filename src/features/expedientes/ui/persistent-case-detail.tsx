@@ -3,7 +3,6 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
-  Bot,
   CalendarClock,
   CheckSquare2,
   FileText,
@@ -259,7 +258,7 @@ function CaseHeader({
         <CardContent className="space-y-3 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 space-y-1">
-              <h1 className="text-lg font-bold tracking-tight sm:text-xl">
+              <h1 className="text-lg font-bold tracking-tight text-balance sm:text-xl">
                 {expediente.referencia} · {expediente.titulo}
               </h1>
               <p className="text-muted-foreground text-sm">
@@ -571,14 +570,7 @@ function WorkstreamsSection({
     <DetailSection
       title={`Líneas de trabajo · ${lineas.length} en el expediente`}
       subtitle="Frentes autónomos del expediente: cada uno con objetivo propio, responsable, seguimiento y resultado verificable. Agrupan y relacionan el trabajo, sin sustituir a fases, actuaciones ni tareas."
-      actions={
-        <>
-          <Button type="button" variant="outline" size="sm" disabled title="Próximamente">
-            <Bot className="h-4 w-4" aria-hidden="true" /> Analizar líneas con IA
-          </Button>
-          {createForm}
-        </>
-      }
+      actions={<>{createForm}</>}
     >
       <div className="border-border/80 bg-muted/20 flex flex-wrap items-center gap-2 rounded-lg border p-3">
         <span className="text-muted-foreground px-1 text-xs font-medium">Filtros</span>

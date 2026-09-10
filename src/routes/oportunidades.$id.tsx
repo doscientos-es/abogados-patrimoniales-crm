@@ -137,7 +137,7 @@ function FichaOportunidadPage() {
           <Badge>{data.fase}</Badge>
           <Badge variant="secondary">{data.subestado}</Badge>
         </div>
-        <h1 className="text-2xl font-semibold">{data.titulo}</h1>
+        <h1 className="text-2xl font-semibold text-balance">{data.titulo}</h1>
         <p className="text-muted-foreground">{data.descripcion || 'Sin descripción registrada.'}</p>
       </header>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

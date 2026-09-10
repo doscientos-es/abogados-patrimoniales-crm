@@ -3,11 +3,7 @@ import type { AnchorHTMLAttributes } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    to,
-    children,
-    ...props
-  }: { to: string } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+  Link: ({ to, children, ...props }: { to: string } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={to} {...props}>
       {children}
     </a>

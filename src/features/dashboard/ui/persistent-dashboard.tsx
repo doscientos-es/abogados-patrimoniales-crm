@@ -479,7 +479,7 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
   return (
     <section aria-label="Centro de control operativo" className="border-b pb-4">
       <div className="mb-3">
-        <h2 className="font-serif text-lg">Centro de control</h2>
+        <h2 className="font-serif text-lg text-balance">Centro de control</h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
           Prioridades del despacho agrupadas por flujo de trabajo.
         </p>

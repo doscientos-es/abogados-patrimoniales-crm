@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">lex logo</title>
+  <desc id="desc">Minimal dark blue outline of a house with the word lex inside.</desc>
+
+  <g fill="none" stroke="#202833" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M43 207V87L119 39L197 87V120"/>
+    <path d="M197 188V207H43"/>
+  </g>
+
+  <text x="184" y="177" fill="#202833"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="55" font-weight="300" letter-spacing="0">lex</text>
+</svg>

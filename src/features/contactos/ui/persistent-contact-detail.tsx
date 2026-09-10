@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +19,7 @@ import { useOportunidades } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import { formatCurrency, useFacturas } from '@/features/facturacion'
 import { notaDesdeRemota, useNotasRemotas } from '@/features/notas'
+import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
 
 export function PersistentContactDetail({ contactId }: { contactId: string }) {
@@ -28,6 +29,7 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
   const contactQuery = useContacto(firmId, contactId)
   const casesQuery = useExpedientesPersistentes(firmId)
   const opportunitiesQuery = useOportunidades(firmId)
+  const onboardingsQuery = useOnboardings(firmId)
   const tasksQuery = useTareasPersistentes(firmId)
   const invoicesQuery = useFacturas(firmId)
   const notesQuery = useNotasRemotas(firmId)
@@ -62,6 +64,7 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
   const opportunities = (opportunitiesQuery.data ?? []).filter(
     (item) => item.contactoId === contactId,
   )
+  const onboardings = (onboardingsQuery.data ?? []).filter((item) => item.contactoId === contactId)
   const opportunityIds = new Set(opportunities.map((item) => item.id))
   const caseIds = new Set(cases.map((item) => item.id))
   const tasks = (tasksQuery.data ?? []).filter(
@@ -112,6 +115,11 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
         title={displayName(contact)}
         subtitle={`${contact.tipoPersona} · ${contact.relacion}`}
         meta={contact.estado}
+        actions={
+          <Link to="/oportunidades/nueva" className={buttonVariants({ size: 'sm' })}>
+            Crear Lead
+          </Link>
+        }
       />
       <Card id="datos-generales">
         <CardHeader>
@@ -186,6 +194,25 @@ export function PersistentContactDetail({ contactId }: { contactId: string }) {
               className="block border-b py-2 text-sm hover:underline"
             >
               {item.referencia} · {item.titulo}
+            </Link>
+          ))}
+        </Related>
+        <Related
+          title="Onboarding"
+          empty="Sin onboarding iniciado."
+          loading={onboardingsQuery.isPending}
+          error={onboardingsQuery.isError}
+        >
+          {onboardings.map((item) => (
+            <Link
+              key={item.id}
+              to="/onboarding"
+              className="flex justify-between border-b py-2 text-sm hover:underline"
+            >
+              <span>
+                {item.referencia} · {item.asunto}
+              </span>
+              <Badge variant="outline">{item.fase}</Badge>
             </Link>
           ))}
         </Related>

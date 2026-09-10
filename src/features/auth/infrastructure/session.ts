@@ -11,8 +11,20 @@ function toAuthenticatedUser(user: { id: string; email?: string | null }): Authe
 export async function getCurrentAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   const client = getSupabaseBrowserClient()
   if (!client) return null
-  // getSession() only reads local storage; getUser() verifies the access token with Auth.
-  const { data, error } = await client.auth.getUser()
+  // Read the local session first. This keeps signed-out screens responsive even when
+  // the Auth endpoint is temporarily unavailable.
+  if (typeof client.auth.getSession === 'function') {
+    const { data: sessionData, error: sessionError } = await client.auth.getSession()
+    if (sessionError) throw sessionError
+    if (!sessionData.session) return null
+  }
+
+  // Verify an existing token, but never leave the application in an infinite loading state.
+  const verification = client.auth.getUser()
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('La verificación de sesión ha agotado el tiempo.')), 8_000),
+  )
+  const { data, error } = await Promise.race([verification, timeout])
   if (error) throw error
   return data.user ? toAuthenticatedUser(data.user) : null
 }
@@ -44,5 +56,13 @@ export async function updateSupabasePassword(password: string) {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase no está configurado en este entorno.')
   const { error } = await client.auth.updateUser({ password })
+  if (error) throw error
+}
+
+export async function requestSupabasePasswordReset(email: string) {
+  const client = getSupabaseBrowserClient()
+  if (!client) throw new Error('Supabase no está configurado en este entorno.')
+  const redirectTo = `${window.location.origin}/`
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo })
   if (error) throw error
 }

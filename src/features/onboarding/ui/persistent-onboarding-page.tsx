@@ -445,6 +445,19 @@ function OnboardingCard({
           )
         ) : null}
         <div className="flex flex-wrap gap-1 border-t pt-2">
+          {item.oportunidadId ? (
+            <Link
+              to="/oportunidades/$id"
+              params={{ id: item.oportunidadId }}
+              className={buttonVariants({
+                variant: 'ghost',
+                size: 'sm',
+                className: 'h-7 px-2 text-xs',
+              })}
+            >
+              Ver Lead
+            </Link>
+          ) : null}
           <Link
             to="/contactos/$id"
             params={{ id: item.contactoId }}

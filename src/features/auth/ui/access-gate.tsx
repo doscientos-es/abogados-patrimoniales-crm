@@ -1,5 +1,5 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { KeyRound, LoaderCircle, LogIn, LogOut, Scale } from 'lucide-react'
+import { ArrowLeft, KeyRound, LoaderCircle, LogIn, LogOut, Scale, ShieldCheck } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -11,6 +11,7 @@ import {
   signInWithPassword,
   signOut,
   updatePassword,
+  requestPasswordReset,
   useAuthSession,
 } from '../application/auth-session'
 import { useActiveMembership } from '../application/membership'
@@ -143,52 +144,130 @@ export function AccountMenu() {
 }
 
 function SignInForm() {
+  const [mode, setMode] = useState<'signin' | 'reset'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [sending, setSending] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSending(true)
-    void signInWithPassword(email.trim(), password)
-      .catch(() => toast.error('Correo o contraseña no válidos.'))
+    const action =
+      mode === 'reset'
+        ? requestPasswordReset(email.trim()).then(() =>
+            toast.success('Te hemos enviado un enlace para restablecer la contraseña.'),
+          )
+        : signInWithPassword(email.trim(), password)
+    void action
+      .catch(() =>
+        toast.error(
+          mode === 'reset'
+            ? 'No se pudo enviar el enlace. Comprueba el correo.'
+            : 'Correo o contraseña no válidos.',
+        ),
+      )
       .finally(() => setSending(false))
   }
   return (
-    <Centered>
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <Scale className="text-primary mb-2 h-8 w-8" />
-          <CardTitle>Acceso a LEX</CardTitle>
-          <CardDescription>
-            Área privada del despacho. El acceso se habilita únicamente por invitación.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={submit}>
-            <Input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Correo profesional"
-            />
-            <Input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Contraseña"
-            />
-            <Button className="w-full" disabled={sending} type="submit">
-              <LogIn className="h-4 w-4" />
-              {sending ? 'Accediendo…' : 'Acceder'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </Centered>
+    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <div className="bg-card grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border shadow-2xl shadow-slate-900/10 md:grid-cols-[0.92fr_1.08fr]">
+        <div className="from-primary via-primary/95 text-primary-foreground hidden flex-col justify-between bg-linear-to-br to-slate-900 p-8 md:flex lg:p-10">
+          <div>
+            <div className="mb-10 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                <Scale className="h-5 w-5" />
+              </span>
+              <span className="font-serif text-2xl font-semibold">LEX</span>
+            </div>
+            <p className="mb-3 text-sm font-medium text-white/65">Gestión jurídica patrimonial</p>
+            <h1 className="max-w-sm font-serif text-3xl leading-tight font-semibold text-balance lg:text-4xl">
+              Todo el despacho, bajo control.
+            </h1>
+            <p className="mt-5 max-w-sm text-sm leading-6 text-pretty text-white/70">
+              Expedientes, tareas y seguimiento comercial en un espacio seguro para trabajar con
+              claridad.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-white/65">
+            <ShieldCheck className="h-4 w-4" /> Acceso privado por invitación
+          </div>
+        </div>
+        <Card className="rounded-none border-0 shadow-none">
+          <CardHeader className="p-7 pb-4 sm:p-10 sm:pb-5">
+            <div className="bg-primary/10 text-primary mb-5 flex h-10 w-10 items-center justify-center rounded-xl md:hidden">
+              <Scale className="h-5 w-5" />
+            </div>
+            <CardTitle className="font-serif text-2xl text-balance">
+              {mode === 'reset' ? 'Recupera tu acceso' : 'Bienvenido a LEX'}
+            </CardTitle>
+            <CardDescription className="mt-2 leading-5 text-pretty">
+              {mode === 'reset'
+                ? 'Te enviaremos un enlace seguro a tu correo profesional.'
+                : 'Área privada del despacho. El acceso se habilita únicamente por invitación.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="max-w-xl p-7 pt-2 sm:p-10 sm:pt-3">
+            <form className="space-y-4" onSubmit={submit}>
+              <label className="block space-y-1.5" htmlFor="sign-in-email">
+                <span className="text-sm font-medium">Correo profesional</span>
+                <Input
+                  id="sign-in-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nombre@despacho.es"
+                />
+              </label>
+              {mode === 'signin' ? (
+                <label className="block space-y-1.5" htmlFor="sign-in-password">
+                  <span className="text-sm font-medium">Contraseña</span>
+                  <Input
+                    id="sign-in-password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Tu contraseña"
+                  />
+                </label>
+              ) : null}
+              <Button className="h-10 w-full" disabled={sending} type="submit">
+                <LogIn className="h-4 w-4" />
+                {sending
+                  ? 'Procesando…'
+                  : mode === 'reset'
+                    ? 'Enviar enlace'
+                    : 'Entrar en el despacho'}
+              </Button>
+            </form>
+            <div className="mt-6 text-center text-sm">
+              {mode === 'signin' ? (
+                <button
+                  className="text-primary font-medium hover:underline"
+                  type="button"
+                  onClick={() => setMode('reset')}
+                >
+                  ¿Has olvidado tu contraseña?
+                </button>
+              ) : (
+                <button
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+                  type="button"
+                  onClick={() => setMode('signin')}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> Volver al acceso
+                </button>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-8 text-center text-xs leading-5">
+              Si aún no tienes acceso, solicita una invitación al administrador del despacho.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
 
@@ -197,8 +276,8 @@ function InvitationRequired() {
     <Centered>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Acceso pendiente de invitación</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-balance">Acceso pendiente de invitación</CardTitle>
+          <CardDescription className="text-pretty">
             Tu cuenta no tiene acceso a ningún despacho. Solicita una invitación a un administrador.
           </CardDescription>
         </CardHeader>
@@ -212,8 +291,8 @@ function ConfigurationRequired() {
     <Centered>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Entorno pendiente de configurar</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-balance">Entorno pendiente de configurar</CardTitle>
+          <CardDescription className="text-pretty">
             Configura el servicio de acceso para habilitar el acceso seguro.
           </CardDescription>
         </CardHeader>

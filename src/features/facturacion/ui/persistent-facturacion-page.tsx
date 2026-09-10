@@ -109,13 +109,18 @@ export function PersistentFacturacionPage() {
         title="Facturación"
         subtitle="Borradores, facturas emitidas, cobros y rectificativas por expediente."
         actions={
-          <BorradorFacturaDialog
-            trigger={<Button type="button">Nueva factura</Button>}
-            expedientes={expedientes}
-            nombreCliente={nombreCliente}
-            pending={guardarBorrador.isPending}
-            onGuardar={(input) => guardarBorrador.mutateAsync(input)}
-          />
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => exportInvoicesCsv(facturas)}>
+              Exportar CSV
+            </Button>
+            <BorradorFacturaDialog
+              trigger={<Button type="button">Nueva factura</Button>}
+              expedientes={expedientes}
+              nombreCliente={nombreCliente}
+              pending={guardarBorrador.isPending}
+              onGuardar={(input) => guardarBorrador.mutateAsync(input)}
+            />
+          </div>
         }
       />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -367,4 +372,36 @@ export function PersistentFacturacionPage() {
       </Card>
     </div>
   )
+}
+
+function exportInvoicesCsv(facturas: FacturaPersistida[]) {
+  const headers = [
+    'Factura',
+    'Cliente',
+    'Expediente',
+    'Concepto',
+    'Total',
+    'Pendiente',
+    'Emisión',
+    'Estado',
+  ]
+  const rows = facturas.map((factura) => [
+    factura.referencia,
+    factura.cliente,
+    factura.asuntoReferencia,
+    factura.concepto,
+    String(factura.importeTotal),
+    String(factura.importePendiente),
+    factura.emision ?? '',
+    ESTADO_FACTURA_LABEL[factura.estado],
+  ])
+  const csv = [headers, ...rows]
+    .map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(';'))
+    .join('\n')
+  const url = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `facturas-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
 }

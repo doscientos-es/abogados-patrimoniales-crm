@@ -2,6 +2,7 @@ export {
   signInWithPassword,
   signOut,
   updatePassword,
+  requestPasswordReset,
   useAuthSession,
 } from './application/auth-session'
 export type { AuthenticatedUser, AuthSessionState } from './application/auth-session'

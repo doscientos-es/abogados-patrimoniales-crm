@@ -67,6 +67,8 @@ export type Database = {
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>
       crm_document_folders: Table<DocumentFolderRow, never, never>
+      crm_drive_connections: Table<DriveConnectionRow, DriveConnectionInsert>
+      crm_drive_sync_jobs: Table<DriveSyncJobRow, DriveSyncJobInsert>
       crm_tasks: Table<TaskRow, TaskInsert, never>
       crm_task_events: Table<TaskEventRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
@@ -94,6 +96,10 @@ export type Database = {
     Views: Record<never, never>
     Functions: {
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
+      crm_queue_drive_sync: {
+        Args: { target_document_id: string; target_operation: 'upload' | 'move' | 'archive' }
+        Returns: DriveSyncJobRow
+      }
       crm_archive_opportunity: {
         Args: {
           target_opportunity_id: string
@@ -692,6 +698,43 @@ export type CaseDocumentRow = {
   created_by: string | null
   created_at: string
   updated_at: string
+  drive_file_id?: string | null
+  drive_parent_id?: string | null
+  drive_sync_status?: 'not_configured' | 'pending' | 'synced' | 'error'
+  drive_synced_at?: string | null
+  drive_error?: string | null
+}
+
+export type DriveConnectionRow = {
+  firm_id: string
+  root_folder_id: string
+  root_folder_name: string
+  status: 'disconnected' | 'connected' | 'error'
+  last_sync_at: string | null
+  last_error: string | null
+  connected_at: string | null
+  connected_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type DriveConnectionInsert = Partial<DriveConnectionRow> & { firm_id: string }
+
+export type DriveSyncJobRow = {
+  id: string
+  firm_id: string
+  document_id: string | null
+  operation: 'upload' | 'move' | 'archive'
+  status: 'pending' | 'running' | 'done' | 'error'
+  attempts: number
+  error: string | null
+  created_at: string
+  processed_at: string | null
+}
+
+export type DriveSyncJobInsert = Partial<DriveSyncJobRow> & {
+  firm_id: string
+  operation: DriveSyncJobRow['operation']
 }
 
 export type DocumentFolderRow = {

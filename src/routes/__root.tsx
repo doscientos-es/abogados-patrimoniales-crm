@@ -40,8 +40,9 @@ const SECTION_LABELS = [
   ['/crm', 'CRM'],
 ] as const
 
-function sectionLabel(pathname: string) {
-  return SECTION_LABELS.find(([path]) => pathname.startsWith(path))?.[1] ?? 'Panel de inicio'
+function sectionInfo(pathname: string) {
+  const match = SECTION_LABELS.find(([path]) => pathname.startsWith(path))
+  return match ? { path: match[0], label: match[1] } : { path: '/', label: 'Panel de inicio' }
 }
 
 function NotFoundComponent() {
@@ -49,7 +50,9 @@ function NotFoundComponent() {
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
         <h1 className="text-foreground font-serif text-7xl font-bold">404</h1>
-        <h2 className="text-foreground mt-4 text-xl font-semibold">Página no encontrada</h2>
+        <h2 className="text-foreground mt-4 text-xl font-semibold text-balance">
+          Página no encontrada
+        </h2>
         <p className="text-muted-foreground mt-2 text-sm">
           La dirección solicitada no existe o ya no está disponible.
         </p>
@@ -75,7 +78,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-foreground text-xl font-semibold tracking-tight">
+        <h1 className="text-foreground text-xl font-semibold tracking-tight text-balance">
           Esta página no se ha cargado
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">Puedes reintentar o volver al inicio.</p>
@@ -163,6 +166,7 @@ function RootComponent() {
 function AuthenticatedRoot() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const section = sectionInfo(pathname)
 
   return (
     <SidebarProvider className="h-svh min-h-0 overflow-hidden">
@@ -186,13 +190,39 @@ function AuthenticatedRoot() {
                 Área de trabajo
               </span>
               <span className="bg-border h-4 w-px" aria-hidden="true" />
-              <span className="text-foreground truncate text-sm font-medium" aria-live="polite">
-                {sectionLabel(pathname)}
-              </span>
+              <Link
+                to={section.path as '/'}
+                className="text-foreground hover:text-primary truncate text-sm font-medium transition-colors"
+                aria-live="polite"
+                title={`Abrir ${section.label}`}
+              >
+                {section.label}
+              </Link>
             </div>
+            <nav aria-label="Accesos rápidos" className="hidden items-center gap-1 lg:flex">
+              <Link
+                to="/oportunidades"
+                search={{ vista: 'todas', abrir: '' }}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
+              >
+                Leads
+              </Link>
+              <Link
+                to="/expedientes"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
+              >
+                Expedientes
+              </Link>
+              <Link
+                to="/tareas"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
+              >
+                Agenda
+              </Link>
+            </nav>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <Link to="/tareas" className={buttonVariants({ size: 'sm' })}>
-                Nueva tarea
+                Abrir agenda
               </Link>
               <AccountMenu />
             </div>
