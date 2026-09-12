@@ -26,6 +26,9 @@ revoke all on function public.crm_can_access_case(uuid) from public, anon;
 grant execute on function public.crm_can_access_case(uuid) to authenticated;
 
 drop policy if exists crm_cases_member on public.crm_cases;
+drop policy if exists crm_cases_read on public.crm_cases;
+drop policy if exists crm_cases_create on public.crm_cases;
+drop policy if exists crm_cases_update on public.crm_cases;
 create policy crm_cases_read on public.crm_cases for select to authenticated
   using (public.crm_can_access_case(id));
 create policy crm_cases_create on public.crm_cases for insert to authenticated
@@ -38,21 +41,45 @@ create policy crm_cases_update on public.crm_cases for update to authenticated
   with check (public.crm_can_access_case(id));
 
 drop policy if exists crm_case_workstreams_member on public.crm_case_workstreams;
+drop policy if exists crm_case_workstreams_read on public.crm_case_workstreams;
+drop policy if exists crm_case_workstreams_create on public.crm_case_workstreams;
+drop policy if exists crm_case_workstreams_update on public.crm_case_workstreams;
+drop policy if exists crm_case_workstreams_access on public.crm_case_workstreams;
 create policy crm_case_workstreams_access on public.crm_case_workstreams for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 drop policy if exists crm_case_activities_member on public.crm_case_activities;
+drop policy if exists crm_case_activities_read on public.crm_case_activities;
+drop policy if exists crm_case_activities_create on public.crm_case_activities;
+drop policy if exists crm_case_activities_update on public.crm_case_activities;
+drop policy if exists crm_case_activities_access on public.crm_case_activities;
 create policy crm_case_activities_access on public.crm_case_activities for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 drop policy if exists crm_case_tasks_member on public.crm_case_tasks;
+drop policy if exists crm_case_tasks_read on public.crm_case_tasks;
+drop policy if exists crm_case_tasks_create on public.crm_case_tasks;
+drop policy if exists crm_case_tasks_update on public.crm_case_tasks;
+drop policy if exists crm_case_tasks_access on public.crm_case_tasks;
 create policy crm_case_tasks_access on public.crm_case_tasks for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 drop policy if exists crm_case_dates_member on public.crm_case_dates;
+drop policy if exists crm_case_dates_read on public.crm_case_dates;
+drop policy if exists crm_case_dates_create on public.crm_case_dates;
+drop policy if exists crm_case_dates_update on public.crm_case_dates;
+drop policy if exists crm_case_dates_access on public.crm_case_dates;
 create policy crm_case_dates_access on public.crm_case_dates for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 drop policy if exists crm_case_communications_member on public.crm_case_communications;
+drop policy if exists crm_case_communications_read on public.crm_case_communications;
+drop policy if exists crm_case_communications_create on public.crm_case_communications;
+drop policy if exists crm_case_communications_update on public.crm_case_communications;
+drop policy if exists crm_case_communications_access on public.crm_case_communications;
 create policy crm_case_communications_access on public.crm_case_communications for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 drop policy if exists crm_case_participants_member on public.crm_case_participants;
+drop policy if exists crm_case_participants_read on public.crm_case_participants;
+drop policy if exists crm_case_participants_create on public.crm_case_participants;
+drop policy if exists crm_case_participants_update on public.crm_case_participants;
+drop policy if exists crm_case_participants_access on public.crm_case_participants;
 create policy crm_case_participants_access on public.crm_case_participants for all to authenticated
   using (public.crm_can_access_case(case_id)) with check (public.crm_can_access_case(case_id));
 

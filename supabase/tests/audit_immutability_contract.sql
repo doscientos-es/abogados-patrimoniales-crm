@@ -24,7 +24,7 @@ begin
     raise exception 'Note audit events must not be insertable by authenticated clients';
   end if;
 
-  foreach function_name in array [
+  foreach function_name in ARRAY ARRAY[
     'crm_log_opportunity_created()',
     'crm_log_task_change()',
     'crm_assign_event_actor()',
