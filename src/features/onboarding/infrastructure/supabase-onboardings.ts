@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AbrirExpedienteDesdeOnboardingInput,
   CrearOnboardingInput,
+  EventoOnboardingPersistido,
   OnboardingPersistido,
 } from '@/features/onboarding/application/onboarding-types'
 import {
   getSupabaseBrowserClient,
+  type OnboardingEventRow,
   type OnboardingRow,
   type OpportunityPriority,
 } from '@/shared/infrastructure/supabase'
@@ -30,6 +32,15 @@ const onboardingFromRow = (row: OnboardingRow): OnboardingPersistido => ({
   siguienteAccion: row.next_action,
   modalidad: row.engagement_mode,
   version: row.version,
+})
+
+const onboardingEventFromRow = (row: OnboardingEventRow): EventoOnboardingPersistido => ({
+  id: row.id,
+  onboardingId: row.onboarding_id,
+  tipo: row.event_type,
+  datos: row.payload,
+  actorId: row.actor_id,
+  creadoEn: row.created_at,
 })
 
 const updateCache = (
@@ -56,6 +67,24 @@ export function useOnboardings(firmId: string | undefined) {
         .order('phase_changed_on')
       if (error) throw error
       return data.map(onboardingFromRow)
+    },
+  })
+}
+
+export function useEventosOnboarding(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['onboarding-events', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async (): Promise<EventoOnboardingPersistido[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_onboarding_events')
+        .select('*')
+        .eq('firm_id', firmId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data.map(onboardingEventFromRow)
     },
   })
 }

@@ -35,13 +35,16 @@ import {
   useAbrirExpedienteDesdeOnboarding,
   useActualizarSiguienteAccion,
   useCrearOnboarding,
+  useEventosOnboarding,
   useOnboardings,
   useRegistrarComunicacionOnboarding,
   useTransicionarOnboarding,
+  type EventoOnboardingPersistido,
   type FaseOnboarding,
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
 import { useCrearTarea } from '@/features/tareas'
+import type { Json } from '@/shared/infrastructure/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const nowForInput = () =>
@@ -54,6 +57,25 @@ const currency = (amount: number | null) =>
     : new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
 const date = (value: string | null) =>
   value ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(value)) : '—'
+const dateTime = (value: string) =>
+  new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(
+    new Date(value),
+  )
+const onboardingEventLabel = (type: string, payload: Json) => {
+  const data = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {}
+  const labels: Record<string, string> = {
+    created: 'Onboarding creado',
+    updated: 'Datos actualizados',
+    payment_confirmed: 'Pago confirmado',
+    formal_start_scheduled: 'Inicio formal programado',
+    formal_start_completed: 'Inicio formal completado',
+    case_opened: 'Expediente abierto',
+    email_draft: 'Borrador de email registrado',
+    phone_call: 'Llamada registrada',
+  }
+  const summary = data['summary']
+  return `${labels[type] ?? type}${typeof summary === 'string' && summary ? `: ${summary}` : ''}`
+}
 
 const ONBOARDING_STAGE_CLASS: Record<FaseOnboarding, string> = {
   proforma: 'fase-ambar',
@@ -67,6 +89,7 @@ export function OnboardingPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const onboardings = useOnboardings(firmId)
+  const eventos = useEventosOnboarding(firmId)
   const contactos = useContactos(firmId)
   const oportunidades = useOportunidades(firmId)
   const miembros = useMiembrosDespacho(firmId)
@@ -106,7 +129,11 @@ export function OnboardingPage() {
   })
   const activos = items.filter(esOnboardingActivo).length
   const isLoading =
-    onboardings.isLoading || contactos.isLoading || oportunidades.isLoading || miembros.isLoading
+    onboardings.isLoading ||
+    eventos.isLoading ||
+    contactos.isLoading ||
+    oportunidades.isLoading ||
+    miembros.isLoading
   const isPending =
     crear.isPending ||
     actualizarAccion.isPending ||
@@ -173,9 +200,9 @@ export function OnboardingPage() {
         />
       </div>
 
-      {onboardings.isError ? (
+      {onboardings.isError || eventos.isError ? (
         <p role="alert" className="text-destructive mb-4 text-sm">
-          No se han podido cargar los onboardings. Puedes reintentar la página.
+          No se han podido cargar los onboardings o su trazabilidad. Puedes reintentar la página.
         </p>
       ) : null}
       {isLoading || items.length ? (
@@ -258,6 +285,8 @@ export function OnboardingPage() {
             <OnboardingCard
               key={item.id}
               item={item}
+              eventos={(eventos.data ?? []).filter((event) => event.onboardingId === item.id)}
+              actorNames={miembrosPorId}
               contacto={contactosPorId.get(item.contactoId)}
               responsableNombre={
                 item.responsableId ? miembrosPorId.get(item.responsableId) : undefined
@@ -306,6 +335,8 @@ export function OnboardingPage() {
 
 function OnboardingCard({
   item,
+  eventos,
+  actorNames,
   contacto,
   responsableNombre,
   pending,
@@ -316,6 +347,8 @@ function OnboardingCard({
   onOpenCase,
 }: {
   item: OnboardingPersistido
+  eventos: EventoOnboardingPersistido[]
+  actorNames: Map<string, string>
   contacto?: ContactoPersistido | undefined
   responsableNombre?: string | undefined
   pending: boolean
@@ -409,6 +442,21 @@ function OnboardingCard({
           <p className="text-sm font-medium">{item.siguienteAccion || PROXIMO_PASO[item.fase]}</p>
           <NextActionDialog item={item} pending={pending} onSave={onNextAction} />
         </div>
+        {eventos.length ? (
+          <div className="border-border/70 space-y-1 border-t pt-2" aria-label="Trazabilidad">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+              Trazabilidad reciente
+            </p>
+            {eventos.slice(0, 3).map((event) => (
+              <p key={event.id} className="text-muted-foreground text-xs leading-5">
+                {onboardingEventLabel(event.tipo, event.datos)} · {dateTime(event.creadoEn)} · Por{' '}
+                {event.actorId
+                  ? (actorNames.get(event.actorId) ?? 'Usuario del despacho')
+                  : 'Sistema'}
+              </p>
+            ))}
+          </div>
+        ) : null}
         {item.fase === 'proforma' ? (
           <PaymentDialog
             pending={pending}

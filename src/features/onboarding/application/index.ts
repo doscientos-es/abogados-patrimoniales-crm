@@ -4,6 +4,7 @@ export {
   useAbrirExpedienteDesdeOnboarding,
   useActualizarSiguienteAccion,
   useCrearOnboarding,
+  useEventosOnboarding,
   useOnboardings,
   useRegistrarComunicacionOnboarding,
   useTransicionarOnboarding,

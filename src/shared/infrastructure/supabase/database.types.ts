@@ -93,7 +93,7 @@ export type Database = {
         OpportunityInsert,
         Partial<OpportunityInsert> & { id?: string; version?: number }
       >
-      crm_opportunity_events: Table<OpportunityEventRow, OpportunityEventInsert, never>
+      crm_opportunity_events: Table<OpportunityEventRow, never, never>
       crm_onboardings: Table<OnboardingRow, OnboardingInsert, never>
       crm_onboarding_events: Table<OnboardingEventRow, never, never>
       crm_task_labels: Table<
@@ -1081,13 +1081,6 @@ export type OpportunityEventRow = {
   payload: Json
   actor_id: string | null
   created_at: string
-}
-
-export type OpportunityEventInsert = {
-  firm_id: string
-  opportunity_id: string
-  event_type: string
-  payload?: Json
 }
 
 export type OnboardingPhase = 'proforma' | 'payment' | 'formal_start' | 'completed'

@@ -1,4 +1,4 @@
-import type { CaseNature, OpportunityPriority } from '@/shared/infrastructure/supabase'
+import type { CaseNature, Json, OpportunityPriority } from '@/shared/infrastructure/supabase'
 
 export type FaseOnboarding = 'proforma' | 'payment' | 'formal_start' | 'completed'
 export type ModalidadInicio = 'pending' | 'in_person' | 'video_call' | 'phone_call'
@@ -22,6 +22,15 @@ export type OnboardingPersistido = {
   siguienteAccion: string
   modalidad: ModalidadInicio
   version: number
+}
+
+export type EventoOnboardingPersistido = {
+  id: string
+  onboardingId: string
+  tipo: string
+  datos: Json
+  actorId: string | null
+  creadoEn: string
 }
 
 export type CrearOnboardingInput = {

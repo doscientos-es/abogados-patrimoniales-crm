@@ -4,9 +4,9 @@ drop policy if exists crm_opportunity_events_insert on public.crm_opportunity_ev
 drop policy if exists crm_task_events_insert on public.crm_task_events;
 drop policy if exists crm_note_events_create on public.crm_note_events;
 
-revoke insert, update, delete on public.crm_opportunity_events from authenticated;
-revoke insert, update, delete on public.crm_task_events from authenticated;
-revoke insert, update, delete on public.crm_note_events from authenticated;
+revoke insert, update, delete on public.crm_opportunity_events from public, anon, authenticated;
+revoke insert, update, delete on public.crm_task_events from public, anon, authenticated;
+revoke insert, update, delete on public.crm_note_events from public, anon, authenticated;
 
 grant select on public.crm_opportunity_events to authenticated;
 grant select on public.crm_task_events to authenticated;
