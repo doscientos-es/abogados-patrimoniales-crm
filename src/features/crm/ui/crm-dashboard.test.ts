@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildCrmMetrics } from './persistent-crm-dashboard'
+import { buildCrmMetrics } from './crm-dashboard'
 
 const task = (overrides = {}) =>
   ({

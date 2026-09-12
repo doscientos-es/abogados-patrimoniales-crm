@@ -14,10 +14,10 @@ export const Route = createFileRoute('/notas')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: NotasPersistentesPage,
+  component: NotesPage,
 })
 
-function NotasPersistentesPage() {
+function NotesPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId

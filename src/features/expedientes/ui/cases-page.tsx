@@ -1,15 +1,15 @@
-import { PopoverContent, PopoverTrigger } from "@doscientos/ui";
-import { Link } from "@tanstack/react-router";
-import { AlertTriangle, GripVertical, Search, SlidersHorizontal, X } from "lucide-react";
-import { useMemo, useState, type DragEvent, type ReactNode } from "react";
+import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
+import { AlertTriangle, GripVertical, Search, SlidersHorizontal, X } from 'lucide-react'
+import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
 
-import { SectionHeader } from "@/components/common";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import type { ContactoPersistido } from "@/features/contactos";
-import type { MiembroDespacho } from "@/features/crm";
+import { SectionHeader } from '@/components/common'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import type { ContactoPersistido } from '@/features/contactos'
+import type { MiembroDespacho } from '@/features/crm'
 import {
   CASE_CONTROL_COLUMNS,
   caseAlerts,
@@ -20,23 +20,23 @@ import {
   casePhaseForColumn,
   relativeDays,
   type CaseControlColumnId,
-} from "@/features/expedientes/application/case-control";
+} from '@/features/expedientes/application/case-control'
 import type {
   ActuacionPersistida,
   ExpedientePersistido,
-} from "@/features/expedientes/application/case-types";
-import type { TareaPersistida } from "@/features/tareas/application/task-types";
+} from '@/features/expedientes/application/case-types'
+import type { TareaPersistida } from '@/features/tareas/application/task-types'
 
-type CaseNature = "all" | "Judicial" | "Extrajudicial";
-type ActiveFilter = { label: string; value: string; onRemove: () => void };
+type CaseNature = 'all' | 'Judicial' | 'Extrajudicial'
+type ActiveFilter = { label: string; value: string; onRemove: () => void }
 
 const CASE_NATURE_TABS = [
-  { value: "all", label: "Todos" },
-  { value: "Extrajudicial", label: "Extrajudicial" },
-  { value: "Judicial", label: "Judicial" },
-] as const;
+  { value: 'all', label: 'Todos' },
+  { value: 'Extrajudicial', label: 'Extrajudicial' },
+  { value: 'Judicial', label: 'Judicial' },
+] as const
 
-export function PersistentCasesPage({
+export function CasesPage({
   expedientes,
   contactos,
   miembros,
@@ -46,85 +46,85 @@ export function PersistentCasesPage({
   onMove,
   actions,
 }: {
-  expedientes: ExpedientePersistido[];
-  contactos: ContactoPersistido[];
-  miembros: MiembroDespacho[];
-  tareas: TareaPersistida[];
-  actuaciones: ActuacionPersistida[];
-  moving: boolean;
-  onMove: (expediente: ExpedientePersistido, fase: string) => Promise<void>;
-  actions?: ReactNode;
+  expedientes: ExpedientePersistido[]
+  contactos: ContactoPersistido[]
+  miembros: MiembroDespacho[]
+  tareas: TareaPersistida[]
+  actuaciones: ActuacionPersistida[]
+  moving: boolean
+  onMove: (expediente: ExpedientePersistido, fase: string) => Promise<void>
+  actions?: ReactNode
 }) {
-  const [query, setQuery] = useState("");
-  const [nature, setNature] = useState<CaseNature>("all");
-  const [assignee, setAssignee] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [dependency, setDependency] = useState("all");
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const now = useMemo(() => Date.now(), []);
+  const [query, setQuery] = useState('')
+  const [nature, setNature] = useState<CaseNature>('all')
+  const [assignee, setAssignee] = useState('all')
+  const [status, setStatus] = useState('all')
+  const [dependency, setDependency] = useState('all')
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [now] = useState(() => Date.now())
   const contactNames = useMemo(
     () => new Map(contactos.map((item) => [item.id, item.nombre])),
     [contactos],
-  );
+  )
   const memberNames = useMemo(
     () => new Map(miembros.map((item) => [item.id, item.nombre])),
     [miembros],
-  );
+  )
   const statusOptions = useMemo(
     () => [...new Set(expedientes.map((item) => item.estadoGeneral).filter(Boolean))].sort(),
     [expedientes],
-  );
+  )
   const dependencyOptions = useMemo(
     () => [...new Set(expedientes.map((item) => caseDependency(item.estadoOperativo)))].sort(),
     [expedientes],
-  );
+  )
   const activeFilters = [
-    assignee !== "all" && {
-      label: "Responsable",
-      value: memberNames.get(assignee) ?? "Usuario no disponible",
-      onRemove: () => setAssignee("all"),
+    assignee !== 'all' && {
+      label: 'Responsable',
+      value: memberNames.get(assignee) ?? 'Usuario no disponible',
+      onRemove: () => setAssignee('all'),
     },
-    status !== "all" && {
-      label: "Estado",
+    status !== 'all' && {
+      label: 'Estado',
       value: status,
-      onRemove: () => setStatus("all"),
+      onRemove: () => setStatus('all'),
     },
-    dependency !== "all" && {
-      label: "Dependencia",
+    dependency !== 'all' && {
+      label: 'Dependencia',
       value: dependency,
-      onRemove: () => setDependency("all"),
+      onRemove: () => setDependency('all'),
     },
-  ].filter((filter): filter is ActiveFilter => Boolean(filter));
+  ].filter((filter): filter is ActiveFilter => Boolean(filter))
   const filtered = expedientes.filter((item) => {
     const text =
-      `${item.referencia} ${item.titulo} ${item.area} ${contactNames.get(item.contactoPrincipalId) ?? ""}`.toLowerCase();
-    const itemDependency = caseDependency(item.estadoOperativo);
+      `${item.referencia} ${item.titulo} ${item.area} ${contactNames.get(item.contactoPrincipalId) ?? ''}`.toLowerCase()
+    const itemDependency = caseDependency(item.estadoOperativo)
     return (
       (!query.trim() || text.includes(query.trim().toLowerCase())) &&
-      (nature === "all" || item.naturaleza === nature) &&
-      (assignee === "all" || item.asignadoId === assignee) &&
-      (status === "all" || item.estadoGeneral === status) &&
-      (dependency === "all" || itemDependency === dependency)
-    );
-  });
+      (nature === 'all' || item.naturaleza === nature) &&
+      (assignee === 'all' || item.asignadoId === assignee) &&
+      (status === 'all' || item.estadoGeneral === status) &&
+      (dependency === 'all' || itemDependency === dependency)
+    )
+  })
 
   const clearFilters = () => {
-    setQuery("");
-    setAssignee("all");
-    setStatus("all");
-    setDependency("all");
-  };
+    setQuery('')
+    setAssignee('all')
+    setStatus('all')
+    setDependency('all')
+  }
 
   const moveToColumn = async (item: ExpedientePersistido, column: CaseControlColumnId) => {
-    if (caseControlColumn(item) !== column) await onMove(item, casePhaseForColumn(column));
-  };
+    if (caseControlColumn(item) !== column) await onMove(item, casePhaseForColumn(column))
+  }
   const dropInColumn = (event: DragEvent<HTMLElement>, column: CaseControlColumnId) => {
-    event.preventDefault();
+    event.preventDefault()
     const item = expedientes.find(
-      (candidate) => candidate.id === event.dataTransfer.getData("text/plain"),
-    );
-    if (item) void moveToColumn(item, column);
-  };
+      (candidate) => candidate.id === event.dataTransfer.getData('text/plain'),
+    )
+    if (item) void moveToColumn(item, column)
+  }
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-4 p-6">
@@ -136,9 +136,9 @@ export function PersistentCasesPage({
       <div className="border-border/80 flex items-center gap-1 border-b px-3 pt-2.5" role="tablist">
         {CASE_NATURE_TABS.map(({ value, label }) => {
           const count =
-            value === "all"
+            value === 'all'
               ? expedientes.length
-              : expedientes.filter((item) => item.naturaleza === value).length;
+              : expedientes.filter((item) => item.naturaleza === value).length
           return (
             <button
               key={value}
@@ -159,7 +159,7 @@ export function PersistentCasesPage({
                 {count}
               </span>
             </button>
-          );
+          )
         })}
       </div>
       <div className="border-border/80 space-y-2 border-b pb-3">
@@ -203,7 +203,7 @@ export function PersistentCasesPage({
                   <p className="text-muted-foreground text-xs">Acota el tablero por sus datos</p>
                 </div>
                 <span className="text-muted-foreground text-xs tabular-nums">
-                  {activeFilters.length ? `${activeFilters.length} activos` : "Sin filtros"}
+                  {activeFilters.length ? `${activeFilters.length} activos` : 'Sin filtros'}
                 </span>
               </div>
               <div className="grid gap-4 p-4 sm:grid-cols-2">
@@ -213,7 +213,7 @@ export function PersistentCasesPage({
                     value={assignee}
                     onChange={setAssignee}
                     options={[
-                      ["all", "Todos los responsables"],
+                      ['all', 'Todos los responsables'],
                       ...miembros.map((item) => [item.id, item.nombre]),
                     ]}
                   />
@@ -224,7 +224,7 @@ export function PersistentCasesPage({
                     value={status}
                     onChange={setStatus}
                     options={[
-                      ["all", "Cualquier estado"],
+                      ['all', 'Cualquier estado'],
                       ...statusOptions.map((item) => [item, item]),
                     ]}
                   />
@@ -235,7 +235,7 @@ export function PersistentCasesPage({
                     value={dependency}
                     onChange={setDependency}
                     options={[
-                      ["all", "Cualquier dependencia"],
+                      ['all', 'Cualquier dependencia'],
                       ...dependencyOptions.map((item) => [item, item]),
                     ]}
                   />
@@ -296,7 +296,7 @@ export function PersistentCasesPage({
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
               {
                 filtered.filter(
-                  (item) => caseMegaphase(caseControlColumn(item)) === "F3 · CASEWORK",
+                  (item) => caseMegaphase(caseControlColumn(item)) === 'F3 · CASEWORK',
                 ).length
               }
             </Badge>
@@ -307,7 +307,7 @@ export function PersistentCasesPage({
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
               {
                 filtered.filter(
-                  (item) => caseMegaphase(caseControlColumn(item)) === "F4 · DELIVERY",
+                  (item) => caseMegaphase(caseControlColumn(item)) === 'F4 · DELIVERY',
                 ).length
               }
             </Badge>
@@ -324,7 +324,6 @@ export function PersistentCasesPage({
               activities={actuaciones}
               now={now}
               moving={moving}
-              onMove={moveToColumn}
               onDrop={dropInColumn}
               dragged={Boolean(draggedId)}
               onDragStart={setDraggedId}
@@ -334,7 +333,7 @@ export function PersistentCasesPage({
         </div>
       </section>
     </main>
-  );
+  )
 }
 
 function CaseColumn({
@@ -347,30 +346,28 @@ function CaseColumn({
   activities,
   now,
   moving,
-  onMove,
   onDrop,
   dragged,
   onDragStart,
   onDragEnd,
 }: {
-  column: CaseControlColumnId;
-  title: string;
-  items: ExpedientePersistido[];
-  contactNames: Map<string, string>;
-  memberNames: Map<string, string>;
-  tasks: TareaPersistida[];
-  activities: ActuacionPersistida[];
-  now: number;
-  moving: boolean;
-  onMove: (item: ExpedientePersistido, column: CaseControlColumnId) => Promise<void>;
-  onDrop: (event: DragEvent<HTMLElement>, column: CaseControlColumnId) => void;
-  dragged: boolean;
-  onDragStart: (id: string) => void;
-  onDragEnd: () => void;
+  column: CaseControlColumnId
+  title: string
+  items: ExpedientePersistido[]
+  contactNames: Map<string, string>
+  memberNames: Map<string, string>
+  tasks: TareaPersistida[]
+  activities: ActuacionPersistida[]
+  now: number
+  moving: boolean
+  onDrop: (event: DragEvent<HTMLElement>, column: CaseControlColumnId) => void
+  dragged: boolean
+  onDragStart: (id: string) => void
+  onDragEnd: () => void
 }) {
   return (
     <section
-      className={`bg-muted/45 h-full min-h-56 rounded-xl border p-3 transition-all ${dragged ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20" : ""}`}
+      className={`bg-muted/45 h-full min-h-56 rounded-xl border p-3 transition-all ${dragged ? 'border-primary/50 bg-primary/5 ring-primary/20 ring-1' : ''}`}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onDrop(event, column)}
     >
@@ -383,8 +380,8 @@ function CaseColumn({
           <CaseCard
             key={item.id}
             item={item}
-            contactName={contactNames.get(item.contactoPrincipalId) ?? "Contacto no disponible"}
-            assigneeName={memberNames.get(item.asignadoId ?? "") ?? "Sin responsable"}
+            contactName={contactNames.get(item.contactoPrincipalId) ?? 'Contacto no disponible'}
+            assigneeName={memberNames.get(item.asignadoId ?? '') ?? 'Sin responsable'}
             alerts={caseAlerts(item, tasks, activities, now)}
             lastMovement={caseLastMovement(item, activities)}
             moving={moving}
@@ -399,7 +396,7 @@ function CaseColumn({
         ) : null}
       </div>
     </section>
-  );
+  )
 }
 
 function CaseCard({
@@ -412,16 +409,16 @@ function CaseCard({
   onDragStart,
   onDragEnd,
 }: {
-  item: ExpedientePersistido;
-  contactName: string;
-  assigneeName: string;
-  alerts: string[];
-  lastMovement: string;
-  moving: boolean;
-  onDragStart: (id: string) => void;
-  onDragEnd: () => void;
+  item: ExpedientePersistido
+  contactName: string
+  assigneeName: string
+  alerts: string[]
+  lastMovement: string
+  moving: boolean
+  onDragStart: (id: string) => void
+  onDragEnd: () => void
 }) {
-  const currentColumn = caseControlColumn(item);
+  const currentColumn = caseControlColumn(item)
   return (
     <Card
       draggable={!moving}
@@ -445,8 +442,8 @@ function CaseCard({
               title="Arrastrar para mover"
               className="text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab rounded p-0.5 active:cursor-grabbing"
               onDragStart={(event) => {
-                event.dataTransfer.setData("text/plain", item.id);
-                onDragStart(item.id);
+                event.dataTransfer.setData('text/plain', item.id)
+                onDragStart(item.id)
               }}
               onDragEnd={onDragEnd}
             >
@@ -455,7 +452,7 @@ function CaseCard({
             {item.referencia}
           </span>
           <Badge
-            variant={item.prioridad === "Alta" ? "destructive" : "secondary"}
+            variant={item.prioridad === 'Alta' ? 'destructive' : 'secondary'}
             className="h-5 px-1.5 text-[10px]"
           >
             {item.prioridad}
@@ -476,15 +473,15 @@ function CaseCard({
             <span className="text-muted-foreground">Responsable:</span> {assigneeName}
           </p>
           <p>
-            <span className="text-muted-foreground">Depende de:</span>{" "}
+            <span className="text-muted-foreground">Depende de:</span>{' '}
             {caseDependency(item.estadoOperativo)}
           </p>
           <p>
-            <span className="text-muted-foreground">Próxima:</span>{" "}
-            {item.proximaAccion || "Sin próxima acción definida"}
+            <span className="text-muted-foreground">Próxima:</span>{' '}
+            {item.proximaAccion || 'Sin próxima acción definida'}
           </p>
           <p>
-            <span className="text-muted-foreground">Último movimiento:</span>{" "}
+            <span className="text-muted-foreground">Último movimiento:</span>{' '}
             {relativeDays(lastMovement)}
           </p>
         </div>
@@ -501,7 +498,7 @@ function CaseCard({
         ) : null}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function ControlSelect({
@@ -511,11 +508,11 @@ function ControlSelect({
   ariaLabel,
   className,
 }: {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[][];
-  ariaLabel: string;
-  className?: string;
+  value: string
+  onChange: (value: string) => void
+  options: string[][]
+  ariaLabel: string
+  className?: string
 }) {
   return (
     <select
@@ -523,7 +520,7 @@ function ControlSelect({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className={
-        className ?? "border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+        className ?? 'border-input bg-background h-9 w-full rounded-md border px-3 text-sm'
       }
     >
       {options.map(([optionValue, label]) => (
@@ -532,7 +529,7 @@ function ControlSelect({
         </option>
       ))}
     </select>
-  );
+  )
 }
 
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
@@ -541,13 +538,13 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
       <span className="text-muted-foreground text-xs font-medium">{label}</span>
       {children}
     </label>
-  );
+  )
 }
 
 function caseNatureTabClass(active: boolean) {
   return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
     active
-      ? "border-primary text-primary"
-      : "border-transparent text-muted-foreground hover:text-foreground"
-  }`;
+      ? 'border-primary text-primary'
+      : 'border-transparent text-muted-foreground hover:text-foreground'
+  }`
 }

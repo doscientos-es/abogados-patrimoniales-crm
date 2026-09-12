@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
-import { PersistentDocuments } from './persistent-documents'
+import { Documents } from './documents'
 
 const moveDocument = vi.fn().mockResolvedValue({ error: null })
 const moveFolder = vi.fn().mockResolvedValue({ error: null })
@@ -115,7 +115,7 @@ function renderDocuments() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <PersistentDocuments />
+      <Documents />
     </QueryClientProvider>,
   )
 }
@@ -130,7 +130,7 @@ afterEach(() => {
   archiveDocument.mockClear()
 })
 
-describe('PersistentDocuments', () => {
+describe('Documents', () => {
   it('offers a keyboard-accessible, confirmed alternative to drag and drop', async () => {
     renderDocuments()
     fireEvent.click(
@@ -222,7 +222,7 @@ describe('PersistentDocuments', () => {
       <QueryClientProvider
         client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
       >
-        <PersistentDocuments
+        <Documents
           location={{ caseId: 'case-1', folderId: null }}
           onLocationChange={onLocationChange}
         />
@@ -256,7 +256,7 @@ describe('PersistentDocuments', () => {
       <QueryClientProvider
         client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
       >
-        <PersistentDocuments rootActions={<button type="button">Nuevo expediente</button>} />
+        <Documents rootActions={<button type="button">Nuevo expediente</button>} />
       </QueryClientProvider>,
     )
 

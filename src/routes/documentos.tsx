@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentDocuments } from '@/components/documentos/persistent-documents'
+import { Documents } from '@/components/documentos/documents'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/documentos')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: PersistentDocumentsRoute,
+  component: DocumentsRoute,
 })
 
 function parseDocumentsSearch(search: Record<string, unknown>): DocumentsSearch {
@@ -37,7 +37,7 @@ function parseDocumentsSearch(search: Record<string, unknown>): DocumentsSearch 
   }
 }
 
-function PersistentDocumentsRoute() {
+function DocumentsRoute() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const session = useAuthSession()
@@ -82,7 +82,7 @@ function PersistentDocumentsRoute() {
     !members.isError
 
   return (
-    <PersistentDocuments
+    <Documents
       location={{ caseId: search.case ?? null, folderId: search.folder ?? null }}
       onLocationChange={updateLocation}
       rootActions={

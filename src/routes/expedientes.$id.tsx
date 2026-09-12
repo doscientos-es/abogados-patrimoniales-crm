@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 
 import { PendingPanel } from '@/components/common'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
@@ -8,7 +8,7 @@ import { useMiembrosDespacho } from '@/features/crm'
 import {
   CaseEditForm,
   CaseRelatedForms,
-  PersistentCaseDetail,
+  CaseDetail,
   useActuacionesPersistentes,
   useActualizarExpediente,
   useCrearActuacion,
@@ -32,10 +32,10 @@ export const Route = createFileRoute('/expedientes/$id')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: FichaExpedientePersistente,
+  component: CaseRoute,
 })
 
-function FichaExpedientePersistente() {
+function CaseRoute() {
   const { id } = Route.useParams()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -55,11 +55,11 @@ function FichaExpedientePersistente() {
     enabled: Boolean(firmId),
     queryFn: async () => {
       const supabase = getSupabaseBrowserClient()
-      if (!supabase) throw new Error('Supabase no está configurado.')
+      if (!supabase || !firmId) return []
       const { data, error } = await supabase
         .from('crm_task_title_templates')
         .select('title')
-        .eq('firm_id', firmId!)
+        .eq('firm_id', firmId)
         .eq('archived', false)
         .order('sort_order')
         .order('title')
@@ -112,7 +112,7 @@ function FichaExpedientePersistente() {
   const expediente = caseQuery.data
 
   return (
-    <PersistentCaseDetail
+    <CaseDetail
       expediente={expediente}
       lineas={workstreams.data ?? []}
       actuaciones={activities.data ?? []}

@@ -329,7 +329,7 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-7 pt-2 sm:p-9 sm:pt-3">
-          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+          <form className="space-y-4" onSubmit={submit}>
             <label className="block space-y-1.5" htmlFor="invite-password">
               <span className="text-sm font-medium">Contraseña</span>
               <PasswordInput

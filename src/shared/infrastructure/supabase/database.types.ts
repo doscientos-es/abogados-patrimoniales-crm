@@ -74,7 +74,11 @@ export type Database = {
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
-      crm_note_acknowledgements: Table<NoteAcknowledgementRow, never, never>
+      crm_note_acknowledgements: Table<
+        NoteAcknowledgementRow,
+        { note_id: string; user_id: string },
+        never
+      >
       crm_note_events: Table<NoteEventRow, never, never>
       crm_invoices: Table<InvoiceRow, never, never>
       crm_invoice_lines: Table<InvoiceLineRow, never, never>

@@ -14,6 +14,12 @@ type Job = {
   attempts: number
 }
 
+function bearerToken(req: Request) {
+  const authorization = req.headers.get('Authorization')
+  const token = authorization?.replace(/^Bearer\s+/i, '')
+  return authorization && token ? { authorization, token } : null
+}
+
 function response(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -143,6 +149,8 @@ async function processJob(admin: ReturnType<typeof createClient>, job: Job) {
     .eq('id', job.document_id)
     .single()
   if (!document) throw new Error('Document not found')
+  if (document.firm_id !== job.firm_id)
+    throw new Error('Document does not belong to the sync job firm')
   if (job.operation === 'archive' && document.drive_file_id) {
     await driveRequest(token, `/files/${document.drive_file_id}`, {
       method: 'PATCH',
@@ -221,41 +229,67 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return response({ error: 'Method not allowed' }, 405)
   const url = Deno.env.get('SUPABASE_URL'),
-    key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!url || !key) return response({ error: 'Server configuration error' }, 500)
+    key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+    anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!url || !key || !anonKey) return response({ error: 'Server configuration error' }, 500)
+  const bearer = bearerToken(req)
+  if (!bearer) return response({ error: 'Unauthorized' }, 401)
+  const caller = createClient(url, anonKey, {
+    global: { headers: { Authorization: bearer.authorization } },
+  })
   const admin = createClient(url, key)
   try {
+    const { data: userData, error: userError } = await caller.auth.getUser(bearer.token)
+    if (userError || !userData.user) return response({ error: 'Unauthorized' }, 401)
+
     const body = (await req.json()) as { jobId?: string }
     if (!body.jobId) return response({ error: 'jobId is required' }, 400)
     const { data: job, error } = await admin
       .from('crm_drive_sync_jobs')
-      .select('*')
+      .select('id, firm_id, document_id, operation, attempts')
       .eq('id', body.jobId)
       .eq('status', 'pending')
       .maybeSingle()
     if (error || !job) return response({ error: 'Job not found or already processed' }, 404)
-    await admin
+
+    const { data: membership } = await admin
+      .from('crm_firm_members')
+      .select('role')
+      .eq('firm_id', job.firm_id)
+      .eq('user_id', userData.user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (!membership) return response({ error: 'Forbidden' }, 403)
+
+    const { data: claimedJob, error: claimError } = await admin
       .from('crm_drive_sync_jobs')
       .update({ status: 'running', attempts: job.attempts + 1 })
       .eq('id', job.id)
+      .eq('status', 'pending')
+      .select('id, firm_id, document_id, operation, attempts')
+      .maybeSingle()
+    if (claimError) return response({ error: 'Could not claim sync job' }, 500)
+    if (!claimedJob) return response({ error: 'Job is already being processed' }, 409)
+
     try {
-      await processJob(admin, job as Job)
+      await processJob(admin, claimedJob as Job)
       await admin
         .from('crm_drive_sync_jobs')
         .update({ status: 'done', processed_at: new Date().toISOString() })
-        .eq('id', job.id)
+        .eq('id', claimedJob.id)
       return response({ ok: true })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Drive sync failed'
       await admin
         .from('crm_drive_sync_jobs')
         .update({ status: 'error', error: message, processed_at: new Date().toISOString() })
-        .eq('id', job.id)
+        .eq('id', claimedJob.id)
       await admin
         .from('crm_case_documents')
         .update({ drive_sync_status: 'error', drive_error: message })
-        .eq('id', job.document_id)
-      return response({ error: message }, 502)
+        .eq('id', claimedJob.document_id)
+        .eq('firm_id', claimedJob.firm_id)
+      return response({ error: 'Drive sync failed' }, 502)
     }
   } catch {
     return response({ error: 'Invalid request' }, 400)

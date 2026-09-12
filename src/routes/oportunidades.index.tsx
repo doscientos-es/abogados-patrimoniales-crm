@@ -39,7 +39,7 @@ import {
   type MiembroDespacho,
   type OportunidadResumen,
 } from '@/features/crm'
-import { PersistentPipelineBoard } from '@/features/crm-presentation'
+import { PipelineBoard } from '@/features/crm-presentation'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/')({
@@ -62,7 +62,7 @@ export const Route = createFileRoute('/oportunidades/')({
       },
     ],
   }),
-  component: PersistentLeadsPage,
+  component: LeadsPage,
 })
 
 /** El alta se realiza en su propia pantalla central: /oportunidades/nueva */
@@ -77,7 +77,7 @@ function NuevaOportunidadBoton() {
   )
 }
 
-function PersistentLeadsPage() {
+function LeadsPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const oportunidades = useOportunidades(membership.data?.firmId)
@@ -416,7 +416,7 @@ function LeadsPersistidos({
         <p className="text-destructive mb-4 text-sm">No se han podido cargar los Leads.</p>
       ) : null}
       {modo === 'kanban' ? (
-        <PersistentPipelineBoard
+        <PipelineBoard
           oportunidades={filtradas}
           contactosPorId={contactosPorId}
           isPending={transition.isPending}

@@ -133,7 +133,7 @@ export function buildCrmMetrics({ opportunities, tasks }: CrmDashboardData, now 
   }
 }
 
-export function PersistentCrmDashboard() {
+export function CrmDashboard() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -337,9 +337,16 @@ function CrmMetric({ label, value, tone }: { label: string; value: number; tone:
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${toneClass}`}>{value}</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${toneClass}`}
+        >
+          {value}
+        </span>
       </div>
-      <ArrowRight className="text-muted-foreground h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
+      <ArrowRight
+        className="text-muted-foreground group-hover:text-primary h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+        aria-hidden="true"
+      />
     </Link>
   )
 }

@@ -7,7 +7,7 @@ import {
   sortTasksForAgenda,
   taskBoardColumn,
   taskStatusForBoardColumn,
-} from './persistent-task-workspace'
+} from './task-workspace'
 
 const task = (overrides: Record<string, unknown> = {}) =>
   ({

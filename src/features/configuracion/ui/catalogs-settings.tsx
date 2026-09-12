@@ -117,6 +117,25 @@ export function CatalogsSettings({ firmId }: { firmId: string }) {
     },
     onError: () => toast.error('No se han podido fusionar las etiquetas.'),
   })
+  if (query.isPending)
+    return (
+      <Card>
+        <CardContent className="text-muted-foreground py-8 text-sm">
+          Cargando catálogos…
+        </CardContent>
+      </Card>
+    )
+  if (query.isError)
+    return (
+      <Card>
+        <CardContent className="space-y-3 py-8 text-sm">
+          <p className="font-medium">No se han podido cargar los catálogos.</p>
+          <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
+    )
   const data = query.data ?? { labels: [], templates: [], areas: [] }
   return (
     <div className="space-y-4">
@@ -167,6 +186,7 @@ export function CatalogsSettings({ firmId }: { firmId: string }) {
           mergeTarget={mergeTarget}
           onMergeTargetChange={setMergeTarget}
           onMerge={(row) => merge.mutate(row.id)}
+          busy={toggle.isPending || merge.isPending}
         />
       </CatalogSection>
       <CatalogSection
@@ -199,6 +219,7 @@ export function CatalogsSettings({ firmId }: { firmId: string }) {
           onToggle={(row) =>
             toggle.mutate({ table: 'crm_task_title_templates', id: row.id, archived: row.archived })
           }
+          busy={toggle.isPending}
         />
       </CatalogSection>
       <CatalogSection
@@ -250,6 +271,7 @@ export function CatalogsSettings({ firmId }: { firmId: string }) {
           onToggle={(row) =>
             toggle.mutate({ table: 'crm_practice_areas', id: row.id, archived: row.archived })
           }
+          busy={toggle.isPending}
         />
       </CatalogSection>
     </div>
@@ -287,6 +309,7 @@ function CatalogList({
   mergeTarget,
   onMergeTargetChange,
   onMerge,
+  busy = false,
 }: {
   rows: CatalogRow[]
   labelKey: 'name' | 'title'
@@ -294,6 +317,7 @@ function CatalogList({
   mergeTarget?: string
   onMergeTargetChange?: (value: string) => void
   onMerge?: (row: CatalogRow) => void
+  busy?: boolean
 }) {
   return (
     <div className="divide-y rounded-md border">
@@ -306,6 +330,7 @@ function CatalogList({
             <Button
               size="sm"
               variant="ghost"
+              disabled={busy}
               onClick={() => onToggle(row)}
               aria-label={`${row.archived ? 'Restaurar' : 'Archivar'} ${row[labelKey] ?? ''}`}
             >
@@ -331,7 +356,7 @@ function CatalogList({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={!mergeTarget || mergeTarget === row.id}
+                  disabled={busy || !mergeTarget || mergeTarget === row.id}
                   onClick={() => onMerge(row)}
                 >
                   Fusionar

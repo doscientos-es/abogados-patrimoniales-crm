@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentFacturacionPage } from '@/features/facturacion'
+import { FacturacionPage } from '@/features/facturacion'
 
 export const Route = createFileRoute('/facturacion')({
   head: () => ({
@@ -17,5 +17,5 @@ export const Route = createFileRoute('/facturacion')({
       },
     ],
   }),
-  component: PersistentFacturacionPage,
+  component: FacturacionPage,
 })

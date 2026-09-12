@@ -37,7 +37,7 @@ const comercial = [
 ] as const
 
 const operativa = [
-  { title: 'Control de expedientes', url: '/expedientes', icon: Briefcase },
+  { title: 'Expedientes', url: '/expedientes', icon: Briefcase },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
 ] as const
 
@@ -65,6 +65,7 @@ export function AppSidebar({ open }: { open: boolean }) {
     <aside
       aria-hidden={!open}
       aria-label="Navegación principal"
+      inert={!open || undefined}
       className={cn(
         'bg-sidebar text-sidebar-foreground relative flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear',
         open ? 'w-(--sidebar-width)' : 'w-0 border-r-0',

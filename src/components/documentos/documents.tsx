@@ -82,7 +82,7 @@ function isImageDocument(document: CaseDocumentRow) {
   )
 }
 
-type PersistentDocumentsProps = {
+type DocumentsProps = {
   location?: DocumentLocation
   onLocationChange?: (location: DocumentLocation) => void
   rootActions?: ReactNode
@@ -123,11 +123,7 @@ async function queueDriveSync(
   if (data?.id) void client.functions.invoke('sync-drive-document', { body: { jobId: data.id } })
 }
 
-export function PersistentDocuments({
-  location,
-  onLocationChange,
-  rootActions,
-}: PersistentDocumentsProps) {
+export function Documents({ location, onLocationChange, rootActions }: DocumentsProps) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -155,7 +151,9 @@ export function PersistentDocuments({
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const [view, setView] = useState<DocumentView>('grid')
-  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
+  const [previewUrls, setPreviewUrls] = useState<
+    Record<string, { url: string; storagePath: string }>
+  >({})
   const { caseId, folderId } = location ?? internalLocation
   const setLocation = (nextLocation: DocumentLocation) => {
     if (onLocationChange) onLocationChange(nextLocation)
@@ -198,19 +196,31 @@ export function PersistentDocuments({
   useEffect(() => {
     let cancelled = false
     const imageDocuments = documentRows.filter(isImageDocument)
-    if (!imageDocuments.length) {
-      setPreviewUrls({})
-      return () => { cancelled = true }
-    }
+    if (!imageDocuments.length)
+      return () => {
+        cancelled = true
+      }
     const c = getSupabaseBrowserClient()
     if (!c) return undefined
-    void Promise.all(imageDocuments.map(async (document) => {
-      const { data } = await c.storage.from('case-documents').createSignedUrl(document.storage_path, 300)
-      return [document.id, data?.signedUrl] as const
-    })).then((entries) => {
-      if (!cancelled) setPreviewUrls(Object.fromEntries(entries.filter((entry): entry is [string, string] => Boolean(entry[1]))))
+    void Promise.all(
+      imageDocuments.map(async (document) => {
+        const { data } = await c.storage
+          .from('case-documents')
+          .createSignedUrl(document.storage_path, 300)
+        return [
+          document.id,
+          data?.signedUrl ? { url: data.signedUrl, storagePath: document.storage_path } : undefined,
+        ] as const
+      }),
+    ).then((entries) => {
+      if (cancelled) return
+      const next: Record<string, { url: string; storagePath: string }> = {}
+      for (const [id, preview] of entries) if (preview) next[id] = preview
+      setPreviewUrls(next)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [documentRows])
   const documentCountByCase = useMemo(() => {
     const counts = new Map<string, number>()
@@ -956,9 +966,16 @@ export function PersistentDocuments({
                             className="text-muted-foreground h-5 w-5 shrink-0"
                             aria-hidden="true"
                           />
-                          <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}>
-                            {isImageDocument(doc) && previewUrls[doc.id] ? (
-                              <img src={previewUrls[doc.id]} alt={`Vista previa de ${doc.original_name}`} className="h-full w-full object-cover" />
+                          <div
+                            className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
+                          >
+                            {isImageDocument(doc) &&
+                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                              <img
+                                src={previewUrls[doc.id]?.url ?? ''}
+                                alt={`Vista previa de ${doc.original_name}`}
+                                className="h-full w-full object-cover"
+                              />
                             ) : (
                               <visual.Icon className="h-6 w-6" aria-hidden="true" />
                             )}
@@ -1054,9 +1071,16 @@ export function PersistentDocuments({
                     >
                       <GripVertical className="h-5 w-5" aria-hidden="true" />
                     </button>
-                    <span className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}>
-                      {isImageDocument(doc) && previewUrls[doc.id] ? (
-                        <img src={previewUrls[doc.id]} alt="" className="h-full w-full object-cover" />
+                    <span
+                      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}
+                    >
+                      {isImageDocument(doc) &&
+                      previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                        <img
+                          src={previewUrls[doc.id]?.url ?? ''}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <visual.Icon className="h-5 w-5" aria-hidden="true" />
                       )}
@@ -1416,7 +1440,13 @@ function DocumentActions({
   const canUseContent = document.content_status === 'validated'
   return (
     <div className="border-border/70 bg-muted/20 flex flex-wrap items-center gap-1.5 rounded-xl border p-1.5">
-      <Button size="sm" variant="secondary" className="h-9 flex-1 justify-center" onClick={() => onMove(document)} disabled={moving}>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="h-9 flex-1 justify-center"
+        onClick={() => onMove(document)}
+        disabled={moving}
+      >
         <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
       </Button>
       <label
@@ -1441,7 +1471,8 @@ function DocumentActions({
         aria-label={`Descargar ${document.original_name}`}
         title="Descargar"
       >
-        <Download className="h-4 w-4" aria-hidden="true" /> <span className="sr-only">Descargar</span>
+        <Download className="h-4 w-4" aria-hidden="true" />{' '}
+        <span className="sr-only">Descargar</span>
       </Button>
       <Button
         size="sm"

@@ -219,7 +219,7 @@ export function canMoveTaskInBoard(task: TareaPersistida, target: TaskBoardColum
   )
 }
 
-export function PersistentTaskWorkspace() {
+export function TaskWorkspace() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -572,7 +572,9 @@ function TaskCalendar({
               </div>
               <div>
                 <h2 className="text-base font-semibold capitalize">{weekRange}</h2>
-                <p className="text-muted-foreground text-xs">Vista semanal · usa los filtros generales de Tareas</p>
+                <p className="text-muted-foreground text-xs">
+                  Vista semanal · usa los filtros generales de Tareas
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -670,7 +672,15 @@ function TaskCalendar({
   )
 }
 
-function CalendarDayColumn({ day, tasks, onEdit }: { day: Date; tasks: TareaPersistida[]; onEdit: (task: TareaPersistida) => void }) {
+function CalendarDayColumn({
+  day,
+  tasks,
+  onEdit,
+}: {
+  day: Date
+  tasks: TareaPersistida[]
+  onEdit: (task: TareaPersistida) => void
+}) {
   const layouts = layoutCalendarEvents(tasks)
   const height = AGENDA_HOURS.length * CALENDAR_HOUR_HEIGHT
   return (
@@ -1059,18 +1069,94 @@ function TaskCard({
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Editar tarea</DialogTitle>
-              <DialogDescription>Actualiza la información operativa de esta tarea.</DialogDescription>
+              <DialogDescription>
+                Actualiza la información operativa de esta tarea.
+              </DialogDescription>
             </DialogHeader>
             <form className="space-y-4" onSubmit={(event) => void submitEdit(event)}>
-              <div className="space-y-1.5"><Label htmlFor={`edit-title-${task.id}`}>Título</Label><Input id={`edit-title-${task.id}`} value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required maxLength={240} /></div>
-              <div className="space-y-1.5"><Label htmlFor={`edit-description-${task.id}`}>Descripción</Label><Textarea id={`edit-description-${task.id}`} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} rows={5} placeholder="Añade contexto, instrucciones o próximos pasos" /></div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5"><Label htmlFor={`edit-priority-${task.id}`}>Prioridad</Label><select id={`edit-priority-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editPriority} onChange={(event) => setEditPriority(event.target.value as TareaPersistida['prioridad'])}><option>Baja</option><option>Media</option><option>Alta</option></select></div>
-                <div className="space-y-1.5"><Label htmlFor={`edit-due-${task.id}`}>Vencimiento</Label><Input id={`edit-due-${task.id}`} type="datetime-local" value={editDue} onChange={(event) => setEditDue(event.target.value)} /></div>
-                <div className="space-y-1.5"><Label htmlFor={`edit-status-${task.id}`}>Estado / columna</Label><select id={`edit-status-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editStatus} onChange={(event) => setEditStatus(event.target.value as TareaPersistida['estado'])}><option>Pendiente</option><option>En curso</option><option>Completada</option><option>Cancelada</option></select></div>
-                <div className="space-y-1.5"><Label htmlFor={`edit-assignee-${task.id}`}>Responsable</Label><select id={`edit-assignee-${task.id}`} className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={editAssignee} onChange={(event) => setEditAssignee(event.target.value)}><option value="">Sin responsable</option>{memberOptions.map((member) => <option key={member.id} value={member.id}>{member.nombre}</option>)}</select></div>
+              <div className="space-y-1.5">
+                <Label htmlFor={`edit-title-${task.id}`}>Título</Label>
+                <Input
+                  id={`edit-title-${task.id}`}
+                  value={editTitle}
+                  onChange={(event) => setEditTitle(event.target.value)}
+                  required
+                  maxLength={240}
+                />
               </div>
-              <DialogFooter><Button type="submit" disabled={editBusy}>{editBusy ? 'Guardando…' : 'Guardar cambios'}</Button></DialogFooter>
+              <div className="space-y-1.5">
+                <Label htmlFor={`edit-description-${task.id}`}>Descripción</Label>
+                <Textarea
+                  id={`edit-description-${task.id}`}
+                  value={editDescription}
+                  onChange={(event) => setEditDescription(event.target.value)}
+                  rows={5}
+                  placeholder="Añade contexto, instrucciones o próximos pasos"
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`edit-priority-${task.id}`}>Prioridad</Label>
+                  <select
+                    id={`edit-priority-${task.id}`}
+                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                    value={editPriority}
+                    onChange={(event) =>
+                      setEditPriority(event.target.value as TareaPersistida['prioridad'])
+                    }
+                  >
+                    <option>Baja</option>
+                    <option>Media</option>
+                    <option>Alta</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`edit-due-${task.id}`}>Vencimiento</Label>
+                  <Input
+                    id={`edit-due-${task.id}`}
+                    type="datetime-local"
+                    value={editDue}
+                    onChange={(event) => setEditDue(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`edit-status-${task.id}`}>Estado / columna</Label>
+                  <select
+                    id={`edit-status-${task.id}`}
+                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                    value={editStatus}
+                    onChange={(event) =>
+                      setEditStatus(event.target.value as TareaPersistida['estado'])
+                    }
+                  >
+                    <option>Pendiente</option>
+                    <option>En curso</option>
+                    <option>Completada</option>
+                    <option>Cancelada</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`edit-assignee-${task.id}`}>Responsable</Label>
+                  <select
+                    id={`edit-assignee-${task.id}`}
+                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                    value={editAssignee}
+                    onChange={(event) => setEditAssignee(event.target.value)}
+                  >
+                    <option value="">Sin responsable</option>
+                    {memberOptions.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={editBusy}>
+                  {editBusy ? 'Guardando…' : 'Guardar cambios'}
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>

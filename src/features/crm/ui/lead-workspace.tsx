@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   useActualizarDetallesOportunidad,
   useEventosOportunidad,
+  useMiembrosDespacho,
   useRegistrarComunicacionOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
@@ -38,6 +39,7 @@ export function LeadWorkspace({
   firmId: string
 }) {
   const events = useEventosOportunidad(firmId, opportunity.id)
+  const members = useMiembrosDespacho(firmId)
   const tasks = useTareasPersistentes(firmId)
   const notes = useNotasRemotas(firmId)
   const onboardings = useOnboardings(firmId)
@@ -87,6 +89,7 @@ export function LeadWorkspace({
     : []
   const relatedTasks = (tasks.data ?? []).filter((task) => task.oportunidadId === opportunity.id)
   const relatedNotes = (notes.data ?? []).filter((note) => note.opportunity_id === opportunity.id)
+  const memberNames = new Map((members.data ?? []).map((member) => [member.id, member.nombre]))
   const linkedOnboarding = (onboardings.data ?? []).find(
     (item) => item.oportunidadId === opportunity.id,
   )
@@ -376,7 +379,9 @@ export function LeadWorkspace({
               />
               <datalist id="lead-task-title-suggestions">
                 {(taskTitles.data ?? []).map((title) => (
-                  <option key={title} value={title} />
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
                 ))}
               </datalist>
             </div>
@@ -490,7 +495,12 @@ export function LeadWorkspace({
             {(events.data ?? []).map((item) => (
               <article key={item.id} className="text-sm">
                 <p className="font-medium">{eventLabel(item.tipo, item.datos)}</p>
-                <p className="text-muted-foreground text-xs">{dateText(item.creadoEn)}</p>
+                <p className="text-muted-foreground text-xs">
+                  {dateText(item.creadoEn)} ·{' '}
+                  {item.autorId
+                    ? (memberNames.get(item.autorId) ?? 'Usuario del despacho')
+                    : 'Sistema'}
+                </p>
               </article>
             ))}
             {!events.data?.length && !events.isPending ? (

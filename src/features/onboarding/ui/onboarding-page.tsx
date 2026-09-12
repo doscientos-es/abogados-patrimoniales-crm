@@ -62,7 +62,7 @@ const ONBOARDING_STAGE_CLASS: Record<FaseOnboarding, string> = {
   completed: 'fase-verde',
 }
 
-export function PersistentOnboardingPage() {
+export function OnboardingPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -121,8 +121,12 @@ export function PersistentOnboardingPage() {
         meta={`${items.length} onboarding${items.length === 1 ? '' : 's'} · ${activos} activo${activos === 1 ? '' : 's'}`}
         actions={
           <>
-            <Link to="/presupuestos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Ver presupuestos
+            <Link
+              to="/oportunidades"
+              search={{ vista: 'todas', abrir: '' }}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Ver Leads aceptados
             </Link>
             <CreateOnboardingDialog
               oportunidades={(oportunidades.data ?? []).filter((item) => item.fase === 'won')}

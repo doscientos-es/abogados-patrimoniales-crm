@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
 import {
   Activity,
   AlertTriangle,
@@ -8,64 +8,67 @@ import {
   FileText,
   History,
   Layers3,
+  MessageSquareText,
   Pencil,
   ShieldAlert,
   UsersRound,
-} from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import type { MiembroDespacho } from "@/features/crm";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import type { MiembroDespacho } from '@/features/crm'
 import {
   caseAlerts,
   caseDependency,
   caseLastMovement,
   relativeDays,
-} from "@/features/expedientes/application/case-control";
+} from '@/features/expedientes/application/case-control'
 import type {
   ActuacionPersistida,
   EventoExpediente,
   ExpedientePersistido,
   LineaPersistida,
   ParticipantePersistido,
-} from "@/features/expedientes/application/case-types";
-import type { NotaRemota } from "@/features/notas";
-import type { CrearTareaInput, TareaPersistida } from "@/features/tareas";
-import type { CaseDocumentRow } from "@/shared/infrastructure/supabase";
+} from '@/features/expedientes/application/case-types'
+import type { NotaRemota } from '@/features/notas'
+import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
+import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
 type CaseDetailTab =
-  | "summary"
-  | "workstreams"
-  | "participants"
-  | "activities"
-  | "documents"
-  | "tasks"
-  | "deadlines"
-  | "history";
+  | 'summary'
+  | 'workstreams'
+  | 'participants'
+  | 'activities'
+  | 'documents'
+  | 'communications'
+  | 'tasks'
+  | 'deadlines'
+  | 'history'
 
 const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activity }> = [
-  { id: "summary", label: "Resumen", Icon: Activity },
-  { id: "workstreams", label: "Líneas de trabajo", Icon: Layers3 },
-  { id: "participants", label: "Intervinientes", Icon: UsersRound },
-  { id: "activities", label: "Actuaciones", Icon: Activity },
-  { id: "documents", label: "Documentos", Icon: FileText },
-  { id: "tasks", label: "Tareas", Icon: CheckSquare2 },
-  { id: "deadlines", label: "Fechas y plazos", Icon: CalendarClock },
-  { id: "history", label: "Histórico", Icon: History },
-];
+  { id: 'summary', label: 'Resumen', Icon: Activity },
+  { id: 'workstreams', label: 'Líneas de trabajo', Icon: Layers3 },
+  { id: 'participants', label: 'Intervinientes', Icon: UsersRound },
+  { id: 'activities', label: 'Actuaciones', Icon: Activity },
+  { id: 'documents', label: 'Documentos', Icon: FileText },
+  { id: 'communications', label: 'Comunicaciones', Icon: MessageSquareText },
+  { id: 'tasks', label: 'Tareas', Icon: CheckSquare2 },
+  { id: 'deadlines', label: 'Fechas y plazos', Icon: CalendarClock },
+  { id: 'history', label: 'Histórico', Icon: History },
+]
 
-export function PersistentCaseDetail({
+export function CaseDetail({
   expediente: item,
   lineas,
   actuaciones,
@@ -82,46 +85,48 @@ export function PersistentCaseDetail({
   notas = [],
   taskTitleTemplates = [],
 }: {
-  expediente: ExpedientePersistido;
-  lineas: LineaPersistida[];
-  actuaciones: ActuacionPersistida[];
-  participantes: ParticipantePersistido[];
-  eventos: EventoExpediente[];
-  documentos: CaseDocumentRow[];
-  tareas: TareaPersistida[];
-  miembros: MiembroDespacho[];
-  clienteNombre: string;
-  taskPending: boolean;
-  onCreateTask: (input: CrearTareaInput) => Promise<unknown>;
-  editor: ReactNode;
-  relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode };
-  notas?: NotaRemota[];
-  taskTitleTemplates?: string[];
+  expediente: ExpedientePersistido
+  lineas: LineaPersistida[]
+  actuaciones: ActuacionPersistida[]
+  participantes: ParticipantePersistido[]
+  eventos: EventoExpediente[]
+  documentos: CaseDocumentRow[]
+  tareas: TareaPersistida[]
+  miembros: MiembroDespacho[]
+  clienteNombre: string
+  taskPending: boolean
+  onCreateTask: (input: CrearTareaInput) => Promise<unknown>
+  editor: ReactNode
+  relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode }
+  notas?: NotaRemota[]
+  taskTitleTemplates?: string[]
 }) {
-  const [activeTab, setActiveTab] = useState<CaseDetailTab>("summary");
-  const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]));
-  const caseTasks = tareas.filter((task) => task.expedienteId === item.id);
-  const openTasks = caseTasks.filter((task) => !["Completada", "Cancelada"].includes(task.estado));
-  const deadlines = caseTasks.filter((task) => task.tipo === "Plazo" || task.venceEn);
-  const alerts = caseAlerts(item, tareas, actuaciones);
-  const lastMovement = caseLastMovement(item, actuaciones);
+  const [activeTab, setActiveTab] = useState<CaseDetailTab>('summary')
+  const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
+  const caseTasks = tareas.filter((task) => task.expedienteId === item.id)
+  const openTasks = caseTasks.filter((task) => !['Completada', 'Cancelada'].includes(task.estado))
+  const deadlines = caseTasks.filter((task) => task.tipo === 'Plazo' || task.venceEn)
+  const alerts = caseAlerts(item, tareas, actuaciones)
+  const lastMovement = caseLastMovement(item, actuaciones)
   const countForTab: Partial<Record<CaseDetailTab, number>> = {
     workstreams: lineas.length,
     participants: participantes.length,
     activities: actuaciones.length,
     documents: documentos.length,
+    communications: notas.filter((note) => note.scope === 'case' && note.case_id === item.id)
+      .length,
     tasks: openTasks.length,
     deadlines: deadlines.length,
-  };
+  }
 
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
-      <Link to="/expedientes" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+      <Link to="/expedientes" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
         <ArrowLeft className="h-4 w-4" /> Volver
       </Link>
       <CaseHeader
         expediente={item}
-        memberName={memberNames.get(item.asignadoId ?? "")}
+        memberName={memberNames.get(item.asignadoId ?? '')}
         lastMovement={lastMovement}
         openTaskCount={openTasks.length}
         alerts={alerts}
@@ -135,8 +140,8 @@ export function PersistentCaseDetail({
         role="tablist"
       >
         {TABS.map(({ id, label, Icon }) => {
-          const count = countForTab[id];
-          const selected = activeTab === id;
+          const count = countForTab[id]
+          const selected = activeTab === id
           return (
             <button
               key={id}
@@ -147,13 +152,13 @@ export function PersistentCaseDetail({
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveTab(id)}
-              className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? "border-primary text-foreground" : "text-muted-foreground hover:text-foreground border-transparent"}`}
+              className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent'}`}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               {label}
               {count !== undefined ? <span className="text-xs tabular-nums">{count}</span> : null}
             </button>
-          );
+          )
         })}
       </div>
 
@@ -162,18 +167,18 @@ export function PersistentCaseDetail({
         role="tabpanel"
         aria-labelledby={`case-detail-tab-${activeTab}`}
       >
-        {activeTab === "summary" ? (
+        {activeTab === 'summary' ? (
           <CaseSummary
             expediente={item}
             lastMovement={lastMovement}
-            memberName={memberNames.get(item.asignadoId ?? "")}
+            memberName={memberNames.get(item.asignadoId ?? '')}
             clienteNombre={clienteNombre}
             tareas={openTasks}
             actuaciones={actuaciones}
             documentos={documentos}
           />
         ) : null}
-        {activeTab === "workstreams" ? (
+        {activeTab === 'workstreams' ? (
           <WorkstreamsSection
             lineas={lineas}
             miembros={miembros}
@@ -181,7 +186,7 @@ export function PersistentCaseDetail({
             createForm={relatedForms.workstream}
           />
         ) : null}
-        {activeTab === "participants" ? (
+        {activeTab === 'participants' ? (
           <DetailSection
             title="Intervinientes"
             subtitle="Personas y entidades vinculadas a este expediente."
@@ -197,7 +202,7 @@ export function PersistentCaseDetail({
             {relatedForms.participant}
           </DetailSection>
         ) : null}
-        {activeTab === "activities" ? (
+        {activeTab === 'activities' ? (
           <DetailSection
             title="Actuaciones"
             subtitle="Registro cronológico de la actividad profesional realizada."
@@ -207,17 +212,22 @@ export function PersistentCaseDetail({
                 <ActivityCard
                   key={activity.id}
                   activity={activity}
-                  memberName={memberNames.get(activity.asignadoId ?? "")}
+                  memberName={memberNames.get(activity.asignadoId ?? '')}
                 />
               ))}
             </div>
             {!actuaciones.length ? <EmptyState message="No hay actuaciones registradas." /> : null}
           </DetailSection>
         ) : null}
-        {activeTab === "documents" ? (
+        {activeTab === 'documents' ? (
           <DocumentsSection documents={documentos} expedienteId={item.id} />
         ) : null}
-        {activeTab === "tasks" ? (
+        {activeTab === 'communications' ? (
+          <CaseCommunications
+            notes={notas.filter((note) => note.scope === 'case' && note.case_id === item.id)}
+          />
+        ) : null}
+        {activeTab === 'tasks' ? (
           <TasksSection
             tasks={caseTasks}
             expediente={item}
@@ -226,11 +236,13 @@ export function PersistentCaseDetail({
             titleTemplates={taskTitleTemplates}
           />
         ) : null}
-        {activeTab === "deadlines" ? <DeadlinesSection tasks={deadlines} /> : null}
-        {activeTab === "history" ? <HistorySection events={eventos} /> : null}
+        {activeTab === 'deadlines' ? <DeadlinesSection tasks={deadlines} /> : null}
+        {activeTab === 'history' ? (
+          <HistorySection events={eventos} memberNames={memberNames} />
+        ) : null}
       </section>
     </main>
-  );
+  )
 }
 
 function CaseHeader({
@@ -243,18 +255,18 @@ function CaseHeader({
   activityForm,
   notas,
 }: {
-  expediente: ExpedientePersistido;
-  memberName: string | undefined;
-  lastMovement: string;
-  openTaskCount: number;
-  alerts: string[];
-  editor: ReactNode;
-  activityForm: ReactNode;
-  notas: NotaRemota[];
+  expediente: ExpedientePersistido
+  memberName: string | undefined
+  lastMovement: string
+  openTaskCount: number
+  alerts: string[]
+  editor: ReactNode
+  activityForm: ReactNode
+  notas: NotaRemota[]
 }) {
   const caseNotes = notas.filter(
-    (note) => note.scope === "case" && note.case_id === expediente.id && note.status === "active",
-  );
+    (note) => note.scope === 'case' && note.case_id === expediente.id && note.status === 'active',
+  )
   return (
     <>
       <Card className="border-border/80 shadow-sm">
@@ -265,18 +277,18 @@ function CaseHeader({
                 {expediente.referencia} · {expediente.titulo}
               </h1>
               <p className="text-muted-foreground text-sm">
-                {expediente.naturaleza} · {expediente.area || "Sin área"} ·{" "}
-                {expediente.tipoAsunto || "Sin tipo de asunto"}
+                {expediente.naturaleza} · {expediente.area || 'Sin área'} ·{' '}
+                {expediente.tipoAsunto || 'Sin tipo de asunto'}
               </p>
               <p className="text-muted-foreground text-xs">
-                {alerts.some((alert) => alert.startsWith("Sin actuaciones"))
-                  ? "Situación: no consta ninguna actuación registrada"
+                {alerts.some((alert) => alert.startsWith('Sin actuaciones'))
+                  ? 'Situación: no consta ninguna actuación registrada'
                   : `Situación: última actuación ${relativeDays(lastMovement)}`}
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <Badge variant="secondary">CASEWORK</Badge>
                 <Badge variant="outline">{expediente.naturaleza}</Badge>
-                <Badge variant={expediente.prioridad === "Alta" ? "destructive" : "outline"}>
+                <Badge variant={expediente.prioridad === 'Alta' ? 'destructive' : 'outline'}>
                   {expediente.prioridad}
                 </Badge>
               </div>
@@ -294,19 +306,19 @@ function CaseHeader({
           </div>
           <div className="bg-muted/35 space-y-2 rounded-md border p-3 text-xs sm:p-4">
             <p className="text-foreground">
-              Fase operativa: <strong>{expediente.fase}</strong> · Estado:{" "}
-              <strong>{expediente.estadoGeneral}</strong> · Depende de:{" "}
+              Fase operativa: <strong>{expediente.fase}</strong> · Estado:{' '}
+              <strong>{expediente.estadoGeneral}</strong> · Depende de:{' '}
               <strong>{caseDependency(expediente.estadoOperativo)}</strong>
             </p>
             <p className="text-muted-foreground">
-              Responsable:{" "}
-              <strong className="text-foreground">{memberName ?? "Sin asignar"}</strong> · Último
+              Responsable:{' '}
+              <strong className="text-foreground">{memberName ?? 'Sin asignar'}</strong> · Último
               movimiento: <strong className="text-foreground">{relativeDays(lastMovement)}</strong>
             </p>
             <p className="text-muted-foreground">
-              Próxima acción:{" "}
+              Próxima acción:{' '}
               <strong className="text-foreground">
-                {expediente.proximaAccion || "Sin siguiente acción definida"}
+                {expediente.proximaAccion || 'Sin siguiente acción definida'}
               </strong>
             </p>
             <div className="border-destructive/35 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2">
@@ -317,12 +329,12 @@ function CaseHeader({
                 />
                 <span>
                   <strong className="text-destructive block text-[11px] uppercase">
-                    {expediente.proximaAccion ? "Siguiente acción" : "Sin siguiente acción"}
+                    {expediente.proximaAccion ? 'Siguiente acción' : 'Sin siguiente acción'}
                   </strong>
                   <span className="text-muted-foreground">
                     {openTaskCount
-                      ? `${openTaskCount} tarea${openTaskCount === 1 ? "" : "s"} abierta${openTaskCount === 1 ? "" : "s"} vinculada${openTaskCount === 1 ? "" : "s"}.`
-                      : "¿Qué hay que hacer ahora para que este asunto avance?"}
+                      ? `${openTaskCount} tarea${openTaskCount === 1 ? '' : 's'} abierta${openTaskCount === 1 ? '' : 's'} vinculada${openTaskCount === 1 ? '' : 's'}.`
+                      : '¿Qué hay que hacer ahora para que este asunto avance?'}
                   </span>
                 </span>
               </div>
@@ -343,11 +355,11 @@ function CaseHeader({
       </Card>
       <CaseNotes notes={caseNotes} />
     </>
-  );
+  )
 }
 
 function CaseNotes({ notes }: { notes: NotaRemota[] }) {
-  if (!notes.length) return null;
+  if (!notes.length) return null
   return (
     <section
       aria-label="Notas internas del expediente"
@@ -358,7 +370,7 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
           <ShieldAlert className="text-destructive h-4 w-4" aria-hidden="true" />
           Notas internas del expediente a tener en cuenta ({notes.length})
         </h2>
-        <Link to="/notas" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+        <Link to="/notas" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           Abrir notas
         </Link>
       </header>
@@ -372,10 +384,10 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
               <div>
                 <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
                   {note.critical
-                    ? "Nota del expediente · advertencia crítica"
-                    : "Nota del expediente"}
+                    ? 'Nota del expediente · advertencia crítica'
+                    : 'Nota del expediente'}
                 </p>
-                <p className="mt-1 text-sm font-semibold">{note.title || "Nota interna"}</p>
+                <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
               </div>
               <div className="flex gap-1.5">
                 {note.requires_acknowledgement ? (
@@ -386,14 +398,54 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
             </div>
             <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
             <p className="text-muted-foreground mt-2 text-xs">
-              {note.actorNames[note.created_by ?? ""] ?? "Sistema"} ·{" "}
+              {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} ·{' '}
               {formatDate(note.created_at, true)}
             </p>
           </article>
         ))}
       </div>
     </section>
-  );
+  )
+}
+
+function CaseCommunications({ notes }: { notes: NotaRemota[] }) {
+  return (
+    <DetailSection
+      title="Comunicaciones"
+      subtitle="Conversaciones y notas internas vinculadas a este expediente."
+    >
+      <div className="flex justify-end">
+        <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          Abrir bandeja de conversaciones
+        </Link>
+      </div>
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          {notes.map((note) => (
+            <article key={note.id} className="bg-muted/30 rounded-xl border p-3">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="text-sm font-semibold">
+                  {note.actorNames[note.created_by ?? ''] ?? 'Miembro del despacho'}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {formatDate(note.created_at, true)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm whitespace-pre-wrap">{note.content}</p>
+              {note.requires_acknowledgement ? (
+                <Badge className="mt-2" variant="outline">
+                  Requiere confirmación de lectura
+                </Badge>
+              ) : null}
+            </article>
+          ))}
+          {!notes.length ? (
+            <EmptyState message="Este expediente todavía no tiene comunicaciones internas." />
+          ) : null}
+        </CardContent>
+      </Card>
+    </DetailSection>
+  )
 }
 
 function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compact?: boolean }) {
@@ -402,11 +454,11 @@ function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compac
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant={compact ? "default" : "outline"}
-          size={compact ? "sm" : "default"}
+          variant={compact ? 'default' : 'outline'}
+          size={compact ? 'sm' : 'default'}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
-          {compact ? "Definir siguiente acción" : "Editar expediente"}
+          {compact ? 'Definir siguiente acción' : 'Editar expediente'}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto">
@@ -416,7 +468,7 @@ function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compac
         {editor}
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 function CaseSummary({
@@ -428,13 +480,13 @@ function CaseSummary({
   actuaciones,
   documentos,
 }: {
-  expediente: ExpedientePersistido;
-  lastMovement: string;
-  memberName: string | undefined;
-  clienteNombre: string;
-  tareas: TareaPersistida[];
-  actuaciones: ActuacionPersistida[];
-  documentos: CaseDocumentRow[];
+  expediente: ExpedientePersistido
+  lastMovement: string
+  memberName: string | undefined
+  clienteNombre: string
+  tareas: TareaPersistida[]
+  actuaciones: ActuacionPersistida[]
+  documentos: CaseDocumentRow[]
 }) {
   return (
     <div className="space-y-4">
@@ -445,7 +497,7 @@ function CaseSummary({
           </CardHeader>
           <CardContent className="text-muted-foreground text-sm leading-6">
             {expediente.dondeEstamos ||
-              "Actualiza la situación y el siguiente paso para orientar al equipo."}
+              'Actualiza la situación y el siguiente paso para orientar al equipo.'}
           </CardContent>
         </Card>
         <Card>
@@ -453,7 +505,7 @@ function CaseSummary({
             <CardTitle className="text-base">Próxima acción</CardTitle>
           </CardHeader>
           <CardContent className="text-sm font-medium">
-            {expediente.proximaAccion || "Sin acción principal"}
+            {expediente.proximaAccion || 'Sin acción principal'}
           </CardContent>
         </Card>
       </div>
@@ -465,12 +517,12 @@ function CaseSummary({
           <CardContent>
             <dl className="grid gap-4 sm:grid-cols-2">
               <Summary label="Cliente" value={clienteNombre} />
-              <Summary label="Área" value={expediente.area || "Sin área"} />
-              <Summary label="Tipo de asunto" value={expediente.tipoAsunto || "Sin definir"} />
+              <Summary label="Área" value={expediente.area || 'Sin área'} />
+              <Summary label="Tipo de asunto" value={expediente.tipoAsunto || 'Sin definir'} />
               <Summary label="Naturaleza" value={expediente.naturaleza} />
               <Summary label="Apertura" value={formatDate(expediente.fechaApertura)} />
               <Summary label="Último movimiento" value={formatDate(lastMovement)} />
-              <Summary label="Responsable" value={memberName ?? "Sin asignar"} />
+              <Summary label="Responsable" value={memberName ?? 'Sin asignar'} />
               <Summary label="Estado" value={expediente.estadoGeneral} />
             </dl>
           </CardContent>
@@ -488,7 +540,7 @@ function CaseSummary({
         </Card>
       </div>
     </div>
-  );
+  )
 }
 
 function DetailSection({
@@ -497,10 +549,10 @@ function DetailSection({
   actions,
   children,
 }: {
-  title: string;
-  subtitle: string;
-  actions?: ReactNode;
-  children: ReactNode;
+  title: string
+  subtitle: string
+  actions?: ReactNode
+  children: ReactNode
 }) {
   return (
     <div className="space-y-4">
@@ -513,12 +565,12 @@ function DetailSection({
       </header>
       {children}
     </div>
-  );
+  )
 }
 
-type WorkstreamSituation = "all" | "with-target" | "without-target";
-type WorkstreamOrder = "manual" | "title" | "target";
-type WorkstreamAdditionalFilter = "all" | "root" | "nested";
+type WorkstreamSituation = 'all' | 'with-target' | 'without-target'
+type WorkstreamOrder = 'manual' | 'title' | 'target'
+type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
 
 function WorkstreamsSection({
   lineas,
@@ -526,48 +578,48 @@ function WorkstreamsSection({
   expedienteReferencia,
   createForm,
 }: {
-  lineas: LineaPersistida[];
-  miembros: MiembroDespacho[];
-  expedienteReferencia: string;
-  createForm: ReactNode;
+  lineas: LineaPersistida[]
+  miembros: MiembroDespacho[]
+  expedienteReferencia: string
+  createForm: ReactNode
 }) {
-  const [status, setStatus] = useState("all");
-  const [situation, setSituation] = useState<WorkstreamSituation>("all");
-  const [assignee, setAssignee] = useState("all");
-  const [priority, setPriority] = useState("all");
-  const [additionalFilter, setAdditionalFilter] = useState<WorkstreamAdditionalFilter>("all");
-  const [order, setOrder] = useState<WorkstreamOrder>("manual");
-  const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))];
+  const [status, setStatus] = useState('all')
+  const [situation, setSituation] = useState<WorkstreamSituation>('all')
+  const [assignee, setAssignee] = useState('all')
+  const [priority, setPriority] = useState('all')
+  const [additionalFilter, setAdditionalFilter] = useState<WorkstreamAdditionalFilter>('all')
+  const [order, setOrder] = useState<WorkstreamOrder>('manual')
+  const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))]
   const visible = lineas
-    .filter((line) => status === "all" || line.estado === status)
+    .filter((line) => status === 'all' || line.estado === status)
     .filter(
       (line) =>
-        situation === "all" || (situation === "with-target") === Boolean(line.fechaObjetivo),
+        situation === 'all' || (situation === 'with-target') === Boolean(line.fechaObjetivo),
     )
-    .filter((line) => assignee === "all" || line.asignadoId === assignee)
-    .filter((line) => priority === "all" || line.prioridad === priority)
+    .filter((line) => assignee === 'all' || line.asignadoId === assignee)
+    .filter((line) => priority === 'all' || line.prioridad === priority)
     .filter(
       (line) =>
-        additionalFilter === "all" ||
-        (additionalFilter === "root" ? !line.parentId : Boolean(line.parentId)),
+        additionalFilter === 'all' ||
+        (additionalFilter === 'root' ? !line.parentId : Boolean(line.parentId)),
     )
     .sort((first, second) => {
-      if (order === "title") return first.titulo.localeCompare(second.titulo, "es");
-      if (order === "target")
-        return dateValue(first.fechaObjetivo) - dateValue(second.fechaObjetivo);
-      return first.orden - second.orden;
-    });
-  const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]));
+      if (order === 'title') return first.titulo.localeCompare(second.titulo, 'es')
+      if (order === 'target')
+        return dateValue(first.fechaObjetivo) - dateValue(second.fechaObjetivo)
+      return first.orden - second.orden
+    })
+  const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
   const hasActiveFilters = [status, situation, assignee, priority, additionalFilter].some(
-    (value) => value !== "all",
-  );
+    (value) => value !== 'all',
+  )
   const resetFilters = () => {
-    setStatus("all");
-    setSituation("all");
-    setAssignee("all");
-    setPriority("all");
-    setAdditionalFilter("all");
-  };
+    setStatus('all')
+    setSituation('all')
+    setAssignee('all')
+    setPriority('all')
+    setAdditionalFilter('all')
+  }
 
   return (
     <DetailSection
@@ -636,7 +688,7 @@ function WorkstreamsSection({
           <WorkstreamCard
             key={line.id}
             line={line}
-            memberName={memberNames.get(line.asignadoId ?? "")}
+            memberName={memberNames.get(line.asignadoId ?? '')}
           />
         ))}
       </div>
@@ -651,13 +703,13 @@ function WorkstreamsSection({
           <p className="text-muted-foreground">
             Puedes asignarlos a este expediente ({expedienteReferencia}) o a cualquier otro.
           </p>
-          <Link to="/documentos" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link to="/documentos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
             Gestionar documentos
           </Link>
         </CardContent>
       </Card>
     </DetailSection>
-  );
+  )
 }
 
 function WorkstreamSelect({
@@ -666,10 +718,10 @@ function WorkstreamSelect({
   onChange,
   children,
 }: {
-  ariaLabel: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
+  ariaLabel: string
+  value: string
+  onChange: (value: string) => void
+  children: ReactNode
 }) {
   return (
     <label className="min-w-40 flex-1 sm:flex-none">
@@ -682,15 +734,15 @@ function WorkstreamSelect({
         {children}
       </select>
     </label>
-  );
+  )
 }
 
 function WorkstreamCard({
   line,
   memberName,
 }: {
-  line: LineaPersistida;
-  memberName: string | undefined;
+  line: LineaPersistida
+  memberName: string | undefined
 }) {
   return (
     <Card>
@@ -699,19 +751,19 @@ function WorkstreamCard({
           <div>
             <p className="font-medium">{line.titulo}</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              {line.descripcion || line.tipo || "Sin descripción"}
+              {line.descripcion || line.tipo || 'Sin descripción'}
             </p>
           </div>
           <Badge variant="outline">{line.estado}</Badge>
         </div>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <span>Responsable: {memberName ?? "Sin asignar"}</span>
+          <span>Responsable: {memberName ?? 'Sin asignar'}</span>
           <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
           <span>Prioridad: {line.prioridad}</span>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function ParticipantCard({ participant }: { participant: ParticipantePersistido }) {
@@ -725,15 +777,15 @@ function ParticipantCard({ participant }: { participant: ParticipantePersistido 
         <Badge variant="outline">{participant.confidencialidad}</Badge>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function ActivityCard({
   activity,
   memberName,
 }: {
-  activity: ActuacionPersistida;
-  memberName: string | undefined;
+  activity: ActuacionPersistida
+  memberName: string | undefined
 }) {
   return (
     <Card>
@@ -751,10 +803,10 @@ function ActivityCard({
         </div>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <span>{activity.tipo}</span>
-          <span>Responsable: {memberName ?? "Sin asignar"}</span>
+          <span>Responsable: {memberName ?? 'Sin asignar'}</span>
           {activity.horas ? (
             <span>
-              {activity.horas} h{activity.facturable ? " facturables" : ""}
+              {activity.horas} h{activity.facturable ? ' facturables' : ''}
             </span>
           ) : null}
         </div>
@@ -770,15 +822,15 @@ function ActivityCard({
         ) : null}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function DocumentsSection({
   documents,
   expedienteId,
 }: {
-  documents: CaseDocumentRow[];
-  expedienteId: string;
+  documents: CaseDocumentRow[]
+  expedienteId: string
 }) {
   return (
     <DetailSection title="Documentos" subtitle="Versiones vigentes incorporadas a este expediente.">
@@ -786,7 +838,7 @@ function DocumentsSection({
         <Link
           to="/documentos"
           search={{ case: expedienteId }}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
         >
           Abrir gestor documental
         </Link>
@@ -799,7 +851,7 @@ function DocumentsSection({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{document.original_name}</p>
                 <p className="text-muted-foreground text-xs">
-                  {document.category} · v{document.version} ·{" "}
+                  {document.category} · v{document.version} ·{' '}
                   {formatDate(document.updated_at, true)}
                 </p>
               </div>
@@ -810,7 +862,7 @@ function DocumentsSection({
         </CardContent>
       </Card>
     </DetailSection>
-  );
+  )
 }
 
 function TasksSection({
@@ -820,36 +872,36 @@ function TasksSection({
   onCreate,
   titleTemplates,
 }: {
-  tasks: TareaPersistida[];
-  expediente: ExpedientePersistido;
-  pending: boolean;
-  onCreate: (input: CrearTareaInput) => Promise<unknown>;
-  titleTemplates: string[];
+  tasks: TareaPersistida[]
+  expediente: ExpedientePersistido
+  pending: boolean
+  onCreate: (input: CrearTareaInput) => Promise<unknown>
+  titleTemplates: string[]
 }) {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
     try {
       await onCreate({
         expedienteId: expediente.id,
         oportunidadId: null,
-        tipo: "Tarea",
-        titulo: text(data, "title"),
-        descripcion: "",
-        prioridad: "Media",
-        venceEn: dateTime(text(data, "due")),
+        tipo: 'Tarea',
+        titulo: text(data, 'title'),
+        descripcion: '',
+        prioridad: 'Media',
+        venceEn: dateTime(text(data, 'due')),
         recordarEn: null,
         clasePlazo: null,
         critico: false,
         asignadoId: expediente.asignadoId,
-      });
-      form.reset();
-      toast.success("Tarea vinculada al expediente.");
+      })
+      form.reset()
+      toast.success('Tarea vinculada al expediente.')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo crear la tarea.");
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
     }
-  };
+  }
   return (
     <DetailSection
       title="Tareas"
@@ -882,7 +934,9 @@ function TasksSection({
             />
             <datalist id="case-task-title-templates">
               {titleTemplates.map((title) => (
-                <option key={title} value={title} />
+                <option key={title} value={title}>
+                  {title}
+                </option>
               ))}
             </datalist>
             <Input name="due" aria-label="Fecha prevista" type="date" />
@@ -893,13 +947,13 @@ function TasksSection({
         </CardContent>
       </Card>
     </DetailSection>
-  );
+  )
 }
 
 function DeadlinesSection({ tasks }: { tasks: TareaPersistida[] }) {
   const ordered = [...tasks].sort(
     (first, second) => dateValue(first.venceEn) - dateValue(second.venceEn),
-  );
+  )
   return (
     <DetailSection
       title="Fechas y plazos"
@@ -914,15 +968,15 @@ function DeadlinesSection({ tasks }: { tasks: TareaPersistida[] }) {
         </CardContent>
       </Card>
     </DetailSection>
-  );
+  )
 }
 
 function TaskRow({
   task,
   showValidation = false,
 }: {
-  task: TareaPersistida;
-  showValidation?: boolean;
+  task: TareaPersistida
+  showValidation?: boolean
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 py-3">
@@ -931,18 +985,24 @@ function TaskRow({
         <p className="text-sm font-medium">{task.titulo}</p>
         <p className="text-muted-foreground text-xs">
           {task.tipo} · {task.estado}
-          {task.venceEn ? ` · ${formatDate(task.venceEn, true)}` : ""}
+          {task.venceEn ? ` · ${formatDate(task.venceEn, true)}` : ''}
         </p>
       </div>
       <Badge variant="outline">{task.prioridad}</Badge>
-      {showValidation && task.tipo === "Plazo" ? (
+      {showValidation && task.tipo === 'Plazo' ? (
         <Badge variant="secondary">{task.validacion}</Badge>
       ) : null}
     </div>
-  );
+  )
 }
 
-function HistorySection({ events }: { events: EventoExpediente[] }) {
+function HistorySection({
+  events,
+  memberNames,
+}: {
+  events: EventoExpediente[]
+  memberNames: Map<string, string>
+}) {
   return (
     <DetailSection
       title="Histórico"
@@ -957,11 +1017,14 @@ function HistorySection({ events }: { events: EventoExpediente[] }) {
                   {event.entidad} · {event.accion}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  {formatDate(event.creadoEn, true)}
+                  {formatDate(event.creadoEn, true)} · Por{' '}
+                  {event.actorId
+                    ? (memberNames.get(event.actorId) ?? 'Usuario del despacho')
+                    : 'Sistema'}
                 </span>
               </div>
               {event.campos.length ? (
-                <p className="text-muted-foreground mt-1 text-xs">{event.campos.join(", ")}</p>
+                <p className="text-muted-foreground mt-1 text-xs">{event.campos.join(', ')}</p>
               ) : null}
             </article>
           ))}
@@ -969,7 +1032,7 @@ function HistorySection({ events }: { events: EventoExpediente[] }) {
         </CardContent>
       </Card>
     </DetailSection>
-  );
+  )
 }
 
 function Summary({ label, value }: { label: string; value: string }) {
@@ -978,7 +1041,7 @@ function Summary({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="mt-1 text-sm font-medium">{value}</dd>
     </div>
-  );
+  )
 }
 
 function QuickRow({ label, value }: { label: string; value: string | number }) {
@@ -987,37 +1050,37 @@ function QuickRow({ label, value }: { label: string; value: string | number }) {
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
-  );
+  )
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <p className="text-muted-foreground py-4 text-sm">{message}</p>;
+  return <p className="text-muted-foreground py-4 text-sm">{message}</p>
 }
 
 function formatDate(value: string | null, includeTime = false) {
-  if (!value) return "Sin fecha";
-  const date = new Date(value);
+  if (!value) return 'Sin fecha'
+  const date = new Date(value)
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-        "es-ES",
-        includeTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" },
-      );
+        'es-ES',
+        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+      )
 }
 function dateValue(value: string | null) {
-  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY;
-  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
 }
 function nextDueLabel(tasks: TareaPersistida[]) {
   const task = [...tasks]
     .filter((item) => item.venceEn)
-    .sort((first, second) => dateValue(first.venceEn) - dateValue(second.venceEn))[0];
-  return task?.venceEn ? formatDate(task.venceEn, true) : "Sin fecha";
+    .sort((first, second) => dateValue(first.venceEn) - dateValue(second.venceEn))[0]
+  return task?.venceEn ? formatDate(task.venceEn, true) : 'Sin fecha'
 }
 function dateTime(value: string) {
-  return value ? `${value}T09:00:00` : null;
+  return value ? `${value}T09:00:00` : null
 }
 function text(data: FormData, name: string) {
-  const value = data.get(name);
-  return typeof value === "string" ? value : "";
+  const value = data.get(name)
+  return typeof value === 'string' ? value : ''
 }

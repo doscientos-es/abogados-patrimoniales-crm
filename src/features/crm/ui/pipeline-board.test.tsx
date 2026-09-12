@@ -15,7 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-import { PersistentPipelineBoard } from './persistent-pipeline-board'
+import { PipelineBoard } from './pipeline-board'
 
 const opportunity = {
   id: 'lead-1',
@@ -35,11 +35,11 @@ const opportunity = {
 
 afterEach(cleanup)
 
-describe('PersistentPipelineBoard', () => {
+describe('PipelineBoard', () => {
   it('presents the Lead details in its color-coded stage and preserves advancing', () => {
     const onAdvance = vi.fn().mockResolvedValue(undefined)
     render(
-      <PersistentPipelineBoard
+      <PipelineBoard
         oportunidades={[opportunity]}
         contactosPorId={new Map([['contact-1', 'Elena Vargas']])}
         isPending={false}

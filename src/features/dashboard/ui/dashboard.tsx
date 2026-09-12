@@ -99,7 +99,7 @@ export function buildDashboardMetrics(
   }
 }
 
-export function PersistentDashboard() {
+export function Dashboard() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -194,6 +194,23 @@ export function PersistentDashboard() {
           </Link>
         }
       />
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-wrap items-center gap-2 py-4">
+          <span className="mr-2 text-sm font-medium">Acciones rápidas</span>
+          <Link to="/expedientes" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Abrir expediente
+          </Link>
+          <Link to="/tareas" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Crear tarea
+          </Link>
+          <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Nueva conversación
+          </Link>
+          <Link to="/documentos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Subir documento
+          </Link>
+        </CardContent>
+      </Card>
       <DashboardControl dashboard={dashboard} />
       <div className="grid gap-4 lg:grid-cols-3">
         <DashboardCard
@@ -505,11 +522,11 @@ function MetricGroup({
         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         <h3 className="text-xs font-semibold tracking-wide uppercase">{title}</h3>
       </div>
-      <div className="divide-y" role="list">
+      <ul className="divide-y">
         {metrics.map((metric) => (
           <CompactMetric key={metric.label} {...metric} />
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
@@ -523,21 +540,24 @@ function CompactMetric({ label, value, tone, to }: ControlMetric) {
     info: 'text-primary',
   }[tone]
   return (
-    <Link
-      to={to}
-      role="listitem"
-      className="hover:bg-muted/50 focus-visible:ring-ring group -mx-1 flex min-w-0 items-center gap-2 rounded-sm px-1 py-2 transition-colors outline-none focus-visible:ring-2"
-    >
-      <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs font-medium">
-        {label}
-      </span>
-      <span className={`font-serif text-lg font-semibold tabular-nums ${valueClass}`}>{value}</span>
-      <ArrowRight
-        className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-        aria-hidden="true"
-      />
-      <span className="sr-only">Ver listado de {label}</span>
-    </Link>
+    <li className="list-none">
+      <Link
+        to={to}
+        className="hover:bg-muted/50 focus-visible:ring-ring group -mx-1 flex min-w-0 items-center gap-2 rounded-sm px-1 py-2 transition-colors outline-none focus-visible:ring-2"
+      >
+        <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs font-medium">
+          {label}
+        </span>
+        <span className={`font-serif text-lg font-semibold tabular-nums ${valueClass}`}>
+          {value}
+        </span>
+        <ArrowRight
+          className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          aria-hidden="true"
+        />
+        <span className="sr-only">Ver listado de {label}</span>
+      </Link>
+    </li>
   )
 }
 

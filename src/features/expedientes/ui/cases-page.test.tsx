@@ -15,7 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-import { PersistentCasesPage } from './persistent-cases-page'
+import { CasesPage } from './cases-page'
 
 const caseworkCase = {
   id: 'casework-1',
@@ -51,10 +51,10 @@ const judicialCase = {
 
 afterEach(cleanup)
 
-describe('PersistentCasesPage', () => {
+describe('CasesPage', () => {
   it('groups the F3 and F4 subcolumns in one continuous control Kanban', () => {
     render(
-      <PersistentCasesPage
+      <CasesPage
         expedientes={[caseworkCase]}
         contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
@@ -89,7 +89,7 @@ describe('PersistentCasesPage', () => {
 
   it('filters the control board through nature tabs', () => {
     render(
-      <PersistentCasesPage
+      <CasesPage
         expedientes={[caseworkCase, judicialCase]}
         contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
@@ -111,7 +111,7 @@ describe('PersistentCasesPage', () => {
 
   it('applies a detailed filter from the filter panel', () => {
     render(
-      <PersistentCasesPage
+      <CasesPage
         expedientes={[caseworkCase, judicialCase]}
         contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
         miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}

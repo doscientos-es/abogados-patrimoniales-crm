@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentContactDetail } from '@/features/contactos/ui/persistent-contact-detail'
+import { ContactDetail } from '@/features/contactos/ui/contact-detail'
 
 export const Route = createFileRoute('/contactos/$id')({
   head: () => ({
@@ -15,5 +15,5 @@ export const Route = createFileRoute('/contactos/$id')({
 
 function ContactDetailRoute() {
   const { id } = Route.useParams()
-  return <PersistentContactDetail contactId={id} />
+  return <ContactDetail contactId={id} />
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentDashboard } from '@/features/dashboard/ui/persistent-dashboard'
+import { Dashboard } from '@/features/dashboard/ui/dashboard'
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -13,5 +13,5 @@ export const Route = createFileRoute('/')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: PersistentDashboard,
+  component: Dashboard,
 })

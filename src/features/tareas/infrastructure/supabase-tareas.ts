@@ -202,7 +202,8 @@ export function useEditarTarea(firmId: string | undefined) {
         new_reminder_at: recordarEn,
         new_assigned_to: asignadoId,
       })
-      if (error?.code === '40001') throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
       if (error) throw error
       return fromRow(data)
     },

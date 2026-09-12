@@ -21,7 +21,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-import { PersistentCaseDetail } from './persistent-case-detail'
+import { CaseDetail } from './case-detail'
 
 const expediente = {
   id: 'case-1',
@@ -45,9 +45,13 @@ const expediente = {
   actualizadoEn: '2026-08-07T09:15:00Z',
 } as never
 
-function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined), notas = [] as never[]) {
+function renderDetail(
+  onCreateTask = vi.fn().mockResolvedValue(undefined),
+  notas = [] as never[],
+  eventos = [] as never[],
+) {
   return render(
-    <PersistentCaseDetail
+    <CaseDetail
       expediente={expediente}
       lineas={
         [{ id: 'line-1', titulo: 'Due diligence', estado: 'En curso', prioridad: 'Alta' }] as never
@@ -75,7 +79,7 @@ function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined), notas
           },
         ] as never
       }
-      eventos={[]}
+      eventos={eventos}
       documentos={
         [
           {
@@ -116,7 +120,7 @@ function renderDetail(onCreateTask = vi.fn().mockResolvedValue(undefined), notas
   )
 }
 
-describe('PersistentCaseDetail', () => {
+describe('CaseDetail', () => {
   afterEach(cleanup)
 
   it('opens each operational feature using data linked to the expediente', () => {
@@ -167,6 +171,22 @@ describe('PersistentCaseDetail', () => {
     expect(screen.getByText(/Notas internas del expediente a tener en cuenta \(1\)/)).toBeTruthy()
     expect(screen.getByText('Confidencialidad familiar')).toBeTruthy()
     expect(screen.getByText('Requiere confirmación')).toBeTruthy()
+  })
+
+  it('shows the actor in the expediente history', () => {
+    renderDetail(undefined, [], [
+      {
+        id: 'event-1',
+        entidad: 'case',
+        accion: 'updated',
+        campos: ['title'],
+        actorId: 'member-1',
+        creadoEn: '2026-08-07T09:15:00Z',
+      },
+    ] as never)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Histórico' }))
+    expect(screen.getByText(/Por Luis Ferrán/)).toBeTruthy()
   })
 
   it('opens the edit form in a dialog from the operational header', () => {

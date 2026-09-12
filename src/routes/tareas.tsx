@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentTaskWorkspace } from '../components/tareas/persistent-task-workspace'
+import { TaskWorkspace } from '../components/tareas/task-workspace'
 
 export const Route = createFileRoute('/tareas')({
   head: () => ({
@@ -24,5 +24,5 @@ export const Route = createFileRoute('/tareas')({
 })
 
 function TareasPage() {
-  return <PersistentTaskWorkspace />
+  return <TaskWorkspace />
 }

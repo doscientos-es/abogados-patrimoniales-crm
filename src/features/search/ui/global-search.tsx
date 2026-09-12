@@ -81,6 +81,13 @@ const MODULES: PaletteItem[] = [
     href: '/notas',
   },
   {
+    id: 'communications',
+    entity_type: 'module',
+    title: 'Comunicaciones',
+    subtitle: 'Conversaciones del despacho',
+    href: '/comunicaciones',
+  },
+  {
     id: 'billing',
     entity_type: 'module',
     title: 'Facturación',
@@ -199,13 +206,9 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false)
   const [term, setTerm] = useState('')
   const [debouncedTerm, setDebouncedTerm] = useState('')
-  const [stored, setStored] = useState<StoredItem[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
   const results = useGlobalSearch(firmId, debouncedTerm)
-
-  useEffect(() => {
-    setStored(loadStoredItems(firmId))
-  }, [firmId, open])
+  const stored = loadStoredItems(firmId)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedTerm(term), 180)
@@ -253,11 +256,8 @@ export function GlobalSearch() {
       ]
   const selectable = groups.flatMap((group) => group.items)
 
-  useEffect(() => setActiveIndex(0), [debouncedTerm, open])
-
   const select = (item: PaletteItem) => {
-    const next = saveStoredItem(firmId, item)
-    setStored(next)
+    saveStoredItem(firmId, item)
     setOpen(false)
     setTerm('')
     void router.navigate({ to: item.href as never })
@@ -284,11 +284,14 @@ export function GlobalSearch() {
         aria-label="Buscar en LEX"
         className="text-muted-foreground hover:text-foreground hidden h-9 min-w-0 justify-start gap-2 border px-2.5 font-normal shadow-none md:flex md:w-64 lg:w-80"
         variant="outline"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setActiveIndex(0)
+          setOpen(true)
+        }}
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="flex-1 truncate text-left text-sm">Buscar en LEX…</span>
-        <kbd className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium">⌘ K</kbd>
+        <kbd className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
       </Button>
       <Button
         aria-label="Buscar en LEX"
@@ -296,7 +299,10 @@ export function GlobalSearch() {
         size="icon"
         title="Buscar en LEX (Ctrl/Cmd K)"
         variant="ghost"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setActiveIndex(0)
+          setOpen(true)
+        }}
       >
         <Search className="h-4 w-4" />
       </Button>
@@ -310,11 +316,13 @@ export function GlobalSearch() {
             <Search className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
             <Input
               autoComplete="off"
-              autoFocus
               className="h-14 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
               placeholder="Busca contactos, leads, expedientes, documentos…"
               value={term}
-              onChange={(event) => setTerm(event.target.value)}
+              onChange={(event) => {
+                setTerm(event.target.value)
+                setActiveIndex(0)
+              }}
               onKeyDown={onInputKeyDown}
               aria-label="Buscar en todo LEX"
             />

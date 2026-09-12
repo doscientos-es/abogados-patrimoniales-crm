@@ -22,7 +22,7 @@ import { notaDesdeRemota, useNotasRemotas } from '@/features/notas'
 import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
 
-export function PersistentContactDetail({ contactId }: { contactId: string }) {
+export function ContactDetail({ contactId }: { contactId: string }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId

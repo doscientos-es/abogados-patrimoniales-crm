@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildDashboardMetrics } from './persistent-dashboard'
+import { buildDashboardMetrics } from './dashboard'
 
 const task = (overrides = {}) =>
   ({

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentOnboardingPage } from '@/features/onboarding'
+import { OnboardingPage } from '@/features/onboarding'
 
 export const Route = createFileRoute('/onboarding')({
   head: () => ({
@@ -14,5 +14,5 @@ export const Route = createFileRoute('/onboarding')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: PersistentOnboardingPage,
+  component: OnboardingPage,
 })

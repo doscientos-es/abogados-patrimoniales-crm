@@ -8,7 +8,7 @@ import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
 import {
   CaseCreateDialog,
-  PersistentCasesPage,
+  CasesPage,
   useActuacionesDespacho,
   useActualizarExpediente,
   useCrearExpediente,
@@ -25,10 +25,10 @@ export const Route = createFileRoute('/expedientes/')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: ExpedientesPersistentesRoute,
+  component: CasesRoute,
 })
 
-function ExpedientesPersistentesRoute() {
+function CasesRoute() {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -86,7 +86,7 @@ function ExpedientesPersistentesRoute() {
     )
 
   return (
-    <PersistentCasesPage
+    <CasesPage
       expedientes={cases.data ?? []}
       contactos={contacts.data ?? []}
       miembros={members.data ?? []}

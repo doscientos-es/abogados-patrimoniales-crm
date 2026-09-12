@@ -164,7 +164,6 @@ export function CaseCreateDialog({
                   placeholder="Ej. Reparto de herencia de la familia García"
                   maxLength={300}
                   required
-                  autoFocus
                   className="sm:col-span-2"
                 />
                 <SelectField
@@ -213,7 +212,9 @@ export function CaseCreateDialog({
                   />
                   <datalist id="case-create-area-options">
                     {(practiceAreas ?? []).map((item) => (
-                      <option key={item} value={item} />
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
                     ))}
                   </datalist>
                 </div>

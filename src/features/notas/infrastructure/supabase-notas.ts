@@ -238,3 +238,68 @@ export function useCrearNotaOportunidad(firmId: string | undefined) {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
   })
 }
+
+export function useCrearConversacion(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      title: string
+      content: string
+      requiresAcknowledgement: boolean
+      userIds: string[]
+      conversationId?: string
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.content.trim()) throw new Error('Escribe un mensaje antes de enviarlo.')
+      const { error } = await client.rpc('crm_save_note', {
+        target_firm_id: firmId,
+        target_note_id: null,
+        event_type: 'created',
+        event_detail: 'Conversación interna creada.',
+        target_payload: {
+          scope: 'execution',
+          origin_id: firmId,
+          origin_label: 'Conversación interna',
+          title: input.title.trim() || 'Conversación interna',
+          content: input.content.trim(),
+          case_id: '',
+          opportunity_id: '',
+          status: 'active',
+          highlighted: false,
+          critical: false,
+          requires_acknowledgement: input.requiresAcknowledgement,
+          validity: 'permanent',
+          starts_on: '',
+          review_on: '',
+          expires_on: '',
+          expiry_action: 'confirm',
+          review_pending: false,
+          snoozed_until: '',
+          visibility: input.userIds.length ? 'restricted' : 'team',
+          details: { conversationId: input.conversationId ?? crypto.randomUUID() },
+          contact_ids: [],
+          permitted_user_ids: input.userIds,
+        },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
+}
+
+export function useConfirmarLectura(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (noteId: string) => {
+      const client = getSupabaseBrowserClient()
+      const user = (await client?.auth.getUser())?.data.user
+      if (!client || !firmId || !user) throw new Error('Necesitas una sesión activa.')
+      const { error } = await client
+        .from('crm_note_acknowledgements')
+        .upsert({ note_id: noteId, user_id: user.id })
+      if (error) throw error
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
+}

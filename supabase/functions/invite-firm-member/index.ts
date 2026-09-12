@@ -35,7 +35,15 @@ Deno.serve(async (req) => {
     const password = typeof body.password === 'string' ? body.password : ''
     const firmId = typeof body.firmId === 'string' ? body.firmId : ''
     const role = typeof body.role === 'string' ? body.role : ''
-    if (name.length < 2 || name.length > 160 || !/^\S+@\S+\.\S+$/.test(email) || email.length > 254 || password.length < 8 || !firmId || !roles.has(role)) {
+    if (
+      name.length < 2 ||
+      name.length > 160 ||
+      !/^\S+@\S+\.\S+$/.test(email) ||
+      email.length > 254 ||
+      password.length < 8 ||
+      !firmId ||
+      !roles.has(role)
+    ) {
       return json({ error: 'Invalid invitation data' }, 400)
     }
 

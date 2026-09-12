@@ -138,7 +138,9 @@ function NuevaOportunidadPage() {
               />
               <datalist id="lead-area-options">
                 {(areas.data ?? []).map((item) => (
-                  <option key={item} value={item} />
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
                 ))}
               </datalist>
             </div>

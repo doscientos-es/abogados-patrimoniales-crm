@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { PersistentCrmDashboard } from '@/features/crm/ui/persistent-crm-dashboard'
+import { CrmDashboard } from '@/features/crm/ui/crm-dashboard'
 
 export const Route = createFileRoute('/crm')({
   head: () => ({
@@ -13,5 +13,5 @@ export const Route = createFileRoute('/crm')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: PersistentCrmDashboard,
+  component: CrmDashboard,
 })

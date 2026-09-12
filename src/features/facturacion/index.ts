@@ -1,2 +1,2 @@
 export * from './application'
-export { PersistentFacturacionPage } from './ui/persistent-facturacion-page'
+export { FacturacionPage } from './ui/facturacion-page'
