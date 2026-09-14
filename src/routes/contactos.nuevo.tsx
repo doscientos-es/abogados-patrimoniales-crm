@@ -20,6 +20,34 @@ const RELATIONSHIPS: RelacionDespacho[] = [
   'Contraparte',
   'Proveedor',
 ]
+const CONTACT_FIELD_NAMES = [
+  'nombre',
+  'primerApellido',
+  'razonSocial',
+  'documento',
+  'email',
+  'telefono',
+  'origen',
+  'direccion',
+  'codigoPostal',
+  'municipio',
+  'provincia',
+  'pais',
+  'canal',
+  'fechaNacimiento',
+  'telefono2',
+  'email2',
+  'codigoOrgano',
+  'numeroOrgano',
+  'partidoJudicial',
+  'organismo',
+  'unidadAdministrativa',
+  'personaContacto',
+  'cargo',
+] as const
+
+type ContactFieldName = (typeof CONTACT_FIELD_NAMES)[number]
+type ContactFormValues = Record<ContactFieldName, string>
 
 export const Route = createFileRoute('/contactos/nuevo')({
   head: () => ({
@@ -32,7 +60,7 @@ export const Route = createFileRoute('/contactos/nuevo')({
   component: NuevoContactoPage,
 })
 
-function NuevoContactoPage() {
+export function NuevoContactoPage() {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -54,31 +82,7 @@ function NuevoContactoPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    const values = Object.fromEntries(
-      [
-        'nombre',
-        'primerApellido',
-        'razonSocial',
-        'documento',
-        'email',
-        'telefono',
-        'origen',
-        'direccion',
-        'codigoPostal',
-        'municipio',
-        'provincia',
-        'pais',
-        'canal',
-        'fechaNacimiento',
-        'telefono2',
-        'email2',
-        'codigoOrgano',
-        'numeroOrgano',
-        'partidoJudicial',
-        'organismo',
-        'unidadAdministrativa',
-      ].map((key) => [key, formText(form, key)]),
-    )
+    const values = contactFormValues(form)
     const displayName = nature === 'Persona física' ? values['nombre'] : values['razonSocial']
     if (!displayName) {
       toast.error(nature === 'Persona física' ? 'Indica el nombre.' : 'Indica la denominación.')
@@ -116,7 +120,12 @@ function NuevoContactoPage() {
       />
       <Card>
         <CardContent className="pt-6">
-          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
+          <form
+            aria-busy={createContact.isPending}
+            aria-label="Formulario de nuevo contacto"
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(event) => void submit(event)}
+          >
             <Choice
               name="naturaleza"
               label="Naturaleza"
@@ -150,7 +159,14 @@ function NuevoContactoPage() {
                   autoComplete="organization"
                   required
                 />
-                <Field name="numeroOrgano" label="Número" required />
+                <Field
+                  name="numeroOrgano"
+                  label="Número"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  digitsOnly
+                  required
+                />
                 <Field name="partidoJudicial" label="Partido judicial" required />
                 <Field name="codigoOrgano" label="Código del órgano" />
               </>
@@ -168,7 +184,12 @@ function NuevoContactoPage() {
             ) : (
               <Field name="razonSocial" label="Denominación" autoComplete="organization" required />
             )}
-            <Field name="documento" label="NIF / CIF" />
+            <Field
+              name="documento"
+              label="NIF / CIF"
+              autoCapitalize="characters"
+              spellCheck={false}
+            />
             <Field name="email" label="Correo" type="email" autoComplete="email" />
             <Field name="email2" label="Correo alternativo" type="email" autoComplete="email" />
             <Field
@@ -201,11 +222,15 @@ function NuevoContactoPage() {
               label="Código postal"
               autoComplete="postal-code"
               inputMode="numeric"
+              pattern="[0-9]{5}"
+              maxLength={5}
+              description="Introduce los cinco dígitos del código postal."
+              digitsOnly
             />
             <Field name="municipio" label="Municipio" autoComplete="address-level2" />
             <Field name="provincia" label="Provincia" autoComplete="address-level1" />
-            <Field name="pais" label="País" autoComplete="country-name" />
-            <Field name="origen" label="Origen" />
+            <Field name="pais" label="País" autoComplete="country-name" defaultValue="España" />
+            <Field name="origen" label="Origen" defaultValue="Web" />
             <Field name="canal" label="Canal" />
             <div className="sm:col-span-2">
               <Button type="submit" disabled={createContact.isPending}>
@@ -219,36 +244,58 @@ function NuevoContactoPage() {
   )
 }
 
+type FieldProps = {
+  name: ContactFieldName
+  label: string
+  type?: InputHTMLAttributes<HTMLInputElement>['type']
+  required?: boolean
+  autoCapitalize?: InputHTMLAttributes<HTMLInputElement>['autoCapitalize']
+  autoComplete?: InputHTMLAttributes<HTMLInputElement>['autoComplete']
+  defaultValue?: string
+  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']
+  maxLength?: number
+  pattern?: string
+  spellCheck?: boolean
+  description?: string
+  digitsOnly?: boolean
+}
+
 function Field({
   name,
   label,
   type = 'text',
   required,
+  description,
+  digitsOnly,
   ...props
-}: {
-  name: string
-  label: string
-  type?: InputHTMLAttributes<HTMLInputElement>['type']
-  required?: boolean
-  autoComplete?: InputHTMLAttributes<HTMLInputElement>['autoComplete']
-  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']
-  pattern?: string
-  maxLength?: number
-}) {
+}: FieldProps) {
+  const descriptionId = description ? `contact-${name}-description` : undefined
+
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`contact-${name}`}>
         {label}
-        {required ? ' *' : ''}
+        {required && <span aria-hidden="true"> *</span>}
+        {required && <span className="sr-only"> (obligatorio)</span>}
       </Label>
       <Input
+        aria-describedby={descriptionId}
+        aria-required={required || undefined}
         id={`contact-${name}`}
         name={name}
         type={type}
         required={required}
-        onInput={type === 'tel' ? sanitizePhoneInput : undefined}
+        onInput={(event) => {
+          if (type === 'tel') sanitizePhoneInput(event)
+          if (digitsOnly) sanitizeDigitsInput(event)
+        }}
         {...props}
       />
+      {description && (
+        <p id={descriptionId} className="text-muted-foreground text-sm">
+          {description}
+        </p>
+      )}
     </div>
   )
 }
@@ -288,7 +335,20 @@ function sanitizePhoneInput(event: FormEvent<HTMLInputElement>) {
   const sanitized = input.value.replace(/[^\d+()\s-]/g, '')
   if (input.value !== sanitized) input.value = sanitized
 }
-function formText(form: FormData, key: string) {
+function sanitizeDigitsInput(event: FormEvent<HTMLInputElement>) {
+  const input = event.currentTarget
+  const sanitized = input.value.replace(/\D/g, '')
+  if (input.value !== sanitized) input.value = sanitized
+}
+
+function contactFormValues(form: FormData): ContactFormValues {
+  return CONTACT_FIELD_NAMES.reduce<ContactFormValues>(
+    (values, key) => ({ ...values, [key]: formText(form, key) }),
+    {} as ContactFormValues,
+  )
+}
+
+function formText(form: FormData, key: ContactFieldName) {
   const value = form.get(key)
   return typeof value === 'string' ? value.trim() : ''
 }

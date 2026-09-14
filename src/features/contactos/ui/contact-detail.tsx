@@ -22,6 +22,12 @@ import { notaDesdeRemota, useNotasRemotas } from '@/features/notas'
 import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
 
+const CONTACT_STATUS_CHIP_CLASSES: Record<ContactoPersistido['estado'], string> = {
+  Activo: 'border-success/30 bg-success/10 text-success',
+  Inactivo: 'border-warning/30 bg-warning/10 text-warning-foreground',
+  Archivado: 'border-border bg-secondary text-secondary-foreground',
+}
+
 export function ContactDetail({ contactId }: { contactId: string }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -125,7 +131,7 @@ export function ContactDetail({ contactId }: { contactId: string }) {
       <SectionHeader
         title={displayName(contact)}
         subtitle={`${contact.tipoPersona} · ${contact.relacion}`}
-        meta={contact.estado}
+        meta={<Badge className={CONTACT_STATUS_CHIP_CLASSES[contact.estado]}>{contact.estado}</Badge>}
         actions={
           <Link to="/oportunidades/nueva" className={buttonVariants({ size: 'sm' })}>
             Crear Lead

@@ -23,6 +23,7 @@ import { reportLovableError } from '../lib/lovable-error-reporting'
 import appCss from '../styles.css?url'
 
 const SECTION_LABELS = [
+  ['/informes', 'Informes'],
   ['/expedientes', 'Expedientes'],
   ['/oportunidades', 'Leads'],
   ['/contactos', 'Contactos'],
@@ -30,6 +31,7 @@ const SECTION_LABELS = [
   ['/onboarding', 'Onboarding'],
   ['/actuaciones', 'Actuaciones'],
   ['/ejecuciones', 'Ejecuciones'],
+  ['/calendario', 'Calendario'],
   ['/alertas', 'Alertas y control'],
   ['/tareas', 'Tareas'],
   ['/documentos', 'Documentos'],
@@ -214,15 +216,15 @@ function AuthenticatedRoot() {
                 Expedientes
               </Link>
               <Link
-                to="/tareas"
+                to="/calendario"
                 className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
               >
-                Agenda
+                Calendario
               </Link>
             </nav>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-              <Link to="/tareas" className={buttonVariants({ size: 'sm' })}>
-                Abrir agenda
+              <Link to="/calendario" className={buttonVariants({ size: 'sm' })}>
+                Abrir calendario
               </Link>
               <AccountMenu />
             </div>

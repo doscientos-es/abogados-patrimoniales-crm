@@ -1,12 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { CalendarPlus, Check, ClipboardCheck, MessageSquarePlus, NotebookPen } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { ArrowDown, ArrowUp, Check, ClipboardCheck, NotebookPen, Plus, Trash2 } from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,9 +26,16 @@ import {
   useRegistrarComunicacionOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
+import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
 import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
-import { useCambiarEstadoTarea, useCrearTarea, useTareasPersistentes } from '@/features/tareas'
+import {
+  useCambiarEstadoTarea,
+  useCrearTarea,
+  useTareasPersistentes,
+  type CrearTareaInput,
+  type TareaPersistida,
+} from '@/features/tareas'
 import { getSupabaseBrowserClient, type Json } from '@/shared/infrastructure/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -31,12 +47,31 @@ const dateText = (value: string) =>
     new Date(value),
   )
 
+type QualificationQuestion = { id: string; text: string }
+
+const suggestedQualificationQuestions = [
+  '¿Está suficientemente explicado el asunto?',
+  '¿Falta documentación básica?',
+  '¿Parece inicialmente un asunto atendible por el despacho?',
+  '¿Existe alguna urgencia declarada?',
+]
+
+export type LeadWorkspaceSection =
+  | 'qualification'
+  | 'tasks'
+  | 'communications'
+  | 'notes'
+  | 'acceptance'
+  | 'history'
+
 export function LeadWorkspace({
   opportunity,
   firmId,
+  section,
 }: {
   opportunity: OportunidadPersistida
   firmId: string
+  section: LeadWorkspaceSection
 }) {
   const events = useEventosOportunidad(firmId, opportunity.id)
   const members = useMiembrosDespacho(firmId)
@@ -93,18 +128,13 @@ export function LeadWorkspace({
   const linkedOnboarding = (onboardings.data ?? []).find(
     (item) => item.oportunidadId === opportunity.id,
   )
-  const [taskTitle, setTaskTitle] = useState('')
-  const [taskDue, setTaskDue] = useState('')
-  const [taskType, setTaskType] = useState<'Tarea' | 'Recordatorio' | 'Evento'>('Tarea')
-  const [taskLabelId, setTaskLabelId] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [noteHighlighted, setNoteHighlighted] = useState(false)
-  const [communicationType, setCommunicationType] = useState<
-    'email_draft' | 'phone_call' | 'meeting'
-  >('phone_call')
-  const [communicationSummary, setCommunicationSummary] = useState('')
-
+  const [questions, setQuestions] = useState(() =>
+    qualificationQuestions(details['preguntasCualificacion']),
+  )
+  const [newQuestion, setNewQuestion] = useState('')
   const saveQualification = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -123,6 +153,14 @@ export function LeadWorkspace({
           probabilidad: probability,
           rolContacto: { rol: formText(form, 'role'), aclaracion: formText(form, 'roleDetail') },
           urgencia: { opcion: formText(form, 'urgency'), detalle: formText(form, 'urgencyDetail') },
+          preguntasCualificacion: questions.map((question) => ({
+            id: question.id,
+            texto: question.text,
+          })),
+          resultadoCualificacion: {
+            resultado: formText(form, 'qualificationResult'),
+            observaciones: formText(form, 'qualificationObservations'),
+          },
           informacionInicial: {
             ...initial,
             queSolicita: formText(form, 'request'),
@@ -140,30 +178,21 @@ export function LeadWorkspace({
     }
   }
 
-  const addTask = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const addTask = async (
+    input: Omit<CrearTareaInput, 'expedienteId' | 'oportunidadId' | 'clasePlazo' | 'critico'>,
+  ) => {
     try {
       await createTask.mutateAsync({
         expedienteId: null,
         oportunidadId: opportunity.id,
-        tipo: taskType,
-        titulo: taskTitle,
-        descripcion: '',
-        prioridad: 'Media',
-        venceEn: taskDue ? (taskDue.includes('T') ? taskDue : `${taskDue}T09:00:00`) : null,
-        recordarEn: null,
+        ...input,
         clasePlazo: null,
         critico: false,
-        asignadoId: opportunity.asignadoId,
-        etiquetaIds: taskLabelId ? [taskLabelId] : [],
       })
-      setTaskTitle('')
-      setTaskDue('')
-      setTaskType('Tarea')
-      setTaskLabelId('')
       toast.success('Tarea creada.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
+      throw error
     }
   }
 
@@ -187,18 +216,51 @@ export function LeadWorkspace({
     }
   }
 
-  const addCommunication = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const addQuestion = (value: string) => {
+    const question = value.trim()
+    if (!question) return
+    setQuestions((current) => [...current, { id: crypto.randomUUID(), text: question }])
+    setNewQuestion('')
+  }
+
+  const updateQuestion = (id: string, value: string) => {
+    setQuestions((current) =>
+      current.map((question) => (question.id === id ? { ...question, text: value } : question)),
+    )
+  }
+
+  const moveQuestion = (index: number, direction: -1 | 1) => {
+    setQuestions((current) => {
+      const destination = index + direction
+      if (destination < 0 || destination >= current.length) return current
+      const reordered = [...current]
+      const source = reordered[index]
+      const target = reordered[destination]
+      if (!source || !target) return current
+      reordered[index] = target
+      reordered[destination] = source
+      return reordered
+    })
+  }
+
+  const removeQuestion = (id: string) => {
+    setQuestions((current) => current.filter((question) => question.id !== id))
+  }
+
+  const addCommunication = async (
+    type: 'email_draft' | 'phone_call' | 'meeting',
+    summary: string,
+  ) => {
     try {
       await logCommunication.mutateAsync({
         opportunityId: opportunity.id,
-        tipo: communicationType,
-        resumen: communicationSummary,
+        tipo: type,
+        resumen: summary,
       })
-      setCommunicationSummary('')
       toast.success('Comunicación registrada en la trazabilidad.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo registrar la comunicación.')
+      throw error
     }
   }
 
@@ -223,362 +285,881 @@ export function LeadWorkspace({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-base">Cualificación y contexto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-3 sm:grid-cols-2"
-            onSubmit={(event) => void saveQualification(event)}
-          >
-            <Field name="role" label="Rol del contacto" defaultValue={text(role['rol'])} />
-            <Field
-              name="roleDetail"
-              label="Aclaración del rol"
-              defaultValue={text(role['aclaracion'])}
-            />
-            <Field name="urgency" label="Urgencia" defaultValue={text(urgency['opcion'])} />
-            <Field
-              name="urgencyDetail"
-              label="Detalle de urgencia"
-              defaultValue={text(urgency['detalle'])}
-            />
-            <Field
-              name="probability"
-              label="Probabilidad (%)"
-              type="number"
-              min="0"
-              max="100"
-              defaultValue={String(opportunity.probabilidad)}
-              required
-            />
-            <Field
-              name="targetDate"
-              label="Cierre previsto"
-              type="date"
-              defaultValue={opportunity.fechaObjetivo ?? ''}
-            />
-            <Field
-              name="request"
-              label="Qué solicita"
-              defaultValue={text(initial['queSolicita'])}
-              multiline
-            />
-            <Field
-              name="situation"
-              label="Qué ha ocurrido"
-              defaultValue={text(initial['queHaOcurrido'])}
-              multiline
-            />
-            <Field
-              name="people"
-              label="Otras personas"
-              defaultValue={text(initial['otrasPersonas'])}
-              multiline
-            />
-            <Field
-              name="procedure"
-              label="Procedimiento iniciado"
-              defaultValue={text(initial['procedimientoIniciado'])}
-              multiline
-            />
-            <Field
-              name="documents"
-              label="Documentación manifestada"
-              defaultValue={text(initial['documentacionManifestada'])}
-              multiline
-            />
-            <Field
-              name="observations"
-              label="Observaciones internas"
-              defaultValue={text(initial['observacionesInternas'])}
-              multiline
-            />
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={saveDetails.isPending}>
-                {saveDetails.isPending ? 'Guardando…' : 'Guardar cualificación'}
-              </Button>
-            </div>
-          </form>
-          {participants.length ? (
-            <div className="mt-4 border-t pt-3">
-              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Intervinientes
-              </p>
-              {participants.map((participant, index) => (
-                <p key={index} className="mt-1 text-sm">
-                  {participantLabel(participant)}
-                </p>
-              ))}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Tareas y próxima acción</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {relatedTasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex items-start justify-between gap-2 border-b pb-2 text-sm"
+    <div className={section === 'tasks' ? 'space-y-4' : 'grid gap-4 lg:grid-cols-2'}>
+      {section === 'qualification' ? (
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Cualificación y contexto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-3 sm:grid-cols-2"
+              onSubmit={(event) => void saveQualification(event)}
             >
-              <div>
-                <p className="font-medium">{task.titulo}</p>
-                <p className="text-muted-foreground">
-                  {task.venceEn ? `Prevista: ${task.venceEn.slice(0, 10)}` : 'Sin fecha'} ·{' '}
-                  {task.estado}
-                </p>
+              <Field name="role" label="Rol del contacto" defaultValue={text(role['rol'])} />
+              <Field
+                name="roleDetail"
+                label="Aclaración del rol"
+                defaultValue={text(role['aclaracion'])}
+              />
+              <Field name="urgency" label="Urgencia" defaultValue={text(urgency['opcion'])} />
+              <Field
+                name="urgencyDetail"
+                label="Detalle de urgencia"
+                defaultValue={text(urgency['detalle'])}
+              />
+              <Field
+                name="probability"
+                label="Probabilidad (%)"
+                type="number"
+                min="0"
+                max="100"
+                defaultValue={String(opportunity.probabilidad)}
+                required
+              />
+              <Field
+                name="targetDate"
+                label="Cierre previsto"
+                type="date"
+                defaultValue={opportunity.fechaObjetivo ?? ''}
+              />
+              <Field
+                name="request"
+                label="Qué solicita"
+                defaultValue={text(initial['queSolicita'])}
+                multiline
+              />
+              <Field
+                name="situation"
+                label="Qué ha ocurrido"
+                defaultValue={text(initial['queHaOcurrido'])}
+                multiline
+              />
+              <Field
+                name="people"
+                label="Otras personas"
+                defaultValue={text(initial['otrasPersonas'])}
+                multiline
+              />
+              <Field
+                name="procedure"
+                label="Procedimiento iniciado"
+                defaultValue={text(initial['procedimientoIniciado'])}
+                multiline
+              />
+              <Field
+                name="documents"
+                label="Documentación manifestada"
+                defaultValue={text(initial['documentacionManifestada'])}
+                multiline
+              />
+              <Field
+                name="observations"
+                label="Observaciones internas"
+                defaultValue={text(initial['observacionesInternas'])}
+                multiline
+              />
+              <fieldset className="space-y-3 border-t pt-4 sm:col-span-2">
+                <legend className="text-sm font-medium">Resultado de la cualificación</legend>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lead-qualification-result">Resultado</Label>
+                    <select
+                      id="lead-qualification-result"
+                      name="qualificationResult"
+                      defaultValue={
+                        text(asRecord(details['resultadoCualificacion'] ?? {})['resultado']) ||
+                        'Sin decidir'
+                      }
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      aria-describedby="lead-qualification-result-help"
+                    >
+                      <option>Sin decidir</option>
+                      <option>Apto para avanzar</option>
+                      <option>Requiere más información</option>
+                      <option>No atendible</option>
+                    </select>
+                    <p
+                      id="lead-qualification-result-help"
+                      className="text-muted-foreground text-xs"
+                    >
+                      Registra la conclusión actual; puedes revisarla más adelante.
+                    </p>
+                  </div>
+                  <Field
+                    name="qualificationObservations"
+                    label="Observaciones"
+                    defaultValue={text(
+                      asRecord(details['resultadoCualificacion'] ?? {})['observaciones'],
+                    )}
+                    helper="Contexto interno que fundamenta el resultado de la cualificación."
+                    multiline
+                  />
+                </div>
+              </fieldset>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={saveDetails.isPending}>
+                  {saveDetails.isPending ? 'Guardando…' : 'Guardar cualificación'}
+                </Button>
               </div>
-              {task.estado !== 'Completada' ? (
+            </form>
+            {participants.length ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Intervinientes
+                </p>
+                {participants.map((participant, index) => (
+                  <p key={index} className="mt-1 text-sm">
+                    {participantLabel(participant)}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+      {section === 'qualification' ? (
+        <QualificationQuestions
+          questions={questions}
+          newQuestion={newQuestion}
+          onNewQuestionChange={setNewQuestion}
+          onAddQuestion={addQuestion}
+          onUpdateQuestion={updateQuestion}
+          onMoveQuestion={moveQuestion}
+          onRemoveQuestion={removeQuestion}
+        />
+      ) : null}
+      {section === 'tasks' ? (
+        <LeadTasksTable
+          tasks={relatedTasks}
+          pending={completeTask.isPending}
+          memberNames={memberNames}
+          onComplete={(task) =>
+            completeTask
+              .mutateAsync({ task, estado: 'Completada' })
+              .then(() => toast.success('Tarea completada.'))
+              .catch(() => toast.error('No se pudo completar la tarea.'))
+          }
+          createDialog={
+            <LeadTaskCreateDialog
+              reference={opportunity.referencia}
+              defaultAssigneeId={opportunity.asignadoId}
+              members={members.data ?? []}
+              labels={taskLabels.data ?? []}
+              titleTemplates={taskTitles.data ?? []}
+              pending={createTask.isPending}
+              onCreate={addTask}
+            />
+          }
+          loading={tasks.isPending}
+        />
+      ) : null}
+      {section === 'notes' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Notas internas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {relatedNotes.map((note) => (
+              <article key={note.id} className="border-b pb-2 text-sm">
+                <p className="font-medium">
+                  {note.title || 'Nota interna'}
+                  {note.highlighted ? ' · Destacada' : ''}
+                </p>
+                <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{note.content}</p>
+              </article>
+            ))}
+            {!relatedNotes.length && !notes.isPending ? (
+              <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
+            ) : null}
+            <LeadNoteForm
+              title={noteTitle}
+              content={noteContent}
+              highlighted={noteHighlighted}
+              pending={createNote.isPending}
+              onTitleChange={setNoteTitle}
+              onContentChange={setNoteContent}
+              onHighlightedChange={setNoteHighlighted}
+              onSubmit={(event) => void addNote(event)}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+      {section === 'communications' ? (
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">Comunicaciones</CardTitle>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Registra el seguimiento del Lead sin salir de su ficha.
+              </p>
+            </div>
+            <LeadCommunicationDialogs
+              reference={opportunity.referencia}
+              pending={logCommunication.isPending}
+              onSave={addCommunication}
+            />
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground border-t pt-4 text-sm">
+              Los registros quedan disponibles en el histórico del Lead para todo el despacho.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+      {section === 'history' ? (
+        <LeadHistoryTimeline
+          events={events.data ?? []}
+          loading={events.isPending}
+          memberNames={memberNames}
+        />
+      ) : null}
+      {section === 'acceptance' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Conversión a onboarding</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {linkedOnboarding ? (
+              <div className="space-y-3">
+                <p className="text-sm">
+                  El onboarding <strong>{linkedOnboarding.referencia}</strong> ya está vinculado a
+                  este Lead.
+                </p>
+                <Link
+                  to="/onboarding"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  <ClipboardCheck className="h-4 w-4" />
+                  Abrir onboarding
+                </Link>
+              </div>
+            ) : opportunity.fase !== 'won' ? (
+              <p className="text-muted-foreground text-sm">
+                Disponible al marcar el Lead como <strong>Aceptado</strong>. Así se preserva la
+                validación comercial antes de iniciar el encargo.
+              </p>
+            ) : (
+              <form
+                className="grid gap-3 sm:grid-cols-2"
+                onSubmit={(event) => void startOnboarding(event)}
+              >
+                <Field
+                  name="quoteReference"
+                  label="Referencia del presupuesto"
+                  placeholder="PR-2026-0001"
+                  required
+                />
+                <Field
+                  name="quoteAmount"
+                  label="Importe acordado"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={
+                    opportunity.valorEstimado === null ? '' : String(opportunity.valorEstimado)
+                  }
+                />
+                <Field
+                  name="proformaDate"
+                  label="Fecha de proforma"
+                  type="date"
+                  defaultValue={today()}
+                  required
+                />
+                <Field
+                  name="nextAction"
+                  label="Siguiente acción"
+                  defaultValue="Confirmar pago de la proforma"
+                />
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={createOnboarding.isPending}>
+                    <ClipboardCheck className="h-4 w-4" />
+                    {createOnboarding.isPending ? 'Iniciando…' : 'Iniciar onboarding'}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  )
+}
+
+export function QualificationQuestions({
+  questions,
+  newQuestion,
+  onNewQuestionChange,
+  onAddQuestion,
+  onUpdateQuestion,
+  onMoveQuestion,
+  onRemoveQuestion,
+}: {
+  questions: QualificationQuestion[]
+  newQuestion: string
+  onNewQuestionChange: (value: string) => void
+  onAddQuestion: (value: string) => void
+  onUpdateQuestion: (id: string, value: string) => void
+  onMoveQuestion: (index: number, direction: -1 | 1) => void
+  onRemoveQuestion: (id: string) => void
+}) {
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="text-base">Preguntas de cualificación</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p id="lead-qualification-questions-help" className="text-muted-foreground text-sm">
+          Cada asunto es distinto: las preguntas pertenecen a este Lead y pueden añadirse, editarse,
+          reordenarse o eliminarse. No requieren autorización previa de un abogado.
+        </p>
+        {questions.length ? (
+          <ol className="space-y-2" aria-describedby="lead-qualification-questions-help">
+            {questions.map((question, index) => (
+              <li key={question.id} className="flex items-center gap-2">
+                <Input
+                  aria-label={`Pregunta de cualificación ${index + 1}`}
+                  value={question.text}
+                  onChange={(event) => onUpdateQuestion(question.id, event.target.value)}
+                  maxLength={500}
+                />
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={completeTask.isPending}
-                  onClick={() =>
-                    void completeTask
-                      .mutateAsync({ task, estado: 'Completada' })
-                      .then(() => toast.success('Tarea completada.'))
-                      .catch(() => toast.error('No se pudo completar la tarea.'))
-                  }
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onMoveQuestion(index, -1)}
+                  disabled={index === 0}
+                  aria-label={`Subir pregunta ${index + 1}`}
                 >
-                  <Check className="h-4 w-4" />
-                  Completar
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </Button>
-              ) : (
-                <Badge variant="secondary">Completada</Badge>
-              )}
-            </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onMoveQuestion(index, 1)}
+                  disabled={index === questions.length - 1}
+                  aria-label={`Bajar pregunta ${index + 1}`}
+                >
+                  <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemoveQuestion(question.id)}
+                  aria-label={`Eliminar pregunta ${index + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Todavía no hay preguntas de cualificación en este Lead.
+          </p>
+        )}
+        <form
+          className="flex flex-wrap gap-2 border-t pt-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onAddQuestion(newQuestion)
+          }}
+        >
+          <div className="min-w-60 flex-1">
+            <Label htmlFor="lead-new-qualification-question" className="sr-only">
+              Añadir pregunta de cualificación
+            </Label>
+            <Input
+              id="lead-new-qualification-question"
+              value={newQuestion}
+              onChange={(event) => onNewQuestionChange(event.target.value)}
+              placeholder="Añadir pregunta"
+              maxLength={500}
+              aria-describedby="lead-qualification-questions-help"
+            />
+          </div>
+          <Button type="submit" variant="outline" disabled={!newQuestion.trim()}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Añadir pregunta
+          </Button>
+        </form>
+        <div className="flex flex-wrap gap-2" aria-label="Preguntas sugeridas">
+          {suggestedQualificationQuestions.map((question) => (
+            <Button
+              key={question}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onAddQuestion(question)}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {question}
+            </Button>
           ))}
-          {!relatedTasks.length && !tasks.isPending ? (
-            <p className="text-muted-foreground text-sm">Sin tareas vinculadas.</p>
-          ) : null}
-          <form
-            className="grid gap-2 border-t pt-3 sm:grid-cols-[1fr_auto_auto_auto]"
-            onSubmit={(event) => void addTask(event)}
-          >
-            <div>
-              <Input
-                aria-label="Título de tarea"
-                value={taskTitle}
-                onChange={(event) => setTaskTitle(event.target.value)}
-                placeholder="Nueva tarea"
-                required
-                maxLength={240}
-                list="lead-task-title-suggestions"
-              />
-              <datalist id="lead-task-title-suggestions">
-                {(taskTitles.data ?? []).map((title) => (
-                  <option key={title} value={title}>
-                    {title}
-                  </option>
-                ))}
-              </datalist>
-            </div>
-            <select
-              aria-label="Tipo de seguimiento"
-              value={taskType}
-              onChange={(event) =>
-                setTaskType(event.target.value as typeof taskType)
-              }
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            >
-              <option value="Tarea">Tarea</option>
-              <option value="Recordatorio">Recordatorio</option>
-              <option value="Evento">Primera cita / evento</option>
-            </select>
-            <select
-              aria-label="Etiqueta de tarea"
-              value={taskLabelId}
-              onChange={(event) => setTaskLabelId(event.target.value)}
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            >
-              <option value="">Sin etiqueta</option>
-              {(taskLabels.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Guarda la cualificación para conservar los cambios de las preguntas.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function LeadNoteForm({
+  title,
+  content,
+  highlighted,
+  pending,
+  onTitleChange,
+  onContentChange,
+  onHighlightedChange,
+  onSubmit,
+}: {
+  title: string
+  content: string
+  highlighted: boolean
+  pending: boolean
+  onTitleChange: (value: string) => void
+  onContentChange: (value: string) => void
+  onHighlightedChange: (value: boolean) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+}) {
+  return (
+    <form
+      className="space-y-3 border-t pt-4"
+      aria-labelledby="lead-new-note-title"
+      aria-describedby="lead-new-note-help"
+      onSubmit={onSubmit}
+    >
+      <div>
+        <h3 id="lead-new-note-title" className="text-sm font-medium">
+          Nueva nota
+        </h3>
+        <p id="lead-new-note-help" className="text-muted-foreground mt-1 text-xs">
+          Las notas son internas y nunca se envían al cliente ni a terceros.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="lead-note-title">Título (opcional)</Label>
+        <Input
+          id="lead-note-title"
+          value={title}
+          onChange={(event) => onTitleChange(event.target.value)}
+          placeholder="Ej. Contexto de la primera llamada"
+          maxLength={300}
+          aria-describedby="lead-note-title-help"
+        />
+        <p id="lead-note-title-help" className="text-muted-foreground text-xs">
+          Resume el contenido para que el equipo pueda localizarlo después.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="lead-note-content">Contenido *</Label>
+        <Textarea
+          id="lead-note-content"
+          value={content}
+          onChange={(event) => onContentChange(event.target.value)}
+          placeholder="Contexto interno que debe conservarse"
+          required
+          maxLength={20_000}
+          rows={3}
+          aria-describedby="lead-note-content-help"
+        />
+        <p id="lead-note-content-help" className="text-muted-foreground text-xs">
+          Obligatorio. Máximo 20.000 caracteres.
+        </p>
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <input
+          id="lead-note-highlighted"
+          type="checkbox"
+          checked={highlighted}
+          onChange={(event) => onHighlightedChange(event.target.checked)}
+        />
+        <Label htmlFor="lead-note-highlighted">Destacar nota</Label>
+      </div>
+      <Button type="submit" size="sm" disabled={pending}>
+        <NotebookPen className="h-4 w-4" />
+        Guardar nota
+      </Button>
+    </form>
+  )
+}
+
+export function LeadTasksTable({
+  tasks,
+  memberNames,
+  pending,
+  loading,
+  createDialog,
+  onComplete,
+}: {
+  tasks: TareaPersistida[]
+  memberNames: ReadonlyMap<string, string>
+  pending: boolean
+  loading: boolean
+  createDialog: ReactNode
+  onComplete: (task: TareaPersistida) => Promise<unknown>
+}) {
+  return (
+    <section aria-labelledby="lead-tasks-heading" className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="lead-tasks-heading" className="text-base font-semibold">
+            Tareas del Lead
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {tasks.length} {tasks.length === 1 ? 'tarea vinculada' : 'tareas vinculadas'}
+          </p>
+        </div>
+        {createDialog}
+      </header>
+      {loading ? (
+        <p className="text-muted-foreground border-border border-y py-8 text-center text-sm">
+          Cargando tareas vinculadas…
+        </p>
+      ) : tasks.length ? (
+        <div className="border-border overflow-x-auto border-y">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <caption className="sr-only">Tareas vinculadas a este Lead</caption>
+            <thead className="bg-muted/50 text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              <tr>
+                <th scope="col" className="px-4 py-3">
+                  Tarea
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Responsable
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Vencimiento
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Prioridad
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Estado
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-border divide-y">
+              {tasks.map((task) => (
+                <tr key={task.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="max-w-md px-4 py-3">
+                    <p className="font-medium">{task.titulo}</p>
+                    {task.descripcion ? (
+                      <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
+                        {task.descripcion}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    {memberNames.get(task.asignadoId ?? '') ?? 'Sin asignar'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {task.venceEn ? dateText(task.venceEn) : 'Sin fecha'}
+                  </td>
+                  <td className="px-4 py-3">{task.prioridad}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={task.estado === 'Completada' ? 'secondary' : 'outline'}>
+                      {task.estado}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {task.estado !== 'Completada' ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => void onComplete(task)}
+                      >
+                        <Check className="h-4 w-4" aria-hidden="true" /> Completar
+                      </Button>
+                    ) : null}
+                  </td>
+                </tr>
               ))}
-            </select>
-            <Input
-              aria-label="Fecha prevista"
-              value={taskDue}
-              onChange={(event) => setTaskDue(event.target.value)}
-              type={taskType === 'Evento' ? 'datetime-local' : 'date'}
-            />
-            <Button type="submit" size="sm" disabled={createTask.isPending}>
-              <CalendarPlus className="h-4 w-4" />
-              Añadir
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notas internas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {relatedNotes.map((note) => (
-            <article key={note.id} className="border-b pb-2 text-sm">
-              <p className="font-medium">
-                {note.title || 'Nota interna'}
-                {note.highlighted ? ' · Destacada' : ''}
-              </p>
-              <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{note.content}</p>
-            </article>
-          ))}
-          {!relatedNotes.length && !notes.isPending ? (
-            <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
-          ) : null}
-          <form className="space-y-2 border-t pt-3" onSubmit={(event) => void addNote(event)}>
-            <Input
-              value={noteTitle}
-              onChange={(event) => setNoteTitle(event.target.value)}
-              placeholder="Título de la nota"
-              maxLength={300}
-            />
-            <Textarea
-              value={noteContent}
-              onChange={(event) => setNoteContent(event.target.value)}
-              placeholder="Contexto interno que debe conservarse"
-              required
-              maxLength={20_000}
-              rows={3}
-            />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={noteHighlighted}
-                onChange={(event) => setNoteHighlighted(event.target.checked)}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-muted-foreground border-border border-y border-dashed py-10 text-center text-sm">
+          Todavía no hay tareas vinculadas a este Lead.
+        </p>
+      )}
+    </section>
+  )
+}
+
+export function LeadHistoryTimeline({
+  events,
+  loading,
+  memberNames,
+}: {
+  events: Array<{ id: string; tipo: string; datos: Json; creadoEn: string; autorId: string | null }>
+  loading: boolean
+  memberNames: ReadonlyMap<string, string>
+}) {
+  return (
+    <section aria-labelledby="lead-history-heading" className="space-y-4 lg:col-span-2">
+      <header>
+        <h2 id="lead-history-heading" className="text-base font-semibold">
+          Histórico
+        </h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Cronología de actividad y cambios realizados en este Lead.
+        </p>
+      </header>
+      {loading ? (
+        <p className="text-muted-foreground border-border border-y py-8 text-center text-sm">
+          Cargando histórico…
+        </p>
+      ) : events.length ? (
+        <ol className="max-h-[32rem] space-y-0 overflow-y-auto ps-4 pe-2">
+          {events.map((item, index) => (
+            <li key={item.id} className="relative ps-7 pb-7 last:pb-0">
+              {index < events.length - 1 ? (
+                <span
+                  className="bg-border absolute start-1.5 top-5 -bottom-3 w-px"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span
+                className="bg-primary ring-background absolute start-0 top-1 z-10 size-3 rounded-full ring-2"
+                aria-hidden="true"
               />
-              Destacar nota
-            </label>
-            <Button type="submit" size="sm" disabled={createNote.isPending}>
-              <NotebookPen className="h-4 w-4" />
-              Guardar nota
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Comunicación y trazabilidad</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <form
-            className="grid gap-2 sm:grid-cols-[auto_1fr_auto]"
-            onSubmit={(event) => void addCommunication(event)}
-          >
-            <select
-              aria-label="Tipo de comunicación"
-              value={communicationType}
-              onChange={(event) =>
-                setCommunicationType(event.target.value as typeof communicationType)
-              }
-              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-            >
-              <option value="phone_call">Llamada</option>
-              <option value="email_draft">Borrador email</option>
-              <option value="meeting">Reunión</option>
-            </select>
-            <Input
-              value={communicationSummary}
-              onChange={(event) => setCommunicationSummary(event.target.value)}
-              placeholder="Resumen de la comunicación"
-              required
-              maxLength={2000}
-            />
-            <Button type="submit" size="sm" disabled={logCommunication.isPending}>
-              <MessageSquarePlus className="h-4 w-4" />
-              Registrar
-            </Button>
-          </form>
-          <div className="max-h-64 space-y-2 overflow-y-auto border-t pt-3">
-            {(events.data ?? []).map((item) => (
-              <article key={item.id} className="text-sm">
-                <p className="font-medium">{eventLabel(item.tipo, item.datos)}</p>
-                <p className="text-muted-foreground text-xs">
-                  {dateText(item.creadoEn)} ·{' '}
+              <article className="min-w-0">
+                <time dateTime={item.creadoEn} className="text-muted-foreground text-xs">
+                  {dateText(item.creadoEn)}
+                </time>
+                <p className="mt-1 text-sm font-medium">{eventLabel(item.tipo, item.datos)}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
                   {item.autorId
                     ? (memberNames.get(item.autorId) ?? 'Usuario del despacho')
                     : 'Sistema'}
                 </p>
               </article>
-            ))}
-            {!events.data?.length && !events.isPending ? (
-              <p className="text-muted-foreground text-sm">Sin eventos registrados.</p>
-            ) : null}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-muted-foreground border-border border-y border-dashed py-10 text-center text-sm">
+          Sin eventos registrados.
+        </p>
+      )}
+    </section>
+  )
+}
+
+export function LeadTaskCreateDialog({
+  reference,
+  defaultAssigneeId,
+  members,
+  labels,
+  titleTemplates,
+  pending,
+  onCreate,
+}: {
+  reference: string
+  defaultAssigneeId: string | null
+  members: Array<{ id: string; nombre: string }>
+  labels: Array<{ id: string; name: string; color: string }>
+  titleTemplates: string[]
+  pending: boolean
+  onCreate: (
+    input: Omit<CrearTareaInput, 'expedienteId' | 'oportunidadId' | 'clasePlazo' | 'critico'>,
+  ) => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const dueDate = formText(data, 'dueDate')
+    const dueTime = formText(data, 'dueTime')
+    try {
+      await onCreate({
+        tipo: 'Tarea',
+        titulo: formText(data, 'title'),
+        descripcion: formText(data, 'description'),
+        prioridad: formText(data, 'priority') as CrearTareaInput['prioridad'],
+        venceEn: dueDate ? `${dueDate}T${dueTime || '09:00'}:00` : null,
+        recordarEn: null,
+        asignadoId: formText(data, 'assignee') || null,
+        etiquetaIds: formText(data, 'label') ? [formText(data, 'label')] : [],
+      })
+      form.reset()
+      setOpen(false)
+    } catch {
+      // The mutation reports the specific error through the parent action.
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button id="lead-new-task" type="button">
+          <Plus className="h-4 w-4" aria-hidden="true" /> Nueva tarea
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-2xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
+        <DialogHeader>
+          <div className="bg-muted/45 border-b px-6 py-5">
+            <DialogTitle>Nueva tarea</DialogTitle>
+            <DialogDescription className="mt-1.5">
+              Quedará vinculada a {reference}.
+            </DialogDescription>
           </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Conversión a onboarding</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {linkedOnboarding ? (
-            <div className="space-y-3">
-              <p className="text-sm">
-                El onboarding <strong>{linkedOnboarding.referencia}</strong> ya está vinculado a
-                este Lead.
-              </p>
-              <Link to="/onboarding" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                <ClipboardCheck className="h-4 w-4" />
-                Abrir onboarding
-              </Link>
-            </div>
-          ) : opportunity.fase !== 'won' ? (
-            <p className="text-muted-foreground text-sm">
-              Disponible al marcar el Lead como <strong>Aceptado</strong>. Así se preserva la
-              validación comercial antes de iniciar el encargo.
-            </p>
-          ) : (
-            <form
-              className="grid gap-3 sm:grid-cols-2"
-              onSubmit={(event) => void startOnboarding(event)}
+        </DialogHeader>
+        <form
+          className="space-y-4 px-6 py-6"
+          aria-busy={pending}
+          onSubmit={(event) => void submit(event)}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TaskFormField
+              name="title"
+              label="Título *"
+              required
+              className="sm:col-span-2"
+              list="lead-task-title-suggestions"
+              placeholder="Qué hay que hacer"
+            />
+            <datalist id="lead-task-title-suggestions">
+              {titleTemplates.map((title) => (
+                <option key={title} value={title} />
+              ))}
+            </datalist>
+            <TaskSelect
+              name="assignee"
+              label="Asignada a"
+              defaultValue={defaultAssigneeId ?? ''}
+              options={[
+                ['', 'Sin asignar'],
+                ...members.map((member) => [member.id, member.nombre]),
+              ]}
+            />
+            <TaskFormField name="dueDate" label="Vencimiento" type="date" />
+            <TaskFormField name="dueTime" label="Hora límite" type="time" />
+            <TaskSelect
+              name="priority"
+              label="Prioridad"
+              defaultValue="Media"
+              options={[
+                ['Alta', 'Alta'],
+                ['Media', 'Media'],
+                ['Baja', 'Baja'],
+              ]}
+            />
+            <TaskSelect
+              name="label"
+              label="Etiquetas"
+              className="sm:col-span-2"
+              options={[['', 'Sin etiquetas'], ...labels.map((label) => [label.id, label.name])]}
+            />
+            <TaskFormField
+              name="description"
+              label="Mensaje inicial"
+              helper="Contexto e indicaciones para quien recibe el encargo."
+              multiline
+              className="sm:col-span-2"
+              placeholder="Indicaciones para quien recibe el encargo"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={pending}
             >
-              <Field
-                name="quoteReference"
-                label="Referencia del presupuesto"
-                placeholder="PR-2026-0001"
-                required
-              />
-              <Field
-                name="quoteAmount"
-                label="Importe acordado"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={
-                  opportunity.valorEstimado === null ? '' : String(opportunity.valorEstimado)
-                }
-              />
-              <Field
-                name="proformaDate"
-                label="Fecha de proforma"
-                type="date"
-                defaultValue={today()}
-                required
-              />
-              <Field
-                name="nextAction"
-                label="Siguiente acción"
-                defaultValue="Confirmar pago de la proforma"
-              />
-              <div className="sm:col-span-2">
-                <Button type="submit" disabled={createOnboarding.isPending}>
-                  <ClipboardCheck className="h-4 w-4" />
-                  {createOnboarding.isPending ? 'Iniciando…' : 'Iniciar onboarding'}
-                </Button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Creando…' : 'Crear tarea'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function TaskFormField({
+  name,
+  label,
+  helper,
+  multiline,
+  className,
+  ...props
+}: {
+  name: string
+  label: string
+  helper?: string
+  multiline?: boolean
+  className?: string
+  type?: string
+  required?: boolean
+  list?: string
+  placeholder?: string
+}) {
+  const helpId = helper ? `lead-task-${name}-help` : undefined
+  return (
+    <div className={`space-y-1.5 ${className ?? ''}`}>
+      <Label htmlFor={`lead-task-${name}`}>{label}</Label>
+      {multiline ? (
+        <Textarea
+          id={`lead-task-${name}`}
+          name={name}
+          rows={4}
+          aria-describedby={helpId}
+          {...props}
+        />
+      ) : (
+        <Input id={`lead-task-${name}`} name={name} aria-describedby={helpId} {...props} />
+      )}
+      {helper ? (
+        <p id={helpId} className="text-muted-foreground text-xs">
+          {helper}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function TaskSelect({
+  name,
+  label,
+  options,
+  defaultValue,
+  className,
+}: {
+  name: string
+  label: string
+  options: string[][]
+  defaultValue?: string
+  className?: string
+}) {
+  return (
+    <div className={`space-y-1.5 ${className ?? ''}`}>
+      <Label htmlFor={`lead-task-${name}`}>{label}</Label>
+      <select
+        id={`lead-task-${name}`}
+        name={name}
+        defaultValue={defaultValue}
+        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+      >
+        {options.map(([value, optionLabel]) => (
+          <option key={`${name}-${value}`} value={value}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -587,11 +1168,13 @@ function Field({
   name,
   label,
   multiline,
+  helper,
   ...props
 }: {
   name: string
   label: string
   multiline?: boolean
+  helper?: string
   defaultValue?: string
   placeholder?: string
   type?: string
@@ -600,14 +1183,20 @@ function Field({
   step?: string
   required?: boolean
 }) {
+  const helpId = helper ? `lead-${name}-help` : undefined
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <Label htmlFor={`lead-${name}`}>{label}</Label>
       {multiline ? (
-        <Textarea id={`lead-${name}`} name={name} rows={3} {...props} />
+        <Textarea id={`lead-${name}`} name={name} rows={3} aria-describedby={helpId} {...props} />
       ) : (
-        <Input id={`lead-${name}`} name={name} {...props} />
+        <Input id={`lead-${name}`} name={name} aria-describedby={helpId} {...props} />
       )}
+      {helper ? (
+        <p id={helpId} className="text-muted-foreground text-xs">
+          {helper}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -619,6 +1208,16 @@ function formText(form: FormData, name: string) {
 function nullableNumber(value: string) {
   const number = Number(value)
   return value && Number.isFinite(number) ? number : null
+}
+function qualificationQuestions(value: Json | undefined): QualificationQuestion[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((question, index) => {
+    const record = asRecord(question)
+    const questionText = text(record['texto']) || text(record['text']) || text(question)
+    return questionText
+      ? [{ id: text(record['id']) || `question-${index}`, text: questionText }]
+      : []
+  })
 }
 function participantLabel(value: Json) {
   const item = asRecord(value)

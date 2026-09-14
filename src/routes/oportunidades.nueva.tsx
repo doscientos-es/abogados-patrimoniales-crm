@@ -1,10 +1,19 @@
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  HighlightMatch,
+} from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, CheckCircle2, Search, UserRound } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
+import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useCrearOportunidad } from '@/features/crm'
+import { contactosParaAutocompletado } from '@/features/crm/application/contact-autocomplete'
 import { useCrearNotaOportunidad } from '@/features/notas'
 import { useCrearTarea } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
@@ -40,24 +50,20 @@ function NuevaOportunidadPage() {
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
-  const filteredContacts = useMemo(() => {
-    const query = contactSearch.trim().toLowerCase()
-    if (!query) return contacts.data ?? []
-    return (contacts.data ?? []).filter((contact) =>
-      [
-        contact.nombre,
-        contact.apellidos,
-        contact.razonSocial,
-        contact.nif,
-        contact.telefono,
-        contact.email,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query),
-    )
-  }, [contactSearch, contacts.data])
+  const [participantSearch, setParticipantSearch] = useState('')
+  const contactOptions = useMemo(
+    () => contactosParaAutocompletado(contacts.data ?? [], contactSearch),
+    [contactSearch, contacts.data],
+  )
+  const participantOptions = useMemo(
+    () =>
+      contactosParaAutocompletado(
+        contacts.data ?? [],
+        participantSearch,
+        contactId ? [contactId] : [],
+      ),
+    [contactId, contacts.data, participantSearch],
+  )
   const areas = useQuery({
     queryKey: ['crm', 'practice-areas', firmId],
     enabled: Boolean(firmId),
@@ -195,84 +201,93 @@ function NuevaOportunidadPage() {
               title="Contacto principal"
               description="Busca por nombre, documento, teléfono o correo."
             />
-            <div className="relative">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                value={contactSearch}
-                onChange={(event) => setContactSearch(event.target.value)}
-                placeholder="Buscar contacto…"
-                className="pl-10"
-                aria-label="Buscar contacto principal"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="lead-contact">Contacto principal *</Label>
+              <Combobox
+                aria-label="Contacto principal"
+                inputValue={contactSearch}
+                items={contactOptions}
+                onInputChange={(value) => {
+                  setContactSearch(value)
+                  if (
+                    value !==
+                    contactName((contacts.data ?? []).find((item) => item.id === contactId))
+                  ) {
+                    setContactId('')
+                  }
+                }}
+                onSelectionChange={(key) => {
+                  const selectedId = key ? String(key) : ''
+                  setContactId(selectedId)
+                  setParticipantIds((current) => current.filter((id) => id !== selectedId))
+                  setContactSearch(
+                    selectedId
+                      ? contactName((contacts.data ?? []).find((item) => item.id === selectedId))
+                      : '',
+                  )
+                }}
+                selectedKey={contactId || null}
+              >
+                <ComboboxInput id="lead-contact" placeholder="Buscar contacto…" />
+                <ComboboxContent>
+                  <ComboboxList emptyState="No hay coincidencias.">
+                    {(contact) => <ContactOption contact={contact} query={contactSearch} />}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {filteredContacts.slice(0, 8).map((contact) => {
-                const name =
-                  contact.razonSocial || `${contact.nombre} ${contact.apellidos ?? ''}`.trim()
-                const selected = contact.id === contactId
-                return (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => setContactId(contact.id)}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : 'hover:border-primary/40'}`}
-                    aria-pressed={selected}
-                  >
-                    <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
-                      <UserRound className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">
-                        {name || 'Sin nombre'}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {contact.email || contact.telefono || contact.nif || contact.tipoPersona}
-                      </span>
-                    </span>
-                    {selected ? (
-                      <CheckCircle2
-                        className="text-primary ml-auto size-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-            {!filteredContacts.length ? (
-              <p className="text-muted-foreground text-sm">
-                No hay coincidencias. Crea el contacto desde Contactos y vuelve a esta pantalla.
-              </p>
-            ) : null}
             <p className="text-muted-foreground text-xs">
               El contacto seleccionado mantiene su relación actual con el despacho.
             </p>
             <div className="space-y-2 border-t pt-4">
-              <Label>Otros intervinientes conocidos</Label>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {(contacts.data ?? [])
-                  .filter((contact) => contact.id !== contactId)
-                  .slice(0, 12)
-                  .map((contact) => (
-                    <label key={contact.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={participantIds.includes(contact.id)}
-                        onChange={(event) =>
-                          setParticipantIds((current) =>
-                            event.target.checked
-                              ? [...current, contact.id]
-                              : current.filter((id) => id !== contact.id),
-                          )
-                        }
-                      />
-                      {contactName(contact)}
-                    </label>
-                  ))}
-              </div>
+              <Label htmlFor="lead-participants">Otros intervinientes conocidos</Label>
+              <Combobox
+                aria-label="Otros intervinientes conocidos"
+                inputValue={participantSearch}
+                items={participantOptions}
+                onInputChange={setParticipantSearch}
+                onSelectionChange={(keys) => {
+                  const selectedIds = keys === 'all' ? [] : [...keys].map(String)
+                  setParticipantIds(selectedIds.filter((id) => id !== contactId))
+                  setParticipantSearch('')
+                }}
+                selectedKeys={new Set(participantIds)}
+                selectionMode="multiple"
+              >
+                <ComboboxInput id="lead-participants" placeholder="Añadir interviniente…" />
+                <ComboboxContent>
+                  <ComboboxList emptyState="No hay coincidencias.">
+                    {(contact) => <ContactOption contact={contact} query={participantSearch} />}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {participantIds.length ? (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Intervinientes seleccionados">
+                  {participantIds.map((id) => {
+                    const participant = (contacts.data ?? []).find((contact) => contact.id === id)
+                    if (!participant) return null
+                    return (
+                      <li key={id}>
+                        <Badge className="border-primary/20 bg-primary/10 text-primary gap-1">
+                          {contactName(participant)}
+                          <button
+                            type="button"
+                            className="hover:bg-primary/15 rounded-sm px-0.5"
+                            onClick={() =>
+                              setParticipantIds((current) =>
+                                current.filter((participantId) => participantId !== id),
+                              )
+                            }
+                            aria-label={`Quitar a ${contactName(participant)} de los intervinientes`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : null}
               <p className="text-muted-foreground text-xs">
                 Se trasladarán como intervinientes al abrir el expediente, sin duplicar sus fichas.
               </p>
@@ -479,10 +494,39 @@ function formText(form: FormData, key: string) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function contactName(contact: {
-  nombre: string
-  apellidos?: string
-  razonSocial?: string
+function contactName(contact?: { nombre: string; apellidos?: string; razonSocial?: string }) {
+  return contact?.razonSocial || `${contact?.nombre ?? ''} ${contact?.apellidos ?? ''}`.trim()
+}
+
+function ContactOption({
+  contact,
+  query,
+}: {
+  contact: {
+    id: string
+    nombre: string
+    apellidos?: string
+    razonSocial?: string
+    nif: string
+    telefono: string
+    email: string
+    tipoPersona: string
+  }
+  query: string
 }) {
-  return contact.razonSocial || `${contact.nombre} ${contact.apellidos ?? ''}`.trim()
+  const name = contactName(contact) || 'Sin nombre'
+  const identifier = contact.email || contact.telefono || contact.nif || contact.tipoPersona
+
+  return (
+    <ComboboxItem id={contact.id} textValue={`${name} ${identifier}`}>
+      <span className="flex min-w-0 flex-col py-0.5">
+        <span className="truncate text-sm font-medium">
+          <HighlightMatch text={name} query={query} />
+        </span>
+        <span className="text-muted-foreground truncate text-xs">
+          <HighlightMatch text={identifier} query={query} />
+        </span>
+      </span>
+    </ComboboxItem>
+  )
 }

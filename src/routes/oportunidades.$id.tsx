@@ -1,5 +1,12 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Archive, ArrowLeft, CalendarDays, Contact, Euro, type LucideIcon } from 'lucide-react'
+import {
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  ExternalLink,
+  Pencil,
+} from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -17,11 +24,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContacto, type ContactoPersistido } from '@/features/contactos'
 import {
   OPPORTUNITY_STAGE_LABELS,
   OPPORTUNITY_TRANSITIONS,
@@ -32,9 +40,32 @@ import {
   useMiembrosDespacho,
   useOportunidad,
   useTransicionarOportunidad,
+  type OportunidadPersistida,
 } from '@/features/crm'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
+import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
+
+export type LeadDetailTab =
+  | 'summary'
+  | 'contact'
+  | 'qualification'
+  | 'tasks'
+  | 'communications'
+  | 'notes'
+  | 'acceptance'
+  | 'history'
+
+const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
+  { id: 'summary', label: 'Resumen' },
+  { id: 'contact', label: 'Contacto' },
+  { id: 'qualification', label: 'Cualificación' },
+  { id: 'tasks', label: 'Tareas' },
+  { id: 'communications', label: 'Comunicaciones' },
+  { id: 'notes', label: 'Notas internas' },
+  { id: 'acceptance', label: 'Validación y aceptación' },
+  { id: 'history', label: 'Histórico' },
+]
 
 export const Route = createFileRoute('/oportunidades/$id')({
   head: () => ({
@@ -65,8 +96,11 @@ function FichaOportunidadPage() {
   )
   const firmId = membership.data?.firmId
   const oportunidad = useOportunidad(firmId, id)
+  const contacto = useContacto(firmId, oportunidad.data?.contactoId ?? '')
   const miembros = useMiembrosDespacho(firmId)
+  const tareas = useTareasPersistentes(firmId)
   const actualizar = useActualizarOportunidad(firmId)
+  const [activeTab, setActiveTab] = useState<LeadDetailTab>('summary')
 
   if (session.status === 'loading') {
     return (
@@ -117,6 +151,8 @@ function FichaOportunidadPage() {
   }
 
   const data = oportunidad.data
+  const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id)
+  const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
   return (
     <main className="mx-auto max-w-[1400px] space-y-6 p-6">
       <Link
@@ -126,74 +162,358 @@ function FichaOportunidadPage() {
       >
         <ArrowLeft className="h-4 w-4" /> Volver a Leads
       </Link>
-      <header className="space-y-2">
+      <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{data.referencia}</Badge>
-          <Badge>{data.fase}</Badge>
+          <Badge>{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
           <Badge variant="secondary">{data.subestado}</Badge>
         </div>
-        <h1 className="text-2xl font-semibold text-balance">{data.titulo}</h1>
-        <p className="text-muted-foreground">{data.descripcion || 'Sin descripción registrada.'}</p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold text-balance">{data.titulo}</h1>
+            <p className="text-muted-foreground mt-1">
+              {data.descripcion || 'Sin descripción registrada.'}
+            </p>
+          </div>
+          <LeadHeroActions
+            stage={data.fase}
+            canEdit={!data.archivadoEn}
+            onSelectTab={setActiveTab}
+          />
+        </div>
       </header>
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard icon={Contact} label="Área" value={data.area || 'Sin asignar'} />
-        <SummaryCard
-          icon={Euro}
-          label="Valor estimado"
-          value={formatCurrency(data.valorEstimado)}
-        />
-        <SummaryCard
-          icon={CalendarDays}
-          label="Cierre previsto"
-          value={data.fechaObjetivo || 'Sin fecha'}
-        />
-        <SummaryCard icon={Contact} label="Prioridad" value={data.prioridad} />
+      <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
+      <section
+        id={`lead-detail-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`lead-detail-tab-${activeTab}`}
+      >
+        {activeTab === 'summary' ? (
+          <div className="space-y-4">
+            <LeadSummary
+              opportunity={data}
+              memberName={memberName}
+              tasks={relatedTasks}
+              tasksLoading={tareas.isPending}
+              onSelectTab={setActiveTab}
+            />
+            {data.archivadoEn ? (
+              <Card>
+                <CardContent className="pt-6 text-sm">
+                  Lead archivado: {data.motivoArchivo || 'sin motivo visible'}.
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
+        {activeTab === 'contact' ? (
+          <div className="space-y-4">
+            <LeadContactOverview
+              opportunity={data}
+              contact={contacto.data}
+              contactLoading={contacto.isPending}
+            />
+            {!data.archivadoEn ? (
+              <OpportunityEditForm
+                key={`edit-${data.id}-${data.version}`}
+                id="lead-edit-details"
+                oportunidad={data}
+                miembros={miembros.data ?? []}
+                miembrosCargando={miembros.isPending}
+                miembrosError={miembros.isError}
+                guardando={actualizar.isPending}
+                headerAction={
+                  <Link
+                    to="/contactos/$id"
+                    params={{ id: data.contactoId }}
+                    className="text-primary inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 transition-colors hover:text-primary/80"
+                  >
+                    Ver ficha del contacto <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                }
+                onSave={async (input) => {
+                  await actualizar.mutateAsync(input)
+                }}
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {activeTab === 'qualification' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="qualification" />
+        ) : null}
+        {activeTab === 'tasks' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="tasks" />
+        ) : null}
+        {activeTab === 'communications' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="communications" />
+        ) : null}
+        {activeTab === 'notes' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="notes" />
+        ) : null}
+        {activeTab === 'history' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="history" />
+        ) : null}
+        {activeTab === 'acceptance' ? (
+          <div className="space-y-4">
+            <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="acceptance" />
+            {!data.archivadoEn ? (
+              <>
+                <OpportunityTransitionCard
+                  key={`${data.id}-${data.version}`}
+                  opportunityId={data.id}
+                  firmId={firmId}
+                  stage={data.fase}
+                />
+                <OpportunityArchiveCard
+                  opportunityId={data.id}
+                  version={data.version}
+                  firmId={firmId}
+                />
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </section>
-      <Card>
-        <CardContent className="pt-6">
-          <Link
-            to="/contactos/$id"
-            params={{ id: data.contactoId }}
-            className={buttonVariants({ variant: 'outline' })}
-          >
-            Abrir ficha del contacto
-          </Link>
+    </main>
+  )
+}
+
+export function LeadHeroActions({
+  stage,
+  canEdit = true,
+  onSelectTab,
+}: {
+  stage: OpportunityStage
+  canEdit?: boolean
+  onSelectTab: (tab: LeadDetailTab) => void
+}) {
+  const canAdvance = OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== 'lost')
+
+  return (
+    <div className="flex shrink-0 flex-wrap gap-2" aria-label="Acciones rápidas del Lead">
+      {canEdit ? (
+        <a
+          href="#lead-edit-details"
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          onClick={() => onSelectTab('contact')}
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" /> Editar Lead
+        </a>
+      ) : null}
+      <a
+        href="#lead-new-task"
+        className={buttonVariants({ size: 'sm' })}
+        onClick={() => onSelectTab('tasks')}
+      >
+        <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Añadir tarea
+      </a>
+      {canAdvance ? (
+        <a
+          href="#lead-stage-transition"
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          onClick={() => onSelectTab('acceptance')}
+        >
+          Avanzar de fase <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </a>
+      ) : null}
+    </div>
+  )
+}
+
+export function LeadSummary({
+  opportunity,
+  memberName,
+  tasks,
+  tasksLoading,
+  onSelectTab,
+}: {
+  opportunity: OportunidadPersistida
+  memberName: string | undefined
+  tasks: TareaPersistida[]
+  tasksLoading: boolean
+  onSelectTab: (tab: LeadDetailTab) => void
+}) {
+  const nextAction = nextLeadAction(tasks)
+  const firstMeeting = firstMeetingStatus(tasks)
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Situación del Lead</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <LeadSummaryItem label="Fase" value={OPPORTUNITY_STAGE_LABELS[opportunity.fase]} />
+            <LeadSummaryItem label="Responsable" value={memberName ?? 'Sin asignar'} />
+            <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
+            <LeadSummaryItem label="Tiempo como Lead" value={leadAge(opportunity.creada)} />
+          </dl>
         </CardContent>
       </Card>
-      <LeadWorkspace
-        key={`workspace-${data.id}-${data.version}`}
-        opportunity={data}
-        firmId={membership.data.firmId}
-      />
-      {data.archivadoEn ? (
-        <Card>
-          <CardContent className="pt-6 text-sm">
-            Lead archivado: {data.motivoArchivo || 'sin motivo visible'}.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <OpportunityEditForm
-            key={`edit-${data.id}-${data.version}`}
-            oportunidad={data}
-            miembros={miembros.data ?? []}
-            miembrosCargando={miembros.isPending}
-            miembrosError={miembros.isError}
-            guardando={actualizar.isPending}
-            onSave={async (input) => {
-              await actualizar.mutateAsync(input)
-            }}
-          />
-          <OpportunityTransitionCard
-            key={`${data.id}-${data.version}`}
-            opportunityId={data.id}
-            firmId={firmId}
-            stage={data.fase}
-          />
-          <OpportunityArchiveCard opportunityId={data.id} version={data.version} firmId={firmId} />
-        </>
-      )}
-    </main>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Siguiente acción</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {tasksLoading ? (
+            <p className="text-muted-foreground text-sm">Cargando tareas vinculadas…</p>
+          ) : nextAction ? (
+            <div>
+              <p className="text-sm font-medium">{nextAction.titulo}</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {nextAction.venceEn ? `Prevista: ${formatDate(nextAction.venceEn)}` : 'Sin fecha'}
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">Sin siguiente acción</p>
+          )}
+          <p className="text-sm font-medium">
+            ¿Qué hay que hacer ahora para que este asunto avance?
+          </p>
+          <a
+            href="#lead-new-task"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            onClick={() => onSelectTab('tasks')}
+          >
+            {nextAction ? 'Gestionar tareas' : 'Definir siguiente acción'}
+          </a>
+          <p className="text-muted-foreground text-xs">
+            La siguiente acción se gestiona como una tarea ordinaria del módulo de Tareas.
+          </p>
+        </CardContent>
+      </Card>
+      <Card className="lg:col-span-3">
+        <CardHeader>
+          <CardTitle className="text-base">Hitos del Lead</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-5 sm:grid-cols-3">
+            <LeadSummaryItem label="Primera cita" value={firstMeeting} />
+            <LeadSummaryItem label="Presupuesto" value={quoteStatus(opportunity.fase)} />
+            <LeadSummaryItem label="Aceptación" value={acceptanceStatus(opportunity.fase)} />
+          </dl>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export function LeadContactOverview({
+  opportunity,
+  contact,
+  contactLoading,
+}: {
+  opportunity: OportunidadPersistida
+  contact: ContactoPersistido | null | undefined
+  contactLoading: boolean
+}) {
+  const details = asRecord(opportunity.detalles)
+  const initial = asRecord(details['informacionInicial'])
+  const role = asRecord(details['rolContacto'])
+  const urgency = asRecord(details['urgencia'])
+  const participants = participantNames(details['otrosIntervinientes'])
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Contacto principal</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+            <LeadSummaryItem
+              label="Contacto principal"
+              value={contactLoading ? 'Cargando contacto…' : contactName(contact)}
+            />
+            <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
+            <LeadSummaryItem label="Fecha de entrada" value={formatDate(opportunity.creada)} />
+            <LeadSummaryItem label="Tiempo como Lead" value={leadAgeShort(opportunity.creada)} />
+            <LeadSummaryItem label="Rol en el Lead" value={textValue(role['rol']) || 'Sin indicar'} />
+          </dl>
+          <div className="border-border border-t pt-5">
+            <h3 className="text-sm font-medium">Otros intervinientes</h3>
+            {participants.length ? (
+              <ul className="text-muted-foreground mt-2 space-y-1 text-sm">
+                {participants.map((participant) => (
+                  <li key={participant}>{participant}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground mt-2 text-sm">
+                No hay otros intervinientes vinculados a este Lead.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Información inicial</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
+            <LeadSummaryItem
+              label="¿Qué ha ocurrido?"
+              value={textValue(initial['queHaOcurrido']) || '—'}
+            />
+            <LeadSummaryItem label="¿Qué solicita?" value={textValue(initial['queSolicita']) || '—'} />
+            <LeadSummaryItem
+              label="¿Existe algún procedimiento ya iniciado?"
+              value={textValue(initial['procedimientoIniciado']) || '—'}
+            />
+            <LeadSummaryItem
+              label="¿Qué documentación manifiesta tener?"
+              value={textValue(initial['documentacionManifestada']) || '—'}
+            />
+            <LeadSummaryItem
+              label="¿Existe alguna urgencia o fecha relevante?"
+              value={urgencyValue(urgency)}
+            />
+          </dl>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
+
+function LeadSummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
+      <dd className="mt-1 text-sm font-medium">{value}</dd>
+    </div>
+  )
+}
+
+export function LeadDetailTabs({
+  activeTab,
+  onSelectTab,
+}: {
+  activeTab: LeadDetailTab
+  onSelectTab: (tab: LeadDetailTab) => void
+}) {
+  return (
+    <div className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2" role="tablist">
+      {LEAD_DETAIL_TABS.map(({ id, label }) => {
+        const selected = activeTab === id
+        return (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={`lead-detail-tab-${id}`}
+            aria-controls={`lead-detail-panel-${id}`}
+            aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onSelectTab(id)}
+            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent'}`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -341,7 +661,7 @@ function TransitionForm({
   }
 
   return (
-    <Card>
+    <Card id="lead-stage-transition">
       <CardContent className="pt-6">
         <form className="grid gap-4 md:grid-cols-3" onSubmit={(event) => void submit(event)}>
           <div className="space-y-1 text-sm">
@@ -398,30 +718,102 @@ function TransitionForm({
   )
 }
 
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-3 pt-6">
-        <Icon className="text-muted-foreground h-5 w-5" />
-        <div>
-          <p className="text-muted-foreground text-xs">{label}</p>
-          <p className="font-medium">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
+function nextLeadAction(tasks: TareaPersistida[]) {
+  return [...tasks]
+    .filter((task) => !['Completada', 'Cancelada'].includes(task.estado))
+    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0]
 }
 
-function formatCurrency(value: number | null) {
-  return value === null
-    ? 'Sin valorar'
-    : new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value)
+function firstMeetingStatus(tasks: TareaPersistida[]) {
+  const meeting = [...tasks]
+    .filter((task) => task.tipo === 'Evento' && task.estado !== 'Cancelada')
+    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0]
+  if (!meeting) return 'Sin programar'
+  if (!meeting.venceEn) return 'Pendiente de programar'
+  return `${meeting.estado === 'Completada' ? 'Celebrada' : 'Programada'} · ${formatDate(meeting.venceEn)}`
+}
+
+function quoteStatus(stage: OpportunityStage) {
+  if (stage === 'quote') return 'Solicitado'
+  if (stage === 'validation') return 'Pendiente de validar'
+  if (stage === 'engagement') return 'Enviado al cliente'
+  if (stage === 'won') return 'Aceptado'
+  if (stage === 'lost') return 'Cerrado sin aceptación'
+  return 'No solicitado'
+}
+
+function acceptanceStatus(stage: OpportunityStage) {
+  if (stage === 'won') return 'Aceptado'
+  if (stage === 'lost') return 'No aceptado'
+  if (stage === 'validation') return 'En validación'
+  if (stage === 'engagement') return 'Pendiente de aceptación'
+  return 'Sin aceptación'
+}
+
+function leadAge(createdAt: string, now = new Date()) {
+  const relative = leadAgeShort(createdAt, now)
+  return relative === 'Sin fecha de alta' ? relative : `${relative} · desde ${formatDate(createdAt)}`
+}
+
+function leadAgeShort(createdAt: string, now = new Date()) {
+  const created = new Date(createdAt)
+  if (Number.isNaN(created.getTime())) return 'Sin fecha de alta'
+  const dayMs = 86_400_000
+  const createdDay = Date.UTC(created.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate())
+  const currentDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const days = Math.max(0, Math.floor((currentDay - createdDay) / dayMs))
+  return days === 0 ? 'Hoy' : days === 1 ? 'Ayer' : `Hace ${days} días`
+}
+
+function taskDateValue(value: string | null) {
+  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
+}
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? 'Sin fecha'
+    : new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date)
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function textValue(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function participantNames(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((participant) => {
+      if (typeof participant === 'string') return participant.trim()
+      const record = asRecord(participant)
+      return (
+        textValue(record['nombre']) ||
+        textValue(record['nombreCompleto']) ||
+        textValue(record['name'])
+      )
+    })
+    .filter(Boolean)
+}
+
+function contactName(contact: ContactoPersistido | null | undefined) {
+  if (!contact) return 'Contacto no disponible'
+  return [contact.nombre, contact.apellidos].filter(Boolean).join(' ')
+}
+
+function urgencyValue(urgency: Record<string, unknown>) {
+  const option = textValue(urgency['opcion'])
+  const detail = textValue(urgency['detalle'])
+  return [option, detail].filter(Boolean).join(' · ') || 'Sin indicar'
 }

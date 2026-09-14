@@ -23,18 +23,22 @@ import type {
 const UNASSIGNED = 'unassigned'
 
 export function OpportunityEditForm({
+  id,
   oportunidad,
   miembros,
   miembrosCargando,
   miembrosError,
   guardando,
+  headerAction,
   onSave,
 }: {
+  id?: string
   oportunidad: OportunidadPersistida
   miembros: MiembroDespacho[]
   miembrosCargando: boolean
   miembrosError: boolean
   guardando: boolean
+  headerAction?: ReactNode
   onSave: (input: ActualizarOportunidadInput) => Promise<void>
 }) {
   const [titulo, setTitulo] = useState(oportunidad.titulo)
@@ -75,9 +79,12 @@ export function OpportunityEditForm({
   }
 
   return (
-    <Card>
+    <Card id={id}>
       <CardHeader>
-        <CardTitle className="text-base">Datos comerciales y asignación</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="text-base">Asunto y datos comerciales</CardTitle>
+          {headerAction}
+        </div>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => void submit(event)}>
@@ -90,7 +97,7 @@ export function OpportunityEditForm({
               maxLength={300}
             />
           </FormField>
-          <FormField id="opportunity-area" label="Área">
+          <FormField id="opportunity-area" label="Área jurídica">
             <Input
               id="opportunity-area"
               value={area}
@@ -135,7 +142,7 @@ export function OpportunityEditForm({
               maxLength={160}
             />
           </FormField>
-          <FormField id="opportunity-amount" label="Valor estimado">
+          <FormField id="opportunity-amount" label="Importe potencial">
             <Input
               id="opportunity-amount"
               type="number"

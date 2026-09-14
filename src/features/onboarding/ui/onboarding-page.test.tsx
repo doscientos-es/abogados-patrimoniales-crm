@@ -102,12 +102,59 @@ describe('CreateOnboardingDialog', () => {
     expect(screen.getByRole('button', { name: 'Editar siguiente acción' }).className).toContain(
       'size-8',
     )
-    expect(screen.getByRole('button', { name: 'Nuevo email' }).className).toContain('size-8')
+    expect(screen.getByRole('button', { name: 'Registrar borrador de email' }).className).toContain(
+      'size-8',
+    )
     expect(screen.getByRole('button', { name: 'Registrar llamada' }).className).toContain('size-8')
     expect(screen.getByRole('button', { name: 'Crear tarea' }).className).toContain('size-8')
     expect(screen.getByRole('button', { name: 'Crear recordatorio' }).className).toContain('size-8')
     expect(screen.getByRole('link', { name: 'Ver Lead' })).toBeTruthy()
     expect(screen.queryByText('Ver contacto')).toBeNull()
+  })
+
+  it('abre y guarda la siguiente acción desde su botón de icono', async () => {
+    const onNextAction = vi.fn().mockResolvedValue(undefined)
+    render(
+      <OnboardingCard
+        item={{
+          id: 'onboarding-1',
+          referencia: 'ONB-2026-0001',
+          contactoId: 'contacto-1',
+          oportunidadId: 'lead-1',
+          expedienteId: null,
+          asunto: 'Reparto de herencia',
+          fase: 'proforma',
+          cambioFase: '2026-09-14',
+          presupuestoReferencia: 'PR-2026-0001',
+          importePresupuesto: 1500,
+          proformaEnviada: '2026-09-14',
+          pagoConfirmado: null,
+          inicioProgramado: null,
+          inicioRealizado: null,
+          responsableId: null,
+          siguienteAccion: '',
+          modalidad: 'pending',
+          version: 1,
+        }}
+        eventos={[]}
+        actorNames={new Map()}
+        contacto={{ nombre: 'Ana López' } as never}
+        pending={false}
+        onAction={vi.fn().mockResolvedValue(undefined)}
+        onNextAction={onNextAction}
+        onCommunication={vi.fn().mockResolvedValue(undefined)}
+        onTask={vi.fn().mockResolvedValue(undefined)}
+        onOpenCase={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar siguiente acción' }))
+    fireEvent.change(screen.getByLabelText('Siguiente acción'), {
+      target: { value: 'Llamar al cliente el viernes' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onNextAction).toHaveBeenCalledWith('Llamar al cliente el viernes'))
   })
 
   it('muestra los campos obligatorios al registrar una proforma', async () => {

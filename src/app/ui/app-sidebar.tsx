@@ -1,11 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Briefcase,
+  CalendarDays,
   CheckSquare,
   Contact,
   FileText,
   Gauge,
   Handshake,
+  ChartNoAxesCombined,
   MessageSquareText,
   Receipt,
   Settings,
@@ -27,6 +29,7 @@ import { cn } from '@/lib/utils'
 
 const general = [
   { title: 'Inicio', url: '/', icon: Gauge },
+  { title: 'Informes', url: '/informes', icon: ChartNoAxesCombined },
   { title: 'CRM', url: '/crm', icon: Sparkles },
 ] as const
 
@@ -38,6 +41,7 @@ const comercial = [
 
 const operativa = [
   { title: 'Expedientes', url: '/expedientes', icon: Briefcase },
+  { title: 'Calendario', url: '/calendario', icon: CalendarDays },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
 ] as const
 

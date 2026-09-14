@@ -12,7 +12,15 @@ import {
   Plus,
   UserRound,
 } from 'lucide-react'
-import { useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ComponentPropsWithoutRef,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
@@ -58,6 +66,7 @@ import {
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
 import { useCrearTarea } from '@/features/tareas'
+import { cn } from '@/lib/utils'
 import type { Json } from '@/shared/infrastructure/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -945,7 +954,7 @@ function CommunicationDialog({
   onSave: (type: 'email_draft' | 'phone_call', summary: string) => Promise<unknown>
 }) {
   const email = type === 'email_draft'
-  const label = email ? 'Nuevo email' : 'Registrar llamada'
+  const label = email ? 'Registrar borrador de email' : 'Registrar llamada'
   return (
     <SmallDialog
       trigger={
@@ -1100,20 +1109,24 @@ function OpenCaseDialog({
   )
 }
 
-function OnboardingIconButton({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      className="size-8"
-      aria-label={label}
-      title={label}
-    >
-      {children}
-    </Button>
-  )
-}
+const OnboardingIconButton = forwardRef<
+  HTMLButtonElement,
+  Omit<ComponentPropsWithoutRef<typeof Button>, 'children'> & { label: string; children: ReactNode }
+>(({ label, children, className, ...props }, ref) => (
+  <Button
+    ref={ref}
+    {...props}
+    type="button"
+    variant="ghost"
+    size="icon-sm"
+    className={cn('size-8', className)}
+    aria-label={label}
+    title={label}
+  >
+    {children}
+  </Button>
+))
+OnboardingIconButton.displayName = 'OnboardingIconButton'
 
 function SmallDialog({
   trigger,

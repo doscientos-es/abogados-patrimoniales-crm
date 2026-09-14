@@ -196,7 +196,6 @@ export function Dashboard() {
     <main className="mx-auto max-w-350 space-y-5">
       <SectionHeader
         title="Inicio"
-        meta={formatLongDate(dashboardTime)}
         subtitle={summary}
         actions={
           <Link to="/tareas" className={buttonVariants({ size: 'sm', className: 'gap-1.5' })}>
@@ -705,14 +704,6 @@ function isSameCalendarDay(value: string | null, now: number) {
     date.getMonth() === reference.getMonth() &&
     date.getDate() === reference.getDate()
   )
-}
-
-function formatLongDate(value: number) {
-  return new Intl.DateTimeFormat('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(value))
 }
 
 function formatActivityDate(value: string) {
