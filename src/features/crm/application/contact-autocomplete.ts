@@ -2,9 +2,9 @@ import type { ContactoPersistido } from '@/features/contactos'
 
 const MAX_AUTOCOMPLETE_RESULTS = 50
 
-type ContactAutocompleteOption = Pick<
+export type ContactAutocompleteOption = Pick<
   ContactoPersistido,
-  'id' | 'nombre' | 'apellidos' | 'razonSocial' | 'nif' | 'telefono' | 'email'
+  'id' | 'nombre' | 'apellidos' | 'razonSocial' | 'nif' | 'telefono' | 'email' | 'tipoPersona'
 >
 
 /** Finds matching contacts while bounding the number of rendered autocomplete options. */

@@ -10,6 +10,7 @@ const contact = (id: string, overrides: Record<string, string> = {}) => ({
   nif: '',
   telefono: '',
   email: '',
+  tipoPersona: 'Persona física' as const,
   ...overrides,
 })
 

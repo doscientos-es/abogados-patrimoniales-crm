@@ -8,7 +8,7 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Check } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -22,7 +22,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useCrearOportunidad } from '@/features/crm'
-import { contactosParaAutocompletado } from '@/features/crm/application/contact-autocomplete'
+import {
+  contactosParaAutocompletado,
+  type ContactAutocompleteOption,
+} from '@/features/crm/application/contact-autocomplete'
 import { useCrearNotaOportunidad } from '@/features/notas'
 import { useCrearTarea } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
@@ -230,7 +233,7 @@ function NuevaOportunidadPage() {
               >
                 <ComboboxInput id="lead-contact" placeholder="Buscar contacto…" />
                 <ComboboxContent>
-                  <ComboboxList emptyState="No hay coincidencias.">
+                  <ComboboxList<ContactAutocompleteOption> emptyState="No hay coincidencias.">
                     {(contact) => <ContactOption contact={contact} query={contactSearch} />}
                   </ComboboxList>
                 </ComboboxContent>
@@ -246,18 +249,29 @@ function NuevaOportunidadPage() {
                 inputValue={participantSearch}
                 items={participantOptions}
                 onInputChange={setParticipantSearch}
-                onSelectionChange={(keys) => {
-                  const selectedIds = keys === 'all' ? [] : [...keys].map(String)
-                  setParticipantIds(selectedIds.filter((id) => id !== contactId))
+                onSelectionChange={(key) => {
+                  if (!key) return
+                  const selectedId = String(key)
+                  if (selectedId === contactId) return
+                  setParticipantIds((current) =>
+                    current.includes(selectedId)
+                      ? current.filter((id) => id !== selectedId)
+                      : [...current, selectedId],
+                  )
                   setParticipantSearch('')
                 }}
-                selectedKeys={new Set(participantIds)}
-                selectionMode="multiple"
+                selectedKey={null}
               >
                 <ComboboxInput id="lead-participants" placeholder="Añadir interviniente…" />
                 <ComboboxContent>
-                  <ComboboxList emptyState="No hay coincidencias.">
-                    {(contact) => <ContactOption contact={contact} query={participantSearch} />}
+                  <ComboboxList<ContactAutocompleteOption> emptyState="No hay coincidencias.">
+                    {(contact) => (
+                      <ContactOption
+                        contact={contact}
+                        query={participantSearch}
+                        selected={participantIds.includes(contact.id)}
+                      />
+                    )}
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
@@ -501,31 +515,29 @@ function contactName(contact?: { nombre: string; apellidos?: string; razonSocial
 function ContactOption({
   contact,
   query,
+  selected = false,
 }: {
-  contact: {
-    id: string
-    nombre: string
-    apellidos?: string
-    razonSocial?: string
-    nif: string
-    telefono: string
-    email: string
-    tipoPersona: string
-  }
+  contact: ContactAutocompleteOption
   query: string
+  selected?: boolean
 }) {
   const name = contactName(contact) || 'Sin nombre'
   const identifier = contact.email || contact.telefono || contact.nif || contact.tipoPersona
 
   return (
     <ComboboxItem id={contact.id} textValue={`${name} ${identifier}`}>
-      <span className="flex min-w-0 flex-col py-0.5">
-        <span className="truncate text-sm font-medium">
-          <HighlightMatch text={name} query={query} />
+      <span className="flex min-w-0 items-center gap-2 py-0.5">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-medium">
+            <HighlightMatch text={name} query={query} />
+          </span>
+          <span className="text-muted-foreground truncate text-xs">
+            <HighlightMatch text={identifier} query={query} />
+          </span>
         </span>
-        <span className="text-muted-foreground truncate text-xs">
-          <HighlightMatch text={identifier} query={query} />
-        </span>
+        {selected ? (
+          <Check className="text-primary size-4 shrink-0" aria-label="Seleccionado" />
+        ) : null}
       </span>
     </ComboboxItem>
   )

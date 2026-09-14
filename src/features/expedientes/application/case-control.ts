@@ -72,6 +72,12 @@ export function casePhaseForColumn(column: CaseControlColumnId) {
   return CASE_CONTROL_COLUMNS.find((item) => item.id === column)?.title ?? 'En curso'
 }
 
+export function casePhaseLabel(phase: string) {
+  const normalized = phase.trim().toLocaleLowerCase('es')
+  if (normalized === 'intake') return 'Inicio'
+  return phase
+}
+
 export function caseMegaphase(column: CaseControlColumnId) {
   return CASE_CONTROL_COLUMNS.find((item) => item.id === column)?.megafase ?? 'F3 · CASEWORK'
 }
@@ -114,8 +120,10 @@ export function caseAlerts(
     .map((item) => Date.parse(item.ocurridaEn))
     .filter(Number.isFinite)
     .sort((first, second) => second - first)[0]
+  const openedAt = Date.parse(expediente.fechaApertura)
+  const lastRelevantMovement = lastActivity ?? (Number.isFinite(openedAt) ? openedAt : undefined)
   const messages = [
-    ...(lastActivity === undefined || lastActivity <= now - 15 * DAY_MS
+    ...(lastRelevantMovement !== undefined && lastRelevantMovement <= now - 15 * DAY_MS
       ? ['Sin actuaciones registradas en más de 15 días']
       : []),
     ...openTasks

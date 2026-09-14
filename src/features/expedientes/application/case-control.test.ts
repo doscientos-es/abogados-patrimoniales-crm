@@ -4,6 +4,7 @@ import {
   caseAlerts,
   caseControlColumn,
   caseDependency,
+  casePhaseLabel,
   casePhaseForColumn,
   relativeDays,
 } from './case-control'
@@ -40,6 +41,7 @@ describe('case control workflow', () => {
     )
     expect(caseControlColumn(expediente({ fase: 'Propuesta o borrador' }))).toBe('proposal')
     expect(casePhaseForColumn('in_progress')).toBe('En curso')
+    expect(casePhaseLabel('intake')).toBe('Inicio')
   })
 
   it('labels dependencies and reports stale, unvalidated, and overdue case work', () => {
@@ -67,6 +69,13 @@ describe('case control workflow', () => {
         'Tarea vencida: Contestación',
       ]),
     )
+  })
+
+  it('does not flag a newly opened case without activities as inactive', () => {
+    const now = Date.parse('2026-09-07T12:00:00Z')
+    const alerts = caseAlerts(expediente({ fechaApertura: '2026-09-07' }), [], [], now)
+
+    expect(alerts).not.toContain('Sin actuaciones registradas en más de 15 días')
   })
 
   it('formats past, current, and future movement dates', () => {

@@ -33,6 +33,7 @@ import {
   caseAlerts,
   caseDependency,
   caseLastMovement,
+  casePhaseLabel,
   relativeDays,
 } from '@/features/expedientes/application/case-control'
 import type {
@@ -127,13 +128,12 @@ export function CaseDetail({
       </Link>
       <CaseHeader
         expediente={item}
-        memberName={memberNames.get(item.asignadoId ?? '')}
         lastMovement={lastMovement}
-        openTaskCount={openTasks.length}
         alerts={alerts}
         editor={editor}
         activityForm={relatedForms.activity}
         notas={notas}
+        hasActivities={actuaciones.some((activity) => activity.expedienteId === item.id)}
       />
 
       <div
@@ -248,112 +248,65 @@ export function CaseDetail({
 
 function CaseHeader({
   expediente,
-  memberName,
   lastMovement,
-  openTaskCount,
   alerts,
   editor,
   activityForm,
   notas,
+  hasActivities,
 }: {
   expediente: ExpedientePersistido
-  memberName: string | undefined
   lastMovement: string
-  openTaskCount: number
   alerts: string[]
   editor: ReactNode
   activityForm: ReactNode
   notas: NotaRemota[]
+  hasActivities: boolean
 }) {
   const caseNotes = notas.filter(
     (note) => note.scope === 'case' && note.case_id === expediente.id && note.status === 'active',
   )
   return (
     <>
-      <Card className="border-border/80 shadow-sm">
-        <CardContent className="space-y-3 p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 space-y-1">
-              <h1 className="text-lg font-bold tracking-tight text-balance sm:text-xl">
-                {expediente.referencia} · {expediente.titulo}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {expediente.naturaleza} · {expediente.area || 'Sin área'} ·{' '}
-                {expediente.tipoAsunto || 'Sin tipo de asunto'}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                {alerts.some((alert) => alert.startsWith('Sin actuaciones'))
-                  ? 'Situación: no consta ninguna actuación registrada'
-                  : `Situación: última actuación ${relativeDays(lastMovement)}`}
-              </p>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <Badge variant="secondary">CASEWORK</Badge>
-                <Badge variant="outline">{expediente.naturaleza}</Badge>
-                <Badge variant={expediente.prioridad === 'Alta' ? 'destructive' : 'outline'}>
-                  {expediente.prioridad}
-                </Badge>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Badge variant="outline" className="h-9 max-w-56 truncate px-3 font-normal">
-                {expediente.fase}
+      <header className="border-border/80 space-y-3 border-b pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1.5">
+            <h1 className="text-lg font-bold tracking-tight text-balance sm:text-xl">
+              {expediente.referencia} · {expediente.titulo}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {expediente.naturaleza} · {expediente.area || 'Sin área'} ·{' '}
+              {expediente.tipoAsunto || 'Sin tipo de asunto'}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {hasActivities
+                ? `Última actuación ${relativeDays(lastMovement)}`
+                : `Expediente abierto ${relativeDays(expediente.fechaApertura)} · sin actuaciones aún`}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="secondary">{casePhaseLabel(expediente.fase)}</Badge>
+              <Badge variant={expediente.prioridad === 'Alta' ? 'destructive' : 'outline'}>
+                Prioridad {expediente.prioridad.toLowerCase()}
               </Badge>
-              <Badge variant="outline" className="h-9 px-3 font-normal">
-                {caseDependency(expediente.estadoOperativo)}
-              </Badge>
-              <CaseEditDialog editor={editor} />
-              {activityForm}
+              <Badge variant="outline">{caseDependency(expediente.estadoOperativo)}</Badge>
             </div>
           </div>
-          <div className="bg-muted/35 space-y-2 rounded-md border p-3 text-xs sm:p-4">
-            <p className="text-foreground">
-              Fase operativa: <strong>{expediente.fase}</strong> · Estado:{' '}
-              <strong>{expediente.estadoGeneral}</strong> · Depende de:{' '}
-              <strong>{caseDependency(expediente.estadoOperativo)}</strong>
-            </p>
-            <p className="text-muted-foreground">
-              Responsable:{' '}
-              <strong className="text-foreground">{memberName ?? 'Sin asignar'}</strong> · Último
-              movimiento: <strong className="text-foreground">{relativeDays(lastMovement)}</strong>
-            </p>
-            <p className="text-muted-foreground">
-              Próxima acción:{' '}
-              <strong className="text-foreground">
-                {expediente.proximaAccion || 'Sin siguiente acción definida'}
-              </strong>
-            </p>
-            <div className="border-destructive/35 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2">
-              <div className="flex items-start gap-2">
-                <AlertTriangle
-                  className="text-destructive mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <span>
-                  <strong className="text-destructive block text-[11px] uppercase">
-                    {expediente.proximaAccion ? 'Siguiente acción' : 'Sin siguiente acción'}
-                  </strong>
-                  <span className="text-muted-foreground">
-                    {openTaskCount
-                      ? `${openTaskCount} tarea${openTaskCount === 1 ? '' : 's'} abierta${openTaskCount === 1 ? '' : 's'} vinculada${openTaskCount === 1 ? '' : 's'}.`
-                      : '¿Qué hay que hacer ahora para que este asunto avance?'}
-                  </span>
-                </span>
-              </div>
-              <CaseEditDialog editor={editor} compact />
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <CaseEditDialog editor={editor} />
+            {activityForm}
           </div>
-          {alerts.length ? (
-            <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs">
-              {alerts.map((alert) => (
-                <span key={alert} className="flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                  {alert}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        </div>
+        {alerts.length ? (
+          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            {alerts.map((alert) => (
+              <span key={alert} className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                {alert}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </header>
       <CaseNotes notes={caseNotes} />
     </>
   )
@@ -498,8 +451,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-      .filter((item): item is string => typeof item === 'string' && item.length > 0)
+        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   return (
     <div className="space-y-4">
