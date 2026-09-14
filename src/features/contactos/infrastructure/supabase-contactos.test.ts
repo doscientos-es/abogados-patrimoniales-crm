@@ -6,15 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   eq: vi.fn(),
   from: vi.fn(),
-  in: vi.fn(),
+  neq: vi.fn(),
   order: vi.fn(),
   or: vi.fn(),
   range: vi.fn(),
   select: vi.fn(),
 }))
 
-vi.mock('@/shared/infrastructure/supabase', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/shared/infrastructure/supabase')>()),
+vi.mock('@/shared/infrastructure/supabase', () => ({
   getSupabaseBrowserClient: () => ({ from: mocks.from }),
 }))
 
@@ -48,7 +47,7 @@ const row = {
 beforeEach(() => {
   const builder = {
     eq: mocks.eq,
-    in: mocks.in,
+    neq: mocks.neq,
     order: mocks.order,
     or: mocks.or,
     range: mocks.range,
@@ -58,7 +57,7 @@ beforeEach(() => {
   mocks.from.mockReturnValue(builder)
   mocks.select.mockReturnValue(builder)
   mocks.eq.mockReturnValue(builder)
-  mocks.in.mockReturnValue(builder)
+  mocks.neq.mockReturnValue(builder)
   mocks.order.mockReturnValue(builder)
   mocks.or.mockReturnValue(builder)
 })
@@ -103,7 +102,7 @@ describe('useContactosPaginados', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(mocks.select).toHaveBeenCalledWith('*', { count: 'exact' })
-    expect(mocks.in).toHaveBeenCalledWith('status', ['active', 'inactive'])
+    expect(mocks.neq).toHaveBeenCalledWith('status', 'archived')
     expect(mocks.eq).toHaveBeenCalledWith('relationship', 'client')
     expect(mocks.eq).toHaveBeenCalledWith('nature', 'person')
     expect(mocks.or).toHaveBeenCalledWith(

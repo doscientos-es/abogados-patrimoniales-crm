@@ -329,7 +329,7 @@ export function useContactosPaginados(
         .eq('firm_id', firmId)
 
       if (filters.archived) request = request.eq('status', 'archived')
-      else if (filters.status === 'all') request = request.in('status', ['active', 'inactive'])
+      else if (filters.status === 'all') request = request.neq('status', 'archived')
       else request = request.eq('status', statusToDatabase[filters.status as EstadoContacto])
 
       if (filters.relationship !== 'all') {

@@ -95,6 +95,7 @@ function ContactosPage() {
   const [sortBy, setSortBy] = useState('name')
   const [page, setPage] = useState(1)
   const [contactToDelete, setContactToDelete] = useState<ContactoPersistido | null>(null)
+  const [filterPopoverPortal, setFilterPopoverPortal] = useState<HTMLDivElement | null>(null)
   const pageSize = 10
   const contacts = useContactosPaginados(firmId, {
     query: debouncedQuery,
@@ -120,10 +121,6 @@ function ContactosPage() {
   const pageCount = Math.max(1, Math.ceil(totalContacts / pageSize))
   const currentPage = Math.min(page, pageCount)
   const firstVisibleContact = (currentPage - 1) * pageSize
-
-  useEffect(() => {
-    if (page > pageCount) setPage(pageCount)
-  }, [page, pageCount])
 
   const activeFilters = [
     relationship !== 'all' && {
@@ -283,6 +280,7 @@ function ContactosPage() {
                   placement="bottom end"
                   className="border-border/80 w-[min(25rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
                 >
+                  <div ref={setFilterPopoverPortal} />
                   <div className="border-border flex items-center justify-between border-b px-4 py-3">
                     <div>
                       <p className="text-sm font-semibold">Filtros</p>
@@ -303,6 +301,7 @@ function ContactosPage() {
                           setRelationship(value)
                           setPage(1)
                         }}
+                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
                         <SelectItem value="all">Toda relación</SelectItem>
@@ -324,6 +323,7 @@ function ContactosPage() {
                           setNature(value)
                           setPage(1)
                         }}
+                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
                         <SelectItem value="all">Toda naturaleza</SelectItem>
@@ -341,6 +341,7 @@ function ContactosPage() {
                           setStatus(value)
                           setPage(1)
                         }}
+                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
                         <SelectItem value="all">Todos los estados</SelectItem>
@@ -357,6 +358,7 @@ function ContactosPage() {
                           setSource(value)
                           setPage(1)
                         }}
+                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
                         <SelectItem value="all">Todos los orígenes</SelectItem>
@@ -695,6 +697,7 @@ function ContactFilter({
   value,
   onValueChange,
   triggerClassName,
+  portalContainer,
   prefix,
   leadingIcon,
   children,
@@ -703,6 +706,7 @@ function ContactFilter({
   value: string
   onValueChange: (value: string) => void
   triggerClassName: string
+  portalContainer?: HTMLElement | null
   prefix?: string
   leadingIcon?: React.ReactNode
   children: React.ReactNode
@@ -724,7 +728,9 @@ function ContactFilter({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent className="z-[60]">{children}</SelectContent>
+      <SelectContent portalContainer={portalContainer} className="z-[100]">
+        {children}
+      </SelectContent>
     </Select>
   )
 }

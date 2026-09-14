@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -461,9 +462,15 @@ function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compac
           {compact ? 'Definir siguiente acción' : 'Editar expediente'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-4xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
         <DialogHeader>
-          <DialogTitle>Editar expediente</DialogTitle>
+          <div className="bg-muted/45 border-b px-6 py-5">
+            <DialogTitle>Editar expediente</DialogTitle>
+            <DialogDescription className="mt-1.5 max-w-2xl">
+              Actualiza la clasificación, el punto de trabajo y el responsable sin perder el
+              contexto operativo del asunto.
+            </DialogDescription>
+          </div>
         </DialogHeader>
         {editor}
       </DialogContent>
@@ -1063,9 +1070,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-        'es-ES',
-        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-      )
+      'es-ES',
+      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+    )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

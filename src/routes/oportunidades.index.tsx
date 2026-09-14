@@ -157,6 +157,7 @@ function LeadsPersistidos({
 }) {
   const [modo, setModo] = useState('kanban')
   const [filters, setFilters] = useState<LeadFilters>(INITIAL_FILTERS)
+  const [filterPopoverPortal, setFilterPopoverPortal] = useState<HTMLDivElement | null>(null)
   const transition = useTransicionarOportunidad(firmId)
   const contactosPorId = useMemo(
     () =>
@@ -281,6 +282,7 @@ function LeadsPersistidos({
               placement="bottom end"
               className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
             >
+              <div ref={setFilterPopoverPortal} />
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold">Filtros de Leads</p>
@@ -296,6 +298,7 @@ function LeadsPersistidos({
                     label="Filtrar por responsable"
                     value={filters.responsableId}
                     onValueChange={(value) => setFilter('responsableId', value)}
+                    portalContainer={filterPopoverPortal}
                   >
                     <SelectItem value={ALL_LEAD_FILTER}>Todos los responsables</SelectItem>
                     <SelectItem value={UNASSIGNED_LEAD_FILTER}>Sin asignar</SelectItem>
@@ -311,6 +314,7 @@ function LeadsPersistidos({
                     label="Filtrar por fase"
                     value={filters.fase}
                     onValueChange={(value) => setFilter('fase', value)}
+                    portalContainer={filterPopoverPortal}
                   >
                     <SelectItem value={ALL_LEAD_FILTER}>Todas las fases</SelectItem>
                     {OPPORTUNITY_STAGES.map((fase) => (
@@ -325,6 +329,7 @@ function LeadsPersistidos({
                     label="Filtrar por estado operativo"
                     value={filters.estadoOperativo}
                     onValueChange={(value) => setFilter('estadoOperativo', value)}
+                    portalContainer={filterPopoverPortal}
                   >
                     <SelectItem value={ALL_LEAD_FILTER}>Todos los estados operativos</SelectItem>
                     <SelectItem value={EMPTY_LEAD_FILTER}>Sin estado operativo</SelectItem>
@@ -340,6 +345,7 @@ function LeadsPersistidos({
                     label="Filtrar por origen"
                     value={filters.origen}
                     onValueChange={(value) => setFilter('origen', value)}
+                    portalContainer={filterPopoverPortal}
                   >
                     <SelectItem value={ALL_LEAD_FILTER}>Todos los orígenes</SelectItem>
                     <SelectItem value={EMPTY_LEAD_FILTER}>Sin origen</SelectItem>
@@ -355,6 +361,7 @@ function LeadsPersistidos({
                     label="Filtrar por prioridad"
                     value={filters.prioridad}
                     onValueChange={(value) => setFilter('prioridad', value)}
+                    portalContainer={filterPopoverPortal}
                   >
                     <SelectItem value={ALL_LEAD_FILTER}>Todas las prioridades</SelectItem>
                     <SelectItem value="Alta">Alta</SelectItem>
@@ -489,11 +496,13 @@ function LeadFilter({
   label,
   value,
   onValueChange,
+  portalContainer,
   children,
 }: {
   label: string
   value: string
   onValueChange: (value: string) => void
+  portalContainer?: HTMLElement | null
   children: ReactNode
 }) {
   return (
@@ -504,7 +513,9 @@ function LeadFilter({
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="z-[60]">{children}</SelectContent>
+      <SelectContent portalContainer={portalContainer} className="z-[100]">
+        {children}
+      </SelectContent>
     </Select>
   )
 }

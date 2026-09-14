@@ -10,6 +10,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -112,6 +114,14 @@ export function OnboardingPage() {
     () => new Map((miembros.data ?? []).map((item) => [item.id, item.nombre])),
     [miembros.data],
   )
+  const oportunidadesDisponiblesParaProforma = useMemo(() => {
+    const oportunidadesConOnboarding = new Set(
+      (onboardings.data ?? [])
+        .map((item) => item.oportunidadId)
+        .filter((id): id is string => Boolean(id)),
+    )
+    return (oportunidades.data ?? []).filter((item) => !oportunidadesConOnboarding.has(item.id))
+  }, [onboardings.data, oportunidades.data])
   if (session.status === 'loading' || membership.isPending)
     return (
       <PendingPanel title="Cargando Onboarding" description="Consultando el despacho activo…" />
@@ -156,7 +166,7 @@ export function OnboardingPage() {
               Ver Leads aceptados
             </Link>
             <CreateOnboardingDialog
-              oportunidades={(oportunidades.data ?? []).filter((item) => item.fase === 'won')}
+              oportunidades={oportunidadesDisponiblesParaProforma}
               contactosPorId={contactosPorId}
               miembros={miembros.data ?? []}
               pending={crear.isPending}
@@ -541,7 +551,7 @@ function OnboardingCard({
   )
 }
 
-function CreateOnboardingDialog({
+export function CreateOnboardingDialog({
   oportunidades,
   contactosPorId,
   miembros,
@@ -565,7 +575,12 @@ function CreateOnboardingDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [opportunityId, setOpportunityId] = useState('')
+  const [asunto, setAsunto] = useState('')
   const selected = oportunidades.find((item) => item.id === opportunityId)
+  const selectOpportunity = (id: string) => {
+    setOpportunityId(id)
+    setAsunto(oportunidades.find((item) => item.id === id)?.titulo ?? '')
+  }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -577,7 +592,7 @@ function CreateOnboardingDialog({
       await onCreate({
         contactoId: selected.contactoId,
         oportunidadId: selected.id,
-        asunto: text(form, 'asunto'),
+        asunto,
         presupuestoReferencia: text(form, 'presupuesto'),
         importePresupuesto: nullableNumber(text(form, 'importe')),
         responsableId: text(form, 'responsable') || null,
@@ -587,6 +602,7 @@ function CreateOnboardingDialog({
       toast.success('Onboarding iniciado con la proforma enviada.')
       setOpen(false)
       setOpportunityId('')
+      setAsunto('')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo iniciar el onboarding.')
     }
@@ -599,61 +615,129 @@ function CreateOnboardingDialog({
           Registrar proforma
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
         <DialogHeader>
-          <DialogTitle>Registrar proforma enviada</DialogTitle>
+          <div className="bg-muted/45 border-b px-6 py-5">
+            <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
+              <FilePlus2 className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <DialogTitle>Registrar proforma enviada</DialogTitle>
+            <DialogDescription className="mt-1.5 max-w-xl">
+              Vincula la proforma a un Lead activo para iniciar su seguimiento comercial. No se
+              enviará ningún documento ni se creará una factura.
+            </DialogDescription>
+          </div>
         </DialogHeader>
-        <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
-          <Field
-            select
-            label="Lead"
-            name="lead"
-            value={opportunityId}
-            onChange={(event) => setOpportunityId(event.target.value)}
-            options={[
-              ['', 'Selecciona un Lead'],
-              ...oportunidades.map((item) => [item.id, `${item.referencia} · ${item.titulo}`]),
-            ]}
-            required
-          />
-          <div className="bg-muted/50 rounded-md border px-3 py-2 text-sm">
-            <span className="text-muted-foreground block text-xs">Contacto</span>
-            {selected
-              ? contactName(contactosPorId.get(selected.contactoId))
-              : 'Se completa al elegir el Lead'}
+        {!oportunidades.length ? (
+          <div className="space-y-2 px-6 py-8">
+            <p className="font-medium">No hay Leads disponibles para registrar una proforma.</p>
+            <p className="text-muted-foreground text-sm">
+              Los Leads archivados o que ya tienen un onboarding vinculado no se muestran aquí.
+            </p>
           </div>
-          <Field label="Asunto" name="asunto" defaultValue={selected?.titulo ?? ''} required />
-          <Field
-            label="Referencia del presupuesto"
-            name="presupuesto"
-            placeholder="PR-2026-0004"
-            required
-          />
-          <Field label="Importe acordado" name="importe" type="number" min="0" step="0.01" />
-          <Field
-            label="Responsable"
-            name="responsable"
-            select
-            options={[['', 'Sin asignar'], ...miembros.map((item) => [item.id, item.nombre])]}
-          />
-          <Field
-            label="Fecha de proforma"
-            name="proforma"
-            type="date"
-            defaultValue={today()}
-            required
-          />
-          <Field label="Siguiente acción" name="accion" placeholder="Comprobar pago" />
-          <p className="text-muted-foreground text-xs sm:col-span-2">
-            Se registrará una confirmación manual. No se enviará ningún documento ni se creará una
-            factura.
-          </p>
-          <div className="sm:col-span-2">
-            <Button type="submit" disabled={pending || !oportunidades.length}>
-              {pending ? 'Registrando…' : 'Registrar proforma enviada'}
-            </Button>
-          </div>
-        </form>
+        ) : (
+          <form className="space-y-6 px-6 py-6" onSubmit={(event) => void submit(event)}>
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-semibold">Datos de la proforma</legend>
+              <p className="text-muted-foreground -mt-2 text-xs">
+                Los campos marcados con * son obligatorios.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  select
+                  label="Lead"
+                  name="lead"
+                  value={opportunityId}
+                  onChange={(event) => selectOpportunity(event.target.value)}
+                  options={[
+                    ['', 'Selecciona un Lead'],
+                    ...oportunidades.map((item) => [
+                      item.id,
+                      `${item.referencia} · ${item.titulo}`,
+                    ]),
+                  ]}
+                  helper="Puedes registrar la proforma antes de que el Lead esté aceptado."
+                  required
+                  className="sm:col-span-2"
+                />
+                <div className="bg-muted/40 space-y-1.5 rounded-lg border px-3 py-2.5 text-sm">
+                  <span className="font-medium">Contacto asociado</span>
+                  <p>{selected ? contactName(contactosPorId.get(selected.contactoId)) : '—'}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Se completa automáticamente al seleccionar el Lead.
+                  </p>
+                </div>
+                <Field
+                  label="Asunto"
+                  name="asunto"
+                  value={asunto}
+                  onChange={(event) => setAsunto(event.target.value)}
+                  helper="Se propone el asunto del Lead; puedes ajustarlo para esta proforma."
+                  required
+                />
+                <Field
+                  label="Referencia del presupuesto"
+                  name="presupuesto"
+                  placeholder="Ej. PR-2026-0004"
+                  helper="Identificador interno que aparecerá en el seguimiento."
+                  maxLength={120}
+                  required
+                />
+                <Field
+                  label="Fecha de envío"
+                  name="proforma"
+                  type="date"
+                  defaultValue={today()}
+                  helper="Indica cuándo se envió o entregó la proforma."
+                  required
+                />
+              </div>
+            </fieldset>
+            <fieldset className="space-y-4 border-t pt-5">
+              <legend className="text-sm font-semibold">Seguimiento interno</legend>
+              <p className="text-muted-foreground -mt-2 text-xs">
+                Estos datos son opcionales y podrás completarlos más adelante.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Importe acordado"
+                  name="importe"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Ej. 1.250,00"
+                  helper="Importe sin impuestos, si ya está definido."
+                  optional
+                />
+                <Field
+                  label="Responsable"
+                  name="responsable"
+                  select
+                  options={[['', 'Sin asignar'], ...miembros.map((item) => [item.id, item.nombre])]}
+                  helper="Persona que realizará el seguimiento del pago."
+                  optional
+                />
+                <Field
+                  label="Siguiente acción"
+                  name="accion"
+                  placeholder="Ej. Comprobar pago el viernes"
+                  helper="Recordatorio operativo para el equipo."
+                  maxLength={500}
+                  optional
+                  className="sm:col-span-2"
+                />
+              </div>
+            </fieldset>
+            <DialogFooter className="gap-2 border-t pt-5 sm:justify-between">
+              <p className="text-muted-foreground text-xs">
+                El registro quedará en la fase «Proforma enviada».
+              </p>
+              <Button type="submit" disabled={pending}>
+                {pending ? 'Registrando…' : 'Registrar proforma'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -981,12 +1065,18 @@ function Field({
   name,
   select,
   options = [],
+  helper,
+  optional,
+  className,
   ...props
 }: {
   label: string
   name: string
   select?: boolean
   options?: string[][]
+  helper?: string
+  optional?: boolean
+  className?: string
   value?: string
   onChange?: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   type?: string
@@ -995,15 +1085,21 @@ function Field({
   required?: boolean
   min?: string
   step?: string
+  maxLength?: number
 }) {
+  const helpId = helper ? `onboarding-${name}-help` : undefined
   return (
-    <div className="space-y-1">
-      <Label htmlFor={`onboarding-${name}`}>{label}</Label>
+    <div className={`space-y-1.5 ${className ?? ''}`}>
+      <Label htmlFor={`onboarding-${name}`}>
+        {label}
+        {props.required ? ' *' : optional ? ' (Opcional)' : ''}
+      </Label>
       {select ? (
         <select
           id={`onboarding-${name}`}
           name={name}
           className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          aria-describedby={helpId}
           {...props}
         >
           {options.map(([value, label]) => (
@@ -1013,8 +1109,13 @@ function Field({
           ))}
         </select>
       ) : (
-        <Input id={`onboarding-${name}`} name={name} {...props} />
+        <Input id={`onboarding-${name}`} name={name} aria-describedby={helpId} {...props} />
       )}
+      {helper ? (
+        <p id={helpId} className="text-muted-foreground text-xs">
+          {helper}
+        </p>
+      ) : null}
     </div>
   )
 }

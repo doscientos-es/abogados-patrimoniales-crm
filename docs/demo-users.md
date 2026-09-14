@@ -26,7 +26,7 @@ DNS records for domain verification of abogadospatrimoniales.es on Resend
 
 Add the following DNS records at your domain provider for abogadospatrimoniales.es:
 
-DKIM
+*DKIM
   Type: TXT
   Name: resend._domainkey
   Value: p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCvcfzl67Bt8XEMPdCZ79eGaQCpSZuYLJ4ioxbl+I7+S0MovrvSqD9xEn9dCuetAF0pNdJi4YPZjL1g5UKcCOdHozfEORUOgE9LlVtMcIcnXrva3JGRUqnPew8ti6UJkP27vxpSq1b77VTbAZXKb/TxRLgZ6LzDYaC8fZFBfxW2DQIDAQAB
@@ -47,7 +47,7 @@ DMARC (recommended)
   Type: TXT
   Name: _dmarc
   Value: v=DMARC1; p=none;
-  TTL: Auto
+  TTL: Auto*
 
 After adding these records, return to Resend to verify.
 Docs: https://resend.com/docs/dashboard/domains/introduction
