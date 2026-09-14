@@ -1,5 +1,17 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { CalendarClock, ClipboardCheck, FilePlus2, Plus, UserRound } from 'lucide-react'
+import {
+  Bell,
+  CalendarClock,
+  ClipboardCheck,
+  ExternalLink,
+  FilePlus2,
+  ListPlus,
+  Mail,
+  Pencil,
+  Phone,
+  Plus,
+  UserRound,
+} from 'lucide-react'
 import { useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
@@ -63,6 +75,42 @@ const dateTime = (value: string) =>
   new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(
     new Date(value),
   )
+export function onboardingErrorMessage(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : error &&
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string'
+        ? error.message
+        : ''
+  const messages: Record<string, string> = {
+    Forbidden: 'No tienes permiso para registrar una proforma en este despacho.',
+    'Lead not found': 'El Lead seleccionado ya no está disponible.',
+    'Archived leads cannot start onboarding':
+      'No puedes registrar una proforma para un Lead archivado.',
+    'This lead already has onboarding': 'Este Lead ya tiene una proforma registrada.',
+    'Matter title is required': 'Indica un asunto para la proforma.',
+    'Quote reference is required': 'Indica la referencia del presupuesto.',
+    'Quote amount cannot be negative': 'El importe no puede ser negativo.',
+    'Proforma sent date is required': 'Indica la fecha de envío de la proforma.',
+    'Only accepted leads can start onboarding':
+      'Este Lead debe estar aceptado antes de registrar la proforma.',
+  }
+  return messages[message] ?? (message || 'No se pudo iniciar el onboarding.')
+}
+export function leadsDisponiblesParaProforma(
+  oportunidades: OportunidadResumen[],
+  onboardings: OnboardingPersistido[],
+) {
+  const oportunidadesConOnboarding = new Set(
+    onboardings.map((item) => item.oportunidadId).filter((id): id is string => Boolean(id)),
+  )
+  return oportunidades.filter(
+    (item) => item.fase === 'won' && !oportunidadesConOnboarding.has(item.id),
+  )
+}
 const onboardingEventLabel = (type: string, payload: Json) => {
   const data = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {}
   const labels: Record<string, string> = {
@@ -114,14 +162,10 @@ export function OnboardingPage() {
     () => new Map((miembros.data ?? []).map((item) => [item.id, item.nombre])),
     [miembros.data],
   )
-  const oportunidadesDisponiblesParaProforma = useMemo(() => {
-    const oportunidadesConOnboarding = new Set(
-      (onboardings.data ?? [])
-        .map((item) => item.oportunidadId)
-        .filter((id): id is string => Boolean(id)),
-    )
-    return (oportunidades.data ?? []).filter((item) => !oportunidadesConOnboarding.has(item.id))
-  }, [onboardings.data, oportunidades.data])
+  const oportunidadesDisponiblesParaProforma = useMemo(
+    () => leadsDisponiblesParaProforma(oportunidades.data ?? [], onboardings.data ?? []),
+    [onboardings.data, oportunidades.data],
+  )
   if (session.status === 'loading' || membership.isPending)
     return (
       <PendingPanel title="Cargando Onboarding" description="Consultando el despacho activo…" />
@@ -343,7 +387,7 @@ export function OnboardingPage() {
   }
 }
 
-function OnboardingCard({
+export function OnboardingCard({
   item,
   eventos,
   actorNames,
@@ -446,11 +490,17 @@ function OnboardingCard({
           ) : null}
         </div>
         <div className="bg-muted/65 rounded-md px-2.5 py-2">
-          <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-            Ahora toca
-          </p>
-          <p className="text-sm font-medium">{item.siguienteAccion || PROXIMO_PASO[item.fase]}</p>
-          <NextActionDialog item={item} pending={pending} onSave={onNextAction} />
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+                Ahora toca
+              </p>
+              <p className="text-sm font-medium">
+                {item.siguienteAccion || PROXIMO_PASO[item.fase]}
+              </p>
+            </div>
+            <NextActionDialog item={item} pending={pending} onSave={onNextAction} />
+          </div>
         </div>
         {eventos.length ? (
           <div className="border-border/70 space-y-1 border-t pt-2" aria-label="Trazabilidad">
@@ -506,45 +556,43 @@ function OnboardingCard({
             <OpenCaseDialog item={item} pending={pending} onOpen={onOpenCase} />
           )
         ) : null}
-        <div className="flex flex-wrap gap-1 border-t pt-2">
-          {item.oportunidadId ? (
-            <Link
-              to="/oportunidades/$id"
-              params={{ id: item.oportunidadId }}
-              className={buttonVariants({
-                variant: 'ghost',
-                size: 'sm',
-                className: 'h-7 px-2 text-xs',
-              })}
-            >
-              Ver Lead
-            </Link>
-          ) : null}
-          <Link
-            to="/contactos/$id"
-            params={{ id: item.contactoId }}
-            className={buttonVariants({
-              variant: 'ghost',
-              size: 'sm',
-              className: 'h-7 px-2 text-xs',
-            })}
-          >
-            Ver contacto
-          </Link>
-          <CommunicationDialog
-            type="email_draft"
-            item={item}
-            pending={pending}
-            onSave={onCommunication}
-          />
-          <CommunicationDialog
-            type="phone_call"
-            item={item}
-            pending={pending}
-            onSave={onCommunication}
-          />
-          <TaskDialog type="Tarea" item={item} pending={pending} onSave={onTask} />
-          <TaskDialog type="Recordatorio" item={item} pending={pending} onSave={onTask} />
+        <div
+          className="border-border/70 flex items-center justify-between gap-2 border-t pt-2"
+          aria-label="Acciones rápidas"
+        >
+          <div className="flex items-center gap-1">
+            {item.oportunidadId ? (
+              <Link
+                to="/oportunidades/$id"
+                params={{ id: item.oportunidadId }}
+                className={buttonVariants({
+                  variant: 'ghost',
+                  size: 'icon-sm',
+                  className: 'size-8',
+                })}
+                aria-label="Ver Lead"
+                title="Ver Lead"
+              >
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+              </Link>
+            ) : null}
+          </div>
+          <div className="border-border/70 flex items-center gap-1 border-l pl-2">
+            <CommunicationDialog
+              type="email_draft"
+              item={item}
+              pending={pending}
+              onSave={onCommunication}
+            />
+            <CommunicationDialog
+              type="phone_call"
+              item={item}
+              pending={pending}
+              onSave={onCommunication}
+            />
+            <TaskDialog type="Tarea" item={item} pending={pending} onSave={onTask} />
+            <TaskDialog type="Recordatorio" item={item} pending={pending} onSave={onTask} />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -604,7 +652,7 @@ export function CreateOnboardingDialog({
       setOpportunityId('')
       setAsunto('')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo iniciar el onboarding.')
+      toast.error(onboardingErrorMessage(error))
     }
   }
   return (
@@ -615,7 +663,7 @@ export function CreateOnboardingDialog({
           Registrar proforma
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-4xl lg:max-w-5xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-3xl lg:max-w-4xl">
         <DialogHeader>
           <div className="bg-muted/45 border-b px-6 py-5">
             <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
@@ -623,16 +671,17 @@ export function CreateOnboardingDialog({
             </div>
             <DialogTitle>Registrar proforma enviada</DialogTitle>
             <DialogDescription className="mt-1.5 max-w-xl">
-              Vincula la proforma a un Lead activo para iniciar su seguimiento comercial. No se
+              Vincula la proforma a un Lead aceptado para iniciar su seguimiento comercial. No se
               enviará ningún documento ni se creará una factura.
             </DialogDescription>
           </div>
         </DialogHeader>
         {!oportunidades.length ? (
           <div className="space-y-2 px-6 py-8">
-            <p className="font-medium">No hay Leads disponibles para registrar una proforma.</p>
+            <p className="font-medium">No hay Leads aceptados disponibles para registrar una proforma.</p>
             <p className="text-muted-foreground text-sm">
-              Los Leads archivados o que ya tienen un onboarding vinculado no se muestran aquí.
+              Acepta primero el Lead desde Oportunidades. Los Leads con un onboarding vinculado
+              tampoco se muestran aquí.
             </p>
           </div>
         ) : (
@@ -656,7 +705,7 @@ export function CreateOnboardingDialog({
                       `${item.referencia} · ${item.titulo}`,
                     ]),
                   ]}
-                  helper="Puedes registrar la proforma antes de que el Lead esté aceptado."
+                  helper="Solo se muestran Leads aceptados que aún no tienen onboarding."
                   required
                   className="sm:col-span-2"
                 />
@@ -754,7 +803,11 @@ function NextActionDialog({
 }) {
   return (
     <SmallDialog
-      trigger="Definir siguiente acción"
+      trigger={
+        <OnboardingIconButton label="Editar siguiente acción">
+          <Pencil className="size-3.5" aria-hidden="true" />
+        </OnboardingIconButton>
+      }
       title="Definir siguiente acción"
       pending={pending}
       onSubmit={async (form) => onSave(text(form, 'accion'))}
@@ -778,7 +831,16 @@ function PaymentDialog({
 }) {
   return (
     <SmallDialog
-      trigger="Marcar pago confirmado"
+      trigger={
+        <Button
+          type="button"
+          variant="outline"
+          className="border-success/35 bg-success/15 text-success-foreground hover:bg-success/25 w-full justify-center shadow-sm"
+        >
+          <ClipboardCheck className="size-4" aria-hidden="true" />
+          Marcar pago confirmado
+        </Button>
+      }
       title="Confirmar pago"
       pending={pending}
       primary="Confirmar pago"
@@ -804,7 +866,12 @@ function FormalStartDialog({
 }) {
   return (
     <SmallDialog
-      trigger="Programar inicio formal"
+      trigger={
+        <Button type="button" variant="outline" className="w-full justify-center">
+          <CalendarClock className="size-4" aria-hidden="true" />
+          Programar inicio formal
+        </Button>
+      }
       title="Programar inicio formal"
       pending={pending}
       primary="Programar inicio"
@@ -841,7 +908,12 @@ function CompleteStartDialog({
 }) {
   return (
     <SmallDialog
-      trigger="Completar inicio formal"
+      trigger={
+        <Button type="button" variant="outline" className="w-full justify-center">
+          <ClipboardCheck className="size-4" aria-hidden="true" />
+          Completar inicio formal
+        </Button>
+      }
       title="Completar inicio formal"
       pending={pending}
       primary="Marcar como completado"
@@ -876,7 +948,15 @@ function CommunicationDialog({
   const label = email ? 'Nuevo email' : 'Registrar llamada'
   return (
     <SmallDialog
-      trigger={label}
+      trigger={
+        <OnboardingIconButton label={label}>
+          {email ? (
+            <Mail className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Phone className="size-3.5" aria-hidden="true" />
+          )}
+        </OnboardingIconButton>
+      }
       title={label}
       pending={pending}
       primary={email ? 'Guardar borrador' : 'Registrar llamada'}
@@ -912,7 +992,15 @@ function TaskDialog({
   const label = type === 'Tarea' ? 'Crear tarea' : 'Crear recordatorio'
   return (
     <SmallDialog
-      trigger={label}
+      trigger={
+        <OnboardingIconButton label={label}>
+          {type === 'Tarea' ? (
+            <ListPlus className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Bell className="size-3.5" aria-hidden="true" />
+          )}
+        </OnboardingIconButton>
+      }
       title={label}
       pending={pending}
       primary={label}
@@ -958,7 +1046,12 @@ function OpenCaseDialog({
 }) {
   return (
     <SmallDialog
-      trigger="Abrir expediente"
+      trigger={
+        <Button type="button" className="w-full justify-center">
+          <FilePlus2 className="size-4" aria-hidden="true" />
+          Abrir expediente
+        </Button>
+      }
       title="Abrir expediente desde el Onboarding"
       pending={pending}
       primary="Abrir expediente"
@@ -1007,6 +1100,21 @@ function OpenCaseDialog({
   )
 }
 
+function OnboardingIconButton({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      className="size-8"
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </Button>
+  )
+}
+
 function SmallDialog({
   trigger,
   title,
@@ -1015,7 +1123,7 @@ function SmallDialog({
   children,
   onSubmit,
 }: {
-  trigger: string
+  trigger: ReactNode
   title: string
   primary?: string
   pending: boolean
@@ -1036,14 +1144,7 @@ function SmallDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 px-0 text-xs underline-offset-2 hover:underline"
-        >
-          {trigger}
-        </Button>
+        {trigger}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>

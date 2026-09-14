@@ -3,6 +3,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  PopoverContent,
+  PopoverTrigger,
 } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -25,7 +27,9 @@ import {
   MoveRight,
   MoreHorizontal,
   RefreshCw,
+  SlidersHorizontal,
   Upload,
+  X,
 } from 'lucide-react'
 import {
   useMemo,
@@ -40,6 +44,7 @@ import {
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
+import { DocumentDetailSheet } from '@/components/documentos/document-detail-sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -76,13 +81,18 @@ type DocumentLocation = { caseId: string | null; folderId: string | null }
 type DocumentView = 'grid' | 'list'
 type DocumentsMode = 'explorer' | 'workflow'
 type DocumentWorkflowStatus = CaseDocumentRow['workflow_status']
+type WorkflowBoardStatus = DocumentWorkflowStatus | 'archived'
 
 const WORKFLOW_COLUMNS: Array<{
   status: DocumentWorkflowStatus
   title: string
   description: string
 }> = [
-  { status: 'inbox', title: 'Bandeja', description: 'Pendiente de clasificar o revisar.' },
+  {
+    status: 'inbox',
+    title: 'Pendiente de tratar',
+    description: 'Entrada pendiente de clasificar o revisar.',
+  },
   {
     status: 'in_progress',
     title: 'En tratamiento',
@@ -92,6 +102,18 @@ const WORKFLOW_COLUMNS: Array<{
     status: 'processed',
     title: 'Tratado',
     description: 'Procesado como evidencia del expediente.',
+  },
+]
+const WORKFLOW_BOARD_COLUMNS: Array<{
+  status: WorkflowBoardStatus
+  title: string
+  description: string
+}> = [
+  ...WORKFLOW_COLUMNS,
+  {
+    status: 'archived',
+    title: 'Archivado / solo consulta',
+    description: 'Conservado como evidencia y trazabilidad.',
   },
 ]
 
@@ -162,7 +184,13 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     caseId: null,
     folderId: null,
   })
-  const [confidentiality, setConfidentiality] = useState<DocumentConfidentiality>('normal')
+  const [uploadConfidentiality, setUploadConfidentiality] =
+    useState<DocumentConfidentiality>('normal')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [fileTypeFilter, setFileTypeFilter] = useState('all')
+  const [confidentialityFilter, setConfidentialityFilter] = useState('all')
+  const [validationFilter, setValidationFilter] = useState('all')
+  const [workflowFilter, setWorkflowFilter] = useState('all')
   const [uploading, setUploading] = useState(false)
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [folderDialogOpen, setFolderDialogOpen] = useState(false)
@@ -182,9 +210,11 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
   const [view, setView] = useState<DocumentView>('grid')
   const [mode, setMode] = useState<DocumentsMode>('explorer')
   const [workflowDocumentId, setWorkflowDocumentId] = useState<string | null>(null)
+  const [selectedLogicalDocumentId, setSelectedLogicalDocumentId] = useState<string | null>(null)
   const [previewUrls, setPreviewUrls] = useState<
     Record<string, { url: string; storagePath: string }>
   >({})
+  const uploadInputRef = useRef<HTMLInputElement>(null)
   const { caseId, folderId } = location ?? internalLocation
   const setLocation = (nextLocation: DocumentLocation) => {
     if (onLocationChange) onLocationChange(nextLocation)
@@ -207,6 +237,23 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
       return data
     },
   })
+  const archivedDocs = useQuery({
+    queryKey: ['archived-documents', firmId],
+    enabled: Boolean(firmId) && mode === 'workflow',
+    queryFn: async () => {
+      const c = getSupabaseBrowserClient()
+      if (!c || !firmId) return []
+      const { data, error } = await c
+        .from('crm_case_documents')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('is_current', true)
+        .not('archived_at', 'is', null)
+        .order('archived_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+  })
   const folders = useQuery({
     queryKey: ['document-folders', firmId],
     enabled: Boolean(firmId),
@@ -224,6 +271,10 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
   })
   const folderRows = folders.data ?? EMPTY_FOLDERS
   const documentRows = docs.data ?? EMPTY_DOCUMENTS
+  const archivedDocumentRows = archivedDocs.data ?? EMPTY_DOCUMENTS
+  const selectedDocument = [...documentRows, ...archivedDocumentRows].find(
+    (document) => document.logical_document_id === selectedLogicalDocumentId,
+  )
   useEffect(() => {
     let cancelled = false
     const imageDocuments = documentRows.filter(isImageDocument)
@@ -285,7 +336,8 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     membership.isPending ||
     cases.isPending ||
     docs.isPending ||
-    folders.isPending
+    folders.isPending ||
+    (mode === 'workflow' && archivedDocs.isPending)
   )
     return <PendingPanel title="Cargando documentos" description="Consultando el despacho…" />
   if (session.status !== 'signed-in' || !firmId)
@@ -295,7 +347,12 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
         description="Necesitas una membresía activa."
       />
     )
-  if (docs.isError || folders.isError || cases.isError)
+  if (
+    docs.isError ||
+    folders.isError ||
+    cases.isError ||
+    (mode === 'workflow' && archivedDocs.isError)
+  )
     return (
       <main className="mx-auto max-w-6xl p-6">
         <section
@@ -378,7 +435,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             original_file_name: file.name,
             content_mime_type: file.type,
             content_size_bytes: file.size,
-            document_confidentiality: confidentiality,
+            document_confidentiality: uploadConfidentiality,
           })
       if (error) throw error
       if (!data) throw new Error('No se pudo preparar el documento.')
@@ -476,8 +533,41 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
   const activeFolders = folderRows.filter(
     (folder) => folder.case_id === caseId && folder.parent_id === folderId,
   )
-  const activeDocuments = documentRows.filter(
+  const documentsInLocation = documentRows.filter(
     (document) => document.case_id === caseId && document.folder_id === folderId,
+  )
+  const activeFilterCount = [
+    categoryFilter,
+    fileTypeFilter,
+    confidentialityFilter,
+    validationFilter,
+    workflowFilter,
+  ].filter((value) => value !== 'all').length
+  const clearDocumentFilters = () => {
+    setCategoryFilter('all')
+    setFileTypeFilter('all')
+    setConfidentialityFilter('all')
+    setValidationFilter('all')
+    setWorkflowFilter('all')
+  }
+  const documentCategoryOptions = Array.from(
+    new Set(documentsInLocation.map((document) => document.category)),
+  ).sort((left, right) => left.localeCompare(right, 'es'))
+  const documentTypeOptions = Array.from(
+    new Map(
+      documentsInLocation.map((document) => [document.mime_type, documentVisual(document).label]),
+    ).entries(),
+  ).sort(([, left], [, right]) => left.localeCompare(right, 'es'))
+  const activeDocuments = documentsInLocation.filter(
+    (document) =>
+      (categoryFilter === 'all' || document.category === categoryFilter) &&
+      (fileTypeFilter === 'all' || document.mime_type === fileTypeFilter) &&
+      (confidentialityFilter === 'all' || document.confidentiality === confidentialityFilter) &&
+      (validationFilter === 'all' ||
+        (validationFilter === 'validated'
+          ? document.content_status === 'validated'
+          : document.content_status !== 'validated')) &&
+      (workflowFilter === 'all' || document.workflow_status === workflowFilter),
   )
   const folderPath: DocumentFolderRow[] = []
   let currentFolderId = folderId
@@ -501,6 +591,9 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
       return { id: folder.id, label: names.join(' / ') }
     })
     .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+  const selectedDocumentFolderLabel = selectedDocument
+    ? folderLabel(folderRows, selectedDocument.folder_id)
+    : 'Raíz del expediente'
   const openCase = (nextCaseId: string) => {
     setLocation({ caseId: nextCaseId || null, folderId: null })
   }
@@ -645,6 +738,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
       if (error) throw error
       void queueDriveSync(c, document.id, 'archive')
       await qc.invalidateQueries({ queryKey: ['documents', firmId] })
+      await qc.invalidateQueries({ queryKey: ['archived-documents', firmId] })
       toast.success(`Documento “${document.original_name}” archivado.`)
       setStatusMessage(`Documento “${document.original_name}” archivado.`)
       setDocumentToArchive(null)
@@ -764,7 +858,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
           ) : null}
         </nav>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <fieldset className="border-border bg-card inline-flex rounded-md border p-0.5">
+          <fieldset className="border-border bg-card order-last inline-flex shrink-0 rounded-md border p-0.5">
             <legend className="sr-only">Vista de documentos</legend>
             <Button
               type="button"
@@ -785,67 +879,28 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
               <Columns3 className="h-4 w-4" aria-hidden="true" /> Flujo documental
             </Button>
           </fieldset>
-          {mode === 'explorer' && activeCase ? (
-            <div className="flex flex-wrap items-end gap-2">
-              <span id="document-upload-help" className="sr-only">
-                PDF, DOCX, XLSX, JPG o PNG; máximo 25 MB. El archivo se guardará en esta ubicación.
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 min-w-32 justify-center"
-                disabled={creatingFolder}
-                onClick={() => {
-                  setFolderError(null)
-                  setFolderDialogOpen(true)
-                }}
-              >
-                <FolderPlus className="h-4 w-4" aria-hidden="true" /> Nueva carpeta
-              </Button>
-              <div className="space-y-1">
-                <Label htmlFor="document-confidentiality">Confidencialidad</Label>
-                <select
-                  id="document-confidentiality"
-                  value={confidentiality}
-                  disabled={uploading}
-                  onChange={(e) => setConfidentiality(e.target.value as DocumentConfidentiality)}
-                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="restricted">Restringido</option>
-                  <option value="confidential">Confidencial</option>
-                </select>
-              </div>
-              <label
-                className={`bg-primary text-primary-foreground focus-within:ring-ring inline-flex h-9 min-w-32 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${uploading ? 'pointer-events-none opacity-50' : 'hover:bg-primary/90'}`}
-              >
-                <Upload className="h-4 w-4" aria-hidden="true" />
-                {uploading ? 'Subiendo…' : 'Subir archivo'}
-                <input
-                  className="sr-only"
-                  type="file"
-                  accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-                  aria-describedby="document-upload-help"
-                  onChange={(e) => void upload(e)}
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-          ) : null}
         </div>
       </header>
       {mode === 'workflow' ? (
         <WorkflowBoard
           documents={documentRows}
+          archivedDocuments={archivedDocumentRows}
           cases={cases.data ?? []}
           changingDocumentId={workflowDocumentId}
+          uploading={uploading}
           onOpenDocument={(document) => {
             setLocation({ caseId: document.case_id, folderId: document.folder_id })
             setMode('explorer')
           }}
-          onWorkflowChange={(document, workflowStatus) => {
-            void updateWorkflowStatus(document, workflowStatus)
+          onOpenCase={(targetCaseId) => {
+            setLocation({ caseId: targetCaseId, folderId: null })
+            setMode('explorer')
           }}
+          onUploadVersion={uploadVersion}
+          onWorkflowChange={(document, status) => {
+            void updateWorkflowStatus(document, status)
+          }}
+          onInspect={(document) => setSelectedLogicalDocumentId(document.logical_document_id)}
         />
       ) : !activeCase ? (
         <section className="space-y-3" aria-labelledby="document-case-list-title">
@@ -944,6 +999,162 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                 {activeFolders.length} carpeta{activeFolders.length === 1 ? '' : 's'} ·{' '}
                 {activeDocuments.length} archivo{activeDocuments.length === 1 ? '' : 's'}
               </span>
+              <fieldset className="border-border bg-card inline-flex items-center rounded-md border p-0.5">
+                <legend className="sr-only">Acciones del explorador</legend>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Nueva carpeta"
+                  title="Nueva carpeta"
+                  disabled={creatingFolder}
+                  onClick={() => {
+                    setFolderError(null)
+                    setFolderDialogOpen(true)
+                  }}
+                >
+                  <FolderPlus className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <PopoverTrigger>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={activeFilterCount ? 'secondary' : 'ghost'}
+                    aria-label="Abrir filtros de documentos"
+                    title="Filtros de documentos"
+                    className="relative"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    {activeFilterCount ? (
+                      <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+                        {activeFilterCount}
+                      </span>
+                    ) : null}
+                  </Button>
+                  <PopoverContent
+                    placement="bottom end"
+                    className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
+                  >
+                    <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold">Filtros de documentos</p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Acota los archivos de esta ubicación.
+                        </p>
+                      </div>
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        {activeFilterCount ? `${activeFilterCount} activos` : 'Sin filtros'}
+                      </span>
+                    </div>
+                    <div className="grid gap-4 p-4 sm:grid-cols-2">
+                      <DocumentFilterSelect
+                        id="document-category-filter"
+                        label="Categoría"
+                        value={categoryFilter}
+                        onChange={setCategoryFilter}
+                        options={[
+                          ['all', 'Todas las categorías'],
+                          ...documentCategoryOptions.map((category): [string, string] => [
+                            category,
+                            category,
+                          ]),
+                        ]}
+                      />
+                      <DocumentFilterSelect
+                        id="document-type-filter"
+                        label="Formato"
+                        value={fileTypeFilter}
+                        onChange={setFileTypeFilter}
+                        options={[['all', 'Todos los formatos'], ...documentTypeOptions]}
+                      />
+                      <DocumentFilterSelect
+                        id="document-confidentiality-filter"
+                        label="Confidencialidad"
+                        value={confidentialityFilter}
+                        onChange={setConfidentialityFilter}
+                        options={[
+                          ['all', 'Todos los niveles'],
+                          ['normal', 'Normal'],
+                          ['restricted', 'Restringido'],
+                          ['confidential', 'Confidencial'],
+                        ]}
+                      />
+                      <DocumentFilterSelect
+                        id="document-validation-filter"
+                        label="Validación"
+                        value={validationFilter}
+                        onChange={setValidationFilter}
+                        options={[
+                          ['all', 'Cualquier validación'],
+                          ['validated', 'Validado'],
+                          ['pending', 'Pendiente de validar'],
+                        ]}
+                      />
+                      <DocumentFilterSelect
+                        id="document-workflow-filter"
+                        label="Flujo documental"
+                        value={workflowFilter}
+                        onChange={setWorkflowFilter}
+                        options={[
+                          ['all', 'Todos los estados'],
+                          ...WORKFLOW_COLUMNS.map((column): [string, string] => [
+                            column.status,
+                            column.title,
+                          ]),
+                        ]}
+                      />
+                    </div>
+                    <div className="border-border border-t px-4 py-3">
+                      <DocumentFilterSelect
+                        id="document-upload-confidentiality"
+                        label="Confidencialidad para nuevas subidas"
+                        value={uploadConfidentiality}
+                        disabled={uploading}
+                        onChange={(value) =>
+                          setUploadConfidentiality(value as DocumentConfidentiality)
+                        }
+                        options={[
+                          ['normal', 'Normal'],
+                          ['restricted', 'Restringido'],
+                          ['confidential', 'Confidencial'],
+                        ]}
+                      />
+                    </div>
+                    {activeFilterCount ? (
+                      <div className="border-border border-t px-4 py-2.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-foreground w-full"
+                          onClick={clearDocumentFilters}
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" /> Restablecer filtros
+                        </Button>
+                      </div>
+                    ) : null}
+                  </PopoverContent>
+                </PopoverTrigger>
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label={uploading ? 'Subiendo archivo' : 'Subir archivo'}
+                  title={uploading ? 'Subiendo archivo' : 'Subir archivo'}
+                  disabled={uploading}
+                  onClick={() => uploadInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <input
+                  ref={uploadInputRef}
+                  className="sr-only"
+                  type="file"
+                  accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                  aria-label="Archivo para subir"
+                  onChange={(event) => void upload(event)}
+                  disabled={uploading}
+                />
+              </fieldset>
               <div className="border-border bg-card inline-flex rounded-md border p-0.5">
                 <Button
                   type="button"
@@ -1117,6 +1328,9 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                           onUploadVersion={uploadVersion}
                           onDownload={download}
                           onArchive={setDocumentToArchive}
+                          onInspect={(document) =>
+                            setSelectedLogicalDocumentId(document.logical_document_id)
+                          }
                         />
                       </div>
                     </CardContent>
@@ -1204,9 +1418,15 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium" title={doc.original_name}>
+                      <button
+                        type="button"
+                        className="focus-visible:ring-ring max-w-full rounded text-left text-sm font-medium focus-visible:ring-2"
+                        title={doc.original_name}
+                        aria-label={`Ver detalle de ${doc.original_name}`}
+                        onClick={() => setSelectedLogicalDocumentId(doc.logical_document_id)}
+                      >
                         {doc.original_name}
-                      </p>
+                      </button>
                       <p className="text-muted-foreground text-xs">
                         {visual.label} · {formatSize(doc.size_bytes)} · v{doc.version} ·{' '}
                         {formatDocumentDate(doc.updated_at)}
@@ -1222,6 +1442,9 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       onUploadVersion={uploadVersion}
                       onDownload={download}
                       onArchive={setDocumentToArchive}
+                      onInspect={(document) =>
+                        setSelectedLogicalDocumentId(document.logical_document_id)
+                      }
                     />
                   </li>
                 )
@@ -1229,13 +1452,34 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             </ul>
           )}
           <div className="space-y-2">
-            {!activeFolders.length && !activeDocuments.length ? (
+            {!activeFolders.length && !documentsInLocation.length ? (
               <div className="border-border bg-muted/30 rounded-lg border border-dashed p-8 text-center">
                 <FolderOpen className="text-muted-foreground mx-auto h-7 w-7" aria-hidden="true" />
                 <h3 className="mt-3 font-medium">Esta ubicación está vacía</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
                   Crea una carpeta o sube el primer archivo. Nada se moverá hasta que lo confirmes.
                 </p>
+              </div>
+            ) : null}
+            {activeFilterCount && documentsInLocation.length && !activeDocuments.length ? (
+              <div className="border-border bg-muted/30 rounded-lg border border-dashed p-6 text-center">
+                <SlidersHorizontal
+                  className="text-muted-foreground mx-auto h-6 w-6"
+                  aria-hidden="true"
+                />
+                <h3 className="mt-3 font-medium">No hay documentos que coincidan</h3>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Ajusta o restablece los filtros para ver los archivos de esta ubicación.
+                </p>
+                <Button
+                  className="mt-3"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearDocumentFilters}
+                >
+                  Restablecer filtros
+                </Button>
               </div>
             ) : null}
           </div>
@@ -1473,41 +1717,117 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DocumentDetailSheet
+        document={selectedDocument ?? null}
+        firmId={firmId}
+        caseReference={
+          (cases.data ?? []).find((item) => item.id === selectedDocument?.case_id)?.referencia
+        }
+        folderLabel={selectedDocumentFolderLabel}
+        uploading={uploading}
+        changingWorkflow={workflowDocumentId === selectedDocument?.id}
+        onOpenChange={(open) => {
+          if (!open) setSelectedLogicalDocumentId(null)
+        }}
+        onDownload={download}
+        onUploadVersion={uploadVersion}
+        onMove={openMoveDialog}
+        onArchive={(document) => {
+          setSelectedLogicalDocumentId(null)
+          setDocumentToArchive(document)
+        }}
+        onWorkflowChange={(document, status) => void updateWorkflowStatus(document, status)}
+      />
     </main>
   )
 }
 
 function WorkflowBoard({
   documents,
+  archivedDocuments,
   cases,
   changingDocumentId,
+  uploading,
   onOpenDocument,
+  onOpenCase,
+  onUploadVersion,
   onWorkflowChange,
+  onInspect,
 }: {
   documents: CaseDocumentRow[]
+  archivedDocuments: CaseDocumentRow[]
   cases: Array<{ id: string; referencia: string; titulo: string }>
   changingDocumentId: string | null
+  uploading: boolean
   onOpenDocument: (document: CaseDocumentRow) => void
-  onWorkflowChange: (
+  onOpenCase: (caseId: string) => void
+  onUploadVersion: (
     document: CaseDocumentRow,
-    status: DocumentWorkflowStatus,
-  ) => void | Promise<void>
+    event: ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>
+  onWorkflowChange: (document: CaseDocumentRow, status: DocumentWorkflowStatus) => void
+  onInspect: (document: CaseDocumentRow) => void
 }) {
   const caseById = new Map(cases.map((caseItem) => [caseItem.id, caseItem]))
+  const [caseFilterId, setCaseFilterId] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase('es')
+  const matchesFilters = (document: CaseDocumentRow) =>
+    (!caseFilterId || document.case_id === caseFilterId) &&
+    (!normalizedSearch ||
+      `${document.original_name} ${document.category}`
+        .toLocaleLowerCase('es')
+        .includes(normalizedSearch))
   return (
     <section className="space-y-4" aria-labelledby="document-workflow-title">
-      <div>
-        <h1 id="document-workflow-title" className="font-serif text-lg font-semibold text-balance">
-          Flujo documental
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Organiza el trabajo sobre cada documento sin cambiar su expediente ni su carpeta.
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1
+            id="document-workflow-title"
+            className="font-serif text-lg font-semibold text-balance"
+          >
+            Flujo documental
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            El documento conserva su expediente, versiones y trazabilidad; las tareas materializan
+            el trabajo.
+          </p>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {documents.length} activo{documents.length === 1 ? '' : 's'} · {archivedDocuments.length}{' '}
+          archivado
+          {archivedDocuments.length === 1 ? '' : 's'}
         </p>
       </div>
-      <div className="grid gap-4 xl:grid-cols-3">
-        {WORKFLOW_COLUMNS.map((column) => {
-          const columnDocuments = documents.filter(
-            (document) => document.workflow_status === column.status,
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          aria-label="Buscar documento"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Buscar documento…"
+          className="sm:max-w-sm"
+        />
+        <select
+          aria-label="Filtrar por expediente"
+          value={caseFilterId}
+          onChange={(event) => setCaseFilterId(event.target.value)}
+          className="border-input bg-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 sm:min-w-56"
+        >
+          <option value="">Todos los expedientes</option>
+          {cases.map((caseItem) => (
+            <option key={caseItem.id} value={caseItem.id}>
+              {caseItem.referencia} · {caseItem.titulo}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-4">
+        {WORKFLOW_BOARD_COLUMNS.map((column) => {
+          const sourceDocuments = column.status === 'archived' ? archivedDocuments : documents
+          const columnDocuments = sourceDocuments.filter(
+            (document) =>
+              (column.status === 'archived' || document.workflow_status === column.status) &&
+              matchesFilters(document),
           )
           return (
             <section
@@ -1528,35 +1848,71 @@ function WorkflowBoard({
                 {columnDocuments.map((document) => {
                   const relatedCase = caseById.get(document.case_id)
                   const updating = changingDocumentId === document.id
+                  const archived = column.status === 'archived'
+                  const visual = documentVisual(document)
                   return (
-                    <Card key={document.id} className="bg-card">
-                      <CardContent className="space-y-3 p-4">
+                    <Card key={document.id} className="bg-card overflow-hidden">
+                      <CardContent className="space-y-3 p-3.5">
                         <div className="flex min-w-0 items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-primary text-xs font-medium">
-                              {relatedCase?.referencia ?? 'Expediente'}
-                            </p>
-                            <p
-                              className="mt-1 truncate text-sm font-medium"
-                              title={document.original_name}
+                          <div className="flex min-w-0 gap-2.5">
+                            <span
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${visual.tone}`}
                             >
-                              {document.original_name}
-                            </p>
+                              <visual.Icon className="h-4 w-4" aria-hidden="true" />
+                            </span>
+                            <div className="min-w-0">
+                              <p
+                                className="text-primary truncate text-xs font-medium"
+                                title={relatedCase?.titulo}
+                              >
+                                {relatedCase?.referencia ?? 'Expediente'}
+                              </p>
+                              <p
+                                className="mt-1 line-clamp-2 text-sm font-semibold"
+                                title={document.original_name}
+                              >
+                                {document.original_name}
+                              </p>
+                            </div>
                           </div>
-                          <Badge variant="outline">v{document.version}</Badge>
+                          <Badge variant="outline" className="shrink-0">
+                            v{document.version}
+                          </Badge>
                         </div>
-                        <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                        <div className="text-muted-foreground flex flex-wrap gap-x-1.5 gap-y-1 text-xs">
                           <span>{document.category}</span>
                           <span aria-hidden="true">·</span>
+                          <span>{visual.label}</span>
+                          <span aria-hidden="true">·</span>
                           <span>{formatSize(document.size_bytes)}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="outline" className="text-[10px]">
+                            {confidentialityLabel(document.confidentiality)}
+                          </Badge>
                           {document.content_status !== 'validated' ? (
-                            <>
-                              <span aria-hidden="true">·</span>
-                              <span>Archivo en preparación</span>
-                            </>
+                            <Badge
+                              variant="outline"
+                              className="border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-800 dark:text-amber-200"
+                            >
+                              Pendiente de validar
+                            </Badge>
+                          ) : null}
+                          {archived ? (
+                            <Badge variant="outline" className="text-[10px]">
+                              Solo consulta
+                            </Badge>
                           ) : null}
                         </div>
-                        <div className="flex items-center justify-between gap-2">
+                        <p className="text-muted-foreground text-xs">
+                          {archived ? 'Archivado' : 'Actualizado'}{' '}
+                          {formatDocumentDate(
+                            archived
+                              ? (document.archived_at ?? document.updated_at)
+                              : document.updated_at,
+                          )}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Button
                             type="button"
                             variant="link"
@@ -1564,27 +1920,72 @@ function WorkflowBoard({
                             className="h-auto px-0"
                             onClick={() => onOpenDocument(document)}
                           >
-                            Abrir en explorador
+                            Ver documento
                           </Button>
-                          <select
-                            aria-label={`Estado de ${document.original_name}`}
-                            value={document.workflow_status}
-                            disabled={updating || document.content_status !== 'validated'}
-                            onChange={(event) => {
-                              void onWorkflowChange(
-                                document,
-                                event.target.value as DocumentWorkflowStatus,
-                              )
-                            }}
-                            className="border-input bg-background focus-visible:ring-ring h-8 max-w-40 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto px-0"
+                            onClick={() => onInspect(document)}
                           >
-                            {WORKFLOW_COLUMNS.map((option) => (
-                              <option key={option.status} value={option.status}>
-                                {option.title}
-                              </option>
-                            ))}
-                          </select>
+                            Ver detalle
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto px-0"
+                            onClick={() => onOpenCase(document.case_id)}
+                          >
+                            Ver expediente
+                          </Button>
+                          {!archived ? (
+                            <label
+                              className={`text-primary focus-within:ring-ring inline-flex cursor-pointer items-center text-xs font-medium underline-offset-4 focus-within:ring-2 hover:underline ${uploading || updating || document.content_status !== 'validated' ? 'pointer-events-none opacity-50' : ''}`}
+                            >
+                              Nueva versión
+                              <input
+                                className="sr-only"
+                                type="file"
+                                accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                                disabled={
+                                  uploading || updating || document.content_status !== 'validated'
+                                }
+                                onChange={(event) => void onUploadVersion(document, event)}
+                              />
+                            </label>
+                          ) : null}
                         </div>
+                        {!archived ? (
+                          <div className="flex items-center justify-between gap-2 border-t pt-2">
+                            <label
+                              className="text-muted-foreground text-xs"
+                              htmlFor={`workflow-status-${document.id}`}
+                            >
+                              Estado
+                            </label>
+                            <select
+                              id={`workflow-status-${document.id}`}
+                              aria-label={`Estado de ${document.original_name}`}
+                              value={document.workflow_status}
+                              disabled={updating || document.content_status !== 'validated'}
+                              onChange={(event) =>
+                                onWorkflowChange(
+                                  document,
+                                  event.target.value as DocumentWorkflowStatus,
+                                )
+                              }
+                              className="border-input bg-background focus-visible:ring-ring h-8 max-w-44 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
+                            >
+                              {WORKFLOW_COLUMNS.map((option) => (
+                                <option key={option.status} value={option.status}>
+                                  {option.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
                       </CardContent>
                     </Card>
                   )
@@ -1608,9 +2009,63 @@ function formatSize(bytes: number) {
   return `${Math.ceil(bytes / 1024)} KB`
 }
 
+function confidentialityLabel(confidentiality: DocumentConfidentiality) {
+  if (confidentiality === 'restricted') return 'Restringido'
+  if (confidentiality === 'confidential') return 'Confidencial'
+  return 'Normal'
+}
+
+function DocumentFilterSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  disabled = false,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: Array<[string, string]>
+  disabled?: boolean
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-input bg-muted/20 focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50"
+      >
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 function folderTone(value: string) {
   const hash = Array.from(value).reduce((total, character) => total + character.charCodeAt(0), 0)
   return FOLDER_TONES[hash % FOLDER_TONES.length]
+}
+
+function folderLabel(folders: DocumentFolderRow[], folderId: string | null) {
+  if (!folderId) return 'Raíz del expediente'
+  const names: string[] = []
+  let currentFolderId: string | null = folderId
+  while (currentFolderId && names.length <= folders.length) {
+    const folder = folders.find((item) => item.id === currentFolderId)
+    if (!folder) break
+    names.unshift(folder.name)
+    currentFolderId = folder.parent_id
+  }
+  return names.join(' / ') || 'Carpeta no disponible'
 }
 
 function isDescendantFolder(
@@ -1668,6 +2123,7 @@ function DocumentActions({
   onUploadVersion,
   onDownload,
   onArchive,
+  onInspect,
 }: {
   document: CaseDocumentRow
   uploading: boolean
@@ -1680,6 +2136,7 @@ function DocumentActions({
   ) => Promise<void>
   onDownload: (document: CaseDocumentRow) => Promise<void>
   onArchive: (document: CaseDocumentRow) => void
+  onInspect: (document: CaseDocumentRow) => void
 }) {
   const canUseContent = document.content_status === 'validated'
   const versionInputRef = useRef<HTMLInputElement>(null)
@@ -1700,6 +2157,9 @@ function DocumentActions({
         className="w-52"
       >
         <DropdownMenuLabel>Acciones del documento</DropdownMenuLabel>
+        <DropdownMenuItem textValue="Ver detalle" onAction={() => onInspect(document)}>
+          <Info className="h-4 w-4" aria-hidden="true" /> Ver detalle
+        </DropdownMenuItem>
         <DropdownMenuItem textValue="Mover" isDisabled={moving} onAction={() => onMove(document)}>
           <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
         </DropdownMenuItem>

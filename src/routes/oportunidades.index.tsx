@@ -1,4 +1,13 @@
-import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
+import {
+  PopoverContent,
+  PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectList,
+  SelectTrigger,
+  SelectValue,
+} from '@doscientos/ui'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Plus, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
@@ -8,13 +17,6 @@ import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -157,7 +159,6 @@ function LeadsPersistidos({
 }) {
   const [modo, setModo] = useState('kanban')
   const [filters, setFilters] = useState<LeadFilters>(INITIAL_FILTERS)
-  const [filterPopoverPortal, setFilterPopoverPortal] = useState<HTMLDivElement | null>(null)
   const transition = useTransicionarOportunidad(firmId)
   const contactosPorId = useMemo(
     () =>
@@ -282,7 +283,6 @@ function LeadsPersistidos({
               placement="bottom end"
               className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
             >
-              <div ref={setFilterPopoverPortal} />
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold">Filtros de Leads</p>
@@ -298,12 +298,11 @@ function LeadsPersistidos({
                     label="Filtrar por responsable"
                     value={filters.responsableId}
                     onValueChange={(value) => setFilter('responsableId', value)}
-                    portalContainer={filterPopoverPortal}
                   >
-                    <SelectItem value={ALL_LEAD_FILTER}>Todos los responsables</SelectItem>
-                    <SelectItem value={UNASSIGNED_LEAD_FILTER}>Sin asignar</SelectItem>
+                    <SelectItem id={ALL_LEAD_FILTER}>Todos los responsables</SelectItem>
+                    <SelectItem id={UNASSIGNED_LEAD_FILTER}>Sin asignar</SelectItem>
                     {miembros.map((miembro) => (
-                      <SelectItem key={miembro.id} value={miembro.id}>
+                      <SelectItem key={miembro.id} id={miembro.id}>
                         {miembro.nombre}
                       </SelectItem>
                     ))}
@@ -314,11 +313,10 @@ function LeadsPersistidos({
                     label="Filtrar por fase"
                     value={filters.fase}
                     onValueChange={(value) => setFilter('fase', value)}
-                    portalContainer={filterPopoverPortal}
                   >
-                    <SelectItem value={ALL_LEAD_FILTER}>Todas las fases</SelectItem>
+                    <SelectItem id={ALL_LEAD_FILTER}>Todas las fases</SelectItem>
                     {OPPORTUNITY_STAGES.map((fase) => (
-                      <SelectItem key={fase} value={fase}>
+                      <SelectItem key={fase} id={fase}>
                         {OPPORTUNITY_STAGE_LABELS[fase]}
                       </SelectItem>
                     ))}
@@ -329,12 +327,11 @@ function LeadsPersistidos({
                     label="Filtrar por estado operativo"
                     value={filters.estadoOperativo}
                     onValueChange={(value) => setFilter('estadoOperativo', value)}
-                    portalContainer={filterPopoverPortal}
                   >
-                    <SelectItem value={ALL_LEAD_FILTER}>Todos los estados operativos</SelectItem>
-                    <SelectItem value={EMPTY_LEAD_FILTER}>Sin estado operativo</SelectItem>
+                    <SelectItem id={ALL_LEAD_FILTER}>Todos los estados operativos</SelectItem>
+                    <SelectItem id={EMPTY_LEAD_FILTER}>Sin estado operativo</SelectItem>
                     {estadosOperativos.map((estado) => (
-                      <SelectItem key={estado} value={estado}>
+                      <SelectItem key={estado} id={estado}>
                         {estado}
                       </SelectItem>
                     ))}
@@ -345,12 +342,11 @@ function LeadsPersistidos({
                     label="Filtrar por origen"
                     value={filters.origen}
                     onValueChange={(value) => setFilter('origen', value)}
-                    portalContainer={filterPopoverPortal}
                   >
-                    <SelectItem value={ALL_LEAD_FILTER}>Todos los orígenes</SelectItem>
-                    <SelectItem value={EMPTY_LEAD_FILTER}>Sin origen</SelectItem>
+                    <SelectItem id={ALL_LEAD_FILTER}>Todos los orígenes</SelectItem>
+                    <SelectItem id={EMPTY_LEAD_FILTER}>Sin origen</SelectItem>
                     {origenes.map((origen) => (
-                      <SelectItem key={origen} value={origen}>
+                      <SelectItem key={origen} id={origen}>
                         {origen}
                       </SelectItem>
                     ))}
@@ -361,12 +357,11 @@ function LeadsPersistidos({
                     label="Filtrar por prioridad"
                     value={filters.prioridad}
                     onValueChange={(value) => setFilter('prioridad', value)}
-                    portalContainer={filterPopoverPortal}
                   >
-                    <SelectItem value={ALL_LEAD_FILTER}>Todas las prioridades</SelectItem>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                    <SelectItem value="Media">Media</SelectItem>
-                    <SelectItem value="Baja">Baja</SelectItem>
+                    <SelectItem id={ALL_LEAD_FILTER}>Todas las prioridades</SelectItem>
+                    <SelectItem id="Alta">Alta</SelectItem>
+                    <SelectItem id="Media">Media</SelectItem>
+                    <SelectItem id="Baja">Baja</SelectItem>
                   </LeadFilter>
                 </FilterField>
               </div>
@@ -496,25 +491,29 @@ function LeadFilter({
   label,
   value,
   onValueChange,
-  portalContainer,
   children,
 }: {
   label: string
   value: string
   onValueChange: (value: string) => void
-  portalContainer?: HTMLElement | null
   children: ReactNode
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select
+      aria-label={label}
+      value={value}
+      onChange={(selected) => {
+        if (typeof selected === 'string') onValueChange(selected)
+      }}
+    >
       <SelectTrigger
         aria-label={label}
         className="border-border/80 bg-muted/20 h-9 w-full shadow-none"
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent portalContainer={portalContainer} className="z-[100]">
-        {children}
+      <SelectContent>
+        <SelectList>{children}</SelectList>
       </SelectContent>
     </Select>
   )

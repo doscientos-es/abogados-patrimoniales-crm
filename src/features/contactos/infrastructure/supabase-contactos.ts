@@ -320,13 +320,14 @@ export function useContactos(firmId: string | undefined) {
 }
 
 function escapePostgrestOrValue(value: string) {
-  return value.replaceAll('\\', '\\\\').replaceAll(',', '\\,').replaceAll('(', '\\(').replaceAll(')', '\\)')
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll(',', '\\,')
+    .replaceAll('(', '\\(')
+    .replaceAll(')', '\\)')
 }
 
-export function useContactosPaginados(
-  firmId: string | undefined,
-  filters: ContactListFilters,
-) {
+export function useContactosPaginados(firmId: string | undefined, filters: ContactListFilters) {
   const page = Math.max(1, filters.page)
   const pageSize = Math.max(1, filters.pageSize)
   const text = filters.query.trim()
@@ -368,10 +369,7 @@ export function useContactosPaginados(
       }
 
       if (filters.sortBy === 'relationship') {
-        request = request
-          .order('relationship')
-          .order('display_name')
-          .order('id')
+        request = request.order('relationship').order('display_name').order('id')
       } else if (filters.sortBy === 'created') {
         request = request
           .order('created_at', { ascending: false })

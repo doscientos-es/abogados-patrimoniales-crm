@@ -83,13 +83,13 @@ export function CaseCreateDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-[min(50vw,72rem)]">
         <DialogHeader>
           <div className="bg-muted/45 border-b px-6 py-5">
             <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
               <FolderPlus className="h-5 w-5" aria-hidden="true" />
             </div>
-            <DialogTitle>Nuevo expediente</DialogTitle>
+            <DialogTitle>Abrir expediente</DialogTitle>
             <DialogDescription className="mt-1.5 max-w-2xl">
               Registra el asunto y su cliente. Podrás completar el detalle operativo después, desde
               su ficha.
@@ -137,7 +137,7 @@ export function CaseCreateDialog({
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="case-create-contacto">Contacto principal *</Label>
+                  <Label htmlFor="case-create-contacto">Cliente *</Label>
                   <select
                     id="case-create-contacto"
                     name="contacto"
@@ -159,9 +159,10 @@ export function CaseCreateDialog({
                   </p>
                 </div>
                 <Field
-                  label="Asunto *"
+                  label="Nombre del expediente *"
                   name="titulo"
                   placeholder="Ej. Reparto de herencia de la familia García"
+                  helper="Nombre con el que el equipo localizará este expediente."
                   maxLength={300}
                   required
                   className="sm:col-span-2"
@@ -174,6 +175,43 @@ export function CaseCreateDialog({
                     ['Judicial', 'Judicial'],
                   ]}
                 />
+                <div className="space-y-1.5">
+                  <Label htmlFor="case-create-area">Área de práctica</Label>
+                  <Input
+                    id="case-create-area"
+                    name="area"
+                    list="case-create-area-options"
+                    placeholder="Ej. Sucesiones"
+                    aria-describedby="case-create-area-help"
+                  />
+                  <datalist id="case-create-area-options">
+                    {(practiceAreas ?? []).map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </datalist>
+                  <p id="case-create-area-help" className="text-muted-foreground text-xs">
+                    Materia jurídica principal del asunto.
+                  </p>
+                </div>
+                <Field
+                  label="Tipo de asunto"
+                  name="tipo"
+                  placeholder="Ej. Herencia"
+                  helper="Subtipo que ayuda a filtrar y encontrar el expediente."
+                />
+              </div>
+            </fieldset>
+            <details className="group bg-muted/25 rounded-lg border">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
+                Creación avanzada{' '}
+                <ChevronDown
+                  className="h-4 w-4 transition-transform group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="grid gap-4 border-t px-4 py-4 sm:grid-cols-2">
                 <SelectField
                   label="Prioridad"
                   name="prioridad"
@@ -188,37 +226,10 @@ export function CaseCreateDialog({
                   name="apertura"
                   type="date"
                   defaultValue={new Date().toISOString().slice(0, 10)}
+                  helper="Se completa automáticamente con la fecha de hoy."
                   required
                   icon={<CalendarDays className="h-4 w-4" aria-hidden="true" />}
                 />
-              </div>
-            </fieldset>
-            <details className="group bg-muted/25 rounded-lg border">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium">
-                Añadir datos operativos{' '}
-                <ChevronDown
-                  className="h-4 w-4 transition-transform group-open:rotate-180"
-                  aria-hidden="true"
-                />
-              </summary>
-              <div className="grid gap-4 border-t px-4 py-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="case-create-area">Área de práctica</Label>
-                  <Input
-                    id="case-create-area"
-                    name="area"
-                    list="case-create-area-options"
-                    placeholder="Ej. Sucesiones"
-                  />
-                  <datalist id="case-create-area-options">
-                    {(practiceAreas ?? []).map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </datalist>
-                </div>
-                <Field label="Tipo de asunto" name="tipo" placeholder="Ej. Herencia" />
                 <SelectField
                   label="Responsable"
                   name="asignado"
@@ -231,11 +242,13 @@ export function CaseCreateDialog({
                   label="Próxima acción"
                   name="proximaAccion"
                   placeholder="Ej. Solicitar documentación"
+                  helper="Déjala para concretar el siguiente paso desde el primer momento."
                 />
                 <Field
                   label="Situación actual"
                   name="dondeEstamos"
                   placeholder="Ej. Pendiente de primera reunión"
+                  helper="Añade el contexto que el equipo necesita para retomar el asunto."
                   className="sm:col-span-2"
                 />
               </div>
@@ -287,6 +300,7 @@ function Field({
   name,
   className,
   icon,
+  helper,
   ...inputProps
 }: {
   label: string
@@ -299,7 +313,9 @@ function Field({
   placeholder?: string
   maxLength?: number
   autoFocus?: boolean
+  helper?: string
 }) {
+  const helpId = `case-create-${name}-help`
   return (
     <div className={`space-y-1.5 ${className ?? ''}`}>
       <Label htmlFor={`case-create-${name}`}>{label}</Label>
@@ -307,6 +323,7 @@ function Field({
         <Input
           id={`case-create-${name}`}
           name={name}
+          aria-describedby={helper ? helpId : undefined}
           {...(icon ? { className: 'pr-10' } : {})}
           {...inputProps}
         />
@@ -316,6 +333,11 @@ function Field({
           </span>
         ) : null}
       </div>
+      {helper ? (
+        <p id={helpId} className="text-muted-foreground text-xs">
+          {helper}
+        </p>
+      ) : null}
     </div>
   )
 }

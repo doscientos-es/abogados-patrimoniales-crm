@@ -6,6 +6,12 @@ import {
   Pagination,
   PopoverContent,
   PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectList,
+  SelectTrigger,
+  SelectValue,
 } from '@doscientos/ui'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -39,13 +45,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -95,7 +94,6 @@ function ContactosPage() {
   const [sortBy, setSortBy] = useState('name')
   const [page, setPage] = useState(1)
   const [contactToDelete, setContactToDelete] = useState<ContactoPersistido | null>(null)
-  const [filterPopoverPortal, setFilterPopoverPortal] = useState<HTMLDivElement | null>(null)
   const pageSize = 10
   const contacts = useContactosPaginados(firmId, {
     query: debouncedQuery,
@@ -280,7 +278,6 @@ function ContactosPage() {
                   placement="bottom end"
                   className="border-border/80 w-[min(25rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
                 >
-                  <div ref={setFilterPopoverPortal} />
                   <div className="border-border flex items-center justify-between border-b px-4 py-3">
                     <div>
                       <p className="text-sm font-semibold">Filtros</p>
@@ -301,18 +298,17 @@ function ContactosPage() {
                           setRelationship(value)
                           setPage(1)
                         }}
-                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
-                        <SelectItem value="all">Toda relación</SelectItem>
-                        <SelectItem value="Lead">Lead</SelectItem>
-                        <SelectItem value="Cliente">Cliente</SelectItem>
-                        <SelectItem value="Profesional / colaborador">
+                        <SelectItem id="all">Toda relación</SelectItem>
+                        <SelectItem id="Lead">Lead</SelectItem>
+                        <SelectItem id="Cliente">Cliente</SelectItem>
+                        <SelectItem id="Profesional / colaborador">
                           Profesional / colaborador
                         </SelectItem>
-                        <SelectItem value="Tercero">Tercero</SelectItem>
-                        <SelectItem value="Contraparte">Contraparte</SelectItem>
-                        <SelectItem value="Proveedor">Proveedor</SelectItem>
+                        <SelectItem id="Tercero">Tercero</SelectItem>
+                        <SelectItem id="Contraparte">Contraparte</SelectItem>
+                        <SelectItem id="Proveedor">Proveedor</SelectItem>
                       </ContactFilter>
                     </FilterField>
                     <FilterField label="Naturaleza">
@@ -323,14 +319,13 @@ function ContactosPage() {
                           setNature(value)
                           setPage(1)
                         }}
-                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
-                        <SelectItem value="all">Toda naturaleza</SelectItem>
-                        <SelectItem value="Persona física">Persona física</SelectItem>
-                        <SelectItem value="Persona jurídica">Persona jurídica</SelectItem>
-                        <SelectItem value="Órgano judicial">Órgano judicial</SelectItem>
-                        <SelectItem value="Público">Público</SelectItem>
+                        <SelectItem id="all">Toda naturaleza</SelectItem>
+                        <SelectItem id="Persona física">Persona física</SelectItem>
+                        <SelectItem id="Persona jurídica">Persona jurídica</SelectItem>
+                        <SelectItem id="Órgano judicial">Órgano judicial</SelectItem>
+                        <SelectItem id="Público">Público</SelectItem>
                       </ContactFilter>
                     </FilterField>
                     <FilterField label="Estado">
@@ -341,13 +336,12 @@ function ContactosPage() {
                           setStatus(value)
                           setPage(1)
                         }}
-                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
-                        <SelectItem value="all">Todos los estados</SelectItem>
-                        <SelectItem value="Activo">Activo</SelectItem>
-                        <SelectItem value="Inactivo">Inactivo</SelectItem>
-                        <SelectItem value="Archivado">Archivado</SelectItem>
+                        <SelectItem id="all">Todos los estados</SelectItem>
+                        <SelectItem id="Activo">Activo</SelectItem>
+                        <SelectItem id="Inactivo">Inactivo</SelectItem>
+                        <SelectItem id="Archivado">Archivado</SelectItem>
                       </ContactFilter>
                     </FilterField>
                     <FilterField label="Origen">
@@ -358,12 +352,11 @@ function ContactosPage() {
                           setSource(value)
                           setPage(1)
                         }}
-                        portalContainer={filterPopoverPortal}
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
-                        <SelectItem value="all">Todos los orígenes</SelectItem>
+                        <SelectItem id="all">Todos los orígenes</SelectItem>
                         {(sources.data ?? []).map((item) => (
-                          <SelectItem key={item} value={item}>
+                          <SelectItem key={item} id={item}>
                             {item}
                           </SelectItem>
                         ))}
@@ -394,17 +387,16 @@ function ContactosPage() {
                 leadingIcon={<ArrowDownUp className="h-3.5 w-3.5" aria-hidden="true" />}
                 triggerClassName="h-9 w-full border-border/80 bg-background font-normal shadow-none hover:bg-muted/60"
               >
-                <SelectItem value="name">Nombre</SelectItem>
-                <SelectItem value="relationship">Relación</SelectItem>
-                <SelectItem value="created">Fecha de alta</SelectItem>
-                <SelectItem value="modified">Última modificación</SelectItem>
+                <SelectItem id="name">Nombre</SelectItem>
+                <SelectItem id="relationship">Relación</SelectItem>
+                <SelectItem id="created">Fecha de alta</SelectItem>
+                <SelectItem id="modified">Última modificación</SelectItem>
               </ContactFilter>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-muted-foreground text-xs">
-              {totalContacts} {totalContacts === 1 ? 'contacto' : 'contactos'} en la vista
-              actual
+              {totalContacts} {totalContacts === 1 ? 'contacto' : 'contactos'} en la vista actual
             </p>
             {activeFilters.length ? (
               <>
@@ -681,8 +673,9 @@ function SortableTableHead({
       <button
         type="button"
         onClick={() => onSort(sortValue)}
-        className={`hover:text-foreground flex h-8 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase transition-colors ${active ? 'text-primary' : 'text-muted-foreground'
-          }`}
+        className={`hover:text-foreground flex h-8 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase transition-colors ${
+          active ? 'text-primary' : 'text-muted-foreground'
+        }`}
         aria-label={`Ordenar por ${label}`}
       >
         {label}
@@ -697,7 +690,6 @@ function ContactFilter({
   value,
   onValueChange,
   triggerClassName,
-  portalContainer,
   prefix,
   leadingIcon,
   children,
@@ -706,13 +698,18 @@ function ContactFilter({
   value: string
   onValueChange: (value: string) => void
   triggerClassName: string
-  portalContainer?: HTMLElement | null
   prefix?: string
   leadingIcon?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select
+      aria-label={label}
+      value={value}
+      onChange={(selected) => {
+        if (typeof selected === 'string') onValueChange(selected)
+      }}
+    >
       <SelectTrigger aria-label={label} className={triggerClassName}>
         {leadingIcon || prefix ? (
           <div className="flex min-w-0 items-center gap-1.5">
@@ -728,8 +725,8 @@ function ContactFilter({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent portalContainer={portalContainer} className="z-[100]">
-        {children}
+      <SelectContent>
+        <SelectList>{children}</SelectList>
       </SelectContent>
     </Select>
   )
@@ -802,10 +799,11 @@ function primaryContact(contact: { personaContacto?: string; telefono: string; e
 }
 
 function tabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
-    ? 'border-primary text-primary'
-    : 'border-transparent text-muted-foreground hover:text-foreground'
-    }`
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
+    active
+      ? 'border-primary text-primary'
+      : 'border-transparent text-muted-foreground hover:text-foreground'
+  }`
 }
 
 function displayName(contact: { nombre: string; apellidos?: string; razonSocial?: string }) {

@@ -462,7 +462,7 @@ function CaseEditDialog({ editor, compact = false }: { editor: ReactNode; compac
           {compact ? 'Definir siguiente acción' : 'Editar expediente'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-4xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] lg:max-w-5xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-[min(50vw,72rem)]">
         <DialogHeader>
           <div className="bg-muted/45 border-b px-6 py-5">
             <DialogTitle>Editar expediente</DialogTitle>
@@ -1100,9 +1100,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-      'es-ES',
-      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-    )
+        'es-ES',
+        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+      )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

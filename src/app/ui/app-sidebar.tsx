@@ -79,7 +79,7 @@ export function AppSidebar({ open }: { open: boolean }) {
             </span>
             <span className="min-w-0 group-data-[collapsible=icon]:hidden">
               <span className="text-sidebar-foreground block truncate font-serif text-sm font-semibold tracking-wide">
-                LEX
+                LEX CRM
               </span>
               <span className="text-sidebar-foreground/60 block truncate text-[11px]">
                 Gestión integral del despacho

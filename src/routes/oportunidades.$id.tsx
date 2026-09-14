@@ -3,6 +3,8 @@ import { Archive, ArrowLeft, CalendarDays, Contact, Euro, type LucideIcon } from
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
+import { Select, SelectContent, SelectItem, SelectList, SelectTrigger, SelectValue } from '@doscientos/ui'
+
 import { PendingPanel } from '@/components/common'
 import {
   AlertDialog,
@@ -18,13 +20,6 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
@@ -351,16 +346,24 @@ function TransitionForm({
         <form className="grid gap-4 md:grid-cols-3" onSubmit={(event) => void submit(event)}>
           <div className="space-y-1 text-sm">
             <Label htmlFor="opportunity-stage">Nueva fase</Label>
-            <Select value={target} onValueChange={(value) => setTarget(value as OpportunityStage)}>
+            <Select
+              aria-label="Nueva fase"
+              value={target}
+              onChange={(value) => {
+                if (typeof value === 'string') setTarget(value as OpportunityStage)
+              }}
+            >
               <SelectTrigger id="opportunity-stage">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {destinations.map((destination) => (
-                  <SelectItem key={destination} value={destination}>
-                    {OPPORTUNITY_STAGE_LABELS[destination]}
-                  </SelectItem>
-                ))}
+                <SelectList>
+                  {destinations.map((destination) => (
+                    <SelectItem key={destination} id={destination}>
+                      {OPPORTUNITY_STAGE_LABELS[destination]}
+                    </SelectItem>
+                  ))}
+                </SelectList>
               </SelectContent>
             </Select>
           </div>

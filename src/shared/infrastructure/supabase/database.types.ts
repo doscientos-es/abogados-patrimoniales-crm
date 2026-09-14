@@ -67,6 +67,7 @@ export type Database = {
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>
       crm_document_folders: Table<DocumentFolderRow, never, never>
+      crm_document_task_links: Table<DocumentTaskLinkRow, never, never>
       crm_drive_connections: Table<DriveConnectionRow, DriveConnectionInsert>
       crm_drive_sync_jobs: Table<DriveSyncJobRow, DriveSyncJobInsert>
       crm_tasks: Table<TaskRow, TaskInsert, never>
@@ -250,6 +251,28 @@ export type Database = {
       crm_move_document_folder: {
         Args: { target_folder_id: string; target_parent_id: string | null }
         Returns: DocumentFolderRow
+      }
+      crm_link_document_task: {
+        Args: { target_document_id: string; target_task_id: string }
+        Returns: DocumentTaskLinkRow
+      }
+      crm_unlink_document_task: {
+        Args: { target_document_id: string; target_task_id: string }
+        Returns: undefined
+      }
+      crm_create_document_task: {
+        Args: {
+          target_document_id: string
+          new_kind: TaskRow['kind']
+          new_title: string
+          new_description: string
+          new_priority: OpportunityPriority
+          new_due_at: string | null
+          new_reminder_at: string | null
+          new_deadline_class: TaskRow['deadline_class']
+          new_assigned_to: string | null
+        }
+        Returns: TaskRow
       }
       crm_update_firm_member: {
         Args: {
@@ -824,6 +847,16 @@ export type DocumentFolderRow = {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export type DocumentTaskLinkRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  document_logical_id: string
+  task_id: string
+  created_by: string | null
+  created_at: string
 }
 
 export type TaskRow = {

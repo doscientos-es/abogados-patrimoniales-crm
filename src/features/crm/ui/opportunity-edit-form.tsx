@@ -1,3 +1,11 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectList,
+  SelectTrigger,
+  SelectValue,
+} from '@doscientos/ui'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
@@ -5,13 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type {
   ActualizarOportunidadInput,
@@ -99,16 +100,21 @@ export function OpportunityEditForm({
           </FormField>
           <FormField id="opportunity-priority" label="Prioridad">
             <Select
+              aria-label="Prioridad"
               value={prioridad}
-              onValueChange={(value) => setPrioridad(value as typeof prioridad)}
+              onChange={(value) => {
+                if (typeof value === 'string') setPrioridad(value as typeof prioridad)
+              }}
             >
               <SelectTrigger id="opportunity-priority">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Alta">Alta</SelectItem>
-                <SelectItem value="Media">Media</SelectItem>
-                <SelectItem value="Baja">Baja</SelectItem>
+                <SelectList>
+                  <SelectItem id="Alta">Alta</SelectItem>
+                  <SelectItem id="Media">Media</SelectItem>
+                  <SelectItem id="Baja">Baja</SelectItem>
+                </SelectList>
               </SelectContent>
             </Select>
           </FormField>
@@ -141,20 +147,26 @@ export function OpportunityEditForm({
           </FormField>
           <FormField id="opportunity-assignee" label="Responsable">
             <Select
+              aria-label="Responsable"
+              placeholder="Selecciona un responsable"
               value={asignadoId}
-              onValueChange={setAsignadoId}
-              disabled={miembrosCargando || miembrosError}
+              onChange={(value) => {
+                if (typeof value === 'string') setAsignadoId(value)
+              }}
+              isDisabled={miembrosCargando || miembrosError}
             >
               <SelectTrigger id="opportunity-assignee">
-                <SelectValue placeholder="Selecciona un responsable" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
-                {miembros.map((miembro) => (
-                  <SelectItem key={miembro.id} value={miembro.id}>
-                    {miembro.nombre}
-                  </SelectItem>
-                ))}
+                <SelectList>
+                  <SelectItem id={UNASSIGNED}>Sin asignar</SelectItem>
+                  {miembros.map((miembro) => (
+                    <SelectItem key={miembro.id} id={miembro.id}>
+                      {miembro.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectList>
               </SelectContent>
             </Select>
             {miembrosError ? (

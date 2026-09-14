@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import type { CaseDocumentRow, TaskRow } from '@/shared/infrastructure/supabase'
 
 import { Documents } from './documents'
 
@@ -11,6 +11,7 @@ const moveFolder = vi.fn().mockResolvedValue({ error: null })
 const createFolder = vi.fn().mockResolvedValue({ error: null })
 const archiveDocument = vi.fn().mockResolvedValue({ error: null })
 const updateDocumentWorkflow = vi.fn().mockResolvedValue({ error: null })
+const linkDocumentTask = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
 let hasDocuments = true
 let hasFolders = true
@@ -36,6 +37,43 @@ const document: CaseDocumentRow = {
   archived_at: null,
   archived_by: null,
   created_by: 'user-1',
+  created_at: '2026-01-01',
+  updated_at: '2026-01-01',
+}
+const archivedDocument: CaseDocumentRow = {
+  ...document,
+  id: 'document-archived',
+  logical_document_id: 'logical-archived',
+  original_name: 'Poder notarial archivado.pdf',
+  archived_at: '2026-01-02',
+}
+const task: TaskRow = {
+  id: 'task-1',
+  firm_id: 'firm-1',
+  opportunity_id: null,
+  case_id: 'case-1',
+  workstream_id: null,
+  kind: 'task',
+  title: 'Preparar escrito de subsanación',
+  description: '',
+  status: 'pending',
+  priority: 'medium',
+  due_on: null,
+  due_at: null,
+  reminder_at: null,
+  deadline_class: null,
+  validation_status: 'not_required',
+  deadline_source: '',
+  validation_note: '',
+  validated_by: null,
+  validated_at: null,
+  completed_at: null,
+  critical: false,
+  assigned_to: null,
+  details: {},
+  version: 1,
+  created_by: 'user-1',
+  updated_by: 'user-1',
   created_at: '2026-01-01',
   updated_at: '2026-01-01',
 }
@@ -66,7 +104,28 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
                     error: documentQueryFails ? new Error('offline') : null,
                   }),
                 }),
+                not: () => ({
+                  order: async () => ({
+                    data: hasDocuments ? [archivedDocument] : [],
+                    error: null,
+                  }),
+                }),
+                order: async () => ({ data: [document], error: null }),
               }),
+            }),
+          }
+        }
+        if (table === 'crm_tasks') {
+          return {
+            eq: () => ({
+              eq: () => ({ order: async () => ({ data: [task], error: null }) }),
+            }),
+          }
+        }
+        if (table === 'crm_document_task_links') {
+          return {
+            eq: () => ({
+              eq: () => ({ order: async () => ({ data: [], error: null }) }),
             }),
           }
         }
@@ -75,27 +134,27 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
             order: async () => ({
               data: hasFolders
                 ? [
-                    {
-                      id: 'folder-1',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Escritos',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                    {
-                      id: 'folder-2',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Pruebas',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                  ]
+                  {
+                    id: 'folder-1',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Escritos',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                  {
+                    id: 'folder-2',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Pruebas',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                ]
                 : [],
               error: null,
             }),
@@ -109,6 +168,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
       if (name === 'crm_create_document_folder') return createFolder(args)
       if (name === 'crm_archive_case_document') return archiveDocument(args)
       if (name === 'crm_update_document_workflow') return updateDocumentWorkflow(args)
+      if (name === 'crm_link_document_task') return linkDocumentTask(args)
       return Promise.resolve({ error: null })
     },
   }),
@@ -132,6 +192,7 @@ afterEach(() => {
   createFolder.mockClear()
   archiveDocument.mockClear()
   updateDocumentWorkflow.mockClear()
+  linkDocumentTask.mockClear()
 })
 
 describe('Documents', () => {
@@ -262,6 +323,30 @@ describe('Documents', () => {
     ).toBe('true')
   })
 
+  it('groups explorer actions with the view controls and filters documents', async () => {
+    renderDocuments()
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Nueva carpeta' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Subir archivo' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros de documentos' }))
+
+    expect(screen.getByLabelText('Confidencialidad')).toBeTruthy()
+    expect(screen.getByLabelText('Flujo documental')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Validación'), { target: { value: 'pending' } })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Abrir filtros de documentos' }), {
+      key: 'Escape',
+    })
+
+    expect(
+      await screen.findByRole('heading', { name: 'No hay documentos que coincidan' }),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Restablecer filtros' }))
+    expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
+  })
+
   it('shows root actions only while listing the document cases', async () => {
     render(
       <QueryClientProvider
@@ -282,8 +367,11 @@ describe('Documents', () => {
     renderDocuments()
     fireEvent.click(await screen.findByRole('button', { name: /flujo documental/i }))
 
-    expect(screen.getByRole('heading', { name: 'Flujo documental' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Flujo documental' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Pendiente de tratar' })).toBeTruthy()
     expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
+    expect(screen.getByText('Poder notarial archivado.pdf')).toBeTruthy()
+    expect(screen.queryByLabelText('Estado de Poder notarial archivado.pdf')).toBeNull()
     fireEvent.change(screen.getByLabelText('Estado de Poder notarial.pdf'), {
       target: { value: 'in_progress' },
     })
@@ -293,6 +381,33 @@ describe('Documents', () => {
         target_document_id: 'document-1',
         target_expected_version: 1,
         target_workflow_status: 'in_progress',
+      }),
+    )
+  })
+
+  it('opens a document sheet with versions and lets the user link an existing case task', async () => {
+    renderDocuments()
+    fireEvent.click(
+      await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir acciones de Poder notarial.pdf' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ver detalle' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Poder notarial.pdf' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Versiones' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Tareas y plazos vinculados' })).toBeTruthy()
+    expect(
+      await screen.findByRole('option', { name: 'Preparar escrito de subsanación' }),
+    ).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Tarea existente para vincular'), {
+      target: { value: 'task-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Vincular' }))
+
+    await waitFor(() =>
+      expect(linkDocumentTask).toHaveBeenCalledWith({
+        target_document_id: 'document-1',
+        target_task_id: 'task-1',
       }),
     )
   })

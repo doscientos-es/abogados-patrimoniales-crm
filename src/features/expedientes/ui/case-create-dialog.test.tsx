@@ -24,7 +24,7 @@ describe('CaseCreateDialog', () => {
     )
   })
 
-  it('submits the essential values and keeps operational fields optional', async () => {
+  it('keeps case identification visible and advanced settings collapsed', async () => {
     const onCreate = vi.fn().mockResolvedValue({ id: 'case-1' })
     render(
       <CaseCreateDialog
@@ -35,10 +35,21 @@ describe('CaseCreateDialog', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: /nuevo expediente/i }))
-    fireEvent.change(screen.getByLabelText(/contacto principal/i), {
+    expect(screen.getByLabelText('Cliente *')).toBeTruthy()
+    expect(screen.getByLabelText('Nombre del expediente *')).toBeTruthy()
+    expect(screen.getByLabelText('Naturaleza *')).toBeTruthy()
+    expect(screen.getByLabelText('Área de práctica')).toBeTruthy()
+    expect(screen.getByLabelText('Tipo de asunto')).toBeTruthy()
+    const advancedSettings = screen.getByText('Creación avanzada').closest('details')
+    expect(advancedSettings?.open).toBe(false)
+
+    fireEvent.change(screen.getByLabelText('Cliente *'), {
       target: { value: 'contact-1' },
     })
-    fireEvent.change(screen.getByLabelText('Asunto *'), { target: { value: 'Herencia familiar' } })
+    fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
+      target: { value: 'Herencia familiar' },
+    })
+    fireEvent.click(screen.getByText('Creación avanzada'))
     fireEvent.change(screen.getByLabelText(/fecha de apertura/i), {
       target: { value: '2026-09-07' },
     })

@@ -1,5 +1,7 @@
 -- Run with a database-administrator connection. Every fixture is rolled back.
 begin;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('00000000-0000-4000-8000-0000000000c1', 'authenticated', 'authenticated', 'document-rpc@example.invalid', '{}'::jsonb, '{}'::jsonb, now(), now());
 insert into public.crm_firms (id, name) values ('10000000-0000-4000-8000-0000000000c1', 'Document RPC Audit Firm');
@@ -13,14 +15,14 @@ insert into public.crm_cases (id, firm_id, case_number, primary_contact_id, titl
 values ('30000000-0000-4000-8000-0000000000c2', '10000000-0000-4000-8000-0000000000c1', 900002, '20000000-0000-4000-8000-0000000000c1', 'Other Document RPC Case', 'judicial');
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1', true);
-select set_config('request.jwt.claim.role', 'authenticated', true);
 do $$
 declare first_document public.crm_case_documents; second_document public.crm_case_documents;
   third_document public.crm_case_documents;
   archived_document public.crm_case_documents;
   root_folder public.crm_document_folders; nested_folder public.crm_document_folders;
   other_case_folder public.crm_document_folders;
+  linked_task public.crm_tasks;
+  other_case_task public.crm_tasks;
 begin
   select * into first_document from public.crm_create_case_document(
     '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c1', null,
@@ -88,12 +90,53 @@ begin
   ) then
     raise exception 'Document workflow contract failed';
   end if;
+  insert into public.crm_tasks(
+    firm_id, case_id, kind, title, priority
+  ) values (
+    '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c1',
+    'task', 'Tarea documental existente', 'medium'
+  ) returning * into linked_task;
+  perform public.crm_link_document_task(second_document.id, linked_task.id);
   select * into third_document from public.crm_create_document_version(
     second_document.id, 2, 'contrato-v3.pdf', 'application/pdf', 1);
   perform public.crm_finalize_document_version(third_document.id, repeat('c', 64));
   if third_document.version <> 3 or third_document.workflow_status <> 'in_progress' then
     raise exception 'Document workflow was not preserved on a new version';
   end if;
+  if not exists (
+    select 1 from public.crm_document_task_links
+    where document_logical_id = third_document.logical_document_id and task_id = linked_task.id
+  ) then raise exception 'Document task link was not created'; end if;
+  if not exists (
+    select 1 from public.crm_case_document_events
+    where document_id = second_document.id and task_id = linked_task.id and event_type = 'task_linked'
+  ) then raise exception 'Document task link audit was not created'; end if;
+  select * into linked_task from public.crm_create_document_task(
+    third_document.id, 'deadline', 'Plazo nacido del documento', '', 'medium',
+    now() + interval '7 days', null, 'judicial', null
+  );
+  if linked_task.kind <> 'deadline' or linked_task.validation_status <> 'proposed'
+    or not exists (
+      select 1 from public.crm_document_task_links
+      where document_logical_id = third_document.logical_document_id and task_id = linked_task.id
+    ) then raise exception 'Atomic document deadline contract failed'; end if;
+  insert into public.crm_tasks(
+    firm_id, case_id, kind, title, priority
+  ) values (
+    '10000000-0000-4000-8000-0000000000c1', '30000000-0000-4000-8000-0000000000c2',
+    'task', 'Tarea de otro expediente', 'medium'
+  ) returning * into other_case_task;
+  begin
+    perform public.crm_link_document_task(third_document.id, other_case_task.id);
+    raise exception 'Cross-case document task link was allowed';
+  exception when others then
+    if sqlerrm <> 'Task must belong to the same case' then raise; end if;
+  end;
+  perform public.crm_unlink_document_task(third_document.id, linked_task.id);
+  if exists (
+    select 1 from public.crm_document_task_links
+    where document_logical_id = third_document.logical_document_id and task_id = linked_task.id
+  ) then raise exception 'Document task link was not removed'; end if;
   begin
     perform public.crm_archive_case_document(third_document.id, 2);
     raise exception 'Stale document archive was allowed';
@@ -109,7 +152,7 @@ begin
   end if;
   if not exists (
     select 1 from public.crm_case_document_events
-    where document_id = second_document.id and event_type = 'archived'
+    where document_id = third_document.id and event_type = 'archived'
   ) then
     raise exception 'Document archive audit event was not recorded';
   end if;
