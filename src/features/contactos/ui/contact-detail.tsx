@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import type { FormEvent } from 'react'
+import type { FormEvent, InputHTMLAttributes } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -141,9 +141,25 @@ export function ContactDetail({ contactId }: { contactId: string }) {
             className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
             onSubmit={(event) => void save(event)}
           >
-            <Field name="name" label="Nombre" value={contact.nombre} required />
-            <Field name="lastName" label="Apellidos" value={contact.apellidos ?? ''} />
-            <Field name="legalName" label="Razón social" value={contact.razonSocial ?? ''} />
+            <Field
+              name="name"
+              label="Nombre"
+              value={contact.nombre}
+              autoComplete="given-name"
+              required
+            />
+            <Field
+              name="lastName"
+              label="Apellidos"
+              value={contact.apellidos ?? ''}
+              autoComplete="family-name"
+            />
+            <Field
+              name="legalName"
+              label="Razón social"
+              value={contact.razonSocial ?? ''}
+              autoComplete="organization"
+            />
             {contact.tipoPersona === 'Órgano judicial' ? (
               <>
                 <Field name="courtNumber" label="Número" value={contact.numeroOrgano ?? ''} />
@@ -152,7 +168,11 @@ export function ContactDetail({ contactId }: { contactId: string }) {
                   label="Partido judicial"
                   value={contact.partidoJudicial ?? ''}
                 />
-                <Field name="courtCode" label="Código del órgano" value={contact.codigoOrgano ?? ''} />
+                <Field
+                  name="courtCode"
+                  label="Código del órgano"
+                  value={contact.codigoOrgano ?? ''}
+                />
               </>
             ) : null}
             {contact.tipoPersona === 'Público' ? (
@@ -166,17 +186,74 @@ export function ContactDetail({ contactId }: { contactId: string }) {
               </>
             ) : null}
             <Field name="taxId" label="NIF / CIF" value={contact.nif} />
-            <Field name="birthDate" label="Fecha de nacimiento" value={contact.nacimiento ?? ''} type="date" />
-            <Field name="email" label="Correo" value={contact.email} type="email" />
-            <Field name="email2" label="Correo alternativo" value={contact.email2 ?? ''} type="email" />
-            <Field name="phone" label="Teléfono" value={contact.telefono} />
-            <Field name="phone2" label="Teléfono alternativo" value={contact.telefono2 ?? ''} />
-            <Field name="address" label="Dirección" value={contact.direccion} />
-            <Field name="postalCode" label="Código postal" value={contact.cp} />
-            <Field name="city" label="Municipio" value={contact.municipio} />
-            <Field name="province" label="Provincia" value={contact.provincia} />
-            <Field name="country" label="País" value={contact.pais} />
-            {(contact.tipoPersona === 'Persona jurídica' || contact.tipoPersona === 'Público') ? (
+            <Field
+              name="birthDate"
+              label="Fecha de nacimiento"
+              value={contact.nacimiento ?? ''}
+              type="date"
+              autoComplete="bday"
+            />
+            <Field
+              name="email"
+              label="Correo"
+              value={contact.email}
+              type="email"
+              autoComplete="email"
+            />
+            <Field
+              name="email2"
+              label="Correo alternativo"
+              value={contact.email2 ?? ''}
+              type="email"
+              autoComplete="email"
+            />
+            <Field
+              name="phone"
+              label="Teléfono"
+              value={contact.telefono}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              pattern="[0-9+() -]+"
+              maxLength={20}
+            />
+            <Field
+              name="phone2"
+              label="Teléfono alternativo"
+              value={contact.telefono2 ?? ''}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              pattern="[0-9+() -]+"
+              maxLength={20}
+            />
+            <Field
+              name="address"
+              label="Dirección"
+              value={contact.direccion}
+              autoComplete="street-address"
+            />
+            <Field
+              name="postalCode"
+              label="Código postal"
+              value={contact.cp}
+              autoComplete="postal-code"
+              inputMode="numeric"
+            />
+            <Field
+              name="city"
+              label="Municipio"
+              value={contact.municipio}
+              autoComplete="address-level2"
+            />
+            <Field
+              name="province"
+              label="Provincia"
+              value={contact.provincia}
+              autoComplete="address-level1"
+            />
+            <Field name="country" label="País" value={contact.pais} autoComplete="country-name" />
+            {contact.tipoPersona === 'Persona jurídica' || contact.tipoPersona === 'Público' ? (
               <>
                 <Field
                   name="contactPerson"
@@ -333,20 +410,41 @@ function Field({
   name,
   label,
   value,
+  type = 'text',
   ...props
 }: {
   name: string
   label: string
   value: string
-  type?: string
+  type?: InputHTMLAttributes<HTMLInputElement>['type']
   required?: boolean
+  autoComplete?: InputHTMLAttributes<HTMLInputElement>['autoComplete']
+  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']
+  pattern?: string
+  maxLength?: number
 }) {
   return (
     <div className="space-y-1">
-      <Label htmlFor={`contact-${name}`}>{label}</Label>
-      <Input id={`contact-${name}`} name={name} defaultValue={value} {...props} />
+      <Label htmlFor={`contact-${name}`}>
+        {label}
+        {props.required ? ' *' : ''}
+      </Label>
+      <Input
+        id={`contact-${name}`}
+        name={name}
+        type={type}
+        defaultValue={value}
+        onInput={type === 'tel' ? sanitizePhoneInput : undefined}
+        {...props}
+      />
     </div>
   )
+}
+
+function sanitizePhoneInput(event: FormEvent<HTMLInputElement>) {
+  const input = event.currentTarget
+  const sanitized = input.value.replace(/[^\d+()\s-]/g, '')
+  if (input.value !== sanitized) input.value = sanitized
 }
 function Related({
   title,

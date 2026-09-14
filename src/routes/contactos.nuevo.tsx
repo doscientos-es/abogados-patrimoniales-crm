@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type InputHTMLAttributes } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -118,12 +118,14 @@ function NuevoContactoPage() {
         <CardContent className="pt-6">
           <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
             <Choice
+              name="naturaleza"
               label="Naturaleza"
               value={nature}
               options={NATURES}
               onChange={(value) => setNature(value as Naturaleza)}
             />
             <Choice
+              name="relacion"
               label="Relación"
               value={relationship}
               options={RELATIONSHIPS}
@@ -131,42 +133,78 @@ function NuevoContactoPage() {
             />
             {nature === 'Persona física' ? (
               <>
-                <Field name="nombre" label="Nombre" required />
-                <Field name="primerApellido" label="Apellidos" />
-                <Field name="fechaNacimiento" label="Fecha de nacimiento" type="date" />
+                <Field name="nombre" label="Nombre" autoComplete="given-name" required />
+                <Field name="primerApellido" label="Apellidos" autoComplete="family-name" />
+                <Field
+                  name="fechaNacimiento"
+                  label="Fecha de nacimiento"
+                  type="date"
+                  autoComplete="bday"
+                />
               </>
             ) : nature === 'Órgano judicial' ? (
               <>
-                <Field name="razonSocial" label="Denominación" required />
+                <Field
+                  name="razonSocial"
+                  label="Denominación"
+                  autoComplete="organization"
+                  required
+                />
                 <Field name="numeroOrgano" label="Número" required />
                 <Field name="partidoJudicial" label="Partido judicial" required />
                 <Field name="codigoOrgano" label="Código del órgano" />
               </>
             ) : nature === 'Público' ? (
               <>
-                <Field name="razonSocial" label="Denominación" required />
+                <Field
+                  name="razonSocial"
+                  label="Denominación"
+                  autoComplete="organization"
+                  required
+                />
                 <Field name="organismo" label="Organismo" />
                 <Field name="unidadAdministrativa" label="Unidad administrativa" />
               </>
             ) : (
-              <Field name="razonSocial" label="Denominación" required />
+              <Field name="razonSocial" label="Denominación" autoComplete="organization" required />
             )}
             <Field name="documento" label="NIF / CIF" />
-            <Field name="email" label="Correo" type="email" />
-            <Field name="email2" label="Correo alternativo" type="email" />
-            <Field name="telefono" label="Teléfono" />
-            <Field name="telefono2" label="Teléfono alternativo" />
+            <Field name="email" label="Correo" type="email" autoComplete="email" />
+            <Field name="email2" label="Correo alternativo" type="email" autoComplete="email" />
+            <Field
+              name="telefono"
+              label="Teléfono"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              pattern="[0-9+() -]+"
+              maxLength={20}
+            />
+            <Field
+              name="telefono2"
+              label="Teléfono alternativo"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              pattern="[0-9+() -]+"
+              maxLength={20}
+            />
             {(nature === 'Persona jurídica' || nature === 'Público') && (
               <>
                 <Field name="personaContacto" label="Persona de contacto" />
                 <Field name="cargo" label="Cargo" />
               </>
             )}
-            <Field name="direccion" label="Dirección" />
-            <Field name="codigoPostal" label="Código postal" />
-            <Field name="municipio" label="Municipio" />
-            <Field name="provincia" label="Provincia" />
-            <Field name="pais" label="País" />
+            <Field name="direccion" label="Dirección" autoComplete="street-address" />
+            <Field
+              name="codigoPostal"
+              label="Código postal"
+              autoComplete="postal-code"
+              inputMode="numeric"
+            />
+            <Field name="municipio" label="Municipio" autoComplete="address-level2" />
+            <Field name="provincia" label="Provincia" autoComplete="address-level1" />
+            <Field name="pais" label="País" autoComplete="country-name" />
             <Field name="origen" label="Origen" />
             <Field name="canal" label="Canal" />
             <div className="sm:col-span-2">
@@ -186,25 +224,42 @@ function Field({
   label,
   type = 'text',
   required,
+  ...props
 }: {
   name: string
   label: string
-  type?: string
+  type?: InputHTMLAttributes<HTMLInputElement>['type']
   required?: boolean
+  autoComplete?: InputHTMLAttributes<HTMLInputElement>['autoComplete']
+  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']
+  pattern?: string
+  maxLength?: number
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`contact-${name}`}>{label}</Label>
-      <Input id={`contact-${name}`} name={name} type={type} required={required} />
+      <Label htmlFor={`contact-${name}`}>
+        {label}
+        {required ? ' *' : ''}
+      </Label>
+      <Input
+        id={`contact-${name}`}
+        name={name}
+        type={type}
+        required={required}
+        onInput={type === 'tel' ? sanitizePhoneInput : undefined}
+        {...props}
+      />
     </div>
   )
 }
 function Choice({
+  name,
   label,
   value,
   options,
   onChange,
 }: {
+  name: string
   label: string
   value: string
   options: string[]
@@ -212,8 +267,10 @@ function Choice({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label htmlFor={`contact-${name}`}>{label}</Label>
       <select
+        id={`contact-${name}`}
+        name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
@@ -224,6 +281,12 @@ function Choice({
       </select>
     </div>
   )
+}
+
+function sanitizePhoneInput(event: FormEvent<HTMLInputElement>) {
+  const input = event.currentTarget
+  const sanitized = input.value.replace(/[^\d+()\s-]/g, '')
+  if (input.value !== sanitized) input.value = sanitized
 }
 function formText(form: FormData, key: string) {
   const value = form.get(key)
