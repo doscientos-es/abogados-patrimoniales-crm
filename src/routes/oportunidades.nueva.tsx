@@ -270,6 +270,7 @@ function NuevaOportunidadPage() {
                         contact={contact}
                         query={participantSearch}
                         selected={participantIds.includes(contact.id)}
+                        showSelection
                       />
                     )}
                   </ComboboxList>
@@ -516,16 +517,22 @@ function ContactOption({
   contact,
   query,
   selected = false,
+  showSelection = false,
 }: {
   contact: ContactAutocompleteOption
   query: string
   selected?: boolean
+  showSelection?: boolean
 }) {
   const name = contactName(contact) || 'Sin nombre'
   const identifier = contact.email || contact.telefono || contact.nif || contact.tipoPersona
 
   return (
-    <ComboboxItem id={contact.id} textValue={`${name} ${identifier}`}>
+    <ComboboxItem
+      id={contact.id}
+      textValue={`${name} ${identifier}`}
+      className={selected ? 'bg-primary/5' : ''}
+    >
       <span className="flex min-w-0 items-center gap-2 py-0.5">
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium">
@@ -535,8 +542,18 @@ function ContactOption({
             <HighlightMatch text={identifier} query={query} />
           </span>
         </span>
-        {selected ? (
-          <Check className="text-primary size-4 shrink-0" aria-label="Seleccionado" />
+        {showSelection ? (
+          selected ? (
+            <span className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full">
+              <Check className="size-3" aria-hidden="true" />
+              <span className="sr-only">Seleccionado</span>
+            </span>
+          ) : (
+            <span
+              className="border-muted-foreground/40 size-5 shrink-0 rounded-full border"
+              aria-hidden="true"
+            />
+          )
         ) : null}
       </span>
     </ComboboxItem>
