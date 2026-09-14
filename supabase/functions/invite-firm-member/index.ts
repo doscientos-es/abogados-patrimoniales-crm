@@ -32,7 +32,6 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-    const password = typeof body.password === 'string' ? body.password : ''
     const firmId = typeof body.firmId === 'string' ? body.firmId : ''
     const role = typeof body.role === 'string' ? body.role : ''
     if (
@@ -40,7 +39,6 @@ Deno.serve(async (req) => {
       name.length > 160 ||
       !/^\S+@\S+\.\S+$/.test(email) ||
       email.length > 254 ||
-      password.length < 8 ||
       !firmId ||
       !roles.has(role)
     ) {
@@ -65,11 +63,8 @@ Deno.serve(async (req) => {
       return json({ error: 'Forbidden' }, 403)
     if (role === 'admin' && membership.role !== 'owner') return json({ error: 'Forbidden' }, 403)
 
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { display_name: name },
+    const { data: created, error: createError } = await admin.auth.admin.inviteUserByEmail(email, {
+      data: { display_name: name },
     })
     if (createError || !created.user) return json({ error: 'Could not create member' }, 400)
 

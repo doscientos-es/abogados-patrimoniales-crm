@@ -26,12 +26,19 @@ import {
 } from '../application/auth-session'
 import { useActiveMembership } from '../application/membership'
 
+type PasswordFlow = 'invite' | 'recovery'
+
+function getPasswordFlowFromHash(): PasswordFlow | null {
+  if (typeof window === 'undefined') return null
+  const type = new URLSearchParams(window.location.hash.slice(1)).get('type')
+  return type === 'invite' || type === 'recovery' ? type : null
+}
+
 export function AccessGate({ children }: { children: ReactNode }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
-  const [inviteFlow, setInviteFlow] = useState(
-    () => typeof window !== 'undefined' && /(?:^|&)type=invite(?:&|$)/.test(window.location.hash),
-  )
+  const [passwordFlow, setPasswordFlow] = useState<PasswordFlow | null>(getPasswordFlowFromHash)
+  const [completingPasswordFlow, setCompletingPasswordFlow] = useState(false)
 
   if (session.status === 'unconfigured') return <ConfigurationRequired />
   if (session.status === 'loading')
@@ -41,6 +48,27 @@ export function AccessGate({ children }: { children: ReactNode }) {
       </Centered>
     )
   if (session.status === 'signed-out') return <SignInForm />
+  if (passwordFlow) {
+    if (completingPasswordFlow)
+      return (
+        <Centered>
+          <LoaderCircle className="h-5 w-5 animate-spin" />
+        </Centered>
+      )
+    return (
+      <SetAuthPassword
+        flow={passwordFlow}
+        onComplete={() => {
+          setCompletingPasswordFlow(true)
+          window.history.replaceState({}, document.title, window.location.pathname)
+          void membership.refetch().finally(() => {
+            setPasswordFlow(null)
+            setCompletingPasswordFlow(false)
+          })
+        }}
+      />
+    )
+  }
   if (membership.isLoading)
     return (
       <Centered>
@@ -54,15 +82,6 @@ export function AccessGate({ children }: { children: ReactNode }) {
       </Centered>
     )
   if (!membership.data) return <InvitationRequired />
-  if (inviteFlow)
-    return (
-      <SetInvitePassword
-        onComplete={() => {
-          window.history.replaceState({}, document.title, window.location.pathname)
-          setInviteFlow(false)
-        }}
-      />
-    )
   return <>{children}</>
 }
 
@@ -169,8 +188,8 @@ function SignInForm() {
     const action =
       mode === 'reset'
         ? requestPasswordReset(email.trim()).then(() =>
-            toast.success('Te hemos enviado un enlace para restablecer la contraseña.'),
-          )
+          toast.success('Te hemos enviado un enlace para restablecer la contraseña.'),
+        )
         : signInWithPassword(email.trim(), password)
     void action
       .catch(() =>
@@ -290,7 +309,7 @@ function SignInForm() {
   )
 }
 
-function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
+function SetAuthPassword({ flow, onComplete }: { flow: PasswordFlow; onComplete: () => void }) {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [sending, setSending] = useState(false)
@@ -309,10 +328,20 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
     setSending(true)
     void updatePassword(password)
       .then(() => {
-        toast.success('Contraseña creada. Ya puedes empezar a trabajar en LEX.')
+        toast.success(
+          flow === 'invite'
+            ? 'Contraseña creada. Ya puedes empezar a trabajar en LEX.'
+            : 'Contraseña restablecida correctamente.',
+        )
         onComplete()
       })
-      .catch(() => toast.error('No se ha podido crear la contraseña. Solicita un nuevo enlace.'))
+      .catch(() =>
+        toast.error(
+          flow === 'invite'
+            ? 'No se ha podido crear la contraseña. Solicita un nuevo enlace.'
+            : 'No se ha podido restablecer la contraseña. Solicita un nuevo enlace.',
+        ),
+      )
       .finally(() => setSending(false))
   }
   return (
@@ -322,18 +351,21 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
           <div className="bg-primary/10 mb-5 flex h-12 w-12 items-center justify-center rounded-xl p-2">
             <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />
           </div>
-          <CardTitle className="font-serif text-2xl text-balance">Crea tu contraseña</CardTitle>
+          <CardTitle className="font-serif text-2xl text-balance">
+            {flow === 'invite' ? 'Crea tu contraseña' : 'Restablece tu contraseña'}
+          </CardTitle>
           <CardDescription className="mt-2 leading-5 text-pretty">
-            Tu invitación está lista. Define una contraseña para acceder al espacio de trabajo del
-            despacho.
+            {flow === 'invite'
+              ? 'Tu invitación está lista. Define una contraseña para acceder al espacio de trabajo del despacho.'
+              : 'Elige una contraseña nueva para recuperar el acceso a LEX.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-7 pt-2 sm:p-9 sm:pt-3">
           <form className="space-y-4" onSubmit={submit}>
-            <label className="block space-y-1.5" htmlFor="invite-password">
+            <label className="block space-y-1.5" htmlFor="auth-password">
               <span className="text-sm font-medium">Contraseña</span>
               <PasswordInput
-                id="invite-password"
+                id="auth-password"
                 autoComplete="new-password"
                 value={password}
                 onChange={setPassword}
@@ -343,10 +375,10 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
                 minLength={8}
               />
             </label>
-            <label className="block space-y-1.5" htmlFor="invite-password-confirmation">
+            <label className="block space-y-1.5" htmlFor="auth-password-confirmation">
               <span className="text-sm font-medium">Repite la contraseña</span>
               <PasswordInput
-                id="invite-password-confirmation"
+                id="auth-password-confirmation"
                 autoComplete="new-password"
                 value={confirmation}
                 onChange={setConfirmation}
@@ -357,7 +389,7 @@ function SetInvitePassword({ onComplete }: { onComplete: () => void }) {
               />
             </label>
             <Button className="h-10 w-full" disabled={sending} type="submit">
-              {sending ? 'Guardando…' : 'Entrar en LEX'}
+              {sending ? 'Guardando…' : flow === 'invite' ? 'Entrar en LEX' : 'Guardar contraseña'}
             </Button>
           </form>
         </CardContent>
