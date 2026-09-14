@@ -25,6 +25,18 @@ begin
   end if;
 
   if exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and policyname in (
+        'crm_firms_require_mfa_update',
+        'crm_firm_settings_require_mfa_insert',
+        'crm_firm_settings_require_mfa_update'
+      )
+  ) or to_regprocedure('public.crm_is_aal2()') is not null then
+    raise exception 'Administrative changes must not require MFA';
+  end if;
+
+  if exists (
     select 1
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace

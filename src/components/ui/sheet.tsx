@@ -4,9 +4,11 @@ import {
   SheetDescription,
   SheetFooter,
   SheetHeader,
-  SheetTitle,
+  SheetTitle as DoscientosSheetTitle,
 } from '@doscientos/ui'
 import * as React from 'react'
+
+import { cn } from '@/lib/utils'
 
 type SheetState = { open: boolean; setOpen: (open: boolean) => void }
 const SheetContext = React.createContext<SheetState | null>(null)
@@ -95,4 +97,11 @@ export function SheetClose({ children, ...props }: React.ComponentProps<typeof B
   )
 }
 
-export { SheetDescription, SheetFooter, SheetHeader, SheetTitle }
+export { SheetDescription, SheetFooter, SheetHeader }
+
+export function SheetTitle({
+  className,
+  ...props
+}: React.ComponentProps<typeof DoscientosSheetTitle>) {
+  return <DoscientosSheetTitle {...props} className={cn('tracking-wide uppercase', className)} />
+}

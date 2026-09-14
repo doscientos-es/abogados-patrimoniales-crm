@@ -89,13 +89,24 @@ export function ContactDetail({ contactId }: { contactId: string }) {
       nombre: text(data, 'name'),
       apellidos: text(data, 'lastName'),
       razonSocial: text(data, 'legalName'),
+      codigoOrgano: text(data, 'courtCode'),
+      numeroOrgano: text(data, 'courtNumber'),
+      partidoJudicial: text(data, 'courtDistrict'),
+      organismo: text(data, 'body'),
+      unidadAdministrativa: text(data, 'administrativeUnit'),
       nif: text(data, 'taxId'),
+      nacimiento: text(data, 'birthDate'),
       email: text(data, 'email'),
+      email2: text(data, 'email2'),
       telefono: text(data, 'phone'),
+      telefono2: text(data, 'phone2'),
       direccion: text(data, 'address'),
       cp: text(data, 'postalCode'),
       municipio: text(data, 'city'),
       provincia: text(data, 'province'),
+      pais: text(data, 'country'),
+      personaContacto: text(data, 'contactPerson'),
+      cargoContacto: text(data, 'contactRole'),
       origen: text(data, 'source'),
     }
     try {
@@ -133,13 +144,48 @@ export function ContactDetail({ contactId }: { contactId: string }) {
             <Field name="name" label="Nombre" value={contact.nombre} required />
             <Field name="lastName" label="Apellidos" value={contact.apellidos ?? ''} />
             <Field name="legalName" label="Razón social" value={contact.razonSocial ?? ''} />
+            {contact.tipoPersona === 'Órgano judicial' ? (
+              <>
+                <Field name="courtNumber" label="Número" value={contact.numeroOrgano ?? ''} />
+                <Field
+                  name="courtDistrict"
+                  label="Partido judicial"
+                  value={contact.partidoJudicial ?? ''}
+                />
+                <Field name="courtCode" label="Código del órgano" value={contact.codigoOrgano ?? ''} />
+              </>
+            ) : null}
+            {contact.tipoPersona === 'Público' ? (
+              <>
+                <Field name="body" label="Organismo" value={contact.organismo ?? ''} />
+                <Field
+                  name="administrativeUnit"
+                  label="Unidad administrativa"
+                  value={contact.unidadAdministrativa ?? ''}
+                />
+              </>
+            ) : null}
             <Field name="taxId" label="NIF / CIF" value={contact.nif} />
+            <Field name="birthDate" label="Fecha de nacimiento" value={contact.nacimiento ?? ''} type="date" />
             <Field name="email" label="Correo" value={contact.email} type="email" />
+            <Field name="email2" label="Correo alternativo" value={contact.email2 ?? ''} type="email" />
             <Field name="phone" label="Teléfono" value={contact.telefono} />
+            <Field name="phone2" label="Teléfono alternativo" value={contact.telefono2 ?? ''} />
             <Field name="address" label="Dirección" value={contact.direccion} />
             <Field name="postalCode" label="Código postal" value={contact.cp} />
             <Field name="city" label="Municipio" value={contact.municipio} />
             <Field name="province" label="Provincia" value={contact.provincia} />
+            <Field name="country" label="País" value={contact.pais} />
+            {(contact.tipoPersona === 'Persona jurídica' || contact.tipoPersona === 'Público') ? (
+              <>
+                <Field
+                  name="contactPerson"
+                  label="Persona de contacto"
+                  value={contact.personaContacto ?? ''}
+                />
+                <Field name="contactRole" label="Cargo" value={contact.cargoContacto ?? ''} />
+              </>
+            ) : null}
             <Field name="source" label="Origen" value={contact.origen} />
             <div className="flex items-end gap-2">
               <Button type="submit" disabled={update.isPending}>

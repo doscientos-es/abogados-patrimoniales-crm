@@ -95,6 +95,7 @@ export function LeadWorkspace({
   )
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDue, setTaskDue] = useState('')
+  const [taskType, setTaskType] = useState<'Tarea' | 'Recordatorio' | 'Evento'>('Tarea')
   const [taskLabelId, setTaskLabelId] = useState('')
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
@@ -142,30 +143,23 @@ export function LeadWorkspace({
   const addTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     try {
-      const task = await createTask.mutateAsync({
+      await createTask.mutateAsync({
         expedienteId: null,
         oportunidadId: opportunity.id,
-        tipo: 'Tarea',
+        tipo: taskType,
         titulo: taskTitle,
         descripcion: '',
         prioridad: 'Media',
-        venceEn: taskDue ? `${taskDue}T09:00:00` : null,
+        venceEn: taskDue ? (taskDue.includes('T') ? taskDue : `${taskDue}T09:00:00`) : null,
         recordarEn: null,
         clasePlazo: null,
         critico: false,
         asignadoId: opportunity.asignadoId,
+        etiquetaIds: taskLabelId ? [taskLabelId] : [],
       })
-      if (taskLabelId) {
-        const client = getSupabaseBrowserClient()
-        if (client) {
-          const { error } = await client
-            .from('crm_task_label_assignments')
-            .insert({ label_id: taskLabelId, task_id: task.id })
-          if (error) throw error
-        }
-      }
       setTaskTitle('')
       setTaskDue('')
+      setTaskType('Tarea')
       setTaskLabelId('')
       toast.success('Tarea creada.')
     } catch (error) {
@@ -364,7 +358,7 @@ export function LeadWorkspace({
             <p className="text-muted-foreground text-sm">Sin tareas vinculadas.</p>
           ) : null}
           <form
-            className="grid gap-2 border-t pt-3 sm:grid-cols-[1fr_auto_auto]"
+            className="grid gap-2 border-t pt-3 sm:grid-cols-[1fr_auto_auto_auto]"
             onSubmit={(event) => void addTask(event)}
           >
             <div>
@@ -386,6 +380,18 @@ export function LeadWorkspace({
               </datalist>
             </div>
             <select
+              aria-label="Tipo de seguimiento"
+              value={taskType}
+              onChange={(event) =>
+                setTaskType(event.target.value as typeof taskType)
+              }
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="Tarea">Tarea</option>
+              <option value="Recordatorio">Recordatorio</option>
+              <option value="Evento">Primera cita / evento</option>
+            </select>
+            <select
               aria-label="Etiqueta de tarea"
               value={taskLabelId}
               onChange={(event) => setTaskLabelId(event.target.value)}
@@ -402,7 +408,7 @@ export function LeadWorkspace({
               aria-label="Fecha prevista"
               value={taskDue}
               onChange={(event) => setTaskDue(event.target.value)}
-              type="date"
+              type={taskType === 'Evento' ? 'datetime-local' : 'date'}
             />
             <Button type="submit" size="sm" disabled={createTask.isPending}>
               <CalendarPlus className="h-4 w-4" />

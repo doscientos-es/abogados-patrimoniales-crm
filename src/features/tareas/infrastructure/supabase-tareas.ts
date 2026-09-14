@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
   CrearTareaInput,
+  EtiquetaTarea,
   TareaPersistida,
   ValidarPlazoInput,
 } from '@/features/tareas/application/task-types'
@@ -9,6 +10,7 @@ import {
   getSupabaseBrowserClient,
   type TaskInsert,
   type TaskRow,
+  type TaskLabelRow,
   type TaskStatus,
 } from '@/shared/infrastructure/supabase'
 
@@ -71,7 +73,25 @@ const fromRow = (row: TaskRow): TareaPersistida => ({
   critico: row.critical,
   asignadoId: row.assigned_to,
   version: row.version,
+  etiquetas: [],
 })
+
+type LabelAssignment = { task_id: string; label_id: string }
+
+function labelsByTask(
+  labels: TaskLabelRow[],
+  assignments: LabelAssignment[],
+): Map<string, EtiquetaTarea[]> {
+  const labelMap = new Map(
+    labels.map((label) => [label.id, { id: label.id, nombre: label.name, color: label.color }]),
+  )
+  const result = new Map<string, EtiquetaTarea[]>()
+  for (const assignment of assignments) {
+    const label = labelMap.get(assignment.label_id)
+    if (label) result.set(assignment.task_id, [...(result.get(assignment.task_id) ?? []), label])
+  }
+  return result
+}
 
 export function useTareasPersistentes(firmId: string | undefined) {
   return useQuery({
@@ -86,7 +106,45 @@ export function useTareasPersistentes(firmId: string | undefined) {
         .eq('firm_id', firmId)
         .order('updated_at', { ascending: false })
       if (error) throw error
-      return data.map(fromRow)
+      const [{ data: assignments, error: assignmentsError }, { data: labels, error: labelsError }] =
+        await Promise.all([
+          client.from('crm_task_label_assignments').select('task_id,label_id'),
+          client
+            .from('crm_task_labels')
+            .select('id,name,color')
+            .eq('firm_id', firmId)
+            .eq('archived', false),
+        ])
+      if (assignmentsError) throw assignmentsError
+      if (labelsError) throw labelsError
+      const taskLabels = labelsByTask(
+        (labels ?? []) as TaskLabelRow[],
+        (assignments ?? []) as LabelAssignment[],
+      )
+      return data.map((row) => ({ ...fromRow(row), etiquetas: taskLabels.get(row.id) ?? [] }))
+    },
+  })
+}
+
+export function useEtiquetasTarea(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['tareas', 'etiquetas', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_task_labels')
+        .select('id,name,color')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('name')
+      if (error) throw error
+      return (data ?? []).map((label) => ({
+        id: label.id,
+        nombre: label.name,
+        color: label.color,
+      }))
     },
   })
 }
@@ -121,7 +179,24 @@ export function useCrearTarea(firmId: string | undefined) {
       }
       const { data, error } = await client.from('crm_tasks').insert(payload).select('*').single()
       if (error) throw error
-      return fromRow(data)
+      if (input.etiquetaIds?.length) {
+        const { error: labelsError } = await client
+          .from('crm_task_label_assignments')
+          .insert(input.etiquetaIds.map((labelId) => ({ label_id: labelId, task_id: data.id })))
+        if (labelsError) throw labelsError
+      }
+      const { data: labels } = await client
+        .from('crm_task_labels')
+        .select('id,name,color')
+        .in('id', input.etiquetaIds ?? [])
+      return {
+        ...fromRow(data),
+        etiquetas: ((labels ?? []) as TaskLabelRow[]).map((label) => ({
+          id: label.id,
+          nombre: label.name,
+          color: label.color,
+        })),
+      }
     },
     onSuccess: (task) =>
       queryClient.setQueryData<TareaPersistida[]>(['tareas', firmId], (items) => [

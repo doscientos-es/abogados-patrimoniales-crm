@@ -40,6 +40,7 @@ import {
   useCambiarEstadoTarea,
   useCrearTarea,
   useEditarTarea,
+  useEtiquetasTarea,
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
@@ -224,6 +225,7 @@ export function TaskWorkspace() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const tasks = useTareasPersistentes(firmId)
+  const labels = useEtiquetasTarea(firmId)
   const cases = useExpedientesPersistentes(firmId)
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
@@ -235,6 +237,7 @@ export function TaskWorkspace() {
   const [priorityFilter, setPriorityFilter] = useState<'all' | TareaPersistida['prioridad']>('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
+  const [labelFilter, setLabelFilter] = useState('all')
   const [view, setView] = useState<TaskView>('kanban')
   const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
   const [calendarEditTask, setCalendarEditTask] = useState<TareaPersistida | null>(null)
@@ -254,9 +257,9 @@ export function TaskWorkspace() {
     return (
       <PendingPanel title="Agenda no disponible" description="Necesitas una membresía activa." />
     )
-  if (tasks.isPending || cases.isPending || members.isPending)
+  if (tasks.isPending || labels.isPending || cases.isPending || members.isPending)
     return <PendingPanel title="Cargando agenda" description="Consultando tareas y plazos…" />
-  if (tasks.isError || cases.isError || members.isError)
+  if (tasks.isError || labels.isError || cases.isError || members.isError)
     return (
       <PendingPanel
         title="No se pudo cargar la agenda"
@@ -268,7 +271,7 @@ export function TaskWorkspace() {
   const canEditTasks = membership.data?.role !== 'paralegal'
   const visible = (tasks.data ?? []).filter((task) => {
     const searchable =
-      `${task.titulo} ${task.descripcion} ${task.tipo} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
+      `${task.titulo} ${task.descripcion} ${task.tipo} ${task.etiquetas.map((label) => label.nombre).join(' ')} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'En espera'
@@ -280,18 +283,24 @@ export function TaskWorkspace() {
       (priorityFilter === 'all' || task.prioridad === priorityFilter) &&
       (assigneeFilter === 'all' ||
         (assigneeFilter === '' ? !task.asignadoId : task.asignadoId === assigneeFilter)) &&
+      (labelFilter === 'all' || task.etiquetas.some((label) => label.id === labelFilter)) &&
       matchesStatus
     )
   })
   const orderedVisible = sortTasksForAgenda(visible)
-  const activeFilterCount = [typeFilter, priorityFilter, assigneeFilter, statusFilter].filter(
-    (value) => value !== 'all',
-  ).length
+  const activeFilterCount = [
+    typeFilter,
+    priorityFilter,
+    assigneeFilter,
+    statusFilter,
+    labelFilter,
+  ].filter((value) => value !== 'all').length
   const clearFilters = () => {
     setTypeFilter('all')
     setPriorityFilter('all')
     setAssigneeFilter('all')
     setStatusFilter('all')
+    setLabelFilter('all')
   }
   const changeStatus = async (task: TareaPersistida, estado: TareaPersistida['estado']) => {
     try {
@@ -340,6 +349,7 @@ export function TaskWorkspace() {
           <TaskCreateDialog
             cases={cases.data ?? []}
             members={members.data ?? []}
+            labels={labels.data ?? []}
             pending={createTask.isPending}
             onCreate={(input) => createTask.mutateAsync(input)}
           />
@@ -391,6 +401,15 @@ export function TaskWorkspace() {
                   ['Recordatorio', 'Recordatorio'],
                   ['Evento', 'Evento'],
                   ['Plazo', 'Plazo'],
+                ]}
+              />
+              <FilterSelect
+                label="Etiqueta"
+                value={labelFilter}
+                onChange={setLabelFilter}
+                options={[
+                  ['all', 'Todas las etiquetas'],
+                  ...(labels.data ?? []).map((label) => [label.id, label.nombre]),
                 ]}
               />
               <FilterSelect
@@ -992,6 +1011,16 @@ function TaskCard({
           <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
             {task.tipo}
           </Badge>
+          {task.etiquetas.map((label) => (
+            <Badge
+              key={label.id}
+              variant="outline"
+              className={`h-6 gap-1 px-2 text-[11px] ${taskLabelClass(label.color)}`}
+            >
+              <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+              {label.nombre}
+            </Badge>
+          ))}
           {task.recordarEn ? (
             <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
               <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1168,11 +1197,13 @@ function TaskCard({
 function TaskCreateDialog({
   cases,
   members,
+  labels,
   pending,
   onCreate,
 }: {
   cases: { id: string; referencia: string; titulo: string }[]
   members: { id: string; nombre: string }[]
+  labels: { id: string; nombre: string; color: string }[]
   pending: boolean
   onCreate: (input: CrearTareaInput) => Promise<unknown>
 }) {
@@ -1196,6 +1227,7 @@ function TaskCreateDialog({
           kind === 'Plazo' ? (text(data, 'deadlineClass') as CrearTareaInput['clasePlazo']) : null,
         critico: data.get('critical') === 'on',
         asignadoId: text(data, 'assignee') || null,
+        etiquetaIds: data.get('label') ? [text(data, 'label')] : [],
       })
       toast.success(kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.')
       form.reset()
@@ -1269,6 +1301,11 @@ function TaskCreateDialog({
                   ['', 'Sin asignar'],
                   ...members.map((member) => [member.id, member.nombre]),
                 ]}
+              />
+              <Select
+                name="label"
+                label="Etiqueta"
+                options={[['', 'Sin etiqueta'], ...labels.map((label) => [label.id, label.nombre])]}
               />
               <Field
                 name="due"
@@ -1394,6 +1431,19 @@ function Select({
 
 const selectClassName =
   'border-input bg-background h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
+
+function taskLabelClass(color: string) {
+  const classes: Record<string, string> = {
+    gray: 'border-border text-muted-foreground',
+    blue: 'border-blue-500/30 text-blue-700 dark:text-blue-300',
+    amber: 'border-amber-500/30 text-amber-700 dark:text-amber-300',
+    rose: 'border-rose-500/30 text-rose-700 dark:text-rose-300',
+    green: 'border-green-500/30 text-green-700 dark:text-green-300',
+    purple: 'border-purple-500/30 text-purple-700 dark:text-purple-300',
+    teal: 'border-teal-500/30 text-teal-700 dark:text-teal-300',
+  }
+  return classes[color] ?? classes['gray']
+}
 
 function text(data: FormData, name: string) {
   const value = data.get(name)

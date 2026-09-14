@@ -495,6 +495,12 @@ function CaseSummary({
   actuaciones: ActuacionPersistida[]
   documentos: CaseDocumentRow[]
 }) {
+  const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
+  const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
+    ? commercialIntake['documentosIniciales']
+      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+      .filter((item): item is string => typeof item === 'string' && item.length > 0)
+    : []
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
@@ -515,6 +521,24 @@ function CaseSummary({
             {expediente.proximaAccion || 'Sin acción principal'}
           </CardContent>
         </Card>
+        {initialDocuments.length ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Documentación declarada en el Lead</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
+                {initialDocuments.map((document) => (
+                  <li key={document}>{document}</li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground mt-3 text-xs">
+                Estos elementos son una declaración inicial; los archivos se incorporan desde el
+                gestor documental para mantener control de versiones y permisos.
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -548,6 +572,12 @@ function CaseSummary({
       </div>
     </div>
   )
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
 }
 
 function DetailSection({

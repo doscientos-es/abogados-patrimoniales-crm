@@ -1,3 +1,5 @@
+import type { Json } from '@/shared/infrastructure/supabase'
+
 export type PrioridadExpediente = 'Alta' | 'Media' | 'Baja'
 
 export type ExpedientePersistido = {
@@ -18,6 +20,7 @@ export type ExpedientePersistido = {
   fechaCierre: string | null
   proximaAccion: string
   dondeEstamos: string
+  detalles: Json
   version: number
   actualizadoEn: string
 }

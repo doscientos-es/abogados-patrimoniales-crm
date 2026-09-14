@@ -764,11 +764,8 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
           ) : null}
         </nav>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <div
-            className="border-border bg-card inline-flex rounded-md border p-0.5"
-            role="group"
-            aria-label="Vista de documentos"
-          >
+          <fieldset className="border-border bg-card inline-flex rounded-md border p-0.5">
+            <legend className="sr-only">Vista de documentos</legend>
             <Button
               type="button"
               size="sm"
@@ -787,7 +784,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             >
               <Columns3 className="h-4 w-4" aria-hidden="true" /> Flujo documental
             </Button>
-          </div>
+          </fieldset>
           {mode === 'explorer' && activeCase ? (
             <div className="flex flex-wrap items-end gap-2">
               <span id="document-upload-help" className="sr-only">
@@ -846,7 +843,9 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             setLocation({ caseId: document.case_id, folderId: document.folder_id })
             setMode('explorer')
           }}
-          onWorkflowChange={updateWorkflowStatus}
+          onWorkflowChange={(document, workflowStatus) => {
+            void updateWorkflowStatus(document, workflowStatus)
+          }}
         />
       ) : !activeCase ? (
         <section className="space-y-3" aria-labelledby="document-case-list-title">
@@ -1489,7 +1488,10 @@ function WorkflowBoard({
   cases: Array<{ id: string; referencia: string; titulo: string }>
   changingDocumentId: string | null
   onOpenDocument: (document: CaseDocumentRow) => void
-  onWorkflowChange: (document: CaseDocumentRow, status: DocumentWorkflowStatus) => void
+  onWorkflowChange: (
+    document: CaseDocumentRow,
+    status: DocumentWorkflowStatus,
+  ) => void | Promise<void>
 }) {
   const caseById = new Map(cases.map((caseItem) => [caseItem.id, caseItem]))
   return (
@@ -1568,12 +1570,12 @@ function WorkflowBoard({
                             aria-label={`Estado de ${document.original_name}`}
                             value={document.workflow_status}
                             disabled={updating || document.content_status !== 'validated'}
-                            onChange={(event) =>
-                              onWorkflowChange(
+                            onChange={(event) => {
+                              void onWorkflowChange(
                                 document,
                                 event.target.value as DocumentWorkflowStatus,
                               )
-                            }
+                            }}
                             className="border-input bg-background focus-visible:ring-ring h-8 max-w-40 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
                           >
                             {WORKFLOW_COLUMNS.map((option) => (

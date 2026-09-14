@@ -69,11 +69,27 @@ function NuevoContactoPage() {
         'provincia',
         'pais',
         'canal',
+        'fechaNacimiento',
+        'telefono2',
+        'email2',
+        'codigoOrgano',
+        'numeroOrgano',
+        'partidoJudicial',
+        'organismo',
+        'unidadAdministrativa',
       ].map((key) => [key, formText(form, key)]),
     )
     const displayName = nature === 'Persona física' ? values['nombre'] : values['razonSocial']
     if (!displayName) {
       toast.error(nature === 'Persona física' ? 'Indica el nombre.' : 'Indica la denominación.')
+      return
+    }
+    if (nature === 'Órgano judicial' && !values['numeroOrgano']) {
+      toast.error('Indica el número del órgano judicial.')
+      return
+    }
+    if (nature === 'Órgano judicial' && !values['partidoJudicial']) {
+      toast.error('Indica el partido judicial.')
       return
     }
     try {
@@ -117,13 +133,35 @@ function NuevoContactoPage() {
               <>
                 <Field name="nombre" label="Nombre" required />
                 <Field name="primerApellido" label="Apellidos" />
+                <Field name="fechaNacimiento" label="Fecha de nacimiento" type="date" />
+              </>
+            ) : nature === 'Órgano judicial' ? (
+              <>
+                <Field name="razonSocial" label="Denominación" required />
+                <Field name="numeroOrgano" label="Número" required />
+                <Field name="partidoJudicial" label="Partido judicial" required />
+                <Field name="codigoOrgano" label="Código del órgano" />
+              </>
+            ) : nature === 'Público' ? (
+              <>
+                <Field name="razonSocial" label="Denominación" required />
+                <Field name="organismo" label="Organismo" />
+                <Field name="unidadAdministrativa" label="Unidad administrativa" />
               </>
             ) : (
               <Field name="razonSocial" label="Denominación" required />
             )}
             <Field name="documento" label="NIF / CIF" />
             <Field name="email" label="Correo" type="email" />
+            <Field name="email2" label="Correo alternativo" type="email" />
             <Field name="telefono" label="Teléfono" />
+            <Field name="telefono2" label="Teléfono alternativo" />
+            {(nature === 'Persona jurídica' || nature === 'Público') && (
+              <>
+                <Field name="personaContacto" label="Persona de contacto" />
+                <Field name="cargo" label="Cargo" />
+              </>
+            )}
             <Field name="direccion" label="Dirección" />
             <Field name="codigoPostal" label="Código postal" />
             <Field name="municipio" label="Municipio" />

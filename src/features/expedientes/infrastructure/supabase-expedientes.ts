@@ -43,6 +43,7 @@ export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   fechaCierre: row.closed_on,
   proximaAccion: row.next_action,
   dondeEstamos: row.current_position,
+  detalles: row.details,
   version: row.version,
   actualizadoEn: row.updated_at,
 })

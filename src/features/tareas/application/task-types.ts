@@ -2,6 +2,12 @@ export type TipoTarea = 'Tarea' | 'Recordatorio' | 'Evento' | 'Plazo'
 export type EstadoTarea = 'Pendiente' | 'En curso' | 'Completada' | 'Cancelada'
 export type ValidacionPlazo = 'No aplica' | 'Propuesto' | 'Validado' | 'Rechazado'
 
+export type EtiquetaTarea = {
+  id: string
+  nombre: string
+  color: string
+}
+
 export type TareaPersistida = {
   id: string
   expedienteId: string | null
@@ -22,6 +28,7 @@ export type TareaPersistida = {
   validadoEn: string | null
   critico: boolean
   asignadoId: string | null
+  etiquetas: EtiquetaTarea[]
   version: number
 }
 
@@ -37,6 +44,7 @@ export type CrearTareaInput = {
   clasePlazo: TareaPersistida['clasePlazo']
   critico: boolean
   asignadoId: string | null
+  etiquetaIds?: string[]
 }
 
 export type ValidarPlazoInput = {

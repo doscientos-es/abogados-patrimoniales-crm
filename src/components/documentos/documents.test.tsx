@@ -236,7 +236,11 @@ describe('Documents', () => {
       </QueryClientProvider>,
     )
 
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Abrir carpeta Escritos' }))[0]!)
+    const [folderButton] = await screen.findAllByRole('button', {
+      name: 'Abrir carpeta Escritos',
+    })
+    if (!folderButton) throw new Error('No se encontró la carpeta Escritos.')
+    fireEvent.click(folderButton)
     expect(onLocationChange).toHaveBeenCalledWith({ caseId: 'case-1', folderId: 'folder-1' })
   })
 

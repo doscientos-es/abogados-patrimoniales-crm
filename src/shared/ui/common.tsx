@@ -61,7 +61,7 @@ export function SectionHeader({
           {logo ? (
             <img src="/logo-lex.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
           ) : null}
-          <h1 className="text-foreground min-w-0 truncate font-serif text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+          <h1 className="text-foreground min-w-0 truncate font-serif text-2xl font-semibold tracking-wide text-balance uppercase sm:text-3xl">
             {title}
           </h1>
           {meta ? (

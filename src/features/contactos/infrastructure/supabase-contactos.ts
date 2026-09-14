@@ -29,6 +29,11 @@ export type ContactoPersistido = {
   nombre: string
   apellidos?: string
   razonSocial?: string
+  codigoOrgano?: string
+  numeroOrgano?: string
+  partidoJudicial?: string
+  organismo?: string
+  unidadAdministrativa?: string
   nif: string
   nacimiento?: string
   estado: EstadoContacto
@@ -151,6 +156,12 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     ...(row.last_name ? { apellidos: row.last_name } : {}),
     ...(row.legal_name ? { razonSocial: row.legal_name } : {}),
     ...(details['codigoOrgano'] ? { codigoOrgano: details['codigoOrgano'] } : {}),
+    ...(details['numeroOrgano'] ? { numeroOrgano: details['numeroOrgano'] } : {}),
+    ...(details['partidoJudicial'] ? { partidoJudicial: details['partidoJudicial'] } : {}),
+    ...(details['organismo'] ? { organismo: details['organismo'] } : {}),
+    ...(details['unidadAdministrativa']
+      ? { unidadAdministrativa: details['unidadAdministrativa'] }
+      : {}),
     nif: row.tax_id ?? '',
     ...(details['fechaNacimiento'] ? { nacimiento: details['fechaNacimiento'] } : {}),
     estado:
@@ -209,6 +220,11 @@ export function useActualizarContacto(firmId: string | undefined) {
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const details = {
         fechaNacimiento: contacto.nacimiento ?? '',
+        codigoOrgano: contacto.codigoOrgano ?? '',
+        numeroOrgano: contacto.numeroOrgano ?? '',
+        partidoJudicial: contacto.partidoJudicial ?? '',
+        organismo: contacto.organismo ?? '',
+        unidadAdministrativa: contacto.unidadAdministrativa ?? '',
         telefono2: contacto.telefono2 ?? '',
         email2: contacto.email2 ?? '',
         direccion: contacto.direccion,
