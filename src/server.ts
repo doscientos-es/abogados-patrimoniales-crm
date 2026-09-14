@@ -45,7 +45,7 @@ function withPrivateAppHeaders(response: Response, request: Request): Response {
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "img-src 'self' data: blob:",
+      "img-src 'self' https://*.supabase.co data: blob:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",

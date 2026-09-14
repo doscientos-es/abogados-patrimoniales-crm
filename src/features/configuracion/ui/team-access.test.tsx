@@ -16,10 +16,9 @@ function renderTeamAccess() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
-  return render(
-    <TeamAccess actorRole="owner" firmId="firm-1" members={[]} onChanged={vi.fn()} />,
-    { wrapper },
-  )
+  return render(<TeamAccess actorRole="owner" firmId="firm-1" members={[]} onChanged={vi.fn()} />, {
+    wrapper,
+  })
 }
 
 describe('TeamAccess', () => {
@@ -28,7 +27,9 @@ describe('TeamAccess', () => {
     renderTeamAccess()
 
     fireEvent.click(screen.getByRole('button', { name: 'Invitar a un nuevo miembro' }))
-    fireEvent.change(screen.getByLabelText('Nombre completo'), { target: { value: 'María García' } })
+    fireEvent.change(screen.getByLabelText('Nombre completo'), {
+      target: { value: 'María García' },
+    })
     fireEvent.change(screen.getByLabelText('Correo profesional'), {
       target: { value: 'maria@despacho.es' },
     })

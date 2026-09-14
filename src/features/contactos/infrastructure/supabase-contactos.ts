@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import {
@@ -52,6 +52,23 @@ export type ContactoPersistido = {
   version: number
 }
 
+export type ContactListFilters = {
+  query: string
+  archived: boolean
+  relationship: string
+  nature: string
+  status: string
+  source: string
+  sortBy: string
+  page: number
+  pageSize: number
+}
+
+export type ContactListPage = {
+  contacts: ContactoPersistido[]
+  count: number
+}
+
 const inputSchema = z.object({
   tipoPersona: z.enum(['Persona física', 'Persona jurídica', 'Órgano judicial', 'Público']),
   relacion: z.enum([
@@ -97,6 +114,12 @@ const relationshipFromDatabase: Record<ContactRelationship, RelacionDespacho> = 
   third_party: 'Tercero',
   counterparty: 'Contraparte',
   supplier: 'Proveedor',
+}
+
+const statusToDatabase: Record<EstadoContacto, ContactStatus> = {
+  Activo: 'active',
+  Inactivo: 'inactive',
+  Archivado: 'archived',
 }
 
 function asObject(value: Json): Record<string, string> {
@@ -276,6 +299,97 @@ export function useContactos(firmId: string | undefined) {
         .order('display_name')
       if (error) throw error
       return data.map(contactoFromRow)
+    },
+  })
+}
+
+function escapePostgrestOrValue(value: string) {
+  return value.replaceAll('\\', '\\\\').replaceAll(',', '\\,').replaceAll('(', '\\(').replaceAll(')', '\\)')
+}
+
+export function useContactosPaginados(
+  firmId: string | undefined,
+  filters: ContactListFilters,
+) {
+  const page = Math.max(1, filters.page)
+  const pageSize = Math.max(1, filters.pageSize)
+  const text = filters.query.trim()
+
+  return useQuery({
+    queryKey: ['crm', 'contactos', 'pagina', firmId, { ...filters, page, pageSize, query: text }],
+    enabled: Boolean(firmId),
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<ContactListPage> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return { contacts: [], count: 0 }
+
+      let request = client
+        .from('crm_contacts')
+        .select('*', { count: 'exact' })
+        .eq('firm_id', firmId)
+
+      if (filters.archived) request = request.eq('status', 'archived')
+      else if (filters.status === 'all') request = request.in('status', ['active', 'inactive'])
+      else request = request.eq('status', statusToDatabase[filters.status as EstadoContacto])
+
+      if (filters.relationship !== 'all') {
+        request = request.eq(
+          'relationship',
+          relationshipToDatabase[filters.relationship as RelacionDespacho],
+        )
+      }
+      if (filters.nature !== 'all') {
+        request = request.eq('nature', natureToDatabase[filters.nature as Naturaleza])
+      }
+      if (filters.source !== 'all') request = request.eq('source', filters.source)
+      if (text) {
+        const escapedText = escapePostgrestOrValue(text)
+        request = request.or(
+          ['display_name', 'tax_id', 'email', 'phone', 'source']
+            .map((column) => `${column}.ilike.%${escapedText}%`)
+            .join(','),
+        )
+      }
+
+      if (filters.sortBy === 'relationship') {
+        request = request
+          .order('relationship')
+          .order('display_name')
+          .order('id')
+      } else if (filters.sortBy === 'created') {
+        request = request
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+      } else if (filters.sortBy === 'modified') {
+        request = request
+          .order('updated_at', { ascending: false })
+          .order('id', { ascending: false })
+      } else {
+        request = request.order('display_name').order('id')
+      }
+
+      const { data, count, error } = await request.range((page - 1) * pageSize, page * pageSize - 1)
+      if (error) throw error
+      return { contacts: (data ?? []).map(contactoFromRow), count: count ?? 0 }
+    },
+  })
+}
+
+export function useOrígenesContacto(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['crm', 'contactos', 'origenes', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_contacts')
+        .select('source')
+        .eq('firm_id', firmId)
+        .not('source', 'is', null)
+        .order('source')
+      if (error) throw error
+      return [...new Set((data ?? []).map((contact) => contact.source).filter(Boolean))]
     },
   })
 }

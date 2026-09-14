@@ -125,8 +125,8 @@ export function TeamAccess({
               </div>
             </div>
             {canManage &&
-              member.role !== 'owner' &&
-              !(actorRole === 'admin' && member.role === 'admin') ? (
+            member.role !== 'owner' &&
+            !(actorRole === 'admin' && member.role === 'admin') ? (
               <div className="flex items-center gap-2">
                 <select
                   className="border-input bg-background h-9 rounded-md border px-2 text-sm"

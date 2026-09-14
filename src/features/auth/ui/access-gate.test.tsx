@@ -14,7 +14,12 @@ vi.mock('../application/auth-session', () => ({
   }),
 }))
 vi.mock('../application/membership', () => ({
-  useActiveMembership: () => ({ data: null, isError: false, isLoading: false, refetch: mocks.refetch }),
+  useActiveMembership: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+    refetch: mocks.refetch,
+  }),
 }))
 
 import { AccessGate } from './access-gate'
@@ -26,6 +31,24 @@ afterEach(() => {
 })
 
 describe('AccessGate', () => {
+  it('lets an invited user create a password before membership activation completes', async () => {
+    mocks.refetch.mockResolvedValue(undefined)
+    mocks.updatePassword.mockResolvedValue(undefined)
+    window.history.replaceState({}, '', '/#type=invite')
+
+    render(<AccessGate>Contenido privado</AccessGate>)
+
+    expect(screen.getByText('Crea tu contraseña')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'nueva-clave' } })
+    fireEvent.change(screen.getByLabelText('Repite la contraseña'), {
+      target: { value: 'nueva-clave' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar en LEX' }))
+
+    await waitFor(() => expect(mocks.updatePassword).toHaveBeenCalledWith('nueva-clave'))
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce())
+  })
+
   it('opens the password form directly from a recovery link', async () => {
     mocks.refetch.mockResolvedValue(undefined)
     mocks.updatePassword.mockResolvedValue(undefined)

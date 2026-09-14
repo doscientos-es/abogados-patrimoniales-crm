@@ -22,7 +22,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -57,8 +57,9 @@ import {
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   useActualizarEstadoContacto,
-  useContactos,
+  useContactosPaginados,
   useEliminarContacto,
+  useOrígenesContacto,
   type ContactoPersistido,
 } from '@/features/contactos'
 
@@ -84,10 +85,8 @@ function ContactosPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
-  const contacts = useContactos(firmId)
-  const updateStatus = useActualizarEstadoContacto(firmId)
-  const deleteContact = useEliminarContacto(firmId)
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [archived, setArchived] = useState(false)
   const [relationship, setRelationship] = useState('all')
   const [nature, setNature] = useState('all')
@@ -96,11 +95,36 @@ function ContactosPage() {
   const [sortBy, setSortBy] = useState('name')
   const [page, setPage] = useState(1)
   const [contactToDelete, setContactToDelete] = useState<ContactoPersistido | null>(null)
-  const sources = useMemo(
-    () =>
-      [...new Set((contacts.data ?? []).map((contact) => contact.origen).filter(Boolean))].sort(),
-    [contacts.data],
-  )
+  const pageSize = 10
+  const contacts = useContactosPaginados(firmId, {
+    query: debouncedQuery,
+    archived,
+    relationship,
+    nature,
+    status,
+    source,
+    sortBy,
+    page,
+    pageSize,
+  })
+  const sources = useOrígenesContacto(firmId)
+  const updateStatus = useActualizarEstadoContacto(firmId)
+  const deleteContact = useEliminarContacto(firmId)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 180)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  const totalContacts = contacts.data?.count ?? 0
+  const pageCount = Math.max(1, Math.ceil(totalContacts / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  const firstVisibleContact = (currentPage - 1) * pageSize
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount)
+  }, [page, pageCount])
+
   const activeFilters = [
     relationship !== 'all' && {
       label: 'Relación',
@@ -143,34 +167,6 @@ function ContactosPage() {
     setSource('all')
     setPage(1)
   }
-  const filtered = useMemo(() => {
-    const text = query.trim().toLocaleLowerCase()
-    return (contacts.data ?? [])
-      .filter((contact) =>
-        archived ? contact.estado === 'Archivado' : contact.estado !== 'Archivado',
-      )
-      .filter((contact) =>
-        `${displayName(contact)} ${contact.nif} ${contact.email} ${contact.telefono} ${contact.relacion} ${contact.tipoPersona} ${contact.origen}`
-          .toLocaleLowerCase()
-          .includes(text),
-      )
-      .filter((contact) => relationship === 'all' || contact.relacion === relationship)
-      .filter((contact) => nature === 'all' || contact.tipoPersona === nature)
-      .filter((contact) => status === 'all' || contact.estado === status)
-      .filter((contact) => source === 'all' || contact.origen === source)
-      .sort((a, b) => {
-        if (sortBy === 'relationship') return a.relacion.localeCompare(b.relacion)
-        if (sortBy === 'created') return (b.creadoEn ?? '').localeCompare(a.creadoEn ?? '')
-        if (sortBy === 'modified') return (b.modificadoEn ?? '').localeCompare(a.modificadoEn ?? '')
-        return displayName(a).localeCompare(displayName(b))
-      })
-  }, [archived, contacts.data, nature, query, relationship, sortBy, source, status])
-  const pageSize = 10
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const currentPage = Math.min(page, pageCount)
-  const firstVisibleContact = (currentPage - 1) * pageSize
-  const paginatedContacts = filtered.slice(firstVisibleContact, firstVisibleContact + pageSize)
-
   const changeSort = (value: string) => {
     setSortBy(value)
     setPage(1)
@@ -364,7 +360,7 @@ function ContactosPage() {
                         triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
                       >
                         <SelectItem value="all">Todos los orígenes</SelectItem>
-                        {sources.map((item) => (
+                        {(sources.data ?? []).map((item) => (
                           <SelectItem key={item} value={item}>
                             {item}
                           </SelectItem>
@@ -405,7 +401,7 @@ function ContactosPage() {
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-muted-foreground text-xs">
-              {filtered.length} {filtered.length === 1 ? 'contacto' : 'contactos'} en la vista
+              {totalContacts} {totalContacts === 1 ? 'contacto' : 'contactos'} en la vista
               actual
             </p>
             {activeFilters.length ? (
@@ -487,7 +483,7 @@ function ContactosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedContacts.map((contact) => (
+              {(contacts.data?.contacts ?? []).map((contact) => (
                 <TableRow key={contact.id} className="h-16 hover:!bg-transparent">
                   <TableCell className="text-primary pl-3 font-mono text-xs font-medium">
                     {contact.referencia || '—'}
@@ -606,11 +602,11 @@ function ContactosPage() {
               ))}
             </TableBody>
           </Table>
-          {filtered.length ? (
+          {totalContacts ? (
             <div className="border-border/80 flex flex-col gap-2 border-t px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground text-xs tabular-nums">
                 Mostrando {firstVisibleContact + 1}–
-                {Math.min(firstVisibleContact + pageSize, filtered.length)} de {filtered.length}
+                {Math.min(firstVisibleContact + pageSize, totalContacts)} de {totalContacts}
               </p>
               <Pagination
                 page={currentPage}
@@ -621,7 +617,7 @@ function ContactosPage() {
               />
             </div>
           ) : null}
-          {!filtered.length ? (
+          {!totalContacts ? (
             <div className="py-14 text-center">
               <p className="text-sm font-medium">No hay contactos con estos criterios</p>
               <p className="text-muted-foreground mt-1 text-xs">
@@ -683,9 +679,8 @@ function SortableTableHead({
       <button
         type="button"
         onClick={() => onSort(sortValue)}
-        className={`hover:text-foreground flex h-8 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase transition-colors ${
-          active ? 'text-primary' : 'text-muted-foreground'
-        }`}
+        className={`hover:text-foreground flex h-8 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase transition-colors ${active ? 'text-primary' : 'text-muted-foreground'
+          }`}
         aria-label={`Ordenar por ${label}`}
       >
         {label}
@@ -729,7 +724,7 @@ function ContactFilter({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent>{children}</SelectContent>
+      <SelectContent className="z-[60]">{children}</SelectContent>
     </Select>
   )
 }
@@ -801,11 +796,10 @@ function primaryContact(contact: { personaContacto?: string; telefono: string; e
 }
 
 function tabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
-    active
-      ? 'border-primary text-primary'
-      : 'border-transparent text-muted-foreground hover:text-foreground'
-  }`
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
+    ? 'border-primary text-primary'
+    : 'border-transparent text-muted-foreground hover:text-foreground'
+    }`
 }
 
 function displayName(contact: { nombre: string; apellidos?: string; razonSocial?: string }) {

@@ -10,6 +10,7 @@ const moveDocument = vi.fn().mockResolvedValue({ error: null })
 const moveFolder = vi.fn().mockResolvedValue({ error: null })
 const createFolder = vi.fn().mockResolvedValue({ error: null })
 const archiveDocument = vi.fn().mockResolvedValue({ error: null })
+const updateDocumentWorkflow = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
 let hasDocuments = true
 let hasFolders = true
@@ -30,6 +31,7 @@ const document: CaseDocumentRow = {
   confidentiality: 'normal',
   checksum_sha256: 'a'.repeat(64),
   content_status: 'validated',
+  workflow_status: 'inbox',
   is_current: true,
   archived_at: null,
   archived_by: null,
@@ -106,6 +108,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
       if (name === 'crm_move_document_folder') return moveFolder(args)
       if (name === 'crm_create_document_folder') return createFolder(args)
       if (name === 'crm_archive_case_document') return archiveDocument(args)
+      if (name === 'crm_update_document_workflow') return updateDocumentWorkflow(args)
       return Promise.resolve({ error: null })
     },
   }),
@@ -128,6 +131,7 @@ afterEach(() => {
   moveFolder.mockClear()
   createFolder.mockClear()
   archiveDocument.mockClear()
+  updateDocumentWorkflow.mockClear()
 })
 
 describe('Documents', () => {
@@ -136,7 +140,8 @@ describe('Documents', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Mover' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir acciones de Poder notarial.pdf' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Mover' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Mover documento' })
     expect(dialog.textContent).toContain('El archivo y su historial de versiones no cambiarán.')
@@ -181,7 +186,8 @@ describe('Documents', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Mover carpeta Escritos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir acciones de la carpeta Escritos' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mover carpeta' }))
     expect(screen.getByRole('dialog', { name: 'Mover carpeta' }).textContent).toContain(
       'Sus archivos y subcarpetas se conservarán.',
     )
@@ -201,7 +207,8 @@ describe('Documents', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /abrir documentos del expediente exp-001/i }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Archivar Poder notarial.pdf' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir acciones de Poder notarial.pdf' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }))
 
     expect(screen.getByRole('dialog', { name: 'Archivar documento' }).textContent).toContain(
       'todas sus versiones dejarán de estar disponibles',
@@ -229,7 +236,7 @@ describe('Documents', () => {
       </QueryClientProvider>,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Abrir carpeta Escritos' }))
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Abrir carpeta Escritos' }))[0]!)
     expect(onLocationChange).toHaveBeenCalledWith({ caseId: 'case-1', folderId: 'folder-1' })
   })
 
@@ -265,6 +272,25 @@ describe('Documents', () => {
       screen.getByRole('button', { name: /abrir documentos del expediente exp-001/i }),
     )
     expect(screen.queryByRole('button', { name: 'Nuevo expediente' })).toBeNull()
+  })
+
+  it('shows workflow independently of folders and persists a state transition', async () => {
+    renderDocuments()
+    fireEvent.click(await screen.findByRole('button', { name: /flujo documental/i }))
+
+    expect(screen.getByRole('heading', { name: 'Flujo documental' })).toBeTruthy()
+    expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Estado de Poder notarial.pdf'), {
+      target: { value: 'in_progress' },
+    })
+
+    await waitFor(() =>
+      expect(updateDocumentWorkflow).toHaveBeenCalledWith({
+        target_document_id: 'document-1',
+        target_expected_version: 1,
+        target_workflow_status: 'in_progress',
+      }),
+    )
   })
 
   it('explains a loading failure and provides a recovery action', async () => {

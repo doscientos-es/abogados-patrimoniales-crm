@@ -211,6 +211,14 @@ export type Database = {
         Args: { target_document_id: string; target_expected_version: number }
         Returns: CaseDocumentRow
       }
+      crm_update_document_workflow: {
+        Args: {
+          target_document_id: string
+          target_expected_version: number
+          target_workflow_status: CaseDocumentRow['workflow_status']
+        }
+        Returns: CaseDocumentRow
+      }
       crm_create_document_version: {
         Args: {
           target_document_id: string
@@ -761,6 +769,7 @@ export type CaseDocumentRow = {
   confidentiality: 'normal' | 'restricted' | 'confidential'
   checksum_sha256: string | null
   content_status: 'pending' | 'validated' | 'rejected'
+  workflow_status: 'inbox' | 'in_progress' | 'processed'
   is_current: boolean
   archived_at: string | null
   archived_by: string | null

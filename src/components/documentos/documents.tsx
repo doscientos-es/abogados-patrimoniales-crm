@@ -1,7 +1,14 @@
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   Archive,
+  Columns3,
   ChevronRight,
   Download,
   FileImage,
@@ -16,6 +23,7 @@ import {
   Info,
   List,
   MoveRight,
+  MoreHorizontal,
   RefreshCw,
   Upload,
 } from 'lucide-react'
@@ -23,6 +31,7 @@ import {
   useMemo,
   useState,
   useEffect,
+  useRef,
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
@@ -65,6 +74,26 @@ const FOLDER_DRAG_TYPE = 'application/x-lex-folder-id'
 type DocumentConfidentiality = CaseDocumentRow['confidentiality']
 type DocumentLocation = { caseId: string | null; folderId: string | null }
 type DocumentView = 'grid' | 'list'
+type DocumentsMode = 'explorer' | 'workflow'
+type DocumentWorkflowStatus = CaseDocumentRow['workflow_status']
+
+const WORKFLOW_COLUMNS: Array<{
+  status: DocumentWorkflowStatus
+  title: string
+  description: string
+}> = [
+  { status: 'inbox', title: 'Bandeja', description: 'Pendiente de clasificar o revisar.' },
+  {
+    status: 'in_progress',
+    title: 'En tratamiento',
+    description: 'Hay trabajo documental abierto.',
+  },
+  {
+    status: 'processed',
+    title: 'Tratado',
+    description: 'Procesado como evidencia del expediente.',
+  },
+]
 
 const FOLDER_TONES = [
   'bg-amber-500/15 text-amber-700 dark:text-amber-300',
@@ -151,6 +180,8 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const [view, setView] = useState<DocumentView>('grid')
+  const [mode, setMode] = useState<DocumentsMode>('explorer')
+  const [workflowDocumentId, setWorkflowDocumentId] = useState<string | null>(null)
   const [previewUrls, setPreviewUrls] = useState<
     Record<string, { url: string; storagePath: string }>
   >({})
@@ -625,6 +656,37 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
       setArchivingDocumentId(null)
     }
   }
+  const updateWorkflowStatus = async (
+    document: CaseDocumentRow,
+    workflowStatus: DocumentWorkflowStatus,
+  ) => {
+    if (!firmId || document.workflow_status === workflowStatus) return
+    const c = getSupabaseBrowserClient()
+    if (!c) {
+      toast.error('No se pudo conectar para actualizar el flujo documental. Inténtalo de nuevo.')
+      return
+    }
+    setWorkflowDocumentId(document.id)
+    setStatusMessage(`Actualizando el flujo de ${document.original_name}.`)
+    try {
+      const { error } = await c.rpc('crm_update_document_workflow', {
+        target_document_id: document.id,
+        target_expected_version: document.version,
+        target_workflow_status: workflowStatus,
+      })
+      if (error) throw error
+      await qc.invalidateQueries({ queryKey: ['documents', firmId] })
+      const label = WORKFLOW_COLUMNS.find((column) => column.status === workflowStatus)?.title
+      toast.success(`Documento movido a ${label?.toLowerCase() ?? 'su nuevo estado'}.`)
+      setStatusMessage(`Documento movido a ${label ?? 'su nuevo estado'}.`)
+    } catch (error) {
+      const message = actionErrorMessage(error, 'No se pudo actualizar el flujo documental.')
+      toast.error(message)
+      setStatusMessage(message)
+    } finally {
+      setWorkflowDocumentId(null)
+    }
+  }
   const beginDocumentDrag = (event: DragEvent<HTMLElement>, documentId: string) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData(DOCUMENT_DRAG_TYPE, documentId)
@@ -656,7 +718,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
       <output className="sr-only" aria-live="polite" aria-atomic="true">
         {statusMessage}
       </output>
-      <header className="border-border/80 bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 shadow-sm">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
         <nav
           className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm"
           aria-label="Ubicación actual"
@@ -701,54 +763,92 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             </>
           ) : null}
         </nav>
-        {activeCase ? (
-          <div className="flex flex-wrap items-end gap-2">
-            <span id="document-upload-help" className="sr-only">
-              PDF, DOCX, XLSX, JPG o PNG; máximo 25 MB. El archivo se guardará en esta ubicación.
-            </span>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div
+            className="border-border bg-card inline-flex rounded-md border p-0.5"
+            role="group"
+            aria-label="Vista de documentos"
+          >
             <Button
-              variant="outline"
+              type="button"
               size="sm"
-              disabled={creatingFolder}
-              onClick={() => {
-                setFolderError(null)
-                setFolderDialogOpen(true)
-              }}
+              variant={mode === 'explorer' ? 'secondary' : 'ghost'}
+              aria-pressed={mode === 'explorer'}
+              onClick={() => setMode('explorer')}
             >
-              <FolderPlus className="h-4 w-4" aria-hidden="true" /> Nueva carpeta
+              Explorador
             </Button>
-            <div className="space-y-1">
-              <Label htmlFor="document-confidentiality">Confidencialidad</Label>
-              <select
-                id="document-confidentiality"
-                value={confidentiality}
-                disabled={uploading}
-                onChange={(e) => setConfidentiality(e.target.value as DocumentConfidentiality)}
-                className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50"
-              >
-                <option value="normal">Normal</option>
-                <option value="restricted">Restringido</option>
-                <option value="confidential">Confidencial</option>
-              </select>
-            </div>
-            <label
-              className={`bg-primary text-primary-foreground focus-within:ring-ring inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${uploading ? 'pointer-events-none opacity-50' : 'hover:bg-primary/90'}`}
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'workflow' ? 'secondary' : 'ghost'}
+              aria-pressed={mode === 'workflow'}
+              onClick={() => setMode('workflow')}
             >
-              <Upload className="h-4 w-4" aria-hidden="true" />
-              {uploading ? 'Subiendo…' : 'Subir archivo'}
-              <input
-                className="sr-only"
-                type="file"
-                accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-                aria-describedby="document-upload-help"
-                onChange={(e) => void upload(e)}
-                disabled={uploading}
-              />
-            </label>
+              <Columns3 className="h-4 w-4" aria-hidden="true" /> Flujo documental
+            </Button>
           </div>
-        ) : null}
+          {mode === 'explorer' && activeCase ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <span id="document-upload-help" className="sr-only">
+                PDF, DOCX, XLSX, JPG o PNG; máximo 25 MB. El archivo se guardará en esta ubicación.
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 min-w-32 justify-center"
+                disabled={creatingFolder}
+                onClick={() => {
+                  setFolderError(null)
+                  setFolderDialogOpen(true)
+                }}
+              >
+                <FolderPlus className="h-4 w-4" aria-hidden="true" /> Nueva carpeta
+              </Button>
+              <div className="space-y-1">
+                <Label htmlFor="document-confidentiality">Confidencialidad</Label>
+                <select
+                  id="document-confidentiality"
+                  value={confidentiality}
+                  disabled={uploading}
+                  onChange={(e) => setConfidentiality(e.target.value as DocumentConfidentiality)}
+                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="restricted">Restringido</option>
+                  <option value="confidential">Confidencial</option>
+                </select>
+              </div>
+              <label
+                className={`bg-primary text-primary-foreground focus-within:ring-ring inline-flex h-9 min-w-32 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-offset-2 ${uploading ? 'pointer-events-none opacity-50' : 'hover:bg-primary/90'}`}
+              >
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                {uploading ? 'Subiendo…' : 'Subir archivo'}
+                <input
+                  className="sr-only"
+                  type="file"
+                  accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                  aria-describedby="document-upload-help"
+                  onChange={(e) => void upload(e)}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
       </header>
-      {!activeCase ? (
+      {mode === 'workflow' ? (
+        <WorkflowBoard
+          documents={documentRows}
+          cases={cases.data ?? []}
+          changingDocumentId={workflowDocumentId}
+          onOpenDocument={(document) => {
+            setLocation({ caseId: document.case_id, folderId: document.folder_id })
+            setMode('explorer')
+          }}
+          onWorkflowChange={updateWorkflowStatus}
+        />
+      ) : !activeCase ? (
         <section className="space-y-3" aria-labelledby="document-case-list-title">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
@@ -911,40 +1011,55 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                     onDragLeave={() => setDragTargetFolderId(undefined)}
                     onDrop={(event) => dropItem(event, folder.id)}
                   >
-                    <button
-                      type="button"
-                      className="focus-visible:ring-ring w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-offset-2"
-                      onClick={() => setLocation({ caseId, folderId: folder.id })}
-                      aria-label={`Abrir carpeta ${folder.name}`}
-                    >
-                      <CardContent className="space-y-3 pt-5">
-                        <div className={`inline-flex rounded-xl p-3 ${tone}`}>
-                          <FolderOpen className="h-7 w-7" aria-hidden="true" />
+                    <CardContent className="space-y-3 p-3">
+                      <button
+                        type="button"
+                        className="focus-visible:ring-ring block w-full rounded-xl text-left focus-visible:ring-2 focus-visible:ring-offset-2"
+                        onClick={() => setLocation({ caseId, folderId: folder.id })}
+                        aria-label={`Abrir carpeta ${folder.name}`}
+                      >
+                        <div className={`flex h-36 items-center justify-center rounded-xl ${tone}`}>
+                          <FolderOpen className="h-16 w-16" aria-hidden="true" />
                         </div>
-                        <div>
+                      </button>
+                      <div className="flex items-start justify-between gap-2 px-1">
+                        <button
+                          type="button"
+                          className="focus-visible:ring-ring min-w-0 flex-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-offset-2"
+                          onClick={() => setLocation({ caseId, folderId: folder.id })}
+                          aria-label={`Abrir carpeta ${folder.name}`}
+                        >
                           <p className="truncate font-medium">{folder.name}</p>
                           <p className="text-muted-foreground mt-1 text-xs">
                             {fileCount} archivo{fileCount === 1 ? '' : 's'} · {childCount}{' '}
-                            subcarpeta
-                            {childCount === 1 ? '' : 's'}
+                            subcarpeta{childCount === 1 ? '' : 's'}
                           </p>
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                          Arrastra aquí archivos o carpetas
-                        </p>
-                      </CardContent>
-                    </button>
-                    <div className="border-border border-t px-4 py-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Mover carpeta ${folder.name}`}
-                        disabled={movingFolderId !== null}
-                        onClick={() => openFolderMoveDialog(folder)}
-                      >
-                        <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover carpeta
-                      </Button>
-                    </div>
+                        </button>
+                        <DropdownMenu
+                          trigger={
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={`Abrir acciones de la carpeta ${folder.name}`}
+                              title="Acciones"
+                            >
+                              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          }
+                          placement="bottom end"
+                          className="w-48"
+                        >
+                          <DropdownMenuLabel>Acciones de la carpeta</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            textValue="Mover carpeta"
+                            isDisabled={movingFolderId !== null}
+                            onAction={() => openFolderMoveDialog(folder)}
+                          >
+                            <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover carpeta
+                          </DropdownMenuItem>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
                   </Card>
                 )
               })}
@@ -959,48 +1074,52 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                     onDragEnd={endDrag}
                     aria-describedby="document-move-help"
                   >
-                    <CardContent className="space-y-4 pt-5">
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
+                    <CardContent className="space-y-2 p-3">
+                      <div className="relative">
+                        <div
+                          className={`relative flex h-36 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
+                        >
+                          {isImageDocument(doc) &&
+                          previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                            <img
+                              src={previewUrls[doc.id]?.url ?? ''}
+                              alt={`Vista previa de ${doc.original_name}`}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <visual.Icon className="h-16 w-16" aria-hidden="true" />
+                          )}
+                        </div>
+                        <div className="bg-background/85 absolute top-2 left-2 flex items-center gap-1 rounded-md px-1.5 py-1 shadow-sm backdrop-blur">
                           <GripVertical
-                            className="text-muted-foreground h-5 w-5 shrink-0"
+                            className="text-muted-foreground h-3.5 w-3.5"
                             aria-hidden="true"
                           />
-                          <div
-                            className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
-                          >
-                            {isImageDocument(doc) &&
-                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
-                              <img
-                                src={previewUrls[doc.id]?.url ?? ''}
-                                alt={`Vista previa de ${doc.original_name}`}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <visual.Icon className="h-6 w-6" aria-hidden="true" />
-                            )}
-                          </div>
+                          <Badge variant="outline" className="bg-transparent text-[10px]">
+                            {visual.label}
+                          </Badge>
                         </div>
-                        <Badge variant="outline">{visual.label}</Badge>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium" title={doc.original_name}>
-                          {doc.original_name}
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          v{doc.version} · {formatSize(doc.size_bytes)} · {doc.category}
-                        </p>
+                      <div className="flex min-w-0 items-start justify-between gap-2 px-1">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium" title={doc.original_name}>
+                            {doc.original_name}
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            v{doc.version} · {formatSize(doc.size_bytes)} · {doc.category}
+                          </p>
+                        </div>
+                        <DocumentActions
+                          document={doc}
+                          uploading={uploading}
+                          moving={movingDocumentId !== null}
+                          archiving={archivingDocumentId !== null}
+                          onMove={openMoveDialog}
+                          onUploadVersion={uploadVersion}
+                          onDownload={download}
+                          onArchive={setDocumentToArchive}
+                        />
                       </div>
-                      <DocumentActions
-                        document={doc}
-                        uploading={uploading}
-                        moving={movingDocumentId !== null}
-                        archiving={archivingDocumentId !== null}
-                        onMove={openMoveDialog}
-                        onUploadVersion={uploadVersion}
-                        onDownload={download}
-                        onArchive={setDocumentToArchive}
-                      />
                     </CardContent>
                   </Card>
                 )
@@ -1359,6 +1478,129 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
   )
 }
 
+function WorkflowBoard({
+  documents,
+  cases,
+  changingDocumentId,
+  onOpenDocument,
+  onWorkflowChange,
+}: {
+  documents: CaseDocumentRow[]
+  cases: Array<{ id: string; referencia: string; titulo: string }>
+  changingDocumentId: string | null
+  onOpenDocument: (document: CaseDocumentRow) => void
+  onWorkflowChange: (document: CaseDocumentRow, status: DocumentWorkflowStatus) => void
+}) {
+  const caseById = new Map(cases.map((caseItem) => [caseItem.id, caseItem]))
+  return (
+    <section className="space-y-4" aria-labelledby="document-workflow-title">
+      <div>
+        <h1 id="document-workflow-title" className="font-serif text-lg font-semibold text-balance">
+          Flujo documental
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Organiza el trabajo sobre cada documento sin cambiar su expediente ni su carpeta.
+        </p>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        {WORKFLOW_COLUMNS.map((column) => {
+          const columnDocuments = documents.filter(
+            (document) => document.workflow_status === column.status,
+          )
+          return (
+            <section
+              key={column.status}
+              className="bg-muted/30 min-w-0 rounded-xl border p-3"
+              aria-labelledby={`workflow-column-${column.status}`}
+            >
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <h2 id={`workflow-column-${column.status}`} className="font-medium">
+                    {column.title}
+                  </h2>
+                  <p className="text-muted-foreground mt-0.5 text-xs">{column.description}</p>
+                </div>
+                <Badge variant="outline">{columnDocuments.length}</Badge>
+              </div>
+              <div className="space-y-3">
+                {columnDocuments.map((document) => {
+                  const relatedCase = caseById.get(document.case_id)
+                  const updating = changingDocumentId === document.id
+                  return (
+                    <Card key={document.id} className="bg-card">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex min-w-0 items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-primary text-xs font-medium">
+                              {relatedCase?.referencia ?? 'Expediente'}
+                            </p>
+                            <p
+                              className="mt-1 truncate text-sm font-medium"
+                              title={document.original_name}
+                            >
+                              {document.original_name}
+                            </p>
+                          </div>
+                          <Badge variant="outline">v{document.version}</Badge>
+                        </div>
+                        <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                          <span>{document.category}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{formatSize(document.size_bytes)}</span>
+                          {document.content_status !== 'validated' ? (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span>Archivo en preparación</span>
+                            </>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto px-0"
+                            onClick={() => onOpenDocument(document)}
+                          >
+                            Abrir en explorador
+                          </Button>
+                          <select
+                            aria-label={`Estado de ${document.original_name}`}
+                            value={document.workflow_status}
+                            disabled={updating || document.content_status !== 'validated'}
+                            onChange={(event) =>
+                              onWorkflowChange(
+                                document,
+                                event.target.value as DocumentWorkflowStatus,
+                              )
+                            }
+                            className="border-input bg-background focus-visible:ring-ring h-8 max-w-40 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
+                          >
+                            {WORKFLOW_COLUMNS.map((option) => (
+                              <option key={option.status} value={option.status}>
+                                {option.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+                {!columnDocuments.length ? (
+                  <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
+                    Sin documentos en este estado.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   return `${Math.ceil(bytes / 1024)} KB`
@@ -1438,53 +1680,59 @@ function DocumentActions({
   onArchive: (document: CaseDocumentRow) => void
 }) {
   const canUseContent = document.content_status === 'validated'
+  const versionInputRef = useRef<HTMLInputElement>(null)
   return (
-    <div className="border-border/70 bg-muted/20 flex flex-wrap items-center gap-1.5 rounded-xl border p-1.5">
-      <Button
-        size="sm"
-        variant="secondary"
-        className="h-9 flex-1 justify-center"
-        onClick={() => onMove(document)}
-        disabled={moving}
+    <div className="flex justify-end">
+      <DropdownMenu
+        trigger={
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={`Abrir acciones de ${document.original_name}`}
+            title="Acciones"
+          >
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        }
+        placement="bottom end"
+        className="w-52"
       >
-        <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
-      </Button>
-      <label
-        className={`border-input bg-background hover:bg-accent inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors ${uploading || !canUseContent ? 'pointer-events-none opacity-50' : ''}`}
-        title="Subir una nueva versión"
-      >
-        <Upload className="h-4 w-4" aria-hidden="true" /> Nueva versión
-        <input
-          className="sr-only"
-          type="file"
-          accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-          onChange={(event) => void onUploadVersion(document, event)}
-          disabled={uploading || !canUseContent}
-        />
-      </label>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-9 px-2.5"
-        disabled={!canUseContent}
-        onClick={() => void onDownload(document)}
-        aria-label={`Descargar ${document.original_name}`}
-        title="Descargar"
-      >
-        <Download className="h-4 w-4" aria-hidden="true" />{' '}
-        <span className="sr-only">Descargar</span>
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 px-2.5"
-        disabled={archiving}
-        onClick={() => onArchive(document)}
-        aria-label={`Archivar ${document.original_name}`}
-        title="Archivar"
-      >
-        <Archive className="h-4 w-4" aria-hidden="true" /> <span className="sr-only">Archivar</span>
-      </Button>
+        <DropdownMenuLabel>Acciones del documento</DropdownMenuLabel>
+        <DropdownMenuItem textValue="Mover" isDisabled={moving} onAction={() => onMove(document)}>
+          <MoveRight className="h-4 w-4" aria-hidden="true" /> Mover
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          textValue="Nueva versión"
+          isDisabled={uploading || !canUseContent}
+          onAction={() => versionInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4" aria-hidden="true" /> Nueva versión
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          textValue="Descargar"
+          isDisabled={!canUseContent}
+          onAction={() => void onDownload(document)}
+        >
+          <Download className="h-4 w-4" aria-hidden="true" /> Descargar
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          textValue="Archivar"
+          variant="destructive"
+          isDisabled={archiving}
+          onAction={() => onArchive(document)}
+        >
+          <Archive className="h-4 w-4" aria-hidden="true" /> Archivar
+        </DropdownMenuItem>
+      </DropdownMenu>
+      <input
+        ref={versionInputRef}
+        className="sr-only"
+        type="file"
+        accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+        onChange={(event) => void onUploadVersion(document, event)}
+        disabled={uploading || !canUseContent}
+      />
     </div>
   )
 }

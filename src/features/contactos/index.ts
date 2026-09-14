@@ -4,9 +4,13 @@ export {
   useEliminarContacto,
   useContacto,
   useContactos,
+  useContactosPaginados,
   useCrearContacto,
+  useOrígenesContacto,
 } from './infrastructure/supabase-contactos'
 export type {
+  ContactListFilters,
+  ContactListPage,
   ContactoPersistido,
   EstadoContacto,
   Naturaleza,

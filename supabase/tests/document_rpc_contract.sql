@@ -17,6 +17,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1
 select set_config('request.jwt.claim.role', 'authenticated', true);
 do $$
 declare first_document public.crm_case_documents; second_document public.crm_case_documents;
+  third_document public.crm_case_documents;
   archived_document public.crm_case_documents;
   root_folder public.crm_document_folders; nested_folder public.crm_document_folders;
   other_case_folder public.crm_document_folders;
@@ -72,12 +73,33 @@ begin
   if not exists (select 1 from public.crm_case_documents where id = second_document.id and is_current and content_status = 'validated') then
     raise exception 'Validated document version was not current';
   end if;
+  select * into second_document from public.crm_update_document_workflow(
+    second_document.id, 2, 'in_progress');
+  if second_document.workflow_status <> 'in_progress' or exists (
+    select 1 from public.crm_case_documents
+    where logical_document_id = second_document.logical_document_id
+      and workflow_status <> 'in_progress'
+  ) or not exists (
+    select 1 from public.crm_case_document_events
+    where document_id = second_document.id
+      and event_type = 'workflow_status_changed'
+      and previous_workflow_status = 'inbox'
+      and workflow_status = 'in_progress'
+  ) then
+    raise exception 'Document workflow contract failed';
+  end if;
+  select * into third_document from public.crm_create_document_version(
+    second_document.id, 2, 'contrato-v3.pdf', 'application/pdf', 1);
+  perform public.crm_finalize_document_version(third_document.id, repeat('c', 64));
+  if third_document.version <> 3 or third_document.workflow_status <> 'in_progress' then
+    raise exception 'Document workflow was not preserved on a new version';
+  end if;
   begin
-    perform public.crm_archive_case_document(second_document.id, 1);
+    perform public.crm_archive_case_document(third_document.id, 2);
     raise exception 'Stale document archive was allowed';
   exception when sqlstate '40001' then null;
   end;
-  select * into archived_document from public.crm_archive_case_document(second_document.id, 2);
+  select * into archived_document from public.crm_archive_case_document(third_document.id, 3);
   if archived_document.archived_at is null or archived_document.archived_by is null
     or exists (
       select 1 from public.crm_case_documents

@@ -1,5 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, CalendarDays, CheckCircle2, HandCoins, Plus, UsersRound } from 'lucide-react'
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  FileUp,
+  FolderOpen,
+  HandCoins,
+  MessageSquarePlus,
+  Plus,
+  UsersRound,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -194,23 +204,52 @@ export function Dashboard() {
           </Link>
         }
       />
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex flex-wrap items-center gap-2 py-4">
-          <span className="mr-2 text-sm font-medium">Acciones rápidas</span>
-          <Link to="/expedientes" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            Abrir expediente
+      <section
+        aria-labelledby="quick-actions-heading"
+        className="flex flex-wrap items-center gap-2"
+      >
+        <span
+          id="quick-actions-heading"
+          className="text-muted-foreground mr-1 text-xs font-medium tracking-wide uppercase"
+        >
+          Acciones rápidas
+        </span>
+        {[
+          {
+            to: '/expedientes' as const,
+            icon: FolderOpen,
+            title: 'Abrir expediente',
+          },
+          {
+            to: '/tareas' as const,
+            icon: Plus,
+            title: 'Crear tarea',
+          },
+          {
+            to: '/comunicaciones' as const,
+            icon: MessageSquarePlus,
+            title: 'Nueva conversación',
+          },
+          {
+            to: '/documentos' as const,
+            icon: FileUp,
+            title: 'Subir documento',
+          },
+        ].map(({ to, icon: Icon, title }) => (
+          <Link
+            key={title}
+            to={to}
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'sm',
+              className: 'h-8 gap-1.5 rounded-full px-3',
+            })}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            {title}
           </Link>
-          <Link to="/tareas" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            Crear tarea
-          </Link>
-          <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            Nueva conversación
-          </Link>
-          <Link to="/documentos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            Subir documento
-          </Link>
-        </CardContent>
-      </Card>
+        ))}
+      </section>
       <DashboardControl dashboard={dashboard} />
       <div className="grid gap-4 lg:grid-cols-3">
         <DashboardCard

@@ -188,8 +188,8 @@ function SignInForm() {
     const action =
       mode === 'reset'
         ? requestPasswordReset(email.trim()).then(() =>
-          toast.success('Te hemos enviado un enlace para restablecer la contraseña.'),
-        )
+            toast.success('Te hemos enviado un enlace para restablecer la contraseña.'),
+          )
         : signInWithPassword(email.trim(), password)
     void action
       .catch(() =>
