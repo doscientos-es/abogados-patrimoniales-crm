@@ -615,7 +615,7 @@ export function CreateOnboardingDialog({
           Registrar proforma
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-4xl lg:max-w-5xl">
         <DialogHeader>
           <div className="bg-muted/45 border-b px-6 py-5">
             <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">

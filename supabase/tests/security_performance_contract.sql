@@ -37,6 +37,24 @@ begin
   end if;
 
   if exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'crm_drive_connections'
+      and (policyname = 'crm_drive_connections_manage' or cmd = 'ALL')
+  ) or 3 <> (
+    select count(*) from pg_policies
+    where schemaname = 'public'
+      and tablename = 'crm_drive_connections'
+      and policyname in (
+        'crm_drive_connections_insert',
+        'crm_drive_connections_update',
+        'crm_drive_connections_delete'
+      )
+  ) then
+    raise exception 'Drive connection writes must use explicit, non-overlapping policies';
+  end if;
+
+  if exists (
     select 1
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace

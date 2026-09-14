@@ -210,7 +210,9 @@ export function CaseEditForm({
       </fieldset>
 
       <DialogFooter className="gap-2 border-t pt-5 sm:justify-between">
-        <p className="text-muted-foreground text-xs">Los cambios se reflejarán en el seguimiento.</p>
+        <p className="text-muted-foreground text-xs">
+          Los cambios se reflejarán en el seguimiento.
+        </p>
         <Button type="submit" disabled={pending}>
           {pending ? (
             <>
@@ -345,5 +347,7 @@ function TextareaField({
 }
 
 function withCurrentOption(value: string, options: string[][]) {
-  return options.some(([optionValue]) => optionValue === value) ? options : [[value, value], ...options]
+  return options.some(([optionValue]) => optionValue === value)
+    ? options
+    : [[value, value], ...options]
 }

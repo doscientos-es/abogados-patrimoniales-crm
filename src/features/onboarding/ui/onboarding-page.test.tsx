@@ -36,6 +36,8 @@ describe('CreateOnboardingDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /registrar proforma/i }))
 
+    expect(screen.getByRole('dialog').className).toContain('sm:max-w-4xl')
+    expect(screen.getByRole('dialog').className).toContain('lg:max-w-5xl')
     expect(screen.getByText('Los campos marcados con * son obligatorios.')).toBeTruthy()
     expect(screen.getByLabelText('Lead *')).toBeTruthy()
     expect(screen.getByLabelText('Importe acordado (Opcional)')).toBeTruthy()
