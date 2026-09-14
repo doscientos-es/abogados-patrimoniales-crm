@@ -1,9 +1,18 @@
 import { useMutation } from '@tanstack/react-query'
-import { MailPlus, UserRoundCog } from 'lucide-react'
+import { MailPlus, Trash2, UserRoundCog } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { UserAvatar } from '@/components/common'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,9 +25,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getSupabaseBrowserClient, type MemberRole } from '@/shared/infrastructure/supabase'
+import {
+  getSupabaseBrowserClient,
+  type MemberRole,
+  type MemberStatus,
+} from '@/shared/infrastructure/supabase'
 
-type Member = { userId: string; role: MemberRole; status: string; displayName: string }
+type Member = { userId: string; role: MemberRole; status: MemberStatus; displayName: string }
 type Change = { userId: string; role: MemberRole; status: 'active' | 'disabled' }
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -43,6 +56,8 @@ export function TeamAccess({
   const [name, setName] = useState('')
   const [open, setOpen] = useState(false)
   const [role, setRole] = useState<MemberRole>('lawyer')
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
+  const [assignmentCount, setAssignmentCount] = useState<number | null>(null)
   const canManage = actorRole === 'owner' || actorRole === 'admin'
   const assignableRoles: MemberRole[] =
     actorRole === 'owner' ? ['admin', 'lawyer', 'paralegal'] : ['lawyer', 'paralegal']
@@ -81,6 +96,46 @@ export function TeamAccess({
       toast.success('Acceso actualizado.')
     },
     onError: () => toast.error('No se ha podido actualizar el acceso. Revisa tus permisos.'),
+  })
+  const previewRemoval = useMutation({
+    mutationFn: async (member: Member) => {
+      const client = getSupabaseBrowserClient()
+      if (!client) throw new Error('Supabase no está configurado en este entorno.')
+      const { data, error } = await client.rpc('crm_get_firm_member_assignment_count', {
+        target_firm_id: firmId,
+        target_user_id: member.userId,
+      })
+      if (error) throw error
+      return { member, assignmentCount: data }
+    },
+    onSuccess: ({ member, assignmentCount: count }) => {
+      setMemberToDelete(member)
+      setAssignmentCount(count)
+    },
+    onError: () => toast.error('No se ha podido preparar la eliminación del acceso.'),
+  })
+  const removeMember = useMutation({
+    mutationFn: async (member: Member) => {
+      const client = getSupabaseBrowserClient()
+      if (!client) throw new Error('Supabase no está configurado en este entorno.')
+      const { data, error } = await client.rpc('crm_delete_firm_member', {
+        target_firm_id: firmId,
+        target_user_id: member.userId,
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: (releasedAssignments) => {
+      setMemberToDelete(null)
+      setAssignmentCount(null)
+      onChanged()
+      toast.success(
+        releasedAssignments
+          ? `Acceso eliminado. ${releasedAssignments} asignaciones quedaron sin responsable.`
+          : 'Acceso eliminado.',
+      )
+    },
+    onError: () => toast.error('No se ha podido eliminar el acceso. Revisa tus permisos.'),
   })
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -131,7 +186,9 @@ export function TeamAccess({
                 <select
                   className="border-input bg-background h-9 rounded-md border px-2 text-sm"
                   value={member.role}
-                  disabled={changeMember.isPending}
+                  disabled={
+                    changeMember.isPending || previewRemoval.isPending || removeMember.isPending
+                  }
                   onChange={(event) =>
                     changeMember.mutate({
                       userId: member.userId,
@@ -149,7 +206,9 @@ export function TeamAccess({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={changeMember.isPending}
+                  disabled={
+                    changeMember.isPending || previewRemoval.isPending || removeMember.isPending
+                  }
                   onClick={() =>
                     changeMember.mutate({
                       userId: member.userId,
@@ -160,6 +219,18 @@ export function TeamAccess({
                 >
                   {member.status === 'active' ? 'Desactivar' : 'Activar'}
                 </Button>
+                {member.status === 'disabled' ? (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={
+                      changeMember.isPending || previewRemoval.isPending || removeMember.isPending
+                    }
+                    onClick={() => previewRemoval.mutate(member)}
+                  >
+                    <Trash2 className="h-4 w-4" /> Eliminar
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <Badge>{ROLE_LABELS[member.role]}</Badge>
@@ -225,6 +296,42 @@ export function TeamAccess({
           </form>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={Boolean(memberToDelete)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !removeMember.isPending) {
+            setMemberToDelete(null)
+            setAssignmentCount(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar acceso</AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberToDelete
+                ? assignmentCount
+                  ? `“${memberToDelete.displayName}” tiene ${assignmentCount} registros asignados. Se quedarán sin responsable y el acceso se eliminará definitivamente.`
+                  : `Se eliminará definitivamente el acceso de “${memberToDelete.displayName}”.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeMember.isPending}>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!memberToDelete || removeMember.isPending}
+              onClick={() => {
+                if (memberToDelete) removeMember.mutate(memberToDelete)
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {removeMember.isPending ? 'Eliminando…' : 'Eliminar acceso'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

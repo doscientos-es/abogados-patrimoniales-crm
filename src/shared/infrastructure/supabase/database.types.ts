@@ -283,6 +283,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      crm_get_firm_member_assignment_count: {
+        Args: { target_firm_id: string; target_user_id: string }
+        Returns: number
+      }
+      crm_delete_firm_member: {
+        Args: { target_firm_id: string; target_user_id: string }
+        Returns: number
+      }
       crm_update_opportunity: {
         Args: {
           target_opportunity_id: string

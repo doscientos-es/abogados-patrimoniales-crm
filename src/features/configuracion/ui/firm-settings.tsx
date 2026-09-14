@@ -13,6 +13,7 @@ import {
   getSupabaseBrowserClient,
   type FirmSettingsRow,
   type MemberRole,
+  type MemberStatus,
 } from '@/shared/infrastructure/supabase'
 
 import { CatalogsSettings } from './catalogs-settings'
@@ -30,7 +31,7 @@ type ConfigurationData = {
   members: Array<{
     userId: string
     role: MemberRole
-    status: string
+    status: MemberStatus
     displayName: string
   }>
 }
