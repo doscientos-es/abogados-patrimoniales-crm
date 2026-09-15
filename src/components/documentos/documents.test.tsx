@@ -134,27 +134,27 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
             order: async () => ({
               data: hasFolders
                 ? [
-                  {
-                    id: 'folder-1',
-                    firm_id: 'firm-1',
-                    case_id: 'case-1',
-                    parent_id: null,
-                    name: 'Escritos',
-                    created_by: 'user-1',
-                    created_at: '2026-01-01',
-                    updated_at: '2026-01-01',
-                  },
-                  {
-                    id: 'folder-2',
-                    firm_id: 'firm-1',
-                    case_id: 'case-1',
-                    parent_id: null,
-                    name: 'Pruebas',
-                    created_by: 'user-1',
-                    created_at: '2026-01-01',
-                    updated_at: '2026-01-01',
-                  },
-                ]
+                    {
+                      id: 'folder-1',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Escritos',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
+                    {
+                      id: 'folder-2',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Pruebas',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
+                  ]
                 : [],
               error: null,
             }),
@@ -374,7 +374,9 @@ describe('Documents', () => {
     expect(screen.queryByLabelText('Estado de Poder notarial archivado.pdf')).toBeNull()
     expect(screen.getByRole('button', { name: 'Ver documento Poder notarial.pdf' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Ver detalle de Poder notarial.pdf' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Ver expediente de Poder notarial.pdf' })).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Ver expediente de Poder notarial.pdf' }),
+    ).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Estado de Poder notarial.pdf'), {
       target: { value: 'in_progress' },
     })
@@ -397,9 +399,12 @@ describe('Documents', () => {
       getData: vi.fn(() => 'document-1'),
       setData: vi.fn(),
     }
-    fireEvent.dragStart(await screen.findByRole('button', { name: 'Arrastrar Poder notarial.pdf' }), {
-      dataTransfer,
-    })
+    fireEvent.dragStart(
+      await screen.findByRole('button', { name: 'Arrastrar Poder notarial.pdf' }),
+      {
+        dataTransfer,
+      },
+    )
     const targetColumn = screen.getByRole('heading', { name: 'En tratamiento' }).closest('section')
     if (!targetColumn) throw new Error('No se encontró la columna de destino.')
     fireEvent.dragOver(targetColumn, { dataTransfer })

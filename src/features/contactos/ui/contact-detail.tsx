@@ -131,7 +131,9 @@ export function ContactDetail({ contactId }: { contactId: string }) {
       <SectionHeader
         title={displayName(contact)}
         subtitle={`${contact.tipoPersona} · ${contact.relacion}`}
-        meta={<Badge className={CONTACT_STATUS_CHIP_CLASSES[contact.estado]}>{contact.estado}</Badge>}
+        meta={
+          <Badge className={CONTACT_STATUS_CHIP_CLASSES[contact.estado]}>{contact.estado}</Badge>
+        }
         actions={
           <Link to="/oportunidades/nueva" className={buttonVariants({ size: 'sm' })}>
             Crear Lead

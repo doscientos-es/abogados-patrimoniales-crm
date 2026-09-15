@@ -125,7 +125,7 @@ describe('CaseDetail', () => {
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
-    expect(screen.getAllByText('Firma de hoja de encargo')).toHaveLength(2)
+    expect(screen.getByText('Firma de hoja de encargo')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))
     expect(screen.getByText('Escritura.pdf')).toBeTruthy()

@@ -90,34 +90,34 @@ const WORKFLOW_COLUMNS: Array<{
   title: string
   description: string
 }> = [
-    {
-      status: 'inbox',
-      title: 'Pendiente de tratar',
-      description: 'Entrada pendiente de clasificar o revisar.',
-    },
-    {
-      status: 'in_progress',
-      title: 'En tratamiento',
-      description: 'Hay trabajo documental abierto.',
-    },
-    {
-      status: 'processed',
-      title: 'Tratado',
-      description: 'Procesado como evidencia del expediente.',
-    },
-  ]
+  {
+    status: 'inbox',
+    title: 'Pendiente de tratar',
+    description: 'Entrada pendiente de clasificar o revisar.',
+  },
+  {
+    status: 'in_progress',
+    title: 'En tratamiento',
+    description: 'Hay trabajo documental abierto.',
+  },
+  {
+    status: 'processed',
+    title: 'Tratado',
+    description: 'Procesado como evidencia del expediente.',
+  },
+]
 const WORKFLOW_BOARD_COLUMNS: Array<{
   status: WorkflowBoardStatus
   title: string
   description: string
 }> = [
-    ...WORKFLOW_COLUMNS,
-    {
-      status: 'archived',
-      title: 'Archivado / solo consulta',
-      description: 'Conservado como evidencia y trazabilidad.',
-    },
-  ]
+  ...WORKFLOW_COLUMNS,
+  {
+    status: 'archived',
+    title: 'Archivado / solo consulta',
+    description: 'Conservado como evidencia y trazabilidad.',
+  },
+]
 const WORKFLOW_BOARD_STYLE: Record<
   WorkflowBoardStatus,
   { column: string; dot: string; chip: string; card: string }
@@ -452,22 +452,22 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     try {
       const { data, error } = currentDocument
         ? await c.rpc('crm_create_document_version', {
-          target_document_id: currentDocument.id,
-          target_expected_version: currentDocument.version,
-          original_file_name: file.name,
-          content_mime_type: file.type,
-          content_size_bytes: file.size,
-        })
+            target_document_id: currentDocument.id,
+            target_expected_version: currentDocument.version,
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+          })
         : await c.rpc('crm_create_case_document', {
-          target_firm_id: firmId,
-          target_case_id: selectedCaseId as string,
-          target_workstream_id: null,
-          document_category: 'General',
-          original_file_name: file.name,
-          content_mime_type: file.type,
-          content_size_bytes: file.size,
-          document_confidentiality: uploadConfidentiality,
-        })
+            target_firm_id: firmId,
+            target_case_id: selectedCaseId as string,
+            target_workstream_id: null,
+            document_category: 'General',
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+            document_confidentiality: uploadConfidentiality,
+          })
       if (error) throw error
       if (!data) throw new Error('No se pudo preparar el documento.')
       id = data.id
@@ -1321,7 +1321,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                           className={`relative flex h-36 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
                         >
                           {isImageDocument(doc) &&
-                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                          previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                             <img
                               src={previewUrls[doc.id]?.url ?? ''}
                               alt={`Vista previa de ${doc.original_name}`}
@@ -1438,7 +1438,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}
                     >
                       {isImageDocument(doc) &&
-                        previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                      previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                         <img
                           src={previewUrls[doc.id]?.url ?? ''}
                           alt=""
@@ -1811,11 +1811,7 @@ function WorkflowBoard({
         .toLocaleLowerCase('es')
         .includes(normalizedSearch))
   const canDropIn = (status: WorkflowBoardStatus) =>
-    Boolean(
-      draggedDocument &&
-      status !== 'archived' &&
-      draggedDocument.workflow_status !== status,
-    )
+    Boolean(draggedDocument && status !== 'archived' && draggedDocument.workflow_status !== status)
   const startDrag = (event: DragEvent<HTMLElement>, document: CaseDocumentRow) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData(DOCUMENT_DRAG_TYPE, document.id)
@@ -1897,7 +1893,10 @@ function WorkflowBoard({
                 <header className="border-border/70 mb-3 flex items-start justify-between gap-3 border-b px-1 pb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`size-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
+                      <span
+                        className={`size-2 shrink-0 rounded-full ${style.dot}`}
+                        aria-hidden="true"
+                      />
                       <h2
                         id={`workflow-column-${column.status}`}
                         className="text-xs font-bold tracking-wide uppercase"
@@ -1931,9 +1930,7 @@ function WorkflowBoard({
                               {!archived ? (
                                 <button
                                   type="button"
-                                  draggable={
-                                    !updating && document.content_status === 'validated'
-                                  }
+                                  draggable={!updating && document.content_status === 'validated'}
                                   disabled={updating || document.content_status !== 'validated'}
                                   aria-label={`Arrastrar ${document.original_name}`}
                                   aria-describedby="workflow-drag-help"

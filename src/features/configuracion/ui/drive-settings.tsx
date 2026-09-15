@@ -128,8 +128,8 @@ export function DriveSettings({ firmId, actorRole }: { firmId: string; actorRole
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <p className="text-muted-foreground text-xs">
-                Las credenciales OAuth se configuran como Secrets en el servidor; nunca se introducen
-                aquí.
+                Las credenciales OAuth se configuran como Secrets en el servidor; nunca se
+                introducen aquí.
               </p>
               {canManage ? (
                 <Button disabled={verify.isPending} type="submit">

@@ -56,9 +56,9 @@ describe('CreateOnboardingDialog', () => {
     const pendiente = { ...aceptado, id: 'lead-pendiente', fase: 'entry' } as const
 
     expect(leadsDisponiblesParaProforma([aceptado, pendiente], [])).toEqual([aceptado])
-    expect(leadsDisponiblesParaProforma([aceptado], [{ oportunidadId: aceptado.id } as never])).toEqual(
-      [],
-    )
+    expect(
+      leadsDisponiblesParaProforma([aceptado], [{ oportunidadId: aceptado.id } as never]),
+    ).toEqual([])
   })
 
   it('agrupa las acciones auxiliares como iconos y destaca la confirmación de pago', () => {

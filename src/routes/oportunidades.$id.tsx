@@ -1,16 +1,15 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
-  Archive,
-  ArrowLeft,
-  ArrowRight,
-  CalendarPlus,
-  ExternalLink,
-  Pencil,
-} from 'lucide-react'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectList,
+  SelectTrigger,
+  SelectValue,
+} from '@doscientos/ui'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ExternalLink, Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
-
-import { Select, SelectContent, SelectItem, SelectList, SelectTrigger, SelectValue } from '@doscientos/ui'
 
 import { PendingPanel } from '@/components/common'
 import {
@@ -226,9 +225,10 @@ function FichaOportunidadPage() {
                   <Link
                     to="/contactos/$id"
                     params={{ id: data.contactoId }}
-                    className="text-primary inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 transition-colors hover:text-primary/80"
+                    className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 transition-colors"
                   >
-                    Ver ficha del contacto <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    Ver ficha del contacto{' '}
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
                 }
                 onSave={async (input) => {
@@ -239,13 +239,21 @@ function FichaOportunidadPage() {
           </div>
         ) : null}
         {activeTab === 'qualification' ? (
-          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="qualification" />
+          <LeadWorkspace
+            opportunity={data}
+            firmId={membership.data.firmId}
+            section="qualification"
+          />
         ) : null}
         {activeTab === 'tasks' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="tasks" />
         ) : null}
         {activeTab === 'communications' ? (
-          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="communications" />
+          <LeadWorkspace
+            opportunity={data}
+            firmId={membership.data.firmId}
+            section="communications"
+          />
         ) : null}
         {activeTab === 'notes' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="notes" />
@@ -255,7 +263,11 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === 'acceptance' ? (
           <div className="space-y-4">
-            <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="acceptance" />
+            <LeadWorkspace
+              opportunity={data}
+              firmId={membership.data.firmId}
+              section="acceptance"
+            />
             {!data.archivadoEn ? (
               <>
                 <OpportunityTransitionCard
@@ -429,7 +441,10 @@ export function LeadContactOverview({
             <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
             <LeadSummaryItem label="Fecha de entrada" value={formatDate(opportunity.creada)} />
             <LeadSummaryItem label="Tiempo como Lead" value={leadAgeShort(opportunity.creada)} />
-            <LeadSummaryItem label="Rol en el Lead" value={textValue(role['rol']) || 'Sin indicar'} />
+            <LeadSummaryItem
+              label="Rol en el Lead"
+              value={textValue(role['rol']) || 'Sin indicar'}
+            />
           </dl>
           <div className="border-border border-t pt-5">
             <h3 className="text-sm font-medium">Otros intervinientes</h3>
@@ -457,7 +472,10 @@ export function LeadContactOverview({
               label="¿Qué ha ocurrido?"
               value={textValue(initial['queHaOcurrido']) || '—'}
             />
-            <LeadSummaryItem label="¿Qué solicita?" value={textValue(initial['queSolicita']) || '—'} />
+            <LeadSummaryItem
+              label="¿Qué solicita?"
+              value={textValue(initial['queSolicita']) || '—'}
+            />
             <LeadSummaryItem
               label="¿Existe algún procedimiento ya iniciado?"
               value={textValue(initial['procedimientoIniciado']) || '—'}
@@ -494,7 +512,10 @@ export function LeadDetailTabs({
   onSelectTab: (tab: LeadDetailTab) => void
 }) {
   return (
-    <div className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2" role="tablist">
+    <div
+      className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2"
+      role="tablist"
+    >
       {LEAD_DETAIL_TABS.map(({ id, label }) => {
         const selected = activeTab === id
         return (
@@ -752,7 +773,9 @@ function acceptanceStatus(stage: OpportunityStage) {
 
 function leadAge(createdAt: string, now = new Date()) {
   const relative = leadAgeShort(createdAt, now)
-  return relative === 'Sin fecha de alta' ? relative : `${relative} · desde ${formatDate(createdAt)}`
+  return relative === 'Sin fecha de alta'
+    ? relative
+    : `${relative} · desde ${formatDate(createdAt)}`
 }
 
 function leadAgeShort(createdAt: string, now = new Date()) {
@@ -775,11 +798,11 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? 'Sin fecha'
     : new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(date)
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(date)
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

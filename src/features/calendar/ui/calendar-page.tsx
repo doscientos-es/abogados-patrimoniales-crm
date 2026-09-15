@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { CalendarDays, CheckSquare, ChevronLeft, ChevronRight, List, Plus } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -220,6 +220,7 @@ export function CalendarPage() {
         </CardContent>
       </Card>
       <CreateEventDialog
+        key={createDay?.toISOString()}
         day={createDay}
         cases={cases.data ?? []}
         members={members.data ?? []}
@@ -346,7 +347,6 @@ function MonthGrid({
           return (
             <div
               key={day.toISOString()}
-              onClick={() => onCreateEvent(day)}
               className={cn(
                 'relative min-h-32 border-r border-b p-1.5 last:border-r-0',
                 !currentMonth && 'bg-muted/20',
@@ -355,10 +355,7 @@ function MonthGrid({
               <button
                 type="button"
                 aria-label={`Crear evento el ${dateLabel}`}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onCreateEvent(day)
-                }}
+                onClick={() => onCreateEvent(day)}
                 className="focus-visible:ring-ring absolute inset-0 z-0 focus-visible:ring-2 focus-visible:outline-none"
               />
               <div className="relative z-10 mb-1 flex justify-end">
@@ -521,12 +518,9 @@ function CreateEventDialog({
   const [description, setDescription] = useState('')
   const [caseId, setCaseId] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
-  const [dueAt, setDueAt] = useState('')
-
-  useEffect(() => {
-    if (day)
-      setDueAt(dateTimeLocalValue(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9)))
-  }, [day])
+  const [dueAt, setDueAt] = useState(() =>
+    day ? dateTimeLocalValue(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9)) : '',
+  )
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

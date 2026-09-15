@@ -89,9 +89,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof error.message === 'string'
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -687,7 +687,9 @@ export function CreateOnboardingDialog({
         </DialogHeader>
         {!oportunidades.length ? (
           <div className="space-y-2 px-6 py-8">
-            <p className="font-medium">No hay Leads aceptados disponibles para registrar una proforma.</p>
+            <p className="font-medium">
+              No hay Leads aceptados disponibles para registrar una proforma.
+            </p>
             <p className="text-muted-foreground text-sm">
               Acepta primero el Lead desde Oportunidades. Los Leads con un onboarding vinculado
               tampoco se muestran aquí.
@@ -1156,9 +1158,7 @@ function SmallDialog({
   }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

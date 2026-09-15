@@ -1032,7 +1032,9 @@ export function LeadTaskCreateDialog({
             />
             <datalist id="lead-task-title-suggestions">
               {titleTemplates.map((title) => (
-                <option key={title} value={title} />
+                <option key={title} value={title}>
+                  {title}
+                </option>
               ))}
             </datalist>
             <TaskSelect

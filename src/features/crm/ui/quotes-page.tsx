@@ -27,13 +27,27 @@ export function QuotesPage() {
   const onboardings = useOnboardings(firmId)
 
   if (session.status === 'loading' || membership.isPending)
-    return <PendingPanel title="Cargando presupuestos" description="Consultando el pipeline comercial…" />
+    return (
+      <PendingPanel
+        title="Cargando presupuestos"
+        description="Consultando el pipeline comercial…"
+      />
+    )
   if (session.status !== 'signed-in' || !firmId)
-    return <PendingPanel title="Presupuestos no disponibles" description="Necesitas una membresía activa." />
+    return (
+      <PendingPanel
+        title="Presupuestos no disponibles"
+        description="Necesitas una membresía activa."
+      />
+    )
   if (opportunities.isPending || contacts.isPending || onboardings.isPending)
-    return <PendingPanel title="Cargando presupuestos" description="Preparando la vista comercial…" />
+    return (
+      <PendingPanel title="Cargando presupuestos" description="Preparando la vista comercial…" />
+    )
   if (opportunities.isError || contacts.isError || onboardings.isError)
-    return <PendingPanel title="No se pudo cargar presupuestos" description="Reintenta la página." />
+    return (
+      <PendingPanel title="No se pudo cargar presupuestos" description="Reintenta la página." />
+    )
 
   const contactNames = new Map(
     (contacts.data ?? []).map((contact) => [
@@ -98,7 +112,9 @@ export function QuotesPage() {
                   </div>
                   <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     <span>Área: {item.area || 'Sin definir'}</span>
-                    <span>Actualizado: {new Date(item.actualizada).toLocaleDateString('es-ES')}</span>
+                    <span>
+                      Actualizado: {new Date(item.actualizada).toLocaleDateString('es-ES')}
+                    </span>
                     {onboarding ? <span>Onboarding: {onboarding.referencia}</span> : null}
                   </div>
                   <Link

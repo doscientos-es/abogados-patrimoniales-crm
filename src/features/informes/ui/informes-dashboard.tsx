@@ -505,10 +505,7 @@ function EmptyState({
   description: string
 }) {
   return (
-    <div
-      className="text-muted-foreground flex min-h-40 flex-col items-center justify-center py-6 text-center"
-      role="status"
-    >
+    <div className="text-muted-foreground flex min-h-40 flex-col items-center justify-center py-6 text-center">
       <Icon className="mb-3 size-5 opacity-60" aria-hidden="true" />
       <p className="text-foreground text-sm font-medium">{title}</p>
       <p className="mt-1 max-w-xs text-sm">{description}</p>
