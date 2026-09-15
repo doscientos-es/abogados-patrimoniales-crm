@@ -40,6 +40,12 @@ const SECTION_LABELS = [
   ['/crm', 'CRM'],
 ] as const
 
+const PUBLIC_LEGAL_PATHS = new Set(['/condiciones', '/privacidad', '/cookies', '/terminos'])
+
+function isPublicLegalPath(pathname: string) {
+  return PUBLIC_LEGAL_PATHS.has(pathname)
+}
+
 function sectionInfo(pathname: string) {
   const match = SECTION_LABELS.find(([path]) => pathname.startsWith(path))
   return match ? { path: match[0], label: match[1] } : { path: '/', label: 'Panel de inicio' }
@@ -167,12 +173,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AccessGate>
-        <AuthenticatedRoot />
-      </AccessGate>
+      {isPublicLegalPath(pathname) ? (
+        <Outlet />
+      ) : (
+        <AccessGate>
+          <AuthenticatedRoot />
+        </AccessGate>
+      )}
       <Toaster />
     </QueryClientProvider>
   )

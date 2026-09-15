@@ -5,6 +5,8 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response
 }
 
+const PUBLIC_LEGAL_PATHS = new Set(['/condiciones', '/privacidad', '/cookies', '/terminos'])
+
 let serverEntryPromise: Promise<ServerEntry> | undefined
 
 async function getServerEntry(): Promise<ServerEntry> {
@@ -56,7 +58,11 @@ function withPrivateAppHeaders(response: Response, request: Request): Response {
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   headers.set('X-Content-Type-Options', 'nosniff')
   headers.set('X-Frame-Options', 'DENY')
-  headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+  if (PUBLIC_LEGAL_PATHS.has(new URL(request.url).pathname)) {
+    headers.delete('X-Robots-Tag')
+  } else {
+    headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+  }
 
   if (new URL(request.url).protocol === 'https:') {
     headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')

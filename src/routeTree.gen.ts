@@ -12,14 +12,18 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ComunicacionesRouteImport } from './routes/comunicaciones'
+import { Route as CondicionesRouteImport } from './routes/condiciones'
 import { Route as ConfiguracionRouteImport } from './routes/configuracion'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as NotasRouteImport } from './routes/notas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as TareasRouteImport } from './routes/tareas'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as ContactosIndexRouteImport } from './routes/contactos.index'
 import { Route as ContactosIdRouteImport } from './routes/contactos.$id'
 import { Route as ContactosNuevoRouteImport } from './routes/contactos.nuevo'
@@ -45,9 +49,19 @@ const ComunicacionesRoute = ComunicacionesRouteImport.update({
   path: '/comunicaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CondicionesRoute = CondicionesRouteImport.update({
+  id: '/condiciones',
+  path: '/condiciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfiguracionRoute = ConfiguracionRouteImport.update({
   id: '/configuracion',
   path: '/configuracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrmRoute = CrmRouteImport.update({
@@ -80,9 +94,19 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TareasRoute = TareasRouteImport.update({
   id: '/tareas',
   path: '/tareas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactosIndexRoute = ContactosIndexRouteImport.update({
@@ -135,14 +159,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
+  '/condiciones': typeof CondicionesRoute
   '/configuracion': typeof ConfiguracionRoute
+  '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRoute
+  '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -157,14 +185,18 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
+  '/condiciones': typeof CondicionesRoute
   '/configuracion': typeof ConfiguracionRoute
+  '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRoute
+  '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -180,14 +212,18 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
+  '/condiciones': typeof CondicionesRoute
   '/configuracion': typeof ConfiguracionRoute
+  '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRoute
+  '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -204,14 +240,18 @@ export interface FileRouteTypes {
     | '/'
     | '/calendario'
     | '/comunicaciones'
+    | '/condiciones'
     | '/configuracion'
+    | '/cookies'
     | '/crm'
     | '/documentos'
     | '/facturacion'
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/privacidad'
     | '/tareas'
+    | '/terminos'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -226,14 +266,18 @@ export interface FileRouteTypes {
     | '/'
     | '/calendario'
     | '/comunicaciones'
+    | '/condiciones'
     | '/configuracion'
+    | '/cookies'
     | '/crm'
     | '/documentos'
     | '/facturacion'
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/privacidad'
     | '/tareas'
+    | '/terminos'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -248,14 +292,18 @@ export interface FileRouteTypes {
     | '/'
     | '/calendario'
     | '/comunicaciones'
+    | '/condiciones'
     | '/configuracion'
+    | '/cookies'
     | '/crm'
     | '/documentos'
     | '/facturacion'
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/privacidad'
     | '/tareas'
+    | '/terminos'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -271,14 +319,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalendarioRoute: typeof CalendarioRoute
   ComunicacionesRoute: typeof ComunicacionesRoute
+  CondicionesRoute: typeof CondicionesRoute
   ConfiguracionRoute: typeof ConfiguracionRoute
+  CookiesRoute: typeof CookiesRoute
   CrmRoute: typeof CrmRoute
   DocumentosRoute: typeof DocumentosRoute
   FacturacionRoute: typeof FacturacionRoute
   InformesRoute: typeof InformesRoute
   NotasRoute: typeof NotasRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacidadRoute: typeof PrivacidadRoute
   TareasRoute: typeof TareasRoute
+  TerminosRoute: typeof TerminosRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
   ExpedientesIdRoute: typeof ExpedientesIdRoute
@@ -313,11 +365,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComunicacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/condiciones': {
+      id: '/condiciones'
+      path: '/condiciones'
+      fullPath: '/condiciones'
+      preLoaderRoute: typeof CondicionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/configuracion': {
       id: '/configuracion'
       path: '/configuracion'
       fullPath: '/configuracion'
       preLoaderRoute: typeof ConfiguracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crm': {
@@ -362,11 +428,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tareas': {
       id: '/tareas'
       path: '/tareas'
       fullPath: '/tareas'
       preLoaderRoute: typeof TareasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contactos/': {
@@ -439,14 +519,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalendarioRoute: CalendarioRoute,
   ComunicacionesRoute: ComunicacionesRoute,
+  CondicionesRoute: CondicionesRoute,
   ConfiguracionRoute: ConfiguracionRoute,
+  CookiesRoute: CookiesRoute,
   CrmRoute: CrmRoute,
   DocumentosRoute: DocumentosRoute,
   FacturacionRoute: FacturacionRoute,
   InformesRoute: InformesRoute,
   NotasRoute: NotasRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacidadRoute: PrivacidadRoute,
   TareasRoute: TareasRoute,
+  TerminosRoute: TerminosRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,
   ExpedientesIdRoute: ExpedientesIdRoute,
