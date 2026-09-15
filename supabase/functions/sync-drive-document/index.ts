@@ -281,7 +281,12 @@ Deno.serve(async (req) => {
           .eq('id', claimedJob.id),
         admin
           .from('crm_drive_connections')
-          .update({ status: 'connected', last_sync_at: processedAt, last_error: null, updated_at: processedAt })
+          .update({
+            status: 'connected',
+            last_sync_at: processedAt,
+            last_error: null,
+            updated_at: processedAt,
+          })
           .eq('firm_id', claimedJob.firm_id),
       ])
       return response({ ok: true })

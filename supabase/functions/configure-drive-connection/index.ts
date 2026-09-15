@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!authorization || !token) return response({ error: 'Unauthorized' }, 401)
-  if (!url || !anonKey || !serviceRoleKey) return response({ error: 'Server configuration error' }, 500)
+  if (!url || !anonKey || !serviceRoleKey)
+    return response({ error: 'Server configuration error' }, 500)
 
   try {
     const body = (await req.json()) as { firmId?: unknown; rootFolderId?: unknown }
@@ -56,7 +57,9 @@ Deno.serve(async (req) => {
     if (!firmId || !/^[A-Za-z0-9_-]+$/.test(rootFolderId))
       return response({ error: 'Invalid Drive connection data' }, 400)
 
-    const caller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } })
+    const caller = createClient(url, anonKey, {
+      global: { headers: { Authorization: authorization } },
+    })
     const { data: userData, error: userError } = await caller.auth.getUser(token)
     if (userError || !userData.user) return response({ error: 'Unauthorized' }, 401)
 
@@ -83,8 +86,14 @@ Deno.serve(async (req) => {
       trashed?: boolean
       error?: { message?: string }
     }
-    if (!folder.ok) return response({ error: root.error?.message ?? 'Drive folder could not be read' }, 400)
-    if (root.mimeType !== 'application/vnd.google-apps.folder' || root.trashed || !root.id || !root.name)
+    if (!folder.ok)
+      return response({ error: root.error?.message ?? 'Drive folder could not be read' }, 400)
+    if (
+      root.mimeType !== 'application/vnd.google-apps.folder' ||
+      root.trashed ||
+      !root.id ||
+      !root.name
+    )
       return response({ error: 'The selected Drive item must be an active folder' }, 400)
 
     const now = new Date().toISOString()

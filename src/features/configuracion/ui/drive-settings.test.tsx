@@ -70,8 +70,9 @@ describe('DriveSettings', () => {
   it('does not offer the connection action to members without administration permissions', async () => {
     renderSettings('lawyer')
 
-    expect(await screen.findByText('Sin conectar')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /verificar/i })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Carpeta raíz de Drive')).toBeDisabled()
+    const field = (await screen.findByLabelText('Carpeta raíz de Drive')) as HTMLInputElement
+    expect(screen.getByText('Sin conectar')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /verificar/i })).toBeNull()
+    expect(field.disabled).toBe(true)
   })
 })

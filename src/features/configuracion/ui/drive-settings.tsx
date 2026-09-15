@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getSupabaseBrowserClient, type DriveConnectionRow, type MemberRole } from '@/shared/infrastructure/supabase'
+import {
+  getSupabaseBrowserClient,
+  type DriveConnectionRow,
+  type MemberRole,
+} from '@/shared/infrastructure/supabase'
 
 function folderId(value: string) {
   const trimmed = value.trim()
@@ -61,7 +65,9 @@ export function DriveSettings({ firmId, actorRole }: { firmId: string; actorRole
       toast.success(`Google Drive conectado a «${data.rootFolderName}».`)
     },
     onError: () =>
-      toast.error('No se ha podido verificar la carpeta. Revisa la carpeta, los secretos y permisos de Drive.'),
+      toast.error(
+        'No se ha podido verificar la carpeta. Revisa la carpeta, los secretos y permisos de Drive.',
+      ),
   })
 
   const savedFolderId = connection.data?.root_folder_id ?? ''
@@ -122,7 +128,8 @@ export function DriveSettings({ firmId, actorRole }: { firmId: string; actorRole
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <p className="text-muted-foreground text-xs">
-                Las credenciales OAuth se configuran como Secrets en Supabase; nunca se introducen aquí.
+                Las credenciales OAuth se configuran como Secrets en Supabase; nunca se introducen
+                aquí.
               </p>
               {canManage ? (
                 <Button disabled={verify.isPending} type="submit">
