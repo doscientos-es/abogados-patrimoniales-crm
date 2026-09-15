@@ -52,8 +52,9 @@ function NavigationProgress() {
     <>
       <div
         aria-hidden="true"
-        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-          }`}
+        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
+          isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
+        }`}
       />
       <output aria-atomic="true" aria-live="polite" className="sr-only">
         {isNavigating ? 'Cargando la nueva página' : ''}

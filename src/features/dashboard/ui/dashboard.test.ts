@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildDashboardMetrics } from './dashboard'
+import { buildDashboardMetrics, buildTodayActions } from './dashboard'
 
 const task = (overrides = {}) =>
   ({
@@ -133,5 +133,34 @@ describe('buildDashboardMetrics', () => {
     expect(metrics.activeCases).toHaveLength(1)
     expect(metrics.casesWithOverdueTask.size).toBe(1)
     expect(metrics.pendingAmount).toBe(1000)
+  })
+
+  it('prioritizes urgent tasks before leads without follow-up and limits the inbox to five actions', () => {
+    const metrics = buildDashboardMetrics(
+      {
+        tasks: [
+          task({ id: 'overdue', venceEn: '2026-08-04T09:00:00Z', critico: true }),
+          task({ id: 'today', tipo: 'Evento', venceEn: '2026-08-05T14:00:00Z' }),
+        ],
+        opportunities: [
+          opportunity({ id: 'quote', fase: 'quote' }),
+          opportunity({ id: 'validation', fase: 'validation' }),
+          opportunity({ id: 'sent', fase: 'engagement' }),
+        ],
+        cases: [],
+        invoices: [invoice()],
+        onboardings: [],
+        activities: [],
+      } as never,
+      new Date('2026-08-05T10:00:00Z').getTime(),
+    )
+
+    expect(buildTodayActions(metrics, new Date('2026-08-05T10:00:00Z').getTime())).toMatchObject([
+      { id: 'task-overdue', type: 'task', tone: 'riesgo' },
+      { id: 'task-today', type: 'task', tone: 'aviso' },
+      { id: 'opportunity-quote', type: 'opportunity' },
+      { id: 'opportunity-validation', type: 'opportunity' },
+      { id: 'opportunity-sent', type: 'opportunity' },
+    ])
   })
 })

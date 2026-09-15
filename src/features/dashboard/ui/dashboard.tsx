@@ -479,6 +479,154 @@ export function Dashboard() {
   )
 }
 
+function TodayActionInbox({
+  actions,
+  relatedRecords,
+  contactNames,
+  pending,
+  onComplete,
+}: {
+  actions: TodayAction[]
+  relatedRecords: ReadonlyMap<string, string>
+  contactNames: ReadonlyMap<string, string>
+  pending: boolean
+  onComplete: (task: TareaPersistida) => Promise<void>
+}) {
+  const actionCount = actions.length
+  return (
+    <section
+      aria-labelledby="today-actions-heading"
+      className="border-primary/20 bg-card overflow-hidden rounded-lg border shadow-sm"
+    >
+      <div className="border-primary/15 bg-primary/5 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3.5">
+        <div>
+          <p className="text-primary text-xs font-semibold tracking-wide uppercase">Bandeja de hoy</p>
+          <h2 id="today-actions-heading" className="mt-0.5 font-serif text-lg font-semibold">
+            {actionCount
+              ? `Tienes ${actionCount} ${actionCount === 1 ? 'acción prioritaria' : 'acciones prioritarias'}.`
+              : 'Todo bajo control.'}
+          </h2>
+        </div>
+        {actionCount ? (
+          <Link
+            to="/tareas"
+            className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'shrink-0' })}
+          >
+            Ver todas <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        ) : null}
+      </div>
+      {actionCount ? (
+        <ul className="divide-y">
+          {actions.map((action) => (
+            <TodayActionRow
+              key={action.id}
+              action={action}
+              relatedRecords={relatedRecords}
+              contactNames={contactNames}
+              pending={pending}
+              onComplete={onComplete}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted-foreground px-4 py-5 text-sm">
+          No hay plazos, seguimientos ni cobros que requieran atención inmediata.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function TodayActionRow({
+  action,
+  relatedRecords,
+  contactNames,
+  pending,
+  onComplete,
+}: {
+  action: TodayAction
+  relatedRecords: ReadonlyMap<string, string>
+  contactNames: ReadonlyMap<string, string>
+  pending: boolean
+  onComplete: (task: TareaPersistida) => Promise<void>
+}) {
+  const toneClass = action.tone === 'riesgo' ? 'bg-destructive' : 'bg-warning'
+
+  if (action.type === 'task') {
+    const { task } = action
+    return (
+      <li className="flex items-center gap-3 px-4 py-3">
+        <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
+        <Link to="/tareas" className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none">
+          <span className="block truncate text-sm font-medium">{task.titulo}</span>
+          <span className="text-muted-foreground block truncate text-xs">
+            {relatedRecords.get(task.expedienteId ?? task.oportunidadId ?? '') ?? 'Sin vínculo'} ·{' '}
+            {formatTaskDueDate(task)}
+          </span>
+        </Link>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          disabled={pending}
+          onClick={() => void onComplete(task)}
+        >
+          <Check className="h-4 w-4" aria-hidden="true" /> Completar
+        </Button>
+      </li>
+    )
+  }
+
+  if (action.type === 'opportunity') {
+    const { opportunity } = action
+    return (
+      <li className="flex items-center gap-3 px-4 py-3">
+        <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
+        <Link
+          to="/oportunidades/$id"
+          params={{ id: opportunity.id }}
+          className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <span className="block truncate text-sm font-medium">
+            {opportunity.referencia} · {opportunity.titulo}
+          </span>
+          <span className="text-muted-foreground block truncate text-xs">
+            Sin seguimiento · {contactNames.get(opportunity.contactoId) ?? 'Contacto no disponible'}
+          </span>
+        </Link>
+        <Link
+          to="/oportunidades/$id"
+          params={{ id: opportunity.id }}
+          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'shrink-0' })}
+        >
+          Abrir
+        </Link>
+      </li>
+    )
+  }
+
+  const { invoice } = action
+  return (
+    <li className="flex items-center gap-3 px-4 py-3">
+      <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
+      <Link to="/facturacion" className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none">
+        <span className="block truncate text-sm font-medium">Cobro pendiente · {invoice.referencia}</span>
+        <span className="text-muted-foreground block truncate text-xs">
+          {invoice.cliente} · {formatCurrency(invoice.importePendiente, invoice.moneda)}
+        </span>
+      </Link>
+      <Link
+        to="/facturacion"
+        className={buttonVariants({ variant: 'outline', size: 'sm', className: 'shrink-0' })}
+      >
+        Revisar
+      </Link>
+    </li>
+  )
+}
+
 type MetricTone = 'neutro' | 'exito' | 'aviso' | 'riesgo' | 'info'
 
 type ControlMetric = {
