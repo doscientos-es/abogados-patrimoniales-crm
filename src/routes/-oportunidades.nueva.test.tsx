@@ -28,13 +28,16 @@ vi.mock('@/features/auth', () => ({
   useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
 }))
 vi.mock('@/features/contactos', () => ({
-  useContactos: () => ({ data: [{ id: 'contact-1', nombre: 'Ana', apellidos: 'López' }], isPending: false }),
+  useContactos: () => ({
+    data: [{ id: 'contact-1', nombre: 'Ana', apellidos: 'López' }],
+    isPending: false,
+  }),
 }))
 vi.mock('@/features/crm', () => ({ useCrearOportunidad: () => ({ isPending: false }) }))
 vi.mock('@/features/notas', () => ({ useCrearNotaOportunidad: () => ({ isPending: false }) }))
 vi.mock('@/features/tareas', () => ({ useCrearTarea: () => ({ isPending: false }) }))
 
-import { Route } from './oportunidades.nueva'
+import { NuevaOportunidadPage } from './oportunidades.nueva'
 
 afterEach(() => {
   cleanup()
@@ -44,8 +47,7 @@ afterEach(() => {
 
 describe('NuevaOportunidadPage', () => {
   it('preselecciona el contacto indicado al abrir el formulario', async () => {
-    const Component = Route.options.component!
-    render(<Component />)
+    render(<NuevaOportunidadPage />)
 
     await waitFor(() =>
       expect((screen.getByLabelText('Contacto principal') as HTMLInputElement).value).toBe(

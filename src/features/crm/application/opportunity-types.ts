@@ -35,6 +35,16 @@ export type EventoOportunidad = {
   creadoEn: string
 }
 
+export type ComunicacionOportunidad = {
+  id: string
+  leadId: string
+  leadReferencia: string
+  leadTitulo: string
+  tipo: 'email_draft' | 'phone_call' | 'meeting'
+  resumen: string
+  creadoEn: string
+}
+
 export type TransicionarOportunidadInput = {
   id: string
   fase: OpportunityStage

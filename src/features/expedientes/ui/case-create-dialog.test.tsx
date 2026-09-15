@@ -2,6 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { AnchorHTMLAttributes } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+const mocks = vi.hoisted(() => ({
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
+}))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, ...props }: { to: string } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={to} {...props}>
@@ -10,9 +15,20 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    error: mocks.toastError,
+    success: mocks.toastSuccess,
+  },
+}))
+
 import { CaseCreateDialog } from './case-create-dialog'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  mocks.toastError.mockReset()
+  mocks.toastSuccess.mockReset()
+})
 
 describe('CaseCreateDialog', () => {
   it('requests a contact before allowing a case to be created', () => {
@@ -65,5 +81,29 @@ describe('CaseCreateDialog', () => {
         }),
       ),
     )
+  })
+
+  it('does not report a navigation rejection as a case creation error', async () => {
+    const onCreated = vi.fn().mockRejectedValue(new Error('Navigation cancelled'))
+    render(
+      <CaseCreateDialog
+        contactos={[{ id: 'contact-1', nombre: 'Ana López' }]}
+        miembros={[]}
+        pending={false}
+        onCreate={vi.fn().mockResolvedValue({ id: 'case-1' })}
+        onCreated={onCreated}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /nuevo expediente/i }))
+    fireEvent.change(screen.getByLabelText('Cliente *'), { target: { value: 'contact-1' } })
+    fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
+      target: { value: 'Herencia familiar' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^crear expediente$/i }))
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('case-1'))
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('Expediente creado.')
+    expect(mocks.toastError).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ArrowRight, Check, MessageSquareText, Send } from 'lucide-react'
+import { ArrowRight, Check, Mail, MessageSquareText, Phone, Send, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useMiembrosDespacho } from '@/features/crm'
+import { useComunicacionesOportunidad, useMiembrosDespacho } from '@/features/crm'
 import { useConfirmarLectura, useCrearConversacion, useNotasRemotas } from '@/features/notas'
 
 export const Route = createFileRoute('/comunicaciones')({
@@ -28,6 +28,7 @@ function ComunicacionesPage() {
   const membership = useActiveMembership(session.user?.id)
   const notes = useNotasRemotas(membership.data?.firmId)
   const members = useMiembrosDespacho(membership.data?.firmId)
+  const leadCommunications = useComunicacionesOportunidad(membership.data?.firmId)
   const createConversation = useCrearConversacion(membership.data?.firmId)
   const confirmRead = useConfirmarLectura(membership.data?.firmId)
   const [message, setMessage] = useState('')
@@ -61,7 +62,13 @@ function ComunicacionesPage() {
   const [selectedConversation, setSelectedConversation] = useState(0)
   const currentConversation = conversations[selectedConversation] ?? conversations[0] ?? []
 
-  if (session.status === 'loading' || membership.isPending || notes.isPending || members.isPending)
+  if (
+    session.status === 'loading' ||
+    membership.isPending ||
+    notes.isPending ||
+    members.isPending ||
+    leadCommunications.isPending
+  )
     return <PendingPanel title="Cargando comunicaciones" description="Consultando el despacho…" />
   if (session.status !== 'signed-in' || !membership.data)
     return (
@@ -70,7 +77,7 @@ function ComunicacionesPage() {
         description="Necesitas una membresía activa."
       />
     )
-  if (notes.isError || members.isError)
+  if (notes.isError || members.isError || leadCommunications.isError)
     return (
       <PendingPanel
         title="No se pudieron cargar las comunicaciones"
@@ -105,6 +112,50 @@ function ComunicacionesPage() {
               Ir a Onboarding
             </Link>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Phone className="h-4 w-4" /> Comunicaciones de Leads
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {leadCommunications.data?.length ? (
+            <ol className="divide-y rounded-xl border">
+              {leadCommunications.data.map((communication) => {
+                const TypeIcon = communicationIcon[communication.tipo]
+                return (
+                  <li key={communication.id} className="flex gap-3 p-4">
+                    <TypeIcon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to="/oportunidades/$id"
+                        params={{ id: communication.leadId }}
+                        className="font-medium hover:underline"
+                      >
+                        {communicationLabel[communication.tipo]} · {communication.leadReferencia} ·{' '}
+                        {communication.leadTitulo}
+                      </Link>
+                      <p className="text-muted-foreground mt-1 text-sm whitespace-pre-wrap">
+                        {communication.resumen}
+                      </p>
+                    </div>
+                    <time
+                      dateTime={communication.creadoEn}
+                      className="text-muted-foreground shrink-0 text-xs"
+                    >
+                      {new Date(communication.creadoEn).toLocaleString('es-ES')}
+                    </time>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p className="text-muted-foreground py-5 text-center text-sm">
+              Todavía no hay llamadas, emails ni reuniones registradas en Leads.
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -286,3 +337,15 @@ function ComunicacionesPage() {
     </main>
   )
 }
+
+const communicationLabel = {
+  email_draft: 'Borrador de email',
+  phone_call: 'Llamada',
+  meeting: 'Reunión',
+} as const
+
+const communicationIcon = {
+  email_draft: Mail,
+  phone_call: Phone,
+  meeting: Users,
+} as const

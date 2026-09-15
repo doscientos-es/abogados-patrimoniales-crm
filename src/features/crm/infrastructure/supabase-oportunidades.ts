@@ -5,6 +5,7 @@ import type {
   ActualizarOportunidadInput,
   ActualizarDetallesOportunidadInput,
   ArchivarOportunidadInput,
+  ComunicacionOportunidad,
   EventoOportunidad,
   MiembroDespacho,
   OportunidadPersistida,
@@ -99,6 +100,32 @@ function eventFromRow(row: OpportunityEventRow): EventoOportunidad {
   }
 }
 
+function communicationFromRow(
+  row: OpportunityEventRow,
+  lead: Pick<OpportunityRow, 'reference' | 'title'> | undefined,
+): ComunicacionOportunidad | null {
+  if (row.event_type !== 'communication_logged') return null
+  const payload = row.payload
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const type = payload['type']
+  const summary = payload['summary']
+  if (
+    (type !== 'email_draft' && type !== 'phone_call' && type !== 'meeting') ||
+    typeof summary !== 'string'
+  )
+    return null
+
+  return {
+    id: row.id,
+    leadId: row.opportunity_id,
+    leadReferencia: lead?.reference ?? 'Lead archivado',
+    leadTitulo: lead?.title ?? 'Lead no disponible',
+    tipo: type,
+    resumen: summary,
+    creadoEn: row.created_at,
+  }
+}
+
 function asJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json
 }
@@ -172,6 +199,34 @@ export function useEventosOportunidad(firmId: string | undefined, opportunityId:
         .order('created_at', { ascending: false })
       if (error) throw error
       return data.map(eventFromRow)
+    },
+  })
+}
+
+export function useComunicacionesOportunidad(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['crm', 'opportunity-communications', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async (): Promise<ComunicacionOportunidad[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const [eventsResult, leadsResult] = await Promise.all([
+        client
+          .from('crm_opportunity_events')
+          .select('*')
+          .eq('firm_id', firmId)
+          .eq('event_type', 'communication_logged')
+          .order('created_at', { ascending: false })
+          .limit(20),
+        client.from('crm_opportunities').select('id, reference, title').eq('firm_id', firmId),
+      ])
+      if (eventsResult.error) throw eventsResult.error
+      if (leadsResult.error) throw leadsResult.error
+
+      const leadsById = new Map((leadsResult.data ?? []).map((lead) => [lead.id, lead]))
+      return (eventsResult.data ?? [])
+        .map((event) => communicationFromRow(event, leadsById.get(event.opportunity_id)))
+        .filter((communication): communication is ComunicacionOportunidad => communication !== null)
     },
   })
 }
@@ -299,9 +354,12 @@ export function useRegistrarComunicacionOportunidad(firmId: string | undefined) 
       if (error) throw error
     },
     onSuccess: (_, input) =>
-      void queryClient.invalidateQueries({
-        queryKey: ['crm', 'opportunity-events', firmId, input.opportunityId],
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['crm', 'opportunity-events', firmId, input.opportunityId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['crm', 'opportunity-communications', firmId] }),
+      ]).then(() => undefined),
   })
 }
 

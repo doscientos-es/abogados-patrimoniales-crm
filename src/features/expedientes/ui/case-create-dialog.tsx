@@ -51,8 +51,9 @@ export function CaseCreateDialog({
     event.preventDefault()
     setFormError(null)
     const data = new FormData(event.currentTarget)
+    let expediente: { id: string }
     try {
-      const expediente = await onCreate({
+      expediente = await onCreate({
         contactoPrincipalId: formText(data, 'contacto'),
         titulo: formText(data, 'titulo'),
         area: formText(data, 'area'),
@@ -64,15 +65,18 @@ export function CaseCreateDialog({
         proximaAccion: formText(data, 'proximaAccion'),
         dondeEstamos: formText(data, 'dondeEstamos'),
       })
-      toast.success('Expediente creado.')
-      setOpen(false)
-      setContactoId('')
-      await onCreated?.(expediente.id)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo crear el expediente.'
       setFormError(message)
       toast.error(message)
+      return
     }
+    toast.success('Expediente creado.')
+    setOpen(false)
+    setContactoId('')
+    void Promise.resolve()
+      .then(() => onCreated?.(expediente.id))
+      .catch(() => undefined)
   }
   return (
     <Dialog open={open} onOpenChange={setOpen}>

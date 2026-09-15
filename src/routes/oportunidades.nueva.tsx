@@ -9,7 +9,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Check } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -48,7 +48,7 @@ export const Route = createFileRoute('/oportunidades/nueva')({
   component: NuevaOportunidadPage,
 })
 
-function NuevaOportunidadPage() {
+export function NuevaOportunidadPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const session = useAuthSession()
@@ -60,9 +60,15 @@ function NuevaOportunidadPage() {
   const createNote = useCrearNotaOportunidad(firmId)
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
+  const [hasChangedContact, setHasChangedContact] = useState(false)
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [participantSearch, setParticipantSearch] = useState('')
-  const hasAppliedPreselectedContact = useRef(false)
+  const preselectedContact = useMemo(
+    () => (contacts.data ?? []).find((item) => item.id === search.contactId),
+    [contacts.data, search.contactId],
+  )
+  const selectedContactId = hasChangedContact ? contactId : (preselectedContact?.id ?? '')
+  const selectedContactSearch = hasChangedContact ? contactSearch : contactName(preselectedContact)
   const contactOptions = useMemo(
     () => contactosParaAutocompletado(contacts.data ?? [], contactSearch),
     [contactSearch, contacts.data],
@@ -72,20 +78,10 @@ function NuevaOportunidadPage() {
       contactosParaAutocompletado(
         contacts.data ?? [],
         participantSearch,
-        contactId ? [contactId] : [],
+        selectedContactId ? [selectedContactId] : [],
       ),
-    [contactId, contacts.data, participantSearch],
+    [contacts.data, participantSearch, selectedContactId],
   )
-  useEffect(() => {
-    if (hasAppliedPreselectedContact.current || contacts.isPending) return
-
-    hasAppliedPreselectedContact.current = true
-    const preselectedContact = (contacts.data ?? []).find((item) => item.id === search.contactId)
-    if (!preselectedContact) return
-
-    setContactId(preselectedContact.id)
-    setContactSearch(contactName(preselectedContact))
-  }, [contacts.data, contacts.isPending, search.contactId])
   const areas = useQuery({
     queryKey: ['crm', 'practice-areas', firmId],
     enabled: Boolean(firmId),
@@ -126,13 +122,13 @@ function NuevaOportunidadPage() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const title = formText(form, 'title')
-    if (!contactId || !title) {
+    if (!selectedContactId || !title) {
       toast.error('Selecciona un contacto e indica un título.')
       return
     }
     try {
       const opportunity = await createOpportunity.mutateAsync({
-        contactId,
+        contactId: selectedContactId,
         title,
         area: formText(form, 'area'),
         source: formText(form, 'source'),
@@ -188,7 +184,7 @@ function NuevaOportunidadPage() {
       if (initialNote) {
         await createNote.mutateAsync({
           oportunidadId: opportunity.id,
-          contactoId: contactId,
+          contactoId: selectedContactId,
           etiquetaOrigen: `${opportunity.referencia} · ${title}`,
           titulo: formText(form, 'initialNoteTitle'),
           contenido: initialNote,
@@ -227,19 +223,23 @@ function NuevaOportunidadPage() {
               <Label htmlFor="lead-contact">Contacto principal *</Label>
               <Combobox
                 aria-label="Contacto principal"
-                inputValue={contactSearch}
+                inputValue={selectedContactSearch}
                 items={contactOptions}
                 onInputChange={(value) => {
+                  setHasChangedContact(true)
                   setContactSearch(value)
                   if (
                     value !==
-                    contactName((contacts.data ?? []).find((item) => item.id === contactId))
+                    contactName((contacts.data ?? []).find((item) => item.id === selectedContactId))
                   ) {
                     setContactId('')
+                  } else {
+                    setContactId(selectedContactId)
                   }
                 }}
                 onSelectionChange={(key) => {
                   const selectedId = key ? String(key) : ''
+                  setHasChangedContact(true)
                   setContactId(selectedId)
                   setParticipantIds((current) => current.filter((id) => id !== selectedId))
                   setContactSearch(
@@ -248,7 +248,7 @@ function NuevaOportunidadPage() {
                       : '',
                   )
                 }}
-                selectedKey={contactId || null}
+                selectedKey={selectedContactId || null}
               >
                 <ComboboxInput id="lead-contact" placeholder="Buscar contacto…" />
                 <ComboboxContent>
@@ -271,7 +271,7 @@ function NuevaOportunidadPage() {
                 onSelectionChange={(key) => {
                   if (!key) return
                   const selectedId = String(key)
-                  if (selectedId === contactId) return
+                  if (selectedId === selectedContactId) return
                   setParticipantIds((current) =>
                     current.includes(selectedId)
                       ? current.filter((id) => id !== selectedId)
@@ -326,7 +326,7 @@ function NuevaOportunidadPage() {
                 Se trasladarán como intervinientes al abrir el expediente, sin duplicar sus fichas.
               </p>
             </div>
-            <input type="hidden" name="contact" value={contactId} />
+            <input type="hidden" name="contact" value={selectedContactId} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field name="title" label="Título del Lead" maxLength={300} required />
               <div className="space-y-1.5">
@@ -452,7 +452,7 @@ function NuevaOportunidadPage() {
               createOpportunity.isPending ||
               createTask.isPending ||
               createNote.isPending ||
-              !contactId
+              !selectedContactId
             }
           >
             {createOpportunity.isPending ? 'Guardando…' : 'Crear Lead'}
