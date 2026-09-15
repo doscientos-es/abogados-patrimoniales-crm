@@ -129,12 +129,14 @@ export function buildTodayActions(
   )
 
   return [
-    ...urgentTasks.map((task) => ({
-      id: `task-${task.id}`,
-      tone: isOverdue(task.venceEn, now) || task.critico ? 'riesgo' : 'aviso',
-      type: 'task' as const,
-      task,
-    })),
+    ...urgentTasks.map(
+      (task): TodayAction => ({
+        id: `task-${task.id}`,
+        tone: isOverdue(task.venceEn, now) || task.critico ? 'riesgo' : 'aviso',
+        type: 'task' as const,
+        task,
+      }),
+    ),
     ...dashboard.leadsWithoutFollowUp.map((opportunity) => ({
       id: `opportunity-${opportunity.id}`,
       tone: 'aviso' as const,
