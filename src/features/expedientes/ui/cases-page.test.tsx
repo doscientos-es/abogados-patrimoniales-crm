@@ -133,4 +133,23 @@ describe('CasesPage', () => {
     expect(screen.queryByText('EXP-001')).toBeNull()
     expect(screen.getByText('1 activos')).toBeTruthy()
   })
+
+  it('advances a case to the next control phase from its card', () => {
+    const onMove = vi.fn().mockResolvedValue(undefined)
+    render(
+      <CasesPage
+        expedientes={[caseworkCase]}
+        contactos={[{ id: 'contact-1', nombre: 'Elena Vargas' }] as never}
+        miembros={[{ id: 'member-1', nombre: 'Laura García' }] as never}
+        tareas={[]}
+        actuaciones={[]}
+        moving={false}
+        onMove={onMove}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avanzar' }))
+
+    expect(onMove).toHaveBeenCalledWith(caseworkCase, 'Revisión y decisión')
+  })
 })

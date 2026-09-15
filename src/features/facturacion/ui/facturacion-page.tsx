@@ -41,6 +41,7 @@ import {
 import {
   BorradorFacturaDialog,
   EmitirFacturaDialog,
+  FacturaPreviewDialog,
   MotivoFacturaDialog,
   RegistrarCobroDialog,
 } from '@/features/facturacion/ui/factura-dialogs'
@@ -276,6 +277,7 @@ export function FacturacionPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
+                      <FacturaPreviewDialog factura={factura} />
                       {puedeEditarse(factura) ? (
                         <BorradorFacturaDialog
                           trigger={

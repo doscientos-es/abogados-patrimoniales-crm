@@ -31,6 +31,7 @@ import {
   ALL_LEAD_FILTER,
   EMPTY_LEAD_FILTER,
   filterLeads,
+  nextOpportunityStage,
   OPPORTUNITY_STAGE_LABELS,
   OPPORTUNITY_STAGES,
   UNASSIGNED_LEAD_FILTER,
@@ -437,13 +438,14 @@ function LeadsPersistidos({
                   <TableHead>Subestado</TableHead>
                   <TableHead>Origen</TableHead>
                   <TableHead>Actualizado</TableHead>
+                  <TableHead className="w-44 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cargando ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="text-muted-foreground py-10 text-center text-sm"
                     >
                       Cargando Leads…
@@ -470,6 +472,38 @@ function LeadsPersistidos({
                     <TableCell>{oportunidad.origen || '—'}</TableCell>
                     <TableCell>
                       {new Intl.DateTimeFormat('es-ES').format(new Date(oportunidad.actualizada))}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1.5">
+                        <Link
+                          to="/oportunidades/$id"
+                          params={{ id: oportunidad.id }}
+                          className={buttonVariants({
+                            variant: 'ghost',
+                            size: 'sm',
+                            className: 'h-7 px-2 text-xs',
+                          })}
+                        >
+                          Abrir
+                        </Link>
+                        {nextOpportunityStage(oportunidad.fase) ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            disabled={transition.isPending}
+                            onClick={() =>
+                              void advance(
+                                oportunidad,
+                                nextOpportunityStage(oportunidad.fase) as OpportunityStage,
+                              )
+                            }
+                          >
+                            Avanzar
+                          </Button>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -94,24 +94,28 @@ function CasesRoute() {
       actuaciones={activities.data ?? []}
       moving={updateCase.isPending}
       onMove={async (expediente, fase) => {
-        await updateCase.mutateAsync({
-          id: expediente.id,
-          versionEsperada: expediente.version,
-          titulo: expediente.titulo,
-          area: expediente.area,
-          tipoAsunto: expediente.tipoAsunto,
-          naturaleza: expediente.naturaleza,
-          prioridad: expediente.prioridad,
-          asignadoId: expediente.asignadoId,
-          fechaApertura: expediente.fechaApertura,
-          fechaCierre: expediente.fechaCierre,
-          proximaAccion: expediente.proximaAccion,
-          dondeEstamos: expediente.dondeEstamos,
-          estadoGeneral: expediente.estadoGeneral,
-          fase,
-          estadoOperativo: expediente.estadoOperativo,
-        })
-        toast.success('Expediente movido a la fase seleccionada.')
+        try {
+          await updateCase.mutateAsync({
+            id: expediente.id,
+            versionEsperada: expediente.version,
+            titulo: expediente.titulo,
+            area: expediente.area,
+            tipoAsunto: expediente.tipoAsunto,
+            naturaleza: expediente.naturaleza,
+            prioridad: expediente.prioridad,
+            asignadoId: expediente.asignadoId,
+            fechaApertura: expediente.fechaApertura,
+            fechaCierre: expediente.fechaCierre,
+            proximaAccion: expediente.proximaAccion,
+            dondeEstamos: expediente.dondeEstamos,
+            estadoGeneral: expediente.estadoGeneral,
+            fase,
+            estadoOperativo: expediente.estadoOperativo,
+          })
+          toast.success('Expediente movido a la fase seleccionada.')
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'No se pudo mover el expediente.')
+        }
       }}
       actions={
         <CaseCreateDialog

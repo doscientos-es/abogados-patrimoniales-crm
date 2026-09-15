@@ -1,6 +1,6 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, GripVertical, Search, SlidersHorizontal, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, GripVertical, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
 
 import { SectionHeader } from '@/components/common'
@@ -124,6 +124,13 @@ export function CasesPage({
       (candidate) => candidate.id === event.dataTransfer.getData('text/plain'),
     )
     if (item) void moveToColumn(item, column)
+  }
+  const advanceCase = async (item: ExpedientePersistido) => {
+    const currentIndex = CASE_CONTROL_COLUMNS.findIndex(
+      (column) => column.id === caseControlColumn(item),
+    )
+    const nextColumn = CASE_CONTROL_COLUMNS[currentIndex + 1]
+    if (nextColumn) await moveToColumn(item, nextColumn.id)
   }
 
   return (
@@ -328,6 +335,7 @@ export function CasesPage({
               dragged={Boolean(draggedId)}
               onDragStart={setDraggedId}
               onDragEnd={() => setDraggedId(null)}
+              onAdvance={advanceCase}
             />
           ))}
         </div>
@@ -350,6 +358,7 @@ function CaseColumn({
   dragged,
   onDragStart,
   onDragEnd,
+  onAdvance,
 }: {
   column: CaseControlColumnId
   title: string
@@ -364,6 +373,7 @@ function CaseColumn({
   dragged: boolean
   onDragStart: (id: string) => void
   onDragEnd: () => void
+  onAdvance: (item: ExpedientePersistido) => Promise<void>
 }) {
   return (
     <section
@@ -387,6 +397,7 @@ function CaseColumn({
             moving={moving}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onAdvance={onAdvance}
           />
         ))}
         {!items.length ? (
@@ -408,6 +419,7 @@ function CaseCard({
   moving,
   onDragStart,
   onDragEnd,
+  onAdvance,
 }: {
   item: ExpedientePersistido
   contactName: string
@@ -417,8 +429,11 @@ function CaseCard({
   moving: boolean
   onDragStart: (id: string) => void
   onDragEnd: () => void
+  onAdvance: (item: ExpedientePersistido) => Promise<void>
 }) {
   const currentColumn = caseControlColumn(item)
+  const currentIndex = CASE_CONTROL_COLUMNS.findIndex((column) => column.id === currentColumn)
+  const nextColumn = CASE_CONTROL_COLUMNS[currentIndex + 1]
   return (
     <Card
       draggable={!moving}
@@ -496,6 +511,28 @@ function CaseCard({
             {alerts.length > 2 ? <p>+{alerts.length - 2} alertas</p> : null}
           </div>
         ) : null}
+        <div className="flex items-center justify-between gap-2 border-t pt-2">
+          <Link
+            to="/expedientes/$id"
+            params={{ id: item.id }}
+            className="text-primary text-xs font-medium hover:underline"
+          >
+            Abrir expediente
+          </Link>
+          {nextColumn ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              disabled={moving}
+              title={`Mover a ${nextColumn.title}`}
+              onClick={() => void onAdvance(item)}
+            >
+              Avanzar <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Button>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   )
@@ -542,9 +579,8 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
 }
 
 function caseNatureTabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
-    active
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
       ? 'border-primary text-primary'
       : 'border-transparent text-muted-foreground hover:text-foreground'
-  }`
+    }`
 }
