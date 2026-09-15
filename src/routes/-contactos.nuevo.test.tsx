@@ -1,8 +1,11 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ createContact: vi.fn(), navigate: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  createContact: vi.fn().mockResolvedValue({ id: 'contact-1' }),
+  navigate: vi.fn(),
+}))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -29,7 +32,11 @@ vi.mock('@/features/contactos', () => ({
 
 import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  mocks.createContact.mockReset().mockResolvedValue({ id: 'contact-1' })
+  mocks.navigate.mockClear()
+})
 
 describe('NuevoContactoPage', () => {
   it('configura valores iniciales, tipos de campo y ayudas accesibles', () => {
@@ -50,5 +57,26 @@ describe('NuevoContactoPage', () => {
 
     fireEvent.input(postalCode, { target: { value: '28A0-13' } })
     expect((postalCode as HTMLInputElement).value).toBe('28013')
+  })
+
+  it('envía los valores normalizados y abre la ficha creada', async () => {
+    render(<NuevoContactoPage />)
+
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: ' Ana ' } })
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+
+    await waitFor(() =>
+      expect(mocks.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tipoPersona: 'Persona física',
+          relacion: 'Lead',
+          valores: expect.objectContaining({ nombre: 'Ana', pais: 'España', origen: 'Web' }),
+        }),
+      ),
+    )
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/contactos/$id',
+      params: { id: 'contact-1' },
+    })
   })
 })

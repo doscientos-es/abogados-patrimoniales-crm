@@ -89,7 +89,7 @@ export function NuevoContactoPage() {
       const contact = await createContact.mutateAsync({
         tipoPersona: nature,
         relacion: relationship,
-        valores,
+        valores: values,
       })
       toast.success('Contacto creado correctamente.')
       await navigate({ to: '/contactos/$id', params: { id: contact.id } })
