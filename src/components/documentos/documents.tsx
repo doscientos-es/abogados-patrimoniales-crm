@@ -66,6 +66,7 @@ import {
   getSupabaseBrowserClient,
   type CaseDocumentRow,
   type DocumentFolderRow,
+  type DriveConnectionRow,
 } from '@/shared/infrastructure/supabase'
 
 const ALLOWED = new Set([
@@ -90,34 +91,34 @@ const WORKFLOW_COLUMNS: Array<{
   title: string
   description: string
 }> = [
-  {
-    status: 'inbox',
-    title: 'Pendiente de tratar',
-    description: 'Entrada pendiente de clasificar o revisar.',
-  },
-  {
-    status: 'in_progress',
-    title: 'En tratamiento',
-    description: 'Hay trabajo documental abierto.',
-  },
-  {
-    status: 'processed',
-    title: 'Tratado',
-    description: 'Procesado como evidencia del expediente.',
-  },
-]
+    {
+      status: 'inbox',
+      title: 'Pendiente de tratar',
+      description: 'Entrada pendiente de clasificar o revisar.',
+    },
+    {
+      status: 'in_progress',
+      title: 'En tratamiento',
+      description: 'Hay trabajo documental abierto.',
+    },
+    {
+      status: 'processed',
+      title: 'Tratado',
+      description: 'Procesado como evidencia del expediente.',
+    },
+  ]
 const WORKFLOW_BOARD_COLUMNS: Array<{
   status: WorkflowBoardStatus
   title: string
   description: string
 }> = [
-  ...WORKFLOW_COLUMNS,
-  {
-    status: 'archived',
-    title: 'Archivado / solo consulta',
-    description: 'Conservado como evidencia y trazabilidad.',
-  },
-]
+    ...WORKFLOW_COLUMNS,
+    {
+      status: 'archived',
+      title: 'Archivado / solo consulta',
+      description: 'Conservado como evidencia y trazabilidad.',
+    },
+  ]
 const WORKFLOW_BOARD_STYLE: Record<
   WorkflowBoardStatus,
   { column: string; dot: string; chip: string; card: string }
@@ -187,6 +188,12 @@ function actionErrorMessage(error: unknown, fallback: string) {
   if (message.includes('forbidden') || message.includes('not authorized'))
     return 'No tienes permiso para realizar esta acción.'
   return `${fallback} Vuelve a intentarlo. Si continúa, contacta con soporte.`
+}
+
+function driveConnectionLabel(status: DriveConnectionRow['status'] | undefined) {
+  if (status === 'connected') return 'Conectado'
+  if (status === 'error') return 'Revisar conexión'
+  return 'Sin conectar'
 }
 
 async function queueDriveSync(
@@ -264,6 +271,21 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
         .eq('is_current', true)
         .is('archived_at', null)
         .order('created_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+  })
+  const driveConnection = useQuery({
+    queryKey: ['crm', 'drive-connection', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async (): Promise<Pick<DriveConnectionRow, 'status'> | null> => {
+      const c = getSupabaseBrowserClient()
+      if (!c || !firmId) return null
+      const { data, error } = await c
+        .from('crm_drive_connections')
+        .select('status')
+        .eq('firm_id', firmId)
+        .maybeSingle()
       if (error) throw error
       return data
     },
@@ -452,22 +474,22 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     try {
       const { data, error } = currentDocument
         ? await c.rpc('crm_create_document_version', {
-            target_document_id: currentDocument.id,
-            target_expected_version: currentDocument.version,
-            original_file_name: file.name,
-            content_mime_type: file.type,
-            content_size_bytes: file.size,
-          })
+          target_document_id: currentDocument.id,
+          target_expected_version: currentDocument.version,
+          original_file_name: file.name,
+          content_mime_type: file.type,
+          content_size_bytes: file.size,
+        })
         : await c.rpc('crm_create_case_document', {
-            target_firm_id: firmId,
-            target_case_id: selectedCaseId as string,
-            target_workstream_id: null,
-            document_category: 'General',
-            original_file_name: file.name,
-            content_mime_type: file.type,
-            content_size_bytes: file.size,
-            document_confidentiality: uploadConfidentiality,
-          })
+          target_firm_id: firmId,
+          target_case_id: selectedCaseId as string,
+          target_workstream_id: null,
+          document_category: 'General',
+          original_file_name: file.name,
+          content_mime_type: file.type,
+          content_size_bytes: file.size,
+          document_confidentiality: uploadConfidentiality,
+        })
       if (error) throw error
       if (!data) throw new Error('No se pudo preparar el documento.')
       id = data.id
@@ -889,6 +911,22 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
           ) : null}
         </nav>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <Badge
+            variant={driveConnection.data?.status === 'connected' ? 'default' : 'secondary'}
+            aria-label={`Estado de Google Drive: ${driveConnection.isPending
+                ? 'Comprobando conexión'
+                : driveConnection.isError
+                  ? 'No disponible'
+                  : driveConnectionLabel(driveConnection.data?.status)
+              }`}
+          >
+            <BriefcaseBusiness className="h-3.5 w-3.5" aria-hidden="true" /> Google Drive ·{' '}
+            {driveConnection.isPending
+              ? 'Comprobando…'
+              : driveConnection.isError
+                ? 'No disponible'
+                : driveConnectionLabel(driveConnection.data?.status)}
+          </Badge>
           <fieldset className="border-border bg-card order-last inline-flex shrink-0 rounded-md border p-0.5">
             <legend className="sr-only">Vista de documentos</legend>
             <Button
@@ -1321,7 +1359,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                           className={`relative flex h-36 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
                         >
                           {isImageDocument(doc) &&
-                          previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                             <img
                               src={previewUrls[doc.id]?.url ?? ''}
                               alt={`Vista previa de ${doc.original_name}`}
@@ -1438,7 +1476,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}
                     >
                       {isImageDocument(doc) &&
-                      previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                        previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                         <img
                           src={previewUrls[doc.id]?.url ?? ''}
                           alt=""

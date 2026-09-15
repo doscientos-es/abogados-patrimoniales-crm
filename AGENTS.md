@@ -1,1 +1,1 @@
-The mcp for supabase is: supabase-polbackup03@gmail.com
+The mcp for supabase is: supabase polbackup03

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { CaseDocumentRow, TaskRow } from '@/shared/infrastructure/supabase'
+import type { CaseDocumentRow, DriveConnectionRow, TaskRow } from '@/shared/infrastructure/supabase'
 
 import { Documents } from './documents'
 
@@ -15,6 +15,7 @@ const linkDocumentTask = vi.fn().mockResolvedValue({ error: null })
 let documentQueryFails = false
 let hasDocuments = true
 let hasFolders = true
+let driveConnection: Pick<DriveConnectionRow, 'status'> | null = null
 const document: CaseDocumentRow = {
   id: 'document-1',
   firm_id: 'firm-1',
@@ -129,32 +130,37 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
             }),
           }
         }
+        if (table === 'crm_drive_connections') {
+          return {
+            eq: () => ({ maybeSingle: async () => ({ data: driveConnection, error: null }) }),
+          }
+        }
         return {
           eq: () => ({
             order: async () => ({
               data: hasFolders
                 ? [
-                    {
-                      id: 'folder-1',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Escritos',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                    {
-                      id: 'folder-2',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Pruebas',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                  ]
+                  {
+                    id: 'folder-1',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Escritos',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                  {
+                    id: 'folder-2',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Pruebas',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                ]
                 : [],
               error: null,
             }),
@@ -187,6 +193,7 @@ afterEach(() => {
   documentQueryFails = false
   hasDocuments = true
   hasFolders = true
+  driveConnection = null
   moveDocument.mockClear()
   moveFolder.mockClear()
   createFolder.mockClear()
@@ -196,6 +203,13 @@ afterEach(() => {
 })
 
 describe('Documents', () => {
+  it('shows when Google Drive is connected for the current firm', async () => {
+    driveConnection = { status: 'connected' }
+    renderDocuments()
+
+    expect(await screen.findByLabelText('Estado de Google Drive: Conectado')).toBeTruthy()
+  })
+
   it('offers a keyboard-accessible, confirmed alternative to drag and drop', async () => {
     renderDocuments()
     fireEvent.click(
