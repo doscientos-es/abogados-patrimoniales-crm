@@ -35,12 +35,13 @@ describe('LegalPage', () => {
 
     const navigation = screen.getByRole('navigation', { name: 'Información legal' })
     expect(navigation.querySelectorAll('a')).toHaveLength(4)
-    expect(screen.getByRole('link', { name: 'Condiciones' })).toHaveAttribute(
-      'href',
+    expect(screen.getByRole('link', { name: 'Condiciones' }).getAttribute('href')).toBe(
       '/condiciones',
     )
-    expect(screen.getByRole('link', { name: 'Privacidad' })).toHaveAttribute('href', '/privacidad')
-    expect(screen.getByRole('link', { name: 'Cookies' })).toHaveAttribute('href', '/cookies')
-    expect(screen.getByRole('link', { name: 'Términos' })).toHaveAttribute('href', '/terminos')
+    expect(screen.getByRole('link', { name: 'Privacidad' }).getAttribute('href')).toBe(
+      '/privacidad',
+    )
+    expect(screen.getByRole('link', { name: 'Cookies' }).getAttribute('href')).toBe('/cookies')
+    expect(screen.getByRole('link', { name: 'Términos' }).getAttribute('href')).toBe('/terminos')
   })
 })
