@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   CheckCircle2,
   FileUp,
   FolderOpen,
@@ -14,7 +15,7 @@ import { useState, type ReactNode } from 'react'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
@@ -27,8 +28,13 @@ import {
 } from '@/features/expedientes'
 import { formatCurrency, useFacturas, type FacturaPersistida } from '@/features/facturacion'
 import { useOnboardings, type OnboardingPersistido } from '@/features/onboarding'
-import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
+import {
+  useCambiarEstadoTarea,
+  useTareasPersistentes,
+  type TareaPersistida,
+} from '@/features/tareas'
 import { isOverdue } from '@/shared/lib/time-status'
+import { toast } from 'sonner'
 
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
 const PENDING_INVOICE_STATUSES = ['draft', 'cancelled', 'paid']
@@ -43,6 +49,11 @@ type DashboardData = {
   onboardings: OnboardingPersistido[]
   activities: ActuacionPersistida[]
 }
+
+type TodayAction =
+  | { id: string; tone: 'riesgo' | 'aviso'; type: 'task'; task: TareaPersistida }
+  | { id: string; tone: 'aviso'; type: 'opportunity'; opportunity: OportunidadResumen }
+  | { id: string; tone: 'aviso'; type: 'invoice'; invoice: FacturaPersistida }
 
 export function buildDashboardMetrics(
   { tasks, opportunities, cases, invoices, onboardings, activities }: DashboardData,
@@ -109,6 +120,36 @@ export function buildDashboardMetrics(
   }
 }
 
+export function buildTodayActions(
+  dashboard: ReturnType<typeof buildDashboardMetrics>,
+  now = Date.now(),
+): TodayAction[] {
+  const urgentTasks = dashboard.immediateTasks.filter(
+    (task) => task.critico || isOverdue(task.venceEn, now) || isSameCalendarDay(task.venceEn, now),
+  )
+
+  return [
+    ...urgentTasks.map((task) => ({
+      id: `task-${task.id}`,
+      tone: isOverdue(task.venceEn, now) || task.critico ? 'riesgo' : 'aviso',
+      type: 'task' as const,
+      task,
+    })),
+    ...dashboard.leadsWithoutFollowUp.map((opportunity) => ({
+      id: `opportunity-${opportunity.id}`,
+      tone: 'aviso' as const,
+      type: 'opportunity' as const,
+      opportunity,
+    })),
+    ...dashboard.pendingInvoices.map((invoice) => ({
+      id: `invoice-${invoice.id}`,
+      tone: 'aviso' as const,
+      type: 'invoice' as const,
+      invoice,
+    })),
+  ].slice(0, 5)
+}
+
 export function Dashboard() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -120,6 +161,7 @@ export function Dashboard() {
   const onboardingsQuery = useOnboardings(firmId)
   const contactsQuery = useContactos(firmId)
   const activitiesQuery = useActuacionesRecientes(firmId)
+  const changeTaskStatus = useCambiarEstadoTarea(firmId)
   const [dashboardTime] = useState(() => Date.now())
 
   if (session.status === 'loading' || membership.isPending)
@@ -171,6 +213,7 @@ export function Dashboard() {
   )
 
   const summary = dashboardSummary(dashboard)
+  const todayActions = buildTodayActions(dashboard, dashboardTime)
   const risks = [
     {
       label: 'Tareas vencidas',
@@ -249,12 +292,26 @@ export function Dashboard() {
           </Link>
         ))}
       </section>
+      <TodayActionInbox
+        actions={todayActions}
+        relatedRecords={relatedRecords}
+        contactNames={contactNames}
+        pending={changeTaskStatus.isPending}
+        onComplete={async (task) => {
+          try {
+            await changeTaskStatus.mutateAsync({ task, estado: 'Completada' })
+            toast.success('Tarea completada.')
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'No se pudo completar la tarea.')
+          }
+        }}
+      />
       <DashboardControl dashboard={dashboard} />
       <div className="grid gap-4 lg:grid-cols-3">
         <DashboardCard
           className="lg:col-span-2"
-          title="Prioridades de hoy"
-          description="Tareas ordenadas por vencimiento y criticidad."
+          title="Próximas tareas"
+          description="Tareas abiertas ordenadas por vencimiento y criticidad."
           empty="No hay tareas abiertas."
           action={<CardAction to="/tareas" label="Ver tareas" />}
         >

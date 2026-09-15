@@ -246,16 +246,6 @@ Sin imágenes decorativas innecesarias.
 
 La plataforma debe conservar una interfaz profesional, sobria y ampliable, con especial atención a la privacidad, la trazabilidad y el control de acceso por despacho. Cada ampliación debe integrarse con el modelo de datos y las reglas de seguridad existentes.
 
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cc89f1f5-53b4-46d3-8fba-914ae24af37c).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
 ## Development
 
 Para trabajar en local necesitas Node.js y pnpm.
