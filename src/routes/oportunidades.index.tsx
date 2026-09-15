@@ -73,6 +73,7 @@ function NuevaOportunidadBoton() {
   return (
     <Link
       to="/oportunidades/nueva"
+      search={{}}
       className={buttonVariants({ size: 'sm', className: 'gap-1.5' })}
     >
       <Plus className="h-4 w-4" /> Nuevo Lead

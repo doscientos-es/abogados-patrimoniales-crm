@@ -67,7 +67,7 @@ export function QuotesPage() {
         subtitle="Controla la preparación, validación, envío y aceptación de cada propuesta comercial."
         meta={`${items.length} en seguimiento`}
         actions={
-          <Link to="/oportunidades/nueva" className={buttonVariants({ size: 'sm' })}>
+          <Link to="/oportunidades/nueva" search={{}} className={buttonVariants({ size: 'sm' })}>
             <Plus className="h-4 w-4" /> Nuevo Lead
           </Link>
         }

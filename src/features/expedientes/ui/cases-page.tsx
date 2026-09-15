@@ -579,8 +579,9 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
 }
 
 function caseNatureTabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
+    active
       ? 'border-primary text-primary'
       : 'border-transparent text-muted-foreground hover:text-foreground'
-    }`
+  }`
 }

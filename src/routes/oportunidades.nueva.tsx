@@ -9,7 +9,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Check } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -31,6 +31,13 @@ import { useCrearTarea } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/nueva')({
+  validateSearch: (search: Record<string, unknown>) => {
+    const contactId =
+      typeof search['contactId'] === 'string' && search['contactId'].trim()
+        ? search['contactId'].trim()
+        : ''
+    return contactId ? { contactId } : {}
+  },
   head: () => ({
     meta: [
       { title: 'Nuevo Lead — LEX' },
@@ -43,6 +50,7 @@ export const Route = createFileRoute('/oportunidades/nueva')({
 
 function NuevaOportunidadPage() {
   const navigate = useNavigate()
+  const search = Route.useSearch()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -54,6 +62,7 @@ function NuevaOportunidadPage() {
   const [contactSearch, setContactSearch] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [participantSearch, setParticipantSearch] = useState('')
+  const hasAppliedPreselectedContact = useRef(false)
   const contactOptions = useMemo(
     () => contactosParaAutocompletado(contacts.data ?? [], contactSearch),
     [contactSearch, contacts.data],
@@ -67,6 +76,16 @@ function NuevaOportunidadPage() {
       ),
     [contactId, contacts.data, participantSearch],
   )
+  useEffect(() => {
+    if (hasAppliedPreselectedContact.current || contacts.isPending) return
+
+    hasAppliedPreselectedContact.current = true
+    const preselectedContact = (contacts.data ?? []).find((item) => item.id === search.contactId)
+    if (!preselectedContact) return
+
+    setContactId(preselectedContact.id)
+    setContactSearch(contactName(preselectedContact))
+  }, [contacts.data, contacts.isPending, search.contactId])
   const areas = useQuery({
     queryKey: ['crm', 'practice-areas', firmId],
     enabled: Boolean(firmId),

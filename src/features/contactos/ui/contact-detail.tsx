@@ -135,7 +135,11 @@ export function ContactDetail({ contactId }: { contactId: string }) {
           <Badge className={CONTACT_STATUS_CHIP_CLASSES[contact.estado]}>{contact.estado}</Badge>
         }
         actions={
-          <Link to="/oportunidades/nueva" className={buttonVariants({ size: 'sm' })}>
+          <Link
+            to="/oportunidades/nueva"
+            search={{ contactId: contact.id }}
+            className={buttonVariants({ size: 'sm' })}
+          >
             Crear Lead
           </Link>
         }
