@@ -12,6 +12,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +35,6 @@ import {
   type TareaPersistida,
 } from '@/features/tareas'
 import { isOverdue } from '@/shared/lib/time-status'
-import { toast } from 'sonner'
 
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
 const PENDING_INVOICE_STATUSES = ['draft', 'cancelled', 'paid']
@@ -129,14 +129,12 @@ export function buildTodayActions(
   )
 
   return [
-    ...urgentTasks.map(
-      (task): TodayAction => ({
-        id: `task-${task.id}`,
-        tone: isOverdue(task.venceEn, now) || task.critico ? 'riesgo' : 'aviso',
-        type: 'task' as const,
-        task,
-      }),
-    ),
+    ...urgentTasks.map((task): TodayAction => ({
+      id: `task-${task.id}`,
+      tone: isOverdue(task.venceEn, now) || task.critico ? 'riesgo' : 'aviso',
+      type: 'task' as const,
+      task,
+    })),
     ...dashboard.leadsWithoutFollowUp.map((opportunity) => ({
       id: `opportunity-${opportunity.id}`,
       tone: 'aviso' as const,
@@ -502,7 +500,9 @@ function TodayActionInbox({
     >
       <div className="border-primary/15 bg-primary/5 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3.5">
         <div>
-          <p className="text-primary text-xs font-semibold tracking-wide uppercase">Bandeja de hoy</p>
+          <p className="text-primary text-xs font-semibold tracking-wide uppercase">
+            Bandeja de hoy
+          </p>
           <h2 id="today-actions-heading" className="mt-0.5 font-serif text-lg font-semibold">
             {actionCount
               ? `Tienes ${actionCount} ${actionCount === 1 ? 'acción prioritaria' : 'acciones prioritarias'}.`
@@ -560,7 +560,10 @@ function TodayActionRow({
     return (
       <li className="flex items-center gap-3 px-4 py-3">
         <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
-        <Link to="/tareas" className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none">
+        <Link
+          to="/tareas"
+          className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
           <span className="block truncate text-sm font-medium">{task.titulo}</span>
           <span className="text-muted-foreground block truncate text-xs">
             {relatedRecords.get(task.expedienteId ?? task.oportunidadId ?? '') ?? 'Sin vínculo'} ·{' '}
@@ -613,8 +616,13 @@ function TodayActionRow({
   return (
     <li className="flex items-center gap-3 px-4 py-3">
       <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
-      <Link to="/facturacion" className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none">
-        <span className="block truncate text-sm font-medium">Cobro pendiente · {invoice.referencia}</span>
+      <Link
+        to="/facturacion"
+        className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <span className="block truncate text-sm font-medium">
+          Cobro pendiente · {invoice.referencia}
+        </span>
         <span className="text-muted-foreground block truncate text-xs">
           {invoice.cliente} · {formatCurrency(invoice.importePendiente, invoice.moneda)}
         </span>
