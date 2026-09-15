@@ -6,7 +6,7 @@ export const Route = createFileRoute('/informes')({
   head: () => ({
     meta: [
       { title: 'Informes — LEX' },
-      { name: 'description', content: 'Visión económica, comercial y operativa del despacho.' },
+      { name: 'description', content: 'Visión económica, operativa y de cartera del despacho.' },
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),

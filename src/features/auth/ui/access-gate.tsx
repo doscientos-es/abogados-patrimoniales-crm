@@ -103,9 +103,13 @@ export function AccountMenu() {
         className="h-auto gap-2 px-1.5 py-1 text-left"
         variant="ghost"
       >
-        <span className="hidden min-w-0 text-right text-xs leading-tight lg:block">
-          <span className="text-foreground block truncate font-medium">{displayName}</span>
-          <span className="text-muted-foreground block truncate">{email}</span>
+        <span className="hidden w-40 min-w-0 text-right text-xs leading-tight lg:block">
+          <span className="text-foreground block truncate font-medium" title={displayName}>
+            {displayName}
+          </span>
+          <span className="text-muted-foreground block truncate" title={email}>
+            {email}
+          </span>
         </span>
         <UserAvatar name={displayName} seed={session.user.id || email} size="sm" />
       </Button>
@@ -202,9 +206,12 @@ function SignInForm() {
       .finally(() => setSending(false))
   }
   return (
-    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4 sm:p-8">
-      <div className="bg-card grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border shadow-2xl shadow-slate-900/10 md:grid-cols-[0.92fr_1.08fr]">
-        <div className="from-primary via-primary/95 text-primary-foreground hidden flex-col justify-between bg-linear-to-br to-slate-900 p-8 md:flex lg:p-10">
+    <div className="auth-login-page flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <div aria-hidden="true" className="auth-login-grid" />
+      <div aria-hidden="true" className="auth-login-glow auth-login-glow-one" />
+      <div aria-hidden="true" className="auth-login-glow auth-login-glow-two" />
+      <div className="auth-login-panel relative z-10 grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border md:grid-cols-[0.92fr_1.08fr]">
+        <div className="auth-login-aside from-primary via-primary/95 text-primary-foreground hidden flex-col justify-between bg-linear-to-br to-slate-900 p-8 md:flex lg:p-10">
           <div>
             <div className="mb-10 flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
@@ -229,7 +236,7 @@ function SignInForm() {
             <ShieldCheck className="h-4 w-4" /> Acceso privado por invitación
           </div>
         </div>
-        <Card className="rounded-none border-0 shadow-none">
+        <Card className="bg-card/95 rounded-none border-0 shadow-none backdrop-blur-sm">
           <CardHeader className="p-7 pb-4 sm:p-10 sm:pb-5">
             <div className="bg-primary/10 text-primary mb-5 flex h-10 w-10 items-center justify-center rounded-xl md:hidden">
               <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />

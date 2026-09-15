@@ -7,10 +7,6 @@ describe('buildInformesMetrics', () => {
     const metrics = buildInformesMetrics(
       {
         cases: [{ id: 'case-1', area: 'Sucesiones', fechaCierre: null }],
-        opportunities: [
-          { id: 'lead-1', fase: 'won' },
-          { id: 'lead-2', fase: 'entry' },
-        ],
         tasks: [
           { id: 'done', estado: 'Completada', venceEn: null },
           { id: 'late', estado: 'Pendiente', venceEn: '2026-08-01' },
@@ -34,7 +30,6 @@ describe('buildInformesMetrics', () => {
     expect(metrics.collected).toBe(800)
     expect(metrics.pending).toBe(400)
     expect(metrics.distribution).toMatchObject([{ label: 'Sucesiones', value: 1 }])
-    expect(metrics.conversion).toBe(50)
     expect(metrics.execution).toBe(50)
     expect(metrics.overdueTasks).toHaveLength(1)
     expect(metrics.trend.at(-1)).toMatchObject({ issued: 1200, collected: 800 })
@@ -42,7 +37,7 @@ describe('buildInformesMetrics', () => {
 
   it('keeps the economic series empty when there is no financial activity', () => {
     const metrics = buildInformesMetrics(
-      { cases: [], invoices: [], opportunities: [], tasks: [] },
+      { cases: [], invoices: [], tasks: [] },
       new Date('2026-08-10T10:00:00Z'),
     )
 

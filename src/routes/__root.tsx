@@ -47,6 +47,24 @@ function sectionInfo(pathname: string) {
   return match ? { path: match[0], label: match[1] } : { path: '/', label: 'Panel de inicio' }
 }
 
+function NavigationProgress() {
+  const isNavigating = useRouterState({ select: (state) => state.status === 'pending' })
+
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
+          isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
+        }`}
+      />
+      <output aria-atomic="true" aria-live="polite" className="sr-only">
+        {isNavigating ? 'Cargando la nueva página' : ''}
+      </output>
+    </>
+  )
+}
+
 function NotFoundComponent() {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
@@ -126,7 +144,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap',
       },
       { rel: 'icon', href: '/logo-lex.svg', type: 'image/svg+xml' },
       { rel: 'apple-touch-icon', href: '/logo-lex.svg' },
@@ -175,7 +193,7 @@ function AuthenticatedRoot() {
       <div className="bg-background flex h-full min-h-0 w-full overflow-hidden">
         <AppSidebar open={sidebarOpen} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="border-border bg-card/95 z-10 flex h-14 shrink-0 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
+          <header className="border-border bg-card/95 relative z-10 flex h-14 shrink-0 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
             <Button
               aria-label={sidebarOpen ? 'Ocultar navegación' : 'Mostrar navegación'}
               className="shrink-0"
@@ -228,6 +246,7 @@ function AuthenticatedRoot() {
               </Link>
               <AccountMenu />
             </div>
+            <NavigationProgress />
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
             {/* Required: nested routes render here. */}

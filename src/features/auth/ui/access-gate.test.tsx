@@ -22,7 +22,7 @@ vi.mock('../application/membership', () => ({
   }),
 }))
 
-import { AccessGate } from './access-gate'
+import { AccessGate, AccountMenu } from './access-gate'
 
 afterEach(() => {
   mocks.refetch.mockReset()
@@ -31,6 +31,14 @@ afterEach(() => {
 })
 
 describe('AccessGate', () => {
+  it('limits the space used by the account email in the navigation bar', () => {
+    render(<AccountMenu />)
+
+    const email = screen.getByTitle('maria@despacho.es')
+    expect(email.className).toContain('truncate')
+    expect(email.parentElement?.className).toContain('w-40')
+  })
+
   it('lets an invited user create a password before membership activation completes', async () => {
     mocks.refetch.mockResolvedValue(undefined)
     mocks.updatePassword.mockResolvedValue(undefined)

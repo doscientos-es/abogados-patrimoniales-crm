@@ -1,5 +1,7 @@
+import { LoaderCircle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 export function UserAvatar({
@@ -142,7 +144,53 @@ export function StatTile({
   )
 }
 
-export function PendingPanel({ title, description }: { title: string; description?: string }) {
+export function PendingPanel({
+  title,
+  description,
+  loading = /^(cargando|preparando)\b/i.test(title),
+}: {
+  title: string
+  description?: string
+  loading?: boolean
+}) {
+  if (loading) {
+    return (
+      <section
+        aria-busy="true"
+        className="border-border bg-muted/40 rounded-lg border border-dashed p-5 sm:p-6"
+      >
+        <output aria-atomic="true" aria-live="polite" className="sr-only">
+          {description ? `${title}. ${description}` : title}
+        </output>
+        <div className="flex items-start gap-3">
+          <LoaderCircle
+            aria-hidden="true"
+            className="text-primary mt-0.5 size-4 shrink-0 animate-spin"
+          />
+          <div className="min-w-0">
+            <p className="text-foreground font-medium">{title}</p>
+            {description ? (
+              <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+            ) : null}
+          </div>
+        </div>
+        <div aria-hidden="true" className="mt-6 space-y-4" data-testid="page-loading-skeleton">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Skeleton className="h-20 rounded-md" />
+            <Skeleton className="h-20 rounded-md" />
+            <Skeleton className="h-20 rounded-md" />
+          </div>
+          <div className="border-border bg-card space-y-3 rounded-md border p-4">
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <div className="border-border bg-muted/40 rounded-lg border border-dashed p-6 text-center">
       <p className="text-foreground font-medium">{title}</p>

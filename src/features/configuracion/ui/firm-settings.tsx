@@ -17,6 +17,7 @@ import {
 } from '@/shared/infrastructure/supabase'
 
 import { CatalogsSettings } from './catalogs-settings'
+import { DriveSettings } from './drive-settings'
 import { TeamAccess } from './team-access'
 
 type FirmForm = Pick<
@@ -101,7 +102,7 @@ export function FirmSettings() {
   const queryClient = useQueryClient()
   const [firmDraft, setFirmDraft] = useState<FirmForm | null>(null)
   const [profileDraft, setProfileDraft] = useState<string | null>(null)
-  const [tab, setTab] = useState<'firm' | 'profile' | 'team' | 'catalogs'>('firm')
+  const [tab, setTab] = useState<'firm' | 'profile' | 'team' | 'catalogs' | 'drive'>('firm')
 
   const invalidate = () => {
     return queryClient.invalidateQueries({
@@ -206,6 +207,7 @@ export function FirmSettings() {
             ['profile', 'Mi perfil'],
             ['team', 'Equipo'],
             ['catalogs', 'Catálogos'],
+            ['drive', 'Google Drive'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -383,6 +385,10 @@ export function FirmSettings() {
       ) : null}
 
       {tab === 'catalogs' ? <CatalogsSettings firmId={firmId ?? ''} /> : null}
+
+      {tab === 'drive' ? (
+        <DriveSettings actorRole={membership.data?.role ?? 'paralegal'} firmId={firmId ?? ''} />
+      ) : null}
 
       {tab === 'firm' ? (
         <div className="border-primary/20 bg-primary/5 flex gap-2 rounded-lg border p-3.5 text-sm">

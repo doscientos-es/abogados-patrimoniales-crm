@@ -8,13 +8,11 @@ import {
   Euro,
   LineChart,
   TrendingUp,
-  UsersRound,
 } from 'lucide-react'
 import { useState } from 'react'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useOportunidades, type OportunidadResumen } from '@/features/crm'
 import { useExpedientesPersistentes, type ExpedientePersistido } from '@/features/expedientes'
 import { formatCurrency, useFacturas, type FacturaPersistida } from '@/features/facturacion'
 import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
@@ -23,7 +21,6 @@ import { isOverdue } from '@/shared/lib/time-status'
 type InformesData = {
   cases: ExpedientePersistido[]
   invoices: FacturaPersistida[]
-  opportunities: OportunidadResumen[]
   tasks: TareaPersistida[]
 }
 
@@ -36,10 +33,7 @@ const openTask = (status: TareaPersistida['estado']) =>
   !['Completada', 'Cancelada'].includes(status)
 const asMonthKey = (value: string) => value.slice(0, 7)
 
-export function buildInformesMetrics(
-  { cases, invoices, opportunities, tasks }: InformesData,
-  now = new Date(),
-) {
+export function buildInformesMetrics({ cases, invoices, tasks }: InformesData, now = new Date()) {
   const year = now.getFullYear()
   const monthKeys = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(year, now.getMonth() - (5 - index), 1)
@@ -68,7 +62,6 @@ export function buildInformesMetrics(
     }
   })
   const activeCases = cases.filter((item) => !item.fechaCierre)
-  const activeLeads = opportunities.filter((item) => !['won', 'lost'].includes(item.fase))
   const openTasks = tasks.filter((item) => openTask(item.estado))
   const overdueTasks = openTasks.filter((item) => isOverdue(item.venceEn, now.getTime()))
   const annualInvoices = invoices.filter(
@@ -93,23 +86,18 @@ export function buildInformesMetrics(
     .filter((payment) => new Date(payment.fecha).getFullYear() === year)
     .reduce((total, payment) => total + payment.importe, 0)
   const pending = invoices.reduce((total, item) => total + item.importePendiente, 0)
-  const wonLeads = opportunities.filter((item) => item.fase === 'won').length
-  const conversion = opportunities.length ? Math.round((wonLeads / opportunities.length) * 100) : 0
   const completedTasks = tasks.filter((item) => item.estado === 'Completada').length
   const execution = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0
 
   return {
     year,
     activeCases,
-    activeLeads,
     overdueTasks,
     issued,
     collected,
     pending,
     trend,
     distribution,
-    wonLeads,
-    conversion,
     openTasks,
     completedTasks,
     execution,
@@ -123,7 +111,6 @@ export function InformesDashboard() {
   const firmId = membership.data?.firmId
   const casesQuery = useExpedientesPersistentes(firmId)
   const invoicesQuery = useFacturas(firmId)
-  const opportunitiesQuery = useOportunidades(firmId)
   const tasksQuery = useTareasPersistentes(firmId)
   const [reportDate] = useState(() => new Date())
 
@@ -135,11 +122,11 @@ export function InformesDashboard() {
     return (
       <PendingPanel title="Informes no disponibles" description="Necesitas una membresía activa." />
     )
-  if ([casesQuery, invoicesQuery, opportunitiesQuery, tasksQuery].some((query) => query.isPending))
+  if ([casesQuery, invoicesQuery, tasksQuery].some((query) => query.isPending))
     return (
       <PendingPanel title="Cargando informes" description="Agrupando los datos del despacho…" />
     )
-  if ([casesQuery, invoicesQuery, opportunitiesQuery, tasksQuery].some((query) => query.isError))
+  if ([casesQuery, invoicesQuery, tasksQuery].some((query) => query.isError))
     return (
       <PendingPanel
         title="No se pudieron cargar los informes"
@@ -151,7 +138,6 @@ export function InformesDashboard() {
     {
       cases: casesQuery.data ?? [],
       invoices: invoicesQuery.data ?? [],
-      opportunities: opportunitiesQuery.data ?? [],
       tasks: tasksQuery.data ?? [],
     },
     reportDate,
@@ -161,11 +147,11 @@ export function InformesDashboard() {
     <div className="mx-auto max-w-[1440px] pb-6">
       <SectionHeader
         title="Informes"
-        subtitle="Una lectura clara del pulso económico, comercial y operativo del despacho."
+        subtitle="Una lectura clara del pulso económico, operativo y de cartera del despacho."
       />
 
       <section
-        className="border-border mb-8 grid gap-y-5 border-y py-5 sm:grid-cols-2 sm:gap-y-0 xl:grid-cols-4 xl:divide-x"
+        className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Indicadores principales"
       >
         <MetricTile
@@ -184,9 +170,9 @@ export function InformesDashboard() {
         />
         <MetricTile
           icon={BriefcaseBusiness}
-          label="Cartera activa"
+          label="Expedientes activos"
           value={metrics.activeCases.length}
-          note={`${metrics.activeLeads.length} Leads en curso`}
+          note="Asuntos actualmente abiertos"
           tone="neutral"
         />
         <MetricTile
@@ -198,7 +184,7 @@ export function InformesDashboard() {
         />
       </section>
 
-      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.9fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.9fr)]">
         <RevenueChart trend={metrics.trend} pending={metrics.pending} />
         <ExecutionCard
           completed={metrics.completedTasks}
@@ -207,14 +193,8 @@ export function InformesDashboard() {
         />
       </section>
 
-      <section className="border-border mt-8 grid gap-8 border-t pt-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)_minmax(20rem,0.8fr)]">
+      <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
         <PortfolioCard items={metrics.distribution} total={metrics.activeCases.length} />
-        <CommercialCard
-          active={metrics.activeLeads.length}
-          won={metrics.wonLeads}
-          conversion={metrics.conversion}
-          total={opportunitiesQuery.data?.length ?? 0}
-        />
         <AttentionCard
           overdueTasks={metrics.overdueTasks.length}
           overdueInvoices={metrics.overdueInvoices.length}
@@ -245,8 +225,8 @@ function MetricTile({
     danger: 'text-destructive',
   }
   return (
-    <article className="min-w-0 px-1 sm:px-5 xl:first:pl-1 xl:last:pr-1">
-      <div className={`mb-3 flex items-center gap-2 text-xs font-medium ${tones[tone]}`}>
+    <article className="bg-card min-w-0 rounded-xl border p-4 shadow-sm">
+      <div className={`mb-4 flex items-center gap-2 text-xs font-medium ${tones[tone]}`}>
         <Icon className="size-4" aria-hidden="true" />
         <span>{label}</span>
       </div>
@@ -267,7 +247,7 @@ function RevenueChart({ trend, pending }: { trend: TrendPoint[]; pending: number
       )
       .join(' ')
   return (
-    <section aria-labelledby="ritmo-economico">
+    <section className="bg-card rounded-xl border p-5 shadow-sm" aria-labelledby="ritmo-economico">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 id="ritmo-economico" className="text-sm font-semibold tracking-wide uppercase">
@@ -349,7 +329,7 @@ function ExecutionCard({
   execution: number
 }) {
   return (
-    <section className="border-border border-l pl-5" aria-labelledby="pulso-operativo">
+    <section className="bg-card rounded-xl border p-5 shadow-sm" aria-labelledby="pulso-operativo">
       <header>
         <h2 id="pulso-operativo" className="text-sm font-semibold tracking-wide uppercase">
           Pulso operativo
@@ -387,7 +367,7 @@ function ExecutionCard({
         />
       )}
       {total ? (
-        <div className="border-border mt-6 border-t pt-4">
+        <div className="bg-muted/55 mt-6 rounded-lg px-3 py-3">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Siguiente objetivo</span>
             <span className="font-semibold">Convertir actividad en cierre</span>
@@ -404,7 +384,7 @@ function ExecutionCard({
 function PortfolioCard({ items, total }: { items: DistributionItem[]; total: number }) {
   const max = Math.max(...items.map((item) => item.value), 1)
   return (
-    <section aria-labelledby="cartera-area">
+    <section className="bg-card rounded-xl border p-5 shadow-sm" aria-labelledby="cartera-area">
       <header>
         <h2 id="cartera-area" className="text-sm font-semibold tracking-wide uppercase">
           Cartera por área
@@ -438,69 +418,10 @@ function PortfolioCard({ items, total }: { items: DistributionItem[]; total: num
             description="La distribución por áreas aparecerá al abrir el primer expediente."
           />
         )}
-        <p className="border-border text-muted-foreground mt-4 border-t pt-3 text-xs">
+        <p className="bg-muted/55 text-muted-foreground mt-5 rounded-lg px-3 py-2.5 text-xs">
           <strong className="text-foreground">{total}</strong> expedientes activos en cartera
         </p>
       </div>
-    </section>
-  )
-}
-
-function CommercialCard({
-  active,
-  won,
-  conversion,
-  total,
-}: {
-  active: number
-  won: number
-  conversion: number
-  total: number
-}) {
-  return (
-    <section className="border-border border-l pl-5" aria-labelledby="traccion-comercial">
-      <header>
-        <h2 id="traccion-comercial" className="text-sm font-semibold tracking-wide uppercase">
-          Tracción comercial
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Situación de los Leads y conversión acumulada.
-        </p>
-      </header>
-      {total ? (
-        <div className="mt-5 grid grid-cols-2 gap-6">
-          <div>
-            <UsersRound className="text-primary mb-3 size-4" />
-            <p className="font-serif text-2xl font-semibold">{active}</p>
-            <p className="text-muted-foreground mt-1 text-xs">Leads activos</p>
-          </div>
-          <div>
-            <TrendingUp className="text-success mb-3 size-4" />
-            <p className="text-success font-serif text-2xl font-semibold">{won}</p>
-            <p className="text-muted-foreground mt-1 text-xs">Aceptados</p>
-          </div>
-        </div>
-      ) : (
-        <EmptyState
-          icon={UsersRound}
-          title="Aún no hay Leads registrados"
-          description="Cuando incorpores contactos comerciales, tendrás aquí el seguimiento de su conversión."
-        />
-      )}
-      {total ? (
-        <div className="mt-6">
-          <div className="mb-2 flex justify-between text-xs">
-            <span className="text-muted-foreground">Conversión global</span>
-            <span className="text-primary font-semibold">{conversion}%</span>
-          </div>
-          <div className="bg-secondary h-2 overflow-hidden rounded-full">
-            <div
-              className="from-primary to-success h-full rounded-full bg-linear-to-r"
-              style={{ width: `${conversion}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
     </section>
   )
 }
@@ -520,7 +441,7 @@ function AttentionCard({
   ]
   const hasAttention = overdueTasks > 0 || overdueInvoices > 0 || pending > 0
   return (
-    <section className="border-border border-l pl-5" aria-labelledby="bandeja-atencion">
+    <section className="bg-card rounded-xl border p-5 shadow-sm" aria-labelledby="bandeja-atencion">
       <header>
         <h2 id="bandeja-atencion" className="text-sm font-semibold tracking-wide uppercase">
           Bandeja de atención
@@ -533,7 +454,7 @@ function AttentionCard({
             <Link
               key={label}
               to={href}
-              className="group hover:bg-secondary flex items-center gap-3 border-b py-3 transition-colors"
+              className="group hover:bg-secondary/80 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors"
             >
               <span className="text-destructive grid size-8 place-items-center">
                 <Icon className="size-4" />
@@ -548,7 +469,7 @@ function AttentionCard({
               <ArrowUpRight className="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           ))}
-          <div className="text-warning-foreground mt-4 text-xs">
+          <div className="bg-warning/10 text-warning-foreground mt-4 rounded-lg px-3 py-2.5 text-xs">
             <strong className="block text-sm">{formatCurrency(pending, 'EUR')} por cobrar</strong>
             <span className="mt-0.5 block opacity-80">
               Importe pendiente de todas las facturas activas.

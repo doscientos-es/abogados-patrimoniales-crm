@@ -70,10 +70,10 @@ async function ensureFolder(token: string, name: string, parentId: string) {
   )
   const found = (await driveRequest(
     token,
-    `/files?q=${query}&fields=files(id,name)&pageSize=1`,
+    `/files?q=${query}&fields=files(id,name)&pageSize=1&supportsAllDrives=true&includeItemsFromAllDrives=true`,
   )) as { files?: { id: string }[] }
   if (found.files?.[0]?.id) return found.files[0].id
-  const created = (await driveRequest(token, '/files?fields=id', {
+  const created = (await driveRequest(token, '/files?fields=id&supportsAllDrives=true', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -152,7 +152,7 @@ async function processJob(admin: ReturnType<typeof createClient>, job: Job) {
   if (document.firm_id !== job.firm_id)
     throw new Error('Document does not belong to the sync job firm')
   if (job.operation === 'archive' && document.drive_file_id) {
-    await driveRequest(token, `/files/${document.drive_file_id}`, {
+    await driveRequest(token, `/files/${document.drive_file_id}?supportsAllDrives=true`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ trashed: true }),
@@ -161,12 +161,12 @@ async function processJob(admin: ReturnType<typeof createClient>, job: Job) {
     const parent = await destinationFolder(token, admin, document.firm_id, document)
     const current = (await driveRequest(
       token,
-      `/files/${document.drive_file_id}?fields=parents`,
+      `/files/${document.drive_file_id}?fields=parents&supportsAllDrives=true`,
     )) as { parents?: string[] }
     const remove = (current.parents ?? []).join(',')
     await driveRequest(
       token,
-      `/files/${document.drive_file_id}?addParents=${parent}&removeParents=${remove}`,
+      `/files/${document.drive_file_id}?addParents=${parent}&removeParents=${remove}&supportsAllDrives=true`,
       { method: 'PATCH' },
     )
     await admin.from('crm_case_documents').update({ drive_parent_id: parent }).eq('id', document.id)
@@ -188,7 +188,7 @@ async function processJob(admin: ReturnType<typeof createClient>, job: Job) {
       `\r\n--${boundary}--`,
     ])
     const uploaded = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id&supportsAllDrives=true',
       {
         method: 'POST',
         headers: {
@@ -273,10 +273,17 @@ Deno.serve(async (req) => {
 
     try {
       await processJob(admin, claimedJob as Job)
-      await admin
-        .from('crm_drive_sync_jobs')
-        .update({ status: 'done', processed_at: new Date().toISOString() })
-        .eq('id', claimedJob.id)
+      const processedAt = new Date().toISOString()
+      await Promise.all([
+        admin
+          .from('crm_drive_sync_jobs')
+          .update({ status: 'done', processed_at: processedAt })
+          .eq('id', claimedJob.id),
+        admin
+          .from('crm_drive_connections')
+          .update({ status: 'connected', last_sync_at: processedAt, last_error: null, updated_at: processedAt })
+          .eq('firm_id', claimedJob.firm_id),
+      ])
       return response({ ok: true })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Drive sync failed'
@@ -288,6 +295,10 @@ Deno.serve(async (req) => {
         .from('crm_case_documents')
         .update({ drive_sync_status: 'error', drive_error: message })
         .eq('id', claimedJob.document_id)
+        .eq('firm_id', claimedJob.firm_id)
+      await admin
+        .from('crm_drive_connections')
+        .update({ status: 'error', last_error: message, updated_at: new Date().toISOString() })
         .eq('firm_id', claimedJob.firm_id)
       return response({ error: 'Drive sync failed' }, 502)
     }

@@ -18,8 +18,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'IBM Plex Serif', ui-serif, Georgia, serif;
+  --font-sans: Geist, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Geist, ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -156,6 +156,102 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+  }
+}
+
+/* Pantallas de acceso: atmósfera sobria, con movimiento muy sutil. */
+.auth-login-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 15% 18%, oklch(0.66 0.1 250 / 42%), transparent 30%),
+    radial-gradient(circle at 84% 78%, oklch(0.52 0.075 258 / 28%), transparent 34%),
+    linear-gradient(135deg, oklch(0.18 0.035 258), oklch(0.29 0.055 258) 53%, oklch(0.2 0.03 250));
+}
+
+.auth-login-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(oklch(1 0 0 / 16%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 16%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black, transparent 78%);
+}
+
+.auth-login-glow {
+  position: absolute;
+  z-index: -1;
+  width: min(58vw, 720px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  filter: blur(28px);
+  opacity: 0.32;
+  will-change: transform;
+  animation: auth-login-float 15s ease-in-out infinite alternate;
+}
+
+.auth-login-glow-one {
+  top: -26%;
+  left: -14%;
+  background: oklch(0.64 0.12 250 / 58%);
+}
+
+.auth-login-glow-two {
+  right: -18%;
+  bottom: -34%;
+  background: oklch(0.58 0.1 285 / 46%);
+  animation-delay: -7s;
+}
+
+.auth-login-panel {
+  box-shadow: 0 32px 90px oklch(0.08 0.025 258 / 48%);
+}
+
+.auth-login-aside {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-login-aside::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(118deg, transparent 28%, oklch(1 0 0 / 10%) 49%, transparent 68%);
+  background-size: 220% 100%;
+  animation: auth-login-shimmer 12s ease-in-out infinite;
+}
+
+@keyframes auth-login-float {
+  from {
+    transform: translate3d(-2%, -3%, 0) scale(0.94);
+  }
+
+  to {
+    transform: translate3d(8%, 6%, 0) scale(1.09);
+  }
+}
+
+@keyframes auth-login-shimmer {
+  from,
+  20% {
+    background-position: 120% 0;
+  }
+
+  65%,
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-login-glow,
+  .auth-login-aside::after {
+    animation: none;
   }
 }
 
