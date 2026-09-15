@@ -15,7 +15,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
       {children}
     </a>
   ),
-  createFileRoute: () => (options: object) => options,
   useNavigate: () => mocks.navigate,
 }))
 
@@ -28,7 +27,7 @@ vi.mock('@/features/contactos', () => ({
   useCrearContacto: () => ({ isPending: false, mutateAsync: mocks.createContact }),
 }))
 
-import { NuevoContactoPage } from './contactos.nuevo'
+import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
 
 afterEach(cleanup)
 
