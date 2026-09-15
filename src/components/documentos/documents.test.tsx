@@ -372,9 +372,39 @@ describe('Documents', () => {
     expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
     expect(screen.getByText('Poder notarial archivado.pdf')).toBeTruthy()
     expect(screen.queryByLabelText('Estado de Poder notarial archivado.pdf')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Ver documento Poder notarial.pdf' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Ver detalle de Poder notarial.pdf' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Ver expediente de Poder notarial.pdf' })).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Estado de Poder notarial.pdf'), {
       target: { value: 'in_progress' },
     })
+
+    await waitFor(() =>
+      expect(updateDocumentWorkflow).toHaveBeenCalledWith({
+        target_document_id: 'document-1',
+        target_expected_version: 1,
+        target_workflow_status: 'in_progress',
+      }),
+    )
+  })
+
+  it('moves a validated document between active workflow columns by dragging its handle', async () => {
+    renderDocuments()
+    fireEvent.click(await screen.findByRole('button', { name: /flujo documental/i }))
+
+    const dataTransfer = {
+      effectAllowed: '',
+      getData: vi.fn(() => 'document-1'),
+      setData: vi.fn(),
+    }
+    fireEvent.dragStart(await screen.findByRole('button', { name: 'Arrastrar Poder notarial.pdf' }), {
+      dataTransfer,
+    })
+    const targetColumn = screen.getByRole('heading', { name: 'En tratamiento' }).closest('section')
+    if (!targetColumn) throw new Error('No se encontró la columna de destino.')
+    fireEvent.dragOver(targetColumn, { dataTransfer })
+    expect(targetColumn.className).toContain('ring-2')
+    fireEvent.drop(targetColumn, { dataTransfer })
 
     await waitFor(() =>
       expect(updateDocumentWorkflow).toHaveBeenCalledWith({

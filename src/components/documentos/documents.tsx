@@ -10,9 +10,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   Archive,
+  BriefcaseBusiness,
   Columns3,
   ChevronRight,
   Download,
+  Eye,
   FileImage,
   FileSpreadsheet,
   FileText,
@@ -88,34 +90,63 @@ const WORKFLOW_COLUMNS: Array<{
   title: string
   description: string
 }> = [
-  {
-    status: 'inbox',
-    title: 'Pendiente de tratar',
-    description: 'Entrada pendiente de clasificar o revisar.',
-  },
-  {
-    status: 'in_progress',
-    title: 'En tratamiento',
-    description: 'Hay trabajo documental abierto.',
-  },
-  {
-    status: 'processed',
-    title: 'Tratado',
-    description: 'Procesado como evidencia del expediente.',
-  },
-]
+    {
+      status: 'inbox',
+      title: 'Pendiente de tratar',
+      description: 'Entrada pendiente de clasificar o revisar.',
+    },
+    {
+      status: 'in_progress',
+      title: 'En tratamiento',
+      description: 'Hay trabajo documental abierto.',
+    },
+    {
+      status: 'processed',
+      title: 'Tratado',
+      description: 'Procesado como evidencia del expediente.',
+    },
+  ]
 const WORKFLOW_BOARD_COLUMNS: Array<{
   status: WorkflowBoardStatus
   title: string
   description: string
 }> = [
-  ...WORKFLOW_COLUMNS,
-  {
-    status: 'archived',
-    title: 'Archivado / solo consulta',
-    description: 'Conservado como evidencia y trazabilidad.',
+    ...WORKFLOW_COLUMNS,
+    {
+      status: 'archived',
+      title: 'Archivado / solo consulta',
+      description: 'Conservado como evidencia y trazabilidad.',
+    },
+  ]
+const WORKFLOW_BOARD_STYLE: Record<
+  WorkflowBoardStatus,
+  { column: string; dot: string; chip: string; card: string }
+> = {
+  inbox: {
+    column: 'border-t-amber-500 bg-amber-500/5',
+    dot: 'bg-amber-500',
+    chip: 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+    card: 'border-l-amber-500',
   },
-]
+  in_progress: {
+    column: 'border-t-sky-500 bg-sky-500/5',
+    dot: 'bg-sky-500',
+    chip: 'border-sky-500/30 bg-sky-500/10 text-sky-800 dark:text-sky-200',
+    card: 'border-l-sky-500',
+  },
+  processed: {
+    column: 'border-t-emerald-500 bg-emerald-500/5',
+    dot: 'bg-emerald-500',
+    chip: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
+    card: 'border-l-emerald-500',
+  },
+  archived: {
+    column: 'border-t-muted-foreground/50 bg-muted/40',
+    dot: 'bg-muted-foreground',
+    chip: 'border-border bg-muted text-muted-foreground',
+    card: 'border-l-muted-foreground/50',
+  },
+}
 
 const FOLDER_TONES = [
   'bg-amber-500/15 text-amber-700 dark:text-amber-300',
@@ -421,22 +452,22 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     try {
       const { data, error } = currentDocument
         ? await c.rpc('crm_create_document_version', {
-            target_document_id: currentDocument.id,
-            target_expected_version: currentDocument.version,
-            original_file_name: file.name,
-            content_mime_type: file.type,
-            content_size_bytes: file.size,
-          })
+          target_document_id: currentDocument.id,
+          target_expected_version: currentDocument.version,
+          original_file_name: file.name,
+          content_mime_type: file.type,
+          content_size_bytes: file.size,
+        })
         : await c.rpc('crm_create_case_document', {
-            target_firm_id: firmId,
-            target_case_id: selectedCaseId as string,
-            target_workstream_id: null,
-            document_category: 'General',
-            original_file_name: file.name,
-            content_mime_type: file.type,
-            content_size_bytes: file.size,
-            document_confidentiality: uploadConfidentiality,
-          })
+          target_firm_id: firmId,
+          target_case_id: selectedCaseId as string,
+          target_workstream_id: null,
+          document_category: 'General',
+          original_file_name: file.name,
+          content_mime_type: file.type,
+          content_size_bytes: file.size,
+          document_confidentiality: uploadConfidentiality,
+        })
       if (error) throw error
       if (!data) throw new Error('No se pudo preparar el documento.')
       id = data.id
@@ -867,7 +898,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
               aria-pressed={mode === 'explorer'}
               onClick={() => setMode('explorer')}
             >
-              Explorador
+              <FolderOpen className="h-4 w-4" aria-hidden="true" /> Explorador
             </Button>
             <Button
               type="button"
@@ -1290,7 +1321,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                           className={`relative flex h-36 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
                         >
                           {isImageDocument(doc) &&
-                          previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                             <img
                               src={previewUrls[doc.id]?.url ?? ''}
                               alt={`Vista previa de ${doc.original_name}`}
@@ -1407,7 +1438,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}
                     >
                       {isImageDocument(doc) &&
-                      previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                        previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                         <img
                           src={previewUrls[doc.id]?.url ?? ''}
                           alt=""
@@ -1771,6 +1802,7 @@ function WorkflowBoard({
   const caseById = new Map(cases.map((caseItem) => [caseItem.id, caseItem]))
   const [caseFilterId, setCaseFilterId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [draggedDocument, setDraggedDocument] = useState<CaseDocumentRow | null>(null)
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase('es')
   const matchesFilters = (document: CaseDocumentRow) =>
     (!caseFilterId || document.case_id === caseFilterId) &&
@@ -1778,8 +1810,29 @@ function WorkflowBoard({
       `${document.original_name} ${document.category}`
         .toLocaleLowerCase('es')
         .includes(normalizedSearch))
+  const canDropIn = (status: WorkflowBoardStatus) =>
+    Boolean(
+      draggedDocument &&
+      status !== 'archived' &&
+      draggedDocument.workflow_status !== status,
+    )
+  const startDrag = (event: DragEvent<HTMLElement>, document: CaseDocumentRow) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData(DOCUMENT_DRAG_TYPE, document.id)
+    setDraggedDocument(document)
+  }
+  const dropInColumn = (event: DragEvent<HTMLElement>, status: WorkflowBoardStatus) => {
+    event.preventDefault()
+    if (draggedDocument && status !== 'archived' && canDropIn(status))
+      onWorkflowChange(draggedDocument, status)
+    setDraggedDocument(null)
+  }
   return (
     <section className="space-y-4" aria-labelledby="document-workflow-title">
+      <p id="workflow-drag-help" className="sr-only">
+        Arrastra un documento validado a otro estado activo para actualizar su flujo. El archivo se
+        realiza desde las acciones del documento.
+      </p>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1
@@ -1821,184 +1874,231 @@ function WorkflowBoard({
           ))}
         </select>
       </div>
-      <div className="grid gap-4 xl:grid-cols-4">
-        {WORKFLOW_BOARD_COLUMNS.map((column) => {
-          const sourceDocuments = column.status === 'archived' ? archivedDocuments : documents
-          const columnDocuments = sourceDocuments.filter(
-            (document) =>
-              (column.status === 'archived' || document.workflow_status === column.status) &&
-              matchesFilters(document),
-          )
-          return (
-            <section
-              key={column.status}
-              className="bg-muted/30 min-w-0 rounded-xl border p-3"
-              aria-labelledby={`workflow-column-${column.status}`}
-            >
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <h2 id={`workflow-column-${column.status}`} className="font-medium">
-                    {column.title}
-                  </h2>
-                  <p className="text-muted-foreground mt-0.5 text-xs">{column.description}</p>
-                </div>
-                <Badge variant="outline">{columnDocuments.length}</Badge>
-              </div>
-              <div className="space-y-3">
-                {columnDocuments.map((document) => {
-                  const relatedCase = caseById.get(document.case_id)
-                  const updating = changingDocumentId === document.id
-                  const archived = column.status === 'archived'
-                  const visual = documentVisual(document)
-                  return (
-                    <Card key={document.id} className="bg-card overflow-hidden">
-                      <CardContent className="space-y-3 p-3.5">
-                        <div className="flex min-w-0 items-start justify-between gap-2">
-                          <div className="flex min-w-0 gap-2.5">
-                            <span
-                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${visual.tone}`}
-                            >
-                              <visual.Icon className="h-4 w-4" aria-hidden="true" />
-                            </span>
-                            <div className="min-w-0">
-                              <p
-                                className="text-primary truncate text-xs font-medium"
-                                title={relatedCase?.titulo}
+      <div className="overflow-x-auto pb-3">
+        <div className="grid min-w-[1120px] grid-cols-4 gap-4">
+          {WORKFLOW_BOARD_COLUMNS.map((column) => {
+            const sourceDocuments = column.status === 'archived' ? archivedDocuments : documents
+            const columnDocuments = sourceDocuments.filter(
+              (document) =>
+                (column.status === 'archived' || document.workflow_status === column.status) &&
+                matchesFilters(document),
+            )
+            const style = WORKFLOW_BOARD_STYLE[column.status]
+            return (
+              <section
+                key={column.status}
+                className={`min-h-[32rem] min-w-0 rounded-xl border border-t-4 p-3 transition-colors ${style.column} ${canDropIn(column.status) ? 'border-primary bg-primary/10 ring-primary/20 ring-2' : ''}`}
+                aria-labelledby={`workflow-column-${column.status}`}
+                onDragOver={(event) => {
+                  if (canDropIn(column.status)) event.preventDefault()
+                }}
+                onDrop={(event) => dropInColumn(event, column.status)}
+              >
+                <header className="border-border/70 mb-3 flex items-start justify-between gap-3 border-b px-1 pb-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`size-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
+                      <h2
+                        id={`workflow-column-${column.status}`}
+                        className="text-xs font-bold tracking-wide uppercase"
+                      >
+                        {column.title}
+                      </h2>
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 text-xs">{column.description}</p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`h-6 min-w-6 shrink-0 rounded-full px-2 text-xs tabular-nums ${style.chip}`}
+                  >
+                    {columnDocuments.length}
+                  </Badge>
+                </header>
+                <div className="space-y-3">
+                  {columnDocuments.map((document) => {
+                    const relatedCase = caseById.get(document.case_id)
+                    const updating = changingDocumentId === document.id
+                    const archived = column.status === 'archived'
+                    const visual = documentVisual(document)
+                    return (
+                      <Card
+                        key={document.id}
+                        className={`bg-card overflow-hidden border-l-[3px] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${style.card} ${draggedDocument?.id === document.id ? 'opacity-50' : ''}`}
+                      >
+                        <CardContent className="space-y-3 p-3.5">
+                          <div className="flex min-w-0 items-start justify-between gap-2">
+                            <div className="flex min-w-0 items-start gap-2">
+                              {!archived ? (
+                                <button
+                                  type="button"
+                                  draggable={
+                                    !updating && document.content_status === 'validated'
+                                  }
+                                  disabled={updating || document.content_status !== 'validated'}
+                                  aria-label={`Arrastrar ${document.original_name}`}
+                                  aria-describedby="workflow-drag-help"
+                                  className="text-muted-foreground hover:bg-muted hover:text-foreground mt-0.5 -ml-1 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded transition-colors active:cursor-grabbing disabled:cursor-not-allowed"
+                                  onDragStart={(event) => startDrag(event, document)}
+                                  onDragEnd={() => setDraggedDocument(null)}
+                                >
+                                  <GripVertical className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                              ) : null}
+                              <span
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${visual.tone}`}
                               >
-                                {relatedCase?.referencia ?? 'Expediente'}
-                              </p>
-                              <p
-                                className="mt-1 line-clamp-2 text-sm font-semibold"
-                                title={document.original_name}
-                              >
-                                {document.original_name}
-                              </p>
+                                <visual.Icon className="h-4 w-4" aria-hidden="true" />
+                              </span>
+                              <div className="min-w-0">
+                                <p
+                                  className="text-primary truncate text-xs font-medium"
+                                  title={relatedCase?.titulo}
+                                >
+                                  {relatedCase?.referencia ?? 'Expediente'}
+                                </p>
+                                <p
+                                  className="mt-1 line-clamp-2 text-sm font-semibold"
+                                  title={document.original_name}
+                                >
+                                  {document.original_name}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <Badge variant="outline" className="shrink-0">
-                            v{document.version}
-                          </Badge>
-                        </div>
-                        <div className="text-muted-foreground flex flex-wrap gap-x-1.5 gap-y-1 text-xs">
-                          <span>{document.category}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{visual.label}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{formatSize(document.size_bytes)}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          <Badge variant="outline" className="text-[10px]">
-                            {confidentialityLabel(document.confidentiality)}
-                          </Badge>
-                          {document.content_status !== 'validated' ? (
-                            <Badge
-                              variant="outline"
-                              className="border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-800 dark:text-amber-200"
-                            >
-                              Pendiente de validar
+                            <Badge variant="outline" className="shrink-0">
+                              v{document.version}
                             </Badge>
-                          ) : null}
-                          {archived ? (
+                          </div>
+                          <div className="text-muted-foreground flex flex-wrap gap-x-1.5 gap-y-1 text-xs">
+                            <span>{document.category}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{visual.label}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{formatSize(document.size_bytes)}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
                             <Badge variant="outline" className="text-[10px]">
-                              Solo consulta
+                              {confidentialityLabel(document.confidentiality)}
                             </Badge>
-                          ) : null}
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                          {archived ? 'Archivado' : 'Actualizado'}{' '}
-                          {formatDocumentDate(
-                            archived
-                              ? (document.archived_at ?? document.updated_at)
-                              : document.updated_at,
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="h-auto px-0"
-                            onClick={() => onOpenDocument(document)}
-                          >
-                            Ver documento
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="h-auto px-0"
-                            onClick={() => onInspect(document)}
-                          >
-                            Ver detalle
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="h-auto px-0"
-                            onClick={() => onOpenCase(document.case_id)}
-                          >
-                            Ver expediente
-                          </Button>
-                          {!archived ? (
-                            <label
-                              className={`text-primary focus-within:ring-ring inline-flex cursor-pointer items-center text-xs font-medium underline-offset-4 focus-within:ring-2 hover:underline ${uploading || updating || document.content_status !== 'validated' ? 'pointer-events-none opacity-50' : ''}`}
-                            >
-                              Nueva versión
-                              <input
-                                className="sr-only"
-                                type="file"
-                                accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
-                                disabled={
-                                  uploading || updating || document.content_status !== 'validated'
-                                }
-                                onChange={(event) => void onUploadVersion(document, event)}
-                              />
-                            </label>
-                          ) : null}
-                        </div>
-                        {!archived ? (
-                          <div className="flex items-center justify-between gap-2 border-t pt-2">
-                            <label
-                              className="text-muted-foreground text-xs"
-                              htmlFor={`workflow-status-${document.id}`}
-                            >
-                              Estado
-                            </label>
-                            <select
-                              id={`workflow-status-${document.id}`}
-                              aria-label={`Estado de ${document.original_name}`}
-                              value={document.workflow_status}
-                              disabled={updating || document.content_status !== 'validated'}
-                              onChange={(event) =>
-                                onWorkflowChange(
-                                  document,
-                                  event.target.value as DocumentWorkflowStatus,
-                                )
-                              }
-                              className="border-input bg-background focus-visible:ring-ring h-8 max-w-44 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
-                            >
-                              {WORKFLOW_COLUMNS.map((option) => (
-                                <option key={option.status} value={option.status}>
-                                  {option.title}
-                                </option>
-                              ))}
-                            </select>
+                            {document.content_status !== 'validated' ? (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-800 dark:text-amber-200"
+                              >
+                                Pendiente de validar
+                              </Badge>
+                            ) : null}
+                            {archived ? (
+                              <Badge variant="outline" className="text-[10px]">
+                                Solo consulta
+                              </Badge>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-                {!columnDocuments.length ? (
-                  <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
-                    Sin documentos en este estado.
-                  </p>
-                ) : null}
-              </div>
-            </section>
-          )
-        })}
+                          <p className="text-muted-foreground text-xs">
+                            {archived ? 'Archivado' : 'Actualizado'}{' '}
+                            {formatDocumentDate(
+                              archived
+                                ? (document.archived_at ?? document.updated_at)
+                                : document.updated_at,
+                            )}
+                          </p>
+                          <div className="border-border/70 flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8"
+                                aria-label={`Ver documento ${document.original_name}`}
+                                title="Ver documento"
+                                onClick={() => onOpenDocument(document)}
+                              >
+                                <Eye className="h-4 w-4" aria-hidden="true" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8"
+                                aria-label={`Ver detalle de ${document.original_name}`}
+                                title="Ver detalle"
+                                onClick={() => onInspect(document)}
+                              >
+                                <Info className="h-4 w-4" aria-hidden="true" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8"
+                                aria-label={`Ver expediente de ${document.original_name}`}
+                                title="Ver expediente"
+                                onClick={() => onOpenCase(document.case_id)}
+                              >
+                                <BriefcaseBusiness className="h-4 w-4" aria-hidden="true" />
+                              </Button>
+                            </div>
+                            {!archived ? (
+                              <label
+                                className={`text-primary focus-within:ring-ring inline-flex cursor-pointer items-center text-xs font-medium underline-offset-4 focus-within:ring-2 hover:underline ${uploading || updating || document.content_status !== 'validated' ? 'pointer-events-none opacity-50' : ''}`}
+                              >
+                                Nueva versión
+                                <input
+                                  className="sr-only"
+                                  type="file"
+                                  accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                                  disabled={
+                                    uploading || updating || document.content_status !== 'validated'
+                                  }
+                                  onChange={(event) => void onUploadVersion(document, event)}
+                                />
+                              </label>
+                            ) : null}
+                          </div>
+                          {!archived ? (
+                            <div className="flex items-center justify-between gap-2 border-t pt-2">
+                              <label
+                                className="text-muted-foreground text-xs"
+                                htmlFor={`workflow-status-${document.id}`}
+                              >
+                                Estado
+                              </label>
+                              <select
+                                id={`workflow-status-${document.id}`}
+                                aria-label={`Estado de ${document.original_name}`}
+                                value={document.workflow_status}
+                                disabled={updating || document.content_status !== 'validated'}
+                                onChange={(event) =>
+                                  onWorkflowChange(
+                                    document,
+                                    event.target.value as DocumentWorkflowStatus,
+                                  )
+                                }
+                                className="border-input bg-background focus-visible:ring-ring h-8 max-w-44 rounded-md border px-2 text-xs focus-visible:ring-2 disabled:opacity-50"
+                              >
+                                {WORKFLOW_COLUMNS.map((option) => (
+                                  <option key={option.status} value={option.status}>
+                                    {option.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                  {!columnDocuments.length ? (
+                    <p className="text-muted-foreground rounded-lg border border-dashed px-4 py-9 text-center text-sm">
+                      {canDropIn(column.status)
+                        ? 'Suelta el documento aquí.'
+                        : 'Sin documentos en este estado.'}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            )
+          })}
+        </div>
       </div>
     </section>
   )

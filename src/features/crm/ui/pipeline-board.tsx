@@ -117,38 +117,39 @@ export function PipelineBoard({
                       aria-describedby="pipeline-drag-help"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="fase-texto text-[10px] font-semibold tracking-wider uppercase">
-                            {oportunidad.referencia}
-                          </p>
-                          <Link
-                            to="/oportunidades/$id"
-                            params={{ id: oportunidad.id }}
-                            className="hover:text-primary line-clamp-2 text-sm font-semibold transition-colors hover:underline"
-                          >
-                            {oportunidad.titulo}
-                          </Link>
-                        </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex min-w-0 items-start gap-2">
                           {canDrag ? (
                             <button
                               type="button"
                               draggable={!isPending}
-                              aria-label={`Mover ${oportunidad.referencia}`}
-                              title="Arrastrar para mover"
-                              className="text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab rounded p-1 active:cursor-grabbing"
+                              disabled={isPending}
+                              aria-label={`Arrastrar ${oportunidad.referencia}`}
+                              aria-describedby="pipeline-drag-help"
+                              className="text-muted-foreground hover:bg-muted hover:text-foreground mt-0.5 -ml-1 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded transition-colors active:cursor-grabbing disabled:cursor-not-allowed"
                               onDragStart={(event) => startDrag(event, oportunidad)}
                               onDragEnd={() => setDragged(null)}
                             >
-                              <GripVertical className="size-4" aria-hidden="true" />
+                              <GripVertical className="h-4 w-4" aria-hidden="true" />
                             </button>
                           ) : null}
-                          <Badge
-                            className={`shrink-0 border ${PRIORITY_CLASS[oportunidad.prioridad]}`}
-                          >
-                            {oportunidad.prioridad}
-                          </Badge>
+                          <div className="min-w-0">
+                            <p className="fase-texto text-[10px] font-semibold tracking-wider uppercase">
+                              {oportunidad.referencia}
+                            </p>
+                            <Link
+                              to="/oportunidades/$id"
+                              params={{ id: oportunidad.id }}
+                              className="hover:text-primary line-clamp-2 text-sm font-semibold transition-colors hover:underline"
+                            >
+                              {oportunidad.titulo}
+                            </Link>
+                          </div>
                         </div>
+                        <Badge
+                          className={`shrink-0 border ${PRIORITY_CLASS[oportunidad.prioridad]}`}
+                        >
+                          {oportunidad.prioridad}
+                        </Badge>
                       </div>
                       <div className="border-border/70 text-muted-foreground mt-3 space-y-1.5 border-y py-2 text-xs">
                         <p className="flex min-w-0 items-center gap-1.5">
