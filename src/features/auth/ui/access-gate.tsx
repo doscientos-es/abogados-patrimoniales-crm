@@ -34,6 +34,23 @@ function getPasswordFlowFromHash(): PasswordFlow | null {
   return type === 'invite' || type === 'recovery' ? type : null
 }
 
+function passwordUpdateErrorMessage(error: unknown, flow: PasswordFlow): string {
+  const fallback =
+    flow === 'invite'
+      ? 'No se ha podido crear la contraseña. Solicita un nuevo enlace.'
+      : 'No se ha podido restablecer la contraseña. Solicita un nuevo enlace.'
+  if (!(error instanceof Error)) return fallback
+
+  const message = error.message.toLowerCase()
+  if (/session|token|jwt|expired|unauthorized/.test(message))
+    return 'El enlace ha caducado o ya se ha utilizado. Solicita uno nuevo.'
+  if (/different from the old|same password/.test(message))
+    return 'La nueva contraseña debe ser distinta de la anterior.'
+  if (/password.*(length|character|weak)|weak password/.test(message))
+    return 'La contraseña no cumple los requisitos de seguridad.'
+  return fallback
+}
+
 export function AccessGate({ children }: { children: ReactNode }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -342,13 +359,7 @@ function SetAuthPassword({ flow, onComplete }: { flow: PasswordFlow; onComplete:
         )
         onComplete()
       })
-      .catch(() =>
-        toast.error(
-          flow === 'invite'
-            ? 'No se ha podido crear la contraseña. Solicita un nuevo enlace.'
-            : 'No se ha podido restablecer la contraseña. Solicita un nuevo enlace.',
-        ),
-      )
+      .catch((error: unknown) => toast.error(passwordUpdateErrorMessage(error, flow)))
       .finally(() => setSending(false))
   }
   return (

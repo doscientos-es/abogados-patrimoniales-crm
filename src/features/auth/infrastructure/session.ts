@@ -66,6 +66,14 @@ export async function signOutOfSupabase() {
 export async function updateSupabasePassword(password: string) {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Supabase no está configurado en este entorno.')
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await client.auth.getSession()
+  if (sessionError || !session)
+    throw new Error('La sesión de recuperación ha caducado o ya se ha utilizado.')
+
   const { error } = await client.auth.updateUser({ password })
   if (error) throw error
 }

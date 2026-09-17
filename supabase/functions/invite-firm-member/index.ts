@@ -7,6 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
 }
 const roles = new Set(['admin', 'lawyer', 'paralegal'])
+const invitationRedirectTo = 'https://www.lex.eus/'
 
 function json(body: Record<string, string>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -65,6 +66,7 @@ Deno.serve(async (req) => {
 
     const { data: created, error: createError } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { display_name: name },
+      redirectTo: invitationRedirectTo,
     })
     if (createError || !created.user) return json({ error: 'Could not create member' }, 400)
 
