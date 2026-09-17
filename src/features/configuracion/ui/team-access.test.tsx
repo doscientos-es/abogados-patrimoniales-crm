@@ -53,6 +53,7 @@ describe('TeamAccess', () => {
   })
 
   it('warns about assignments and removes a disabled member', async () => {
+    mocks.invoke.mockResolvedValue({ data: { releasedAssignments: 2 }, error: null })
     mocks.rpc.mockImplementation((functionName: string) => {
       if (functionName === 'crm_get_firm_member_assignment_count')
         return Promise.resolve({ data: 2, error: null })
@@ -78,12 +79,11 @@ describe('TeamAccess', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
 
     await screen.findByText(/tiene 2 registros asignados/i)
-    fireEvent.click(screen.getByRole('button', { name: 'Eliminar acceso' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar usuario' }))
 
     await waitFor(() =>
-      expect(mocks.rpc).toHaveBeenCalledWith('crm_delete_firm_member', {
-        target_firm_id: 'firm-1',
-        target_user_id: 'user-2',
+      expect(mocks.invoke).toHaveBeenCalledWith('delete-disabled-firm-member', {
+        body: { firmId: 'firm-1', userId: 'user-2' },
       }),
     )
     expect(onChanged).toHaveBeenCalledOnce()

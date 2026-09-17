@@ -118,12 +118,11 @@ export function TeamAccess({
     mutationFn: async (member: Member) => {
       const client = getSupabaseBrowserClient()
       if (!client) throw new Error('Supabase no está configurado en este entorno.')
-      const { data, error } = await client.rpc('crm_delete_firm_member', {
-        target_firm_id: firmId,
-        target_user_id: member.userId,
+      const { data, error } = await client.functions.invoke('delete-disabled-firm-member', {
+        body: { firmId, userId: member.userId },
       })
       if (error) throw error
-      return data
+      return typeof data?.releasedAssignments === 'number' ? data.releasedAssignments : 0
     },
     onSuccess: (releasedAssignments) => {
       setMemberToDelete(null)
@@ -131,8 +130,8 @@ export function TeamAccess({
       onChanged()
       toast.success(
         releasedAssignments
-          ? `Acceso eliminado. ${releasedAssignments} asignaciones quedaron sin responsable.`
-          : 'Acceso eliminado.',
+          ? `Usuario eliminado definitivamente. ${releasedAssignments} asignaciones quedaron sin responsable.`
+          : 'Usuario eliminado definitivamente.',
       )
     },
     onError: () => toast.error('No se ha podido eliminar el acceso. Revisa tus permisos.'),
@@ -307,12 +306,12 @@ export function TeamAccess({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar acceso</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar usuario definitivamente</AlertDialogTitle>
             <AlertDialogDescription>
               {memberToDelete
                 ? assignmentCount
-                  ? `“${memberToDelete.displayName}” tiene ${assignmentCount} registros asignados. Se quedarán sin responsable y el acceso se eliminará definitivamente.`
-                  : `Se eliminará definitivamente el acceso de “${memberToDelete.displayName}”.`
+                  ? `“${memberToDelete.displayName}” tiene ${assignmentCount} registros asignados. Se quedarán sin responsable y se eliminarán definitivamente su cuenta y acceso.`
+                  : `Se eliminarán definitivamente la cuenta y el acceso de “${memberToDelete.displayName}”.`
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -327,7 +326,7 @@ export function TeamAccess({
               }}
             >
               <Trash2 className="h-4 w-4" />
-              {removeMember.isPending ? 'Eliminando…' : 'Eliminar acceso'}
+              {removeMember.isPending ? 'Eliminando…' : 'Eliminar usuario'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
