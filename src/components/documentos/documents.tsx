@@ -91,34 +91,34 @@ const WORKFLOW_COLUMNS: Array<{
   title: string
   description: string
 }> = [
-    {
-      status: 'inbox',
-      title: 'Pendiente de tratar',
-      description: 'Entrada pendiente de clasificar o revisar.',
-    },
-    {
-      status: 'in_progress',
-      title: 'En tratamiento',
-      description: 'Hay trabajo documental abierto.',
-    },
-    {
-      status: 'processed',
-      title: 'Tratado',
-      description: 'Procesado como evidencia del expediente.',
-    },
-  ]
+  {
+    status: 'inbox',
+    title: 'Pendiente de tratar',
+    description: 'Entrada pendiente de clasificar o revisar.',
+  },
+  {
+    status: 'in_progress',
+    title: 'En tratamiento',
+    description: 'Hay trabajo documental abierto.',
+  },
+  {
+    status: 'processed',
+    title: 'Tratado',
+    description: 'Procesado como evidencia del expediente.',
+  },
+]
 const WORKFLOW_BOARD_COLUMNS: Array<{
   status: WorkflowBoardStatus
   title: string
   description: string
 }> = [
-    ...WORKFLOW_COLUMNS,
-    {
-      status: 'archived',
-      title: 'Archivado / solo consulta',
-      description: 'Conservado como evidencia y trazabilidad.',
-    },
-  ]
+  ...WORKFLOW_COLUMNS,
+  {
+    status: 'archived',
+    title: 'Archivado / solo consulta',
+    description: 'Conservado como evidencia y trazabilidad.',
+  },
+]
 const WORKFLOW_BOARD_STYLE: Record<
   WorkflowBoardStatus,
   { column: string; dot: string; chip: string; card: string }
@@ -474,22 +474,22 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
     try {
       const { data, error } = currentDocument
         ? await c.rpc('crm_create_document_version', {
-          target_document_id: currentDocument.id,
-          target_expected_version: currentDocument.version,
-          original_file_name: file.name,
-          content_mime_type: file.type,
-          content_size_bytes: file.size,
-        })
+            target_document_id: currentDocument.id,
+            target_expected_version: currentDocument.version,
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+          })
         : await c.rpc('crm_create_case_document', {
-          target_firm_id: firmId,
-          target_case_id: selectedCaseId as string,
-          target_workstream_id: null,
-          document_category: 'General',
-          original_file_name: file.name,
-          content_mime_type: file.type,
-          content_size_bytes: file.size,
-          document_confidentiality: uploadConfidentiality,
-        })
+            target_firm_id: firmId,
+            target_case_id: selectedCaseId as string,
+            target_workstream_id: null,
+            document_category: 'General',
+            original_file_name: file.name,
+            content_mime_type: file.type,
+            content_size_bytes: file.size,
+            document_confidentiality: uploadConfidentiality,
+          })
       if (error) throw error
       if (!data) throw new Error('No se pudo preparar el documento.')
       id = data.id
@@ -913,12 +913,13 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge
             variant={driveConnection.data?.status === 'connected' ? 'default' : 'secondary'}
-            aria-label={`Estado de Google Drive: ${driveConnection.isPending
+            aria-label={`Estado de Google Drive: ${
+              driveConnection.isPending
                 ? 'Comprobando conexión'
                 : driveConnection.isError
                   ? 'No disponible'
                   : driveConnectionLabel(driveConnection.data?.status)
-              }`}
+            }`}
           >
             <BriefcaseBusiness className="h-3.5 w-3.5" aria-hidden="true" /> Google Drive ·{' '}
             {driveConnection.isPending
@@ -1359,7 +1360,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                           className={`relative flex h-36 items-center justify-center overflow-hidden rounded-xl ${visual.tone}`}
                         >
                           {isImageDocument(doc) &&
-                            previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                          previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                             <img
                               src={previewUrls[doc.id]?.url ?? ''}
                               alt={`Vista previa de ${doc.original_name}`}
@@ -1476,7 +1477,7 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
                       className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${visual.tone}`}
                     >
                       {isImageDocument(doc) &&
-                        previewUrls[doc.id]?.storagePath === doc.storage_path ? (
+                      previewUrls[doc.id]?.storagePath === doc.storage_path ? (
                         <img
                           src={previewUrls[doc.id]?.url ?? ''}
                           alt=""
@@ -1919,6 +1920,8 @@ function WorkflowBoard({
             )
             const style = WORKFLOW_BOARD_STYLE[column.status]
             return (
+              // Native HTML drag and drop only fires these events on its drop target.
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
               <section
                 key={column.status}
                 className={`min-h-[32rem] min-w-0 rounded-xl border border-t-4 p-3 transition-colors ${style.column} ${canDropIn(column.status) ? 'border-primary bg-primary/10 ring-primary/20 ring-2' : ''}`}

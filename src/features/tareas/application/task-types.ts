@@ -1,5 +1,5 @@
 export type TipoTarea = 'Tarea' | 'Recordatorio' | 'Evento' | 'Plazo'
-export type EstadoTarea = 'Pendiente' | 'En curso' | 'Completada' | 'Cancelada'
+export type EstadoTarea = 'Pendiente' | 'En curso' | 'En espera' | 'Completada' | 'Cancelada'
 export type ValidacionPlazo = 'No aplica' | 'Propuesto' | 'Validado' | 'Rechazado'
 
 export type EtiquetaTarea = {
@@ -28,6 +28,20 @@ export type TareaPersistida = {
   validadoEn: string | null
   critico: boolean
   asignadoId: string | null
+  creadaPorId: string | null
+  esSiguienteAccion: boolean
+  motivoEspera: string | null
+  revisarEn: string | null
+  detalleEspera: string
+  resultadoCierre: string
+  motivoCancelacion: string
+  abiertaEn: string | null
+  abiertaPorId: string | null
+  motivoRechazo: string
+  rechazadaEn: string | null
+  tareaPadreId: string | null
+  reunion: Record<string, unknown>
+  bloqueada: boolean
   etiquetas: EtiquetaTarea[]
   version: number
 }
@@ -44,7 +58,21 @@ export type CrearTareaInput = {
   clasePlazo: TareaPersistida['clasePlazo']
   critico: boolean
   asignadoId: string | null
+  mensajeInicial?: string
   etiquetaIds?: string[]
+}
+
+export type TransicionEsperaInput = {
+  task: TareaPersistida
+  motivo: string
+  revisarEn: string
+  detalle?: string
+}
+
+export type CompletarTareaInput = {
+  task: TareaPersistida
+  resultado: string
+  continuidad?: 'create_next_task' | 'close_without_continuity'
 }
 
 export type ValidarPlazoInput = {

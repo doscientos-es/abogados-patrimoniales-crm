@@ -23,7 +23,7 @@ export const Route = createFileRoute('/comunicaciones')({
   component: ComunicacionesPage,
 })
 
-function ComunicacionesPage() {
+export function ComunicacionesPage() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const notes = useNotasRemotas(membership.data?.firmId)

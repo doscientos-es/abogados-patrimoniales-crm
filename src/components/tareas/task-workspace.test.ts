@@ -18,10 +18,11 @@ const task = (overrides: Record<string, unknown> = {}) =>
   }) as never
 
 describe('taskBoardColumn', () => {
-  it('groups active tasks by status and proposed deadlines as waiting', () => {
+  it('groups active tasks by their real workflow status', () => {
     expect(taskBoardColumn(task())).toBe('pending')
     expect(taskBoardColumn(task({ estado: 'En curso' }))).toBe('in-progress')
-    expect(taskBoardColumn(task({ validacion: 'Propuesto' }))).toBe('waiting')
+    expect(taskBoardColumn(task({ estado: 'En espera' }))).toBe('waiting')
+    expect(taskBoardColumn(task({ validacion: 'Propuesto' }))).toBe('pending')
   })
 
   it('keeps completed and cancelled tasks out of the active Kanban', () => {
@@ -34,7 +35,7 @@ describe('taskBoardColumn', () => {
     expect(taskStatusForBoardColumn('in-progress')).toBe('En curso')
     expect(taskStatusForBoardColumn('waiting')).toBeNull()
     expect(canMoveTaskInBoard(task(), 'in-progress')).toBe(true)
-    expect(canMoveTaskInBoard(task({ validacion: 'Propuesto' }), 'pending')).toBe(false)
+    expect(canMoveTaskInBoard(task({ estado: 'En espera' }), 'pending')).toBe(false)
   })
 })
 

@@ -1,5 +1,5 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   BellRing,
   CalendarDays,
@@ -48,8 +48,9 @@ import {
 } from '@/features/tareas'
 
 type TaskView = 'calendar' | 'kanban' | 'list'
-type TaskFilterStatus = 'all' | TareaPersistida['estado'] | 'En espera'
+type TaskFilterStatus = 'all' | TareaPersistida['estado']
 type TaskBoardColumnId = 'pending' | 'in-progress' | 'waiting'
+type TaskScope = 'mine' | 'delegated' | 'all' | 'administration'
 
 const AGENDA_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const AGENDA_START_HOUR = 8
@@ -75,7 +76,7 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
 }> = [
   { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
   { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
-  { id: 'waiting', title: 'En espera', description: 'Plazos pendientes de validación' },
+  { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
 ]
 
 const TASK_PRIORITY_CLASS: Record<TareaPersistida['prioridad'], string> = {
@@ -193,11 +194,10 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
   return layouts.map(({ end: _end, group: _group, ...layout }) => layout)
 }
 
-/** "En espera" es una categoría de visualización para plazos propuestos, no un estado nuevo. */
 export function taskBoardColumn(task: TareaPersistida): TaskBoardColumnId | null {
-  if (task.validacion === 'Propuesto') return 'waiting'
   if (task.estado === 'Pendiente') return 'pending'
   if (task.estado === 'En curso') return 'in-progress'
+  if (task.estado === 'En espera') return 'waiting'
   return null
 }
 
@@ -232,12 +232,15 @@ export function TaskWorkspace() {
   const change = useCambiarEstadoTarea(firmId)
   const edit = useEditarTarea(firmId)
   const validate = useValidarPlazo(firmId)
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CrearTareaInput['tipo']>('all')
   const [priorityFilter, setPriorityFilter] = useState<'all' | TareaPersistida['prioridad']>('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [labelFilter, setLabelFilter] = useState('all')
+  const [scope, setScope] = useState<TaskScope>('mine')
+  const [onlyNextActions, setOnlyNextActions] = useState(false)
   const [view, setView] = useState<TaskView>('kanban')
   const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
   const [calendarEditTask, setCalendarEditTask] = useState<TareaPersistida | null>(null)
@@ -269,21 +272,26 @@ export function TaskWorkspace() {
 
   const canValidate = membership.data?.role !== 'paralegal'
   const canEditTasks = membership.data?.role !== 'paralegal'
-  const visible = (tasks.data ?? []).filter((task) => {
+  const allTasks = tasks.data ?? []
+  const visible = allTasks.filter((task) => {
     const searchable =
       `${task.titulo} ${task.descripcion} ${task.tipo} ${task.etiquetas.map((label) => label.nombre).join(' ')} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'En espera'
-        ? taskBoardColumn(task) === 'waiting'
-        : task.estado === statusFilter)
+    const matchesStatus = statusFilter === 'all' || task.estado === statusFilter
     return (
+      (scope === 'all' ||
+        (scope === 'mine' && task.asignadoId === session.user?.id) ||
+        (scope === 'delegated' &&
+          task.creadaPorId === session.user?.id &&
+          task.asignadoId !== session.user?.id) ||
+        (scope === 'administration' &&
+          ['owner', 'admin', 'lawyer'].includes(membership.data?.role ?? ''))) &&
       (!query.trim() || searchable.includes(query.trim().toLowerCase())) &&
       (typeFilter === 'all' || task.tipo === typeFilter) &&
       (priorityFilter === 'all' || task.prioridad === priorityFilter) &&
       (assigneeFilter === 'all' ||
         (assigneeFilter === '' ? !task.asignadoId : task.asignadoId === assigneeFilter)) &&
       (labelFilter === 'all' || task.etiquetas.some((label) => label.id === labelFilter)) &&
+      (!onlyNextActions || task.esSiguienteAccion) &&
       matchesStatus
     )
   })
@@ -294,13 +302,15 @@ export function TaskWorkspace() {
     assigneeFilter,
     statusFilter,
     labelFilter,
-  ].filter((value) => value !== 'all').length
+    onlyNextActions,
+  ].filter((value) => value !== 'all' && value !== false).length
   const clearFilters = () => {
     setTypeFilter('all')
     setPriorityFilter('all')
     setAssigneeFilter('all')
     setStatusFilter('all')
     setLabelFilter('all')
+    setOnlyNextActions(false)
   }
   const changeStatus = async (task: TareaPersistida, estado: TareaPersistida['estado']) => {
     try {
@@ -351,10 +361,59 @@ export function TaskWorkspace() {
             members={members.data ?? []}
             labels={labels.data ?? []}
             pending={createTask.isPending}
-            onCreate={(input) => createTask.mutateAsync(input)}
+            onCreate={async (input) => {
+              const task = await createTask.mutateAsync(input)
+              await navigate({ to: '/tareas/$taskId', params: { taskId: task.id } })
+            }}
           />
         }
       />
+      <div className="flex flex-wrap items-center gap-2" aria-label="Ámbitos de tareas">
+        {(
+          [
+            ['mine', 'Mis tareas'],
+            ['delegated', 'Delegadas'],
+            ['all', 'Todas'],
+            ['administration', 'Administración'],
+          ] as const
+        ).map(([id, label]) => (
+          <Button
+            key={id}
+            type="button"
+            size="sm"
+            variant={scope === id ? 'default' : 'outline'}
+            onClick={() => setScope(id)}
+          >
+            {label}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          size="sm"
+          variant={onlyNextActions ? 'default' : 'outline'}
+          onClick={() => setOnlyNextActions((current) => !current)}
+        >
+          Siguientes acciones
+        </Button>
+        <Badge variant="secondary">
+          En espera: {allTasks.filter((task) => task.estado === 'En espera').length}
+        </Badge>
+        <Badge variant="secondary">
+          Sin abrir: {allTasks.filter((task) => task.asignadoId && !task.abiertaEn).length}
+        </Badge>
+        <Badge variant="secondary">
+          Sin siguiente acción:{' '}
+          {cases.data?.filter(
+            (item) =>
+              !allTasks.some(
+                (task) =>
+                  task.expedienteId === item.id &&
+                  task.esSiguienteAccion &&
+                  !['Completada', 'Cancelada'].includes(task.estado),
+              ),
+          ).length ?? 0}
+        </Badge>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="task-search" className="relative min-w-56 flex-1">
           <span className="sr-only">Buscar tareas y plazos</span>
@@ -441,7 +500,7 @@ export function TaskWorkspace() {
                   ['all', 'Todos los estados'],
                   ['Pendiente', 'Pendiente'],
                   ['En curso', 'En curso'],
-                  ['En espera', 'En espera de validación'],
+                  ['En espera', 'En espera'],
                   ['Completada', 'Completada'],
                   ['Cancelada', 'Cancelada'],
                 ]}
@@ -788,8 +847,8 @@ function TaskKanban({
   return (
     <section aria-label="Tablero Kanban de tareas" className="overflow-x-auto pb-2">
       <p id="task-drag-help" className="sr-only">
-        Arrastra una tarea entre Pendiente y En curso para actualizar su estado. Los plazos en
-        espera requieren validación profesional.
+        Arrastra una tarea entre Pendiente y En curso para actualizar su estado. Las tareas en
+        espera se gestionan desde su detalle.
       </p>
       <div className="grid min-w-[960px] grid-cols-3 gap-3">
         {TASK_BOARD_COLUMNS.map((column) => {
@@ -907,12 +966,12 @@ function TaskCard({
   const [editTitle, setEditTitle] = useState(task.titulo)
   const [editDescription, setEditDescription] = useState(task.descripcion)
   const [editPriority, setEditPriority] = useState(task.prioridad)
-  const [editStatus, setEditStatus] = useState(task.estado)
   const [editAssignee, setEditAssignee] = useState(task.asignadoId ?? '')
   const [editDue, setEditDue] = useState(task.venceEn?.slice(0, 16) ?? '')
   const [editBusy, setEditBusy] = useState(false)
   const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!canEdit) return
     setEditBusy(true)
     try {
       await onEdit({
@@ -920,7 +979,7 @@ function TaskCard({
         titulo: editTitle,
         descripcion: editDescription,
         prioridad: editPriority,
-        estado: editStatus,
+        estado: task.estado,
         venceEn: editDue ? new Date(editDue).toISOString() : null,
         recordarEn: task.recordarEn,
         asignadoId: editAssignee || null,
@@ -952,18 +1011,13 @@ function TaskCard({
               </button>
             ) : null}
             <div className="min-w-0">
-              {canEdit ? (
-                <button
-                  type="button"
-                  className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
-                  onClick={() => setEditOpen(true)}
-                  aria-label={`Editar tarea: ${task.titulo}`}
-                >
-                  {task.titulo}
-                </button>
-              ) : (
-                <p className="line-clamp-2 text-[15px] leading-5 font-semibold">{task.titulo}</p>
-              )}
+              <Link
+                to="/tareas/$taskId"
+                params={{ taskId: task.id }}
+                className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
+              >
+                {task.titulo}
+              </Link>
               {!compact && task.descripcion ? (
                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                   {task.descripcion}
@@ -1078,14 +1132,13 @@ function TaskCard({
                 Empezar
               </Button>
             ) : null}
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() => void onChangeStatus(task, 'Completada')}
+            <Link
+              to="/tareas/$taskId"
+              params={{ taskId: task.id }}
+              className="border-input hover:bg-muted inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium"
             >
-              Completar
-            </Button>
+              Abrir detalle
+            </Link>
           </div>
         ) : null}
         <Dialog
@@ -1149,22 +1202,6 @@ function TaskCard({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`edit-status-${task.id}`}>Estado / columna</Label>
-                  <select
-                    id={`edit-status-${task.id}`}
-                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-                    value={editStatus}
-                    onChange={(event) =>
-                      setEditStatus(event.target.value as TareaPersistida['estado'])
-                    }
-                  >
-                    <option>Pendiente</option>
-                    <option>En curso</option>
-                    <option>Completada</option>
-                    <option>Cancelada</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
                   <Label htmlFor={`edit-assignee-${task.id}`}>Responsable</Label>
                   <select
                     id={`edit-assignee-${task.id}`}
@@ -1182,7 +1219,7 @@ function TaskCard({
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={editBusy}>
+                <Button type="submit" disabled={!canEdit || editBusy}>
                   {editBusy ? 'Guardando…' : 'Guardar cambios'}
                 </Button>
               </DialogFooter>
@@ -1227,6 +1264,7 @@ function TaskCreateDialog({
           kind === 'Plazo' ? (text(data, 'deadlineClass') as CrearTareaInput['clasePlazo']) : null,
         critico: data.get('critical') === 'on',
         asignadoId: text(data, 'assignee') || null,
+        mensajeInicial: text(data, 'initialMessage'),
         etiquetaIds: data.get('label') ? [text(data, 'label')] : [],
       })
       toast.success(kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.')
@@ -1269,6 +1307,7 @@ function TaskCreateDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field name="title" label="Título *" required className="sm:col-span-2" />
               <Field name="description" label="Descripción" className="sm:col-span-2" />
+              <Field name="initialMessage" label="Mensaje inicial" className="sm:col-span-2" />
               <Select
                 name="case"
                 label="Expediente *"

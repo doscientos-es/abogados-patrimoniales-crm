@@ -44,7 +44,7 @@ vi.mock('@/features/notas', () => ({
   useNotasRemotas: () => ({ data: [], isPending: false, isError: false }),
 }))
 
-import { Route } from './comunicaciones'
+import { ComunicacionesPage } from './comunicaciones'
 
 type LinkProps = {
   children: ReactNode
@@ -54,11 +54,9 @@ type LinkProps = {
 
 describe('ComunicacionesPage', () => {
   it('muestra las últimas llamadas registradas en los Leads', () => {
-    const Component = Route.options.component
-    if (!Component) throw new Error('La ruta de comunicaciones debe definir un componente.')
-    render(<Component />)
+    render(<ComunicacionesPage />)
 
-    expect(screen.getByRole('heading', { name: 'Comunicaciones de Leads' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Comunicaciones' })).toBeTruthy()
     expect(screen.getByText('Llamada · OP-2026-0008 · Herencia familiar')).toBeTruthy()
     expect(screen.getByText('Consulta sobre la partición de la herencia.')).toBeTruthy()
   })

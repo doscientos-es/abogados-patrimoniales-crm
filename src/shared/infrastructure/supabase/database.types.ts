@@ -72,6 +72,10 @@ export type Database = {
       crm_drive_sync_jobs: Table<DriveSyncJobRow, DriveSyncJobInsert>
       crm_tasks: Table<TaskRow, TaskInsert, never>
       crm_task_events: Table<TaskEventRow, never, never>
+      crm_task_messages: Table<TaskMessageRow, never, never>
+      crm_task_evidences: Table<TaskEvidenceRow, never, never>
+      crm_task_dependencies: Table<TaskDependencyRow, never, never>
+      crm_task_inbox_items: Table<TaskInboxItemRow, TaskInboxItemInsert>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
@@ -182,6 +186,96 @@ export type Database = {
           new_reminder_at: string | null
           new_assigned_to: string | null
         }
+        Returns: TaskRow
+      }
+      crm_create_task: {
+        Args: {
+          target_firm_id: string
+          target_case_id: string | null
+          target_opportunity_id: string | null
+          new_kind: TaskRow['kind']
+          new_title: string
+          new_description: string
+          new_priority: OpportunityPriority
+          new_due_at: string | null
+          new_reminder_at: string | null
+          new_assigned_to: string | null
+          new_deadline_class?: TaskRow['deadline_class']
+          initial_message?: string | null
+          new_parent_task_id?: string | null
+          new_meeting_details?: Json
+        }
+        Returns: TaskRow
+      }
+      crm_open_task: { Args: { target_task_id: string }; Returns: TaskRow }
+      crm_set_task_status: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          new_status: TaskStatus
+          result_text?: string | null
+          cancellation_text?: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_put_task_on_hold: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          reason: string
+          review_at: string
+          detail?: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_complete_task: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          result_text: string
+          continuity_decision?: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_set_next_action: {
+        Args: { target_task_id: string; target_expected_version: number; enabled: boolean }
+        Returns: TaskRow
+      }
+      crm_add_task_message: {
+        Args: { target_task_id: string; message_body: string }
+        Returns: TaskMessageRow
+      }
+      crm_add_task_evidence: {
+        Args: {
+          target_task_id: string
+          evidence_body?: string | null
+          target_document_id?: string | null
+        }
+        Returns: TaskEvidenceRow
+      }
+      crm_create_task_dependency: {
+        Args: { target_predecessor_id: string; target_successor_id: string }
+        Returns: TaskDependencyRow
+      }
+      crm_remove_task_dependency: { Args: { target_dependency_id: string }; Returns: undefined }
+      crm_update_task_meeting: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          new_meeting_details: Json
+        }
+        Returns: TaskRow
+      }
+      crm_reassign_task: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          new_assigned_to: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_reject_task: {
+        Args: { target_task_id: string; target_expected_version: number; reason: string }
         Returns: TaskRow
       }
       crm_validate_deadline: {
@@ -569,7 +663,7 @@ export type OpportunityStage =
   | 'lost'
 export type OpportunityPriority = 'low' | 'medium' | 'high'
 export type CaseNature = 'judicial' | 'extrajudicial'
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+export type TaskStatus = 'pending' | 'in_progress' | 'waiting' | 'completed' | 'cancelled'
 
 export type ContactRow = {
   id: string
@@ -890,6 +984,18 @@ export type TaskRow = {
   completed_at: string | null
   critical: boolean
   assigned_to: string | null
+  is_next_action: boolean
+  waiting_reason: string | null
+  waiting_until: string | null
+  waiting_detail: string
+  completion_result: string
+  cancellation_reason: string
+  opened_at: string | null
+  opened_by: string | null
+  rejection_reason: string
+  rejected_at: string | null
+  parent_task_id: string | null
+  meeting_details: Json
   details: Json
   version: number
   created_by: string | null
@@ -918,6 +1024,18 @@ export type TaskInsert = {
   validation_note?: string
   critical?: boolean
   assigned_to?: string | null
+  is_next_action?: boolean
+  waiting_reason?: string | null
+  waiting_until?: string | null
+  waiting_detail?: string
+  completion_result?: string
+  cancellation_reason?: string
+  opened_at?: string | null
+  opened_by?: string | null
+  rejection_reason?: string
+  rejected_at?: string | null
+  parent_task_id?: string | null
+  meeting_details?: Json
   details?: Json
 }
 
@@ -929,6 +1047,53 @@ export type TaskEventRow = {
   payload: Json
   actor_id: string | null
   created_at: string
+}
+
+export type TaskMessageRow = {
+  id: string
+  firm_id: string
+  task_id: string
+  author_id: string | null
+  body: string
+  message_type: 'initial_assignment' | 'comment' | 'system'
+  created_at: string
+}
+
+export type TaskEvidenceRow = {
+  id: string
+  firm_id: string
+  task_id: string
+  created_by: string | null
+  body: string
+  document_id: string | null
+  created_at: string
+}
+
+export type TaskDependencyRow = {
+  id: string
+  firm_id: string
+  predecessor_task_id: string
+  successor_task_id: string
+  created_by: string | null
+  created_at: string
+}
+
+export type TaskInboxItemRow = {
+  id: string
+  firm_id: string
+  user_id: string
+  task_id: string | null
+  capture_text: string
+  stage: 'inbox' | 'clarify' | 'delegate' | 'next' | 'now' | 'waiting' | 'weekly_review'
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export type TaskInboxItemInsert = Omit<TaskInboxItemRow, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export type NoteRow = {

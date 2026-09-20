@@ -58,11 +58,12 @@ describe('buildCrmMetrics', () => {
           opportunity({ id: 'lost', fase: 'lost' }),
         ],
         tasks: [
-          task({ id: 'entry-action', oportunidadId: 'entry' }),
+          task({ id: 'entry-action', oportunidadId: 'entry', esSiguienteAccion: true }),
           task({
             id: 'meeting-action',
             oportunidadId: 'meeting',
             tipo: 'Evento',
+            esSiguienteAccion: true,
             venceEn: '2026-08-07T09:00:00Z',
           }),
           task({
@@ -70,6 +71,7 @@ describe('buildCrmMetrics', () => {
             oportunidadId: 'quote',
             venceEn: '2026-08-02T09:00:00Z',
             critico: true,
+            esSiguienteAccion: true,
           }),
         ],
       },

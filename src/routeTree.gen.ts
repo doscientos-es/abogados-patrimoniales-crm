@@ -33,6 +33,7 @@ import { Route as OportunidadesIndexRouteImport } from './routes/oportunidades.i
 import { Route as OportunidadesIdRouteImport } from './routes/oportunidades.$id'
 import { Route as OportunidadesNuevaRouteImport } from './routes/oportunidades.nueva'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
+import { Route as TareasTaskIdRouteImport } from './routes/tareas.$taskId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -154,6 +155,11 @@ const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
   path: '/presupuestos/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TareasTaskIdRoute = TareasTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => TareasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -169,13 +175,14 @@ export interface FileRoutesByFullPath {
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
-  '/tareas': typeof TareasRoute
+  '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
@@ -195,13 +202,14 @@ export interface FileRoutesByTo {
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
-  '/tareas': typeof TareasRoute
+  '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos': typeof ContactosIndexRoute
   '/expedientes': typeof ExpedientesIndexRoute
   '/oportunidades': typeof OportunidadesIndexRoute
@@ -222,13 +230,14 @@ export interface FileRoutesById {
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
-  '/tareas': typeof TareasRoute
+  '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/tareas/$taskId'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/tareas/$taskId'
     | '/contactos'
     | '/expedientes'
     | '/oportunidades'
@@ -309,6 +320,7 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/tareas/$taskId'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
@@ -329,7 +341,7 @@ export interface RootRouteChildren {
   NotasRoute: typeof NotasRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacidadRoute: typeof PrivacidadRoute
-  TareasRoute: typeof TareasRoute
+  TareasRoute: typeof TareasRouteWithChildren
   TerminosRoute: typeof TerminosRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
@@ -512,8 +524,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tareas/$taskId': {
+      id: '/tareas/$taskId'
+      path: '/$taskId'
+      fullPath: '/tareas/$taskId'
+      preLoaderRoute: typeof TareasTaskIdRouteImport
+      parentRoute: typeof TareasRoute
+    }
   }
 }
+
+interface TareasRouteChildren {
+  TareasTaskIdRoute: typeof TareasTaskIdRoute
+}
+
+const TareasRouteChildren: TareasRouteChildren = {
+  TareasTaskIdRoute: TareasTaskIdRoute,
+}
+
+const TareasRouteWithChildren =
+  TareasRoute._addFileChildren(TareasRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -529,7 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotasRoute: NotasRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacidadRoute: PrivacidadRoute,
-  TareasRoute: TareasRoute,
+  TareasRoute: TareasRouteWithChildren,
   TerminosRoute: TerminosRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,

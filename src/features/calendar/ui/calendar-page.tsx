@@ -33,6 +33,7 @@ import { useMiembrosDespacho } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   useCrearTarea,
+  useEditarTarea,
   useTareasPersistentes,
   type CrearTareaInput,
   type TareaPersistida,
@@ -85,6 +86,7 @@ export function CalendarPage() {
   const cases = useExpedientesPersistentes(firmId)
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
+  const editTask = useEditarTarea(firmId)
   const [view, setView] = useState<CalendarView>('month')
   const [filter, setFilter] = useState<CalendarFilter>('all')
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
@@ -231,7 +233,21 @@ export function CalendarPage() {
         onCreate={(input) => createTask.mutateAsync(input)}
       />
       <EventDetailDialog
+        key={selectedEntry?.task.id}
         entry={selectedEntry}
+        pending={editTask.isPending}
+        onUpdate={(task, dueAt) =>
+          editTask.mutateAsync({
+            task,
+            titulo: task.titulo,
+            descripcion: task.descripcion,
+            estado: task.estado,
+            prioridad: task.prioridad,
+            venceEn: dueAt,
+            recordarEn: task.recordarEn,
+            asignadoId: task.asignadoId,
+          })
+        }
         onOpenChange={(open) => {
           if (!open) setSelectedEntry(null)
         }}
@@ -656,27 +672,28 @@ function CreateEventDialog({
 
 function EventDetailDialog({
   entry,
+  pending,
+  onUpdate,
   onOpenChange,
 }: {
   entry: CalendarEntry | null
+  pending: boolean
+  onUpdate: (task: TareaPersistida, dueAt: string | null) => Promise<unknown>
   onOpenChange: (open: boolean) => void
 }) {
   const task = entry?.task
-  const target = task?.expedienteId
-    ? '/expedientes/$id'
-    : task?.oportunidadId
-      ? '/oportunidades/$id'
-      : '/tareas'
-  const targetProps = task?.expedienteId
-    ? { params: { id: task.expedienteId } }
-    : task?.oportunidadId
-      ? { params: { id: task.oportunidadId } }
-      : {}
-  const targetLabel = task?.expedienteId
-    ? 'Ver expediente'
-    : task?.oportunidadId
-      ? 'Ver oportunidad'
-      : 'Ver en tareas'
+  const updateDate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!task) return
+    const dueAtValue = new FormData(event.currentTarget).get('dueAt')
+    const dueAt = typeof dueAtValue === 'string' ? dueAtValue : ''
+    try {
+      await onUpdate(task, dueAt ? new Date(dueAt).toISOString() : null)
+      toast.success('Fecha de tarea actualizada.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar la fecha.')
+    }
+  }
 
   return (
     <Dialog open={Boolean(entry)} onOpenChange={onOpenChange}>
@@ -705,10 +722,24 @@ function EventDetailDialog({
                   <dd className="font-medium">{task.critico ? 'Crítica' : task.prioridad}</dd>
                 </div>
               </dl>
+              <form className="space-y-1.5" onSubmit={(event) => void updateDate(event)}>
+                <Label htmlFor={`calendar-task-date-${task.id}`}>Fecha y hora</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id={`calendar-task-date-${task.id}`}
+                    name="dueAt"
+                    type="datetime-local"
+                    defaultValue={task.venceEn ? dateTimeLocalValue(new Date(task.venceEn)) : ''}
+                  />
+                  <Button type="submit" variant="outline" disabled={pending}>
+                    Actualizar fecha
+                  </Button>
+                </div>
+              </form>
             </div>
             <DialogFooter>
-              <Link to={target} {...targetProps} className={buttonVariants()}>
-                {targetLabel}
+              <Link to="/tareas/$taskId" params={{ taskId: task.id }} className={buttonVariants()}>
+                Abrir tarea
               </Link>
             </DialogFooter>
           </>

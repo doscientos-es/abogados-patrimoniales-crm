@@ -100,6 +100,7 @@ function renderDetail(
             titulo: 'Preparar firma',
             tipo: 'Tarea',
             estado: 'Pendiente',
+            esSiguienteAccion: true,
             prioridad: 'Alta',
             venceEn: '2026-08-10T09:00:00Z',
           },
@@ -125,7 +126,7 @@ describe('CaseDetail', () => {
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
-    expect(screen.getByText('Firma de hoja de encargo')).toBeTruthy()
+    expect(screen.getByText('Preparar firma')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))
     expect(screen.getByText('Escritura.pdf')).toBeTruthy()

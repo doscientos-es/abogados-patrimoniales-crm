@@ -49,10 +49,13 @@ export function buildCrmMetrics({ opportunities, tasks }: CrmDashboardData, now 
   const wonOpportunities = opportunities.filter((item) => item.fase === 'won')
   const lostOpportunities = opportunities.filter((item) => item.fase === 'lost')
   const tasksByOpportunity = groupTasksByOpportunity(openTasks)
+  const nextActionsByOpportunity = groupTasksByOpportunity(
+    openTasks.filter((task) => task.esSiguienteAccion),
+  )
   const staleOpportunities = activeOpportunities.filter((item) =>
     isOlderThan(item.actualizada, STALE_AFTER_MS, now),
   )
-  const withoutAction = activeOpportunities.filter((item) => !tasksByOpportunity.has(item.id))
+  const withoutAction = activeOpportunities.filter((item) => !nextActionsByOpportunity.has(item.id))
   const pendingReview = activeOpportunities.filter((item) => isPendingReview(item.subestado))
   const opportunitiesWithUpcomingMeeting = activeOpportunities.filter((item) =>
     (tasksByOpportunity.get(item.id) ?? []).some(
@@ -83,14 +86,14 @@ export function buildCrmMetrics({ opportunities, tasks }: CrmDashboardData, now 
     value: activeOpportunities.filter((item) => item.prioridad === priority).length,
   }))
   const nextActions = [...openTasks]
-    .filter((task) => task.oportunidadId)
+    .filter((task) => task.oportunidadId && task.esSiguienteAccion)
     .sort((first, second) => dueTimestamp(first.venceEn) - dueTimestamp(second.venceEn))
     .slice(0, 8)
   const alerts = activeOpportunities
     .map((opportunity): AlertItem | null => {
       const linkedTasks = tasksByOpportunity.get(opportunity.id) ?? []
       const messages = [
-        ...(linkedTasks.length ? [] : ['Sin próxima acción']),
+        ...(nextActionsByOpportunity.has(opportunity.id) ? [] : ['Sin próxima acción']),
         ...(isOlderThan(opportunity.actualizada, STALE_AFTER_MS, now)
           ? [`Sin actualizar ${daysSince(opportunity.actualizada, now)} días`]
           : []),
@@ -130,6 +133,8 @@ export function buildCrmMetrics({ opportunities, tasks }: CrmDashboardData, now 
     overdueActions: openTasks.filter(
       (task) => Boolean(task.oportunidadId) && isOverdue(task.venceEn, now),
     ),
+    waitingTasks: openTasks.filter((task) => task.estado === 'En espera'),
+    unopenedTasks: openTasks.filter((task) => Boolean(task.asignadoId) && !task.abiertaEn),
   }
 }
 

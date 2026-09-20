@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   createTask: vi.fn().mockResolvedValue(undefined),
+  editTask: vi.fn().mockResolvedValue(undefined),
   tasks: [] as unknown[],
 }))
 
@@ -26,6 +27,7 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: mocks.tasks, isPending: false, isError: false }),
   useCrearTarea: () => ({ mutateAsync: mocks.createTask, isPending: false }),
+  useEditarTarea: () => ({ mutateAsync: mocks.editTask, isPending: false }),
 }))
 vi.mock('@/features/expedientes', () => ({
   useExpedientesPersistentes: () => ({
@@ -48,6 +50,7 @@ afterEach(() => {
   cleanup()
   mocks.tasks = []
   mocks.createTask.mockClear()
+  mocks.editTask.mockClear()
   vi.useRealTimers()
 })
 
@@ -67,7 +70,7 @@ describe('CalendarPage', () => {
     )
   })
 
-  it('opens event details and provides a link to its related record', () => {
+  it('opens event details, updates the shared task date, and links to its task detail', async () => {
     mocks.tasks = [
       {
         id: 'task-1',
@@ -99,8 +102,20 @@ describe('CalendarPage', () => {
 
     expect(screen.getByRole('dialog', { name: 'Reunión con cliente' })).toBeTruthy()
     expect(screen.getByText('Revisar la estrategia.')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Ver expediente' }).getAttribute('href')).toBe(
-      '/expedientes/$id',
+    expect(screen.getByRole('link', { name: 'Abrir tarea' }).getAttribute('href')).toBe(
+      '/tareas/$taskId',
+    )
+    fireEvent.change(screen.getByLabelText('Fecha y hora'), {
+      target: { value: '2026-09-15T11:30' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar fecha' }))
+
+    await expect.poll(() => mocks.editTask.mock.calls.length).toBe(1)
+    expect(mocks.editTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({ id: 'task-1' }),
+        venceEn: new Date('2026-09-15T11:30').toISOString(),
+      }),
     )
   })
 })

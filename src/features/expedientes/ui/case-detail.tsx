@@ -454,6 +454,7 @@ function CaseSummary({
         .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
         .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
+  const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
@@ -471,7 +472,17 @@ function CaseSummary({
             <CardTitle className="text-base">Próxima acción</CardTitle>
           </CardHeader>
           <CardContent className="text-sm font-medium">
-            {expediente.proximaAccion || 'Sin acción principal'}
+            {nextAction ? (
+              <Link
+                to="/tareas/$taskId"
+                params={{ taskId: nextAction.id }}
+                className="hover:text-primary underline-offset-4 hover:underline"
+              >
+                {nextAction.titulo}
+              </Link>
+            ) : (
+              <span className="text-muted-foreground">Sin siguiente acción</span>
+            )}
           </CardContent>
         </Card>
         {initialDocuments.length ? (
@@ -517,6 +528,11 @@ function CaseSummary({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <QuickRow label="Tareas abiertas" value={tareas.length} />
+            <QuickRow
+              label="En espera"
+              value={tareas.filter((task) => task.estado === 'En espera').length}
+            />
+            <QuickRow label="Bloqueadas" value={tareas.filter((task) => task.bloqueada).length} />
             <QuickRow label="Últimas actuaciones" value={actuaciones.length} />
             <QuickRow label="Documentos vigentes" value={documentos.length} />
             <QuickRow label="Próximo vencimiento" value={nextDueLabel(tareas)} />
