@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   changeStatus: vi.fn().mockResolvedValue(undefined),
   cancelTask: vi.fn().mockResolvedValue(undefined),
   rejectTask: vi.fn().mockResolvedValue(undefined),
+  updateMeeting: vi.fn().mockResolvedValue(undefined),
+  role: 'paralegal',
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -27,7 +29,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('@/features/auth', () => ({
   useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
-  useActiveMembership: () => ({ data: { firmId: 'firm-1', role: 'paralegal' }, isPending: false }),
+  useActiveMembership: () => ({ data: { firmId: 'firm-1', role: mocks.role }, isPending: false }),
 }))
 vi.mock('@/features/crm', () => ({
   useMiembrosDespacho: () => ({
@@ -45,6 +47,11 @@ vi.mock('@/features/expedientes', () => ({
     isPending: false,
     isError: false,
   }),
+  useParticipantesPersistentes: () => ({
+    data: [{ id: 'participant-1', contactoId: 'contact-1', nombre: 'María Cliente' }],
+    isPending: false,
+    isError: false,
+  }),
 }))
 vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({
@@ -53,7 +60,7 @@ vi.mock('@/features/tareas', () => ({
         id: 'task-1',
         expedienteId: 'case-1',
         oportunidadId: null,
-        tipo: 'Tarea',
+        tipo: 'Evento',
         titulo: 'Preparar borrador',
         descripcion: 'Revisar la documentación.',
         estado: 'Pendiente',
@@ -101,6 +108,7 @@ vi.mock('@/features/tareas', () => ({
   useCambiarEstadoTarea: () => ({ mutateAsync: mocks.changeStatus, isPending: false }),
   useCancelarTarea: () => ({ mutateAsync: mocks.cancelTask, isPending: false }),
   useRechazarTarea: () => ({ mutateAsync: mocks.rejectTask, isPending: false }),
+  useActualizarReunionTarea: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
   usePonerTareaEnEspera: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCompletarTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useMarcarSiguienteAccion: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -117,6 +125,7 @@ import { TaskDetail } from './task-detail'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  mocks.role = 'paralegal'
 })
 
 describe('TaskDetail', () => {
@@ -145,6 +154,27 @@ describe('TaskDetail', () => {
     await expect.poll(() => mocks.rejectTask.mock.calls.length).toBe(1)
     expect(mocks.rejectTask).toHaveBeenCalledWith(
       expect.objectContaining({ motivo: 'Falta documentación' }),
+    )
+  })
+
+  it('preselects case contacts and saves enriched meeting details for a manager', async () => {
+    mocks.role = 'owner'
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(screen.getByText('Datos de la reunión')).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'María Cliente' }).selected).toBe(true)
+    fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2026-09-20T09:00' } })
+    fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-09-20T10:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar reunión' }))
+
+    await expect.poll(() => mocks.updateMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          attendeeContactIds: ['contact-1'],
+          mode: 'office_bilbao',
+        }),
+      }),
     )
   })
 })

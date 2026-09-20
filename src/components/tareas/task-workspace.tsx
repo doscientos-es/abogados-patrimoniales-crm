@@ -38,12 +38,16 @@ import { useMiembrosDespacho } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   useCambiarEstadoTarea,
+  useCapturarInboxTarea,
   useCrearTarea,
   useEditarTarea,
   useEtiquetasTarea,
+  useInboxTareas,
+  useMoverInboxTarea,
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
+  type TaskInboxItemRow,
   type TareaPersistida,
 } from '@/features/tareas'
 
@@ -51,6 +55,16 @@ type TaskView = 'calendar' | 'kanban' | 'list'
 type TaskFilterStatus = 'all' | TareaPersistida['estado']
 type TaskBoardColumnId = 'pending' | 'in-progress' | 'waiting'
 type TaskScope = 'mine' | 'delegated' | 'all' | 'administration'
+
+const INBOX_STAGE_LABELS: Record<TaskInboxItemRow['stage'], string> = {
+  inbox: 'INBOX',
+  clarify: 'Aclarar',
+  delegate: 'Delegar',
+  next: 'Siguiente',
+  now: 'Ahora',
+  waiting: 'En espera',
+  weekly_review: 'Revisión semanal',
+}
 
 const AGENDA_WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const AGENDA_START_HOUR = 8
@@ -232,6 +246,9 @@ export function TaskWorkspace() {
   const change = useCambiarEstadoTarea(firmId)
   const edit = useEditarTarea(firmId)
   const validate = useValidarPlazo(firmId)
+  const inbox = useInboxTareas(firmId, session.user?.id)
+  const captureInbox = useCapturarInboxTarea(firmId, session.user?.id)
+  const moveInbox = useMoverInboxTarea(firmId, session.user?.id)
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CrearTareaInput['tipo']>('all')
@@ -260,9 +277,15 @@ export function TaskWorkspace() {
     return (
       <PendingPanel title="Agenda no disponible" description="Necesitas una membresía activa." />
     )
-  if (tasks.isPending || labels.isPending || cases.isPending || members.isPending)
+  if (
+    tasks.isPending ||
+    labels.isPending ||
+    cases.isPending ||
+    members.isPending ||
+    inbox.isPending
+  )
     return <PendingPanel title="Cargando agenda" description="Consultando tareas y plazos…" />
-  if (tasks.isError || labels.isError || cases.isError || members.isError)
+  if (tasks.isError || labels.isError || cases.isError || members.isError || inbox.isError)
     return (
       <PendingPanel
         title="No se pudo cargar la agenda"
@@ -349,6 +372,23 @@ export function TaskWorkspace() {
       throw error
     }
   }
+  const addInboxItem = async (captureText: string, taskId: string | null) => {
+    try {
+      await captureInbox.mutateAsync({ captureText, taskId })
+      toast.success('Añadido a tu INBOX personal.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar en el INBOX.')
+      throw error
+    }
+  }
+  const changeInboxStage = async (itemId: string, stage: TaskInboxItemRow['stage']) => {
+    try {
+      await moveInbox.mutateAsync({ itemId, stage })
+      toast.success('INBOX actualizado sin cambiar el estado de la tarea.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo mover la entrada del INBOX.')
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
@@ -414,6 +454,13 @@ export function TaskWorkspace() {
           ).length ?? 0}
         </Badge>
       </div>
+      <TaskInbox
+        items={inbox.data ?? []}
+        tasks={allTasks}
+        pending={captureInbox.isPending || moveInbox.isPending}
+        onCapture={addInboxItem}
+        onMove={changeInboxStage}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="task-search" className="relative min-w-56 flex-1">
           <span className="sr-only">Buscar tareas y plazos</span>
@@ -597,6 +644,127 @@ export function TaskWorkspace() {
         </div>
       ) : null}
     </main>
+  )
+}
+
+function TaskInbox({
+  items,
+  tasks,
+  pending,
+  onCapture,
+  onMove,
+}: {
+  items: TaskInboxItemRow[]
+  tasks: TareaPersistida[]
+  pending: boolean
+  onCapture: (captureText: string, taskId: string | null) => Promise<void>
+  onMove: (itemId: string, stage: TaskInboxItemRow['stage']) => Promise<void>
+}) {
+  const titles = new Map(tasks.map((task) => [task.id, task.titulo]))
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const captureText = String(data.get('capture') ?? '')
+    const taskId = String(data.get('task') ?? '') || null
+    try {
+      await onCapture(captureText, taskId)
+      form.reset()
+    } catch {
+      // The mutation has already shown its actionable error message.
+    }
+  }
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-semibold">INBOX personal</h2>
+            <p className="text-muted-foreground text-sm">
+              Organiza tus capturas sin modificar el estado compartido de las tareas.
+            </p>
+          </div>
+          <Badge variant="secondary">{items.length}</Badge>
+        </div>
+        <form
+          className="grid gap-2 sm:grid-cols-[1fr_14rem_auto]"
+          onSubmit={(event) => void submit(event)}
+        >
+          <Input
+            name="capture"
+            aria-label="Captura rápida"
+            placeholder="Anota algo para revisar…"
+          />
+          <select
+            name="task"
+            aria-label="Tarea opcional para INBOX"
+            defaultValue=""
+            className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+          >
+            <option value="">Sin tarea vinculada</option>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.titulo}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" size="sm" disabled={pending}>
+            Capturar
+          </Button>
+        </form>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map((stage) => {
+            const stageItems = items.filter((item) => item.stage === stage)
+            return (
+              <section key={stage} className="bg-muted/30 space-y-2 rounded-md border p-3">
+                <h3 className="text-xs font-semibold tracking-wide uppercase">
+                  {INBOX_STAGE_LABELS[stage]} · {stageItems.length}
+                </h3>
+                {stageItems.map((item) => (
+                  <article
+                    key={item.id}
+                    className="bg-background space-y-2 rounded border p-2 text-sm"
+                  >
+                    <p>
+                      {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
+                    </p>
+                    {item.task_id ? (
+                      <Link
+                        to="/tareas/$taskId"
+                        params={{ taskId: item.task_id }}
+                        className="text-primary block truncate text-xs underline underline-offset-4"
+                      >
+                        {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
+                      </Link>
+                    ) : null}
+                    <select
+                      aria-label={`Mover ${item.capture_text || 'entrada'} del INBOX`}
+                      value={item.stage}
+                      disabled={pending}
+                      onChange={(event) =>
+                        void onMove(item.id, event.target.value as TaskInboxItemRow['stage'])
+                      }
+                      className="border-input bg-background h-8 w-full rounded border px-2 text-xs"
+                    >
+                      {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map(
+                        (option) => (
+                          <option key={option} value={option}>
+                            {INBOX_STAGE_LABELS[option]}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </article>
+                ))}
+                {!stageItems.length ? (
+                  <p className="text-muted-foreground text-xs">Sin elementos.</p>
+                ) : null}
+              </section>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

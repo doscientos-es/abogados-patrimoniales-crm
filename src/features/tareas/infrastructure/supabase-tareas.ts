@@ -12,14 +12,18 @@ import {
   type CaseDocumentRow,
   type DocumentTaskLinkRow,
   getSupabaseBrowserClient,
+  type Json,
   type TaskEvidenceRow,
   type TaskEventRow,
+  type TaskInboxItemRow,
   type TaskMessageRow,
   type TaskRow,
   type TaskDependencyRow,
   type TaskLabelRow,
   type TaskStatus,
 } from '@/shared/infrastructure/supabase'
+
+export type { TaskInboxItemRow } from '@/shared/infrastructure/supabase'
 
 const typeFromDb = {
   task: 'Tarea',
@@ -508,6 +512,111 @@ export function useEliminarDependenciaTarea(firmId: string | undefined) {
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export type DetallesReunion = {
+  startsAt: string
+  endsAt: string
+  mode: 'office_bilbao' | 'office_recalde' | 'phone' | 'outside_office'
+  location: string
+  meetingUrl: string
+  preparation: string
+  attendeeContactIds: string[]
+  attendeeUserIds: string[]
+}
+
+export function useActualizarReunionTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ task, details }: { task: TareaPersistida; details: DetallesReunion }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_task_meeting', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        new_meeting_details: details as Json,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la reunión. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useInboxTareas(firmId: string | undefined, userId: string | undefined) {
+  return useQuery({
+    queryKey: ['tareas', firmId, userId, 'inbox'],
+    enabled: Boolean(firmId && userId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) return []
+      const { data, error } = await client
+        .from('crm_task_inbox_items')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('user_id', userId)
+        .order('stage')
+        .order('position')
+        .order('created_at')
+      if (error) throw error
+      return (data ?? []) as TaskInboxItemRow[]
+    },
+  })
+}
+
+export function useCapturarInboxTarea(firmId: string | undefined, userId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      captureText,
+      taskId,
+    }: {
+      captureText: string
+      taskId?: string | null
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) throw new Error('No hay un despacho activo.')
+      if (!captureText.trim() && !taskId)
+        throw new Error('Escribe una captura o selecciona una tarea.')
+      const { data, error } = await client
+        .from('crm_task_inbox_items')
+        .insert({
+          firm_id: firmId,
+          user_id: userId,
+          task_id: taskId ?? null,
+          capture_text: captureText.trim(),
+          stage: 'inbox',
+          position: 0,
+        })
+        .select()
+        .single()
+      if (error) throw error
+      return data as TaskInboxItemRow
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, userId, 'inbox'] }),
+  })
+}
+
+export function useMoverInboxTarea(firmId: string | undefined, userId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ itemId, stage }: { itemId: string; stage: TaskInboxItemRow['stage'] }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) throw new Error('No hay un despacho activo.')
+      const { error } = await client
+        .from('crm_task_inbox_items')
+        .update({ stage })
+        .eq('id', itemId)
+        .eq('firm_id', firmId)
+        .eq('user_id', userId)
+      if (error) throw error
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, userId, 'inbox'] }),
   })
 }
 

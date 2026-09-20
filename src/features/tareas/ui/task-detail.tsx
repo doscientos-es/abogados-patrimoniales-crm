@@ -18,9 +18,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
-import { useExpedientesPersistentes } from '@/features/expedientes'
+import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
 import {
   useAbrirTarea,
+  useActualizarReunionTarea,
   useAnadirEvidenciaTarea,
   useAnadirMensajeTarea,
   useCambiarEstadoTarea,
@@ -40,6 +41,8 @@ import {
   useRechazarTarea,
   useTareasPersistentes,
   useVincularDocumentoTarea,
+  type DetallesReunion,
+  type TareaPersistida,
 } from '@/features/tareas'
 
 const date = (value: string | null) =>
@@ -52,6 +55,20 @@ const date = (value: string | null) =>
 const formText = (data: FormData, name: string) => {
   const value = data.get(name)
   return typeof value === 'string' ? value : ''
+}
+
+const detailsText = (details: Record<string, unknown>, name: string) =>
+  typeof details[name] === 'string' ? details[name] : ''
+
+const detailsIds = (details: Record<string, unknown>, name: string) =>
+  Array.isArray(details[name])
+    ? details[name].filter((value): value is string => typeof value === 'string')
+    : []
+
+const toDateTimeLocal = (value: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }
 
 export function TaskDetail({ taskId }: { taskId: string }) {
@@ -72,6 +89,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const complete = useCompletarTarea(firmId)
   const cancel = useCancelarTarea(firmId)
   const reject = useRechazarTarea(firmId)
+  const updateMeeting = useActualizarReunionTarea(firmId)
   const nextAction = useMarcarSiguienteAccion(firmId)
   const addMessage = useAnadirMensajeTarea(firmId, taskId)
   const addEvidence = useAnadirEvidenciaTarea(firmId, taskId)
@@ -88,6 +106,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     () => (tasks.data ?? []).find((item) => item.id === taskId) ?? null,
     [taskId, tasks.data],
   )
+  const participants = useParticipantesPersistentes(firmId, task?.expedienteId ?? '')
   const caseDocuments = useDocumentosExpedienteTarea(firmId, task?.expedienteId)
   const memberNames = useMemo(
     () => new Map((members.data ?? []).map((member) => [member.id, member.nombre])),
@@ -124,11 +143,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     }
   }, [canWork, open, task])
 
-  if (tasks.isPending || members.isPending || cases.isPending)
+  if (tasks.isPending || members.isPending || cases.isPending || participants.isPending)
     return (
       <PendingPanel title="Cargando tarea" description="Recuperando el encargo y su historial…" />
     )
-  if (tasks.isError || members.isError || cases.isError)
+  if (tasks.isError || members.isError || cases.isError || participants.isError)
     return (
       <PendingPanel title="No se pudo cargar la tarea" description="Reintenta en unos instantes." />
     )
@@ -303,6 +322,21 @@ export function TaskDetail({ taskId }: { taskId: string }) {
               ) : null}
             </CardContent>
           </Card>
+          {task.tipo === 'Evento' ? (
+            <MeetingDetailsCard
+              task={task}
+              participants={participants.data ?? []}
+              members={members.data ?? []}
+              canManage={canManage}
+              pending={updateMeeting.isPending}
+              onSubmit={(details) =>
+                run(
+                  () => updateMeeting.mutateAsync({ task, details }),
+                  'Detalles de reunión actualizados.',
+                )
+              }
+            />
+          ) : null}
           <Card>
             <CardContent className="space-y-4 pt-6">
               <h2 className="font-semibold">Conversación</h2>
@@ -775,5 +809,163 @@ function TaskReasonDialog({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function MeetingDetailsCard({
+  task,
+  participants,
+  members,
+  canManage,
+  pending,
+  onSubmit,
+}: {
+  task: TareaPersistida
+  participants: Array<{ id: string; contactoId: string | null; nombre: string }>
+  members: Array<{ id: string; nombre: string }>
+  canManage: boolean
+  pending: boolean
+  onSubmit: (details: DetallesReunion) => Promise<unknown>
+}) {
+  const details = task.reunion
+  const storedContactIds = detailsIds(details, 'attendeeContactIds')
+  const contactIds = storedContactIds.length
+    ? storedContactIds
+    : participants.flatMap((participant) =>
+        participant.contactoId ? [participant.contactoId] : [],
+      )
+  const userIds = detailsIds(details, 'attendeeUserIds')
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    const startsAt = formText(data, 'startsAt')
+    const endsAt = formText(data, 'endsAt')
+    if (!startsAt || !endsAt) return
+    void onSubmit({
+      startsAt: new Date(startsAt).toISOString(),
+      endsAt: new Date(endsAt).toISOString(),
+      mode: formText(data, 'mode') as DetallesReunion['mode'],
+      location: formText(data, 'location'),
+      meetingUrl: formText(data, 'meetingUrl'),
+      preparation: formText(data, 'preparation'),
+      attendeeContactIds: data
+        .getAll('attendeeContactIds')
+        .filter((value): value is string => typeof value === 'string'),
+      attendeeUserIds: data
+        .getAll('attendeeUserIds')
+        .filter((value): value is string => typeof value === 'string'),
+    })
+  }
+  return (
+    <Card>
+      <CardContent className="space-y-4 pt-6">
+        <div>
+          <h2 className="font-semibold">Datos de la reunión</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Los contactos del expediente se proponen como asistentes.
+          </p>
+        </div>
+        <form className="grid gap-3 md:grid-cols-2" onSubmit={submit}>
+          <Label>
+            Inicio
+            <Input
+              name="startsAt"
+              type="datetime-local"
+              required
+              disabled={!canManage}
+              defaultValue={toDateTimeLocal(detailsText(details, 'startsAt') || task.venceEn || '')}
+            />
+          </Label>
+          <Label>
+            Fin
+            <Input
+              name="endsAt"
+              type="datetime-local"
+              required
+              disabled={!canManage}
+              defaultValue={toDateTimeLocal(detailsText(details, 'endsAt'))}
+            />
+          </Label>
+          <Label>
+            Modalidad
+            <select
+              name="mode"
+              disabled={!canManage}
+              defaultValue={detailsText(details, 'mode') || 'office_bilbao'}
+              className="border-input bg-background h-10 w-full rounded-md border px-3"
+            >
+              <option value="office_bilbao">Despacho Bilbao</option>
+              <option value="office_recalde">Despacho Recalde</option>
+              <option value="phone">Teléfono</option>
+              <option value="outside_office">Fuera del despacho</option>
+            </select>
+          </Label>
+          <Label>
+            Lugar
+            <Input
+              name="location"
+              disabled={!canManage}
+              defaultValue={detailsText(details, 'location')}
+            />
+          </Label>
+          <Label>
+            Enlace de reunión
+            <Input
+              name="meetingUrl"
+              type="url"
+              disabled={!canManage}
+              defaultValue={detailsText(details, 'meetingUrl')}
+            />
+          </Label>
+          <Label>
+            Preparación
+            <Textarea
+              name="preparation"
+              disabled={!canManage}
+              defaultValue={detailsText(details, 'preparation')}
+            />
+          </Label>
+          <Label>
+            Contactos asistentes
+            <select
+              name="attendeeContactIds"
+              multiple
+              disabled={!canManage}
+              defaultValue={contactIds}
+              className="border-input bg-background min-h-24 w-full rounded-md border px-3"
+            >
+              {participants
+                .filter((participant) => participant.contactoId)
+                .map((participant) => (
+                  <option key={participant.id} value={participant.contactoId ?? ''}>
+                    {participant.nombre}
+                  </option>
+                ))}
+            </select>
+          </Label>
+          <Label>
+            Equipo asistente
+            <select
+              name="attendeeUserIds"
+              multiple
+              disabled={!canManage}
+              defaultValue={userIds}
+              className="border-input bg-background min-h-24 w-full rounded-md border px-3"
+            >
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.nombre}
+                </option>
+              ))}
+            </select>
+          </Label>
+          <div className="md:col-span-2">
+            <Button type="submit" disabled={!canManage || pending}>
+              Guardar reunión
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
