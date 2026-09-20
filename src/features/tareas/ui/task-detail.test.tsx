@@ -132,8 +132,8 @@ describe('TaskDetail', () => {
   it('shows task traceability and lets the responsible user work without managing protected fields', async () => {
     render(<TaskDetail taskId="task-1" />)
 
-    expect(screen.getByText('Ana Responsable')).toBeTruthy()
-    expect(screen.getByText('Luis Encargante')).toBeTruthy()
+    expect(screen.getAllByText('Ana Responsable')).not.toHaveLength(0)
+    expect(screen.getAllByText('Luis Encargante')).not.toHaveLength(0)
     expect(screen.getByText('Urgente')).toBeTruthy()
     expect(screen.getByText('Asignada para revisar.')).toBeTruthy()
     expect(screen.getByText('Siguiente acción:')).toBeTruthy()
@@ -162,7 +162,9 @@ describe('TaskDetail', () => {
     render(<TaskDetail taskId="task-1" />)
 
     expect(screen.getByText('Datos de la reunión')).toBeTruthy()
-    expect(screen.getByRole('option', { name: 'María Cliente' }).selected).toBe(true)
+    expect(
+      (screen.getByRole('option', { name: 'María Cliente' }) as HTMLOptionElement).selected,
+    ).toBe(true)
     fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2026-09-20T09:00' } })
     fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-09-20T10:00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Guardar reunión' }))

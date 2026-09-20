@@ -10,6 +10,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart({
+      router: { routeFileIgnorePattern: '\\.test\\.(ts|tsx)$' },
       importProtection: {
         behavior: 'error',
         client: { files: ['**/server/**'], specifiers: ['server-only'] },
