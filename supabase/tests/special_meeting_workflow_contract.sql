@@ -16,6 +16,10 @@ begin
     raise exception 'Special meeting cancellation and no-show reasons must be enforced';
   end if;
 
+  if position('A rescheduling reason is required' in workflow_definition) = 0 then
+    raise exception 'Special meeting rescheduling history and reasons must be enforced';
+  end if;
+
   if position('next_status in (''preparation'', ''cancelled'', ''not_held'') then null' in workflow_definition) = 0 then
     raise exception 'Unscheduled special meetings must not retain a calendar due date';
   end if;

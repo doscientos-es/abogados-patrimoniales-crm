@@ -231,6 +231,13 @@ describe('Documents', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Mover' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Mover documento' })
+    expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]')
+    expect(dialog.className).toContain('overflow-y-auto')
+    expect(
+      screen
+        .getByRole('button', { name: 'Confirmar movimiento' })
+        .closest('[data-slot="dialog-footer"]')?.className,
+    ).toContain('sticky')
     expect(dialog.textContent).toContain('El archivo y su historial de versiones no cambiarán.')
     const destination = screen.getByLabelText('Destino') as HTMLSelectElement
     fireEvent.change(destination, { target: { value: 'folder-1' } })

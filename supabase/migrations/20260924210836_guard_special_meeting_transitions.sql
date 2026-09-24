@@ -12,6 +12,8 @@ declare
   current_task public.crm_tasks;
   saved_task public.crm_tasks;
   current_status text;
+  current_reschedule_count integer := 0;
+  next_reschedule_count integer;
   next_status text;
 begin
   select * into current_task
@@ -50,6 +52,22 @@ begin
   if next_status in ('cancelled', 'not_held') and next_status is distinct from current_status
     and nullif(trim(coalesce(new_meeting_details ->> 'statusReason', '')), '') is null then
     raise exception 'A reason is required to cancel or mark a meeting as not held';
+  end if;
+  if current_status = 'scheduled' and next_status = 'preparation' then
+    if jsonb_typeof(new_meeting_details -> 'rescheduleHistory') is distinct from 'array' then
+      raise exception 'A rescheduling history entry is required';
+    end if;
+    if jsonb_typeof(current_task.meeting_details -> 'rescheduleHistory') = 'array' then
+      current_reschedule_count := jsonb_array_length(current_task.meeting_details -> 'rescheduleHistory');
+    end if;
+    next_reschedule_count := jsonb_array_length(new_meeting_details -> 'rescheduleHistory');
+    if next_reschedule_count <= current_reschedule_count
+      or nullif(trim(coalesce(
+        new_meeting_details -> 'rescheduleHistory' -> (next_reschedule_count - 1) ->> 'reason',
+        ''
+      )), '') is null then
+      raise exception 'A rescheduling reason is required';
+    end if;
   end if;
   if next_status in ('scheduled', 'in_progress', 'finished') then
     if nullif(trim(coalesce(new_meeting_details ->> 'startsAt', '')), '') is null
