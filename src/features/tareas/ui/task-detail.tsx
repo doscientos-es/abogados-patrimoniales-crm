@@ -49,8 +49,8 @@ import {
 const date = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
-        new Date(value),
-      )
+      new Date(value),
+    )
     : 'Sin fecha'
 
 const formText = (data: FormData, name: string) => {
@@ -69,49 +69,52 @@ const detailsIds = (details: Record<string, unknown>, name: string) =>
 const meetingPreparationItems = (details: Record<string, unknown>) =>
   Array.isArray(details['preparationItems'])
     ? details['preparationItems'].filter(
-        (
-          item,
-        ): item is {
-          id: string
-          text: string
-          done: boolean
-          category?: string
-          createdById?: string
-          createdByName?: string
-          createdAt?: string
-        } => {
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-          const value = item as Record<string, unknown>
-          return (
-            typeof value['id'] === 'string' &&
-            typeof value['text'] === 'string' &&
-            typeof value['done'] === 'boolean'
+      (
+        item,
+      ): item is {
+        id: string
+        text: string
+        done: boolean
+        category?: string
+        createdById?: string
+        createdByName?: string
+        createdAt?: string
+      } => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const value = item as Record<string, unknown>
+        return (
+          typeof value['id'] === 'string' &&
+          typeof value['text'] === 'string' &&
+          typeof value['done'] === 'boolean' &&
+          ['category', 'createdById', 'createdByName', 'createdAt'].every(
+            (key) => value[key] === undefined || typeof value[key] === 'string',
           )
-        },
-      )
+        )
+      },
+    )
     : []
 
 const meetingRescheduleHistory = (details: Record<string, unknown>) =>
   Array.isArray(details['rescheduleHistory'])
     ? details['rescheduleHistory'].filter(
-        (
-          item,
-        ): item is {
-          requestedAt: string
-          reason: string
-          previousStartsAt: string
-          previousEndsAt: string
-        } => {
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-          const value = item as Record<string, unknown>
-          return (
-            typeof value['requestedAt'] === 'string' &&
-            typeof value['reason'] === 'string' &&
-            typeof value['previousStartsAt'] === 'string' &&
-            typeof value['previousEndsAt'] === 'string'
-          )
-        },
-      )
+      (
+        item,
+      ): item is {
+        requestedAt: string
+        reason: string
+        previousStartsAt: string
+        previousEndsAt: string
+      } => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const value = item as Record<string, unknown>
+        return (
+          typeof value['requestedAt'] === 'string' &&
+          typeof value['reason'] === 'string' &&
+          typeof value['previousStartsAt'] === 'string' &&
+          typeof value['previousEndsAt'] === 'string'
+        )
+      },
+    )
     : []
 
 const formatElapsedTime = (startedAt: string, now: number) => {
@@ -997,6 +1000,11 @@ function SpecialMeetingWorkspace({
       return
     }
     const nextStatus = isRescheduling ? 'preparation' : formText(data, 'meetingStatus') || status
+    const statusReason = formText(data, 'meetingStatusReason').trim()
+    if (['cancelled', 'not_held'].includes(nextStatus) && nextStatus !== status && !statusReason) {
+      toast.error('Indica el motivo para cancelar o marcar la reunión como no celebrada.')
+      return
+    }
     const startInput = canManage
       ? formText(data, 'specialStartsAt')
       : detailsText(details, 'startsAt')
@@ -1035,20 +1043,20 @@ function SpecialMeetingWorkspace({
     const nextPreparationItems =
       meetingAction === 'add_preparation_item'
         ? [
-            ...submittedPreparationItems,
-            {
-              id:
-                typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                  ? crypto.randomUUID()
-                  : `preparation-${Date.now()}`,
-              text: newItemText,
-              done: false,
-              category: formText(data, 'preparationCategory'),
-              createdById: actorId,
-              ...(createdByName ? { createdByName } : {}),
-              createdAt: now,
-            },
-          ]
+          ...submittedPreparationItems,
+          {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `preparation-${Date.now()}`,
+            text: newItemText,
+            done: false,
+            category: formText(data, 'preparationCategory'),
+            createdById: actorId,
+            ...(createdByName ? { createdByName } : {}),
+            createdAt: now,
+          },
+        ]
         : removePreparationItemId
           ? submittedPreparationItems.filter((item) => item.id !== removePreparationItemId)
           : submittedPreparationItems
@@ -1056,9 +1064,9 @@ function SpecialMeetingWorkspace({
     const actualDurationMinutes =
       nextStatus === 'finished' && detailsText(details, 'startedAt')
         ? Math.max(
-            0,
-            Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
-          )
+          0,
+          Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
+        )
         : typeof details['actualDurationMinutes'] === 'number'
           ? details['actualDurationMinutes']
           : undefined
@@ -1082,19 +1090,22 @@ function SpecialMeetingWorkspace({
       meetingType: canManage ? formText(data, 'specialType') : detailsText(details, 'meetingType'),
       subject: canManage ? formText(data, 'specialSubject') : detailsText(details, 'subject'),
       status: nextStatus as NonNullable<DetallesReunion['status']>,
+      statusReason: ['cancelled', 'not_held'].includes(nextStatus)
+        ? statusReason || detailsText(details, 'statusReason')
+        : '',
       attendeeContactIds: canManage
         ? data
-            .getAll('specialContacts')
-            .filter((value): value is string => typeof value === 'string')
+          .getAll('specialContacts')
+          .filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeContactIds'),
       attendeeUserIds: canManage
         ? data.getAll('specialUsers').filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeUserIds'),
       attendeeNames: canManage
         ? formText(data, 'specialOtherAttendees')
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean)
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
         : Array.isArray(details['attendeeNames'])
           ? details['attendeeNames'].filter((item): item is string => typeof item === 'string')
           : [],
@@ -1115,16 +1126,16 @@ function SpecialMeetingWorkspace({
       preparationItems: nextPreparationItems,
       ...(isRescheduling
         ? {
-            rescheduleHistory: [
-              ...rescheduleHistory,
-              {
-                requestedAt: now,
-                reason: rescheduleReason,
-                previousStartsAt: detailsText(details, 'startsAt'),
-                previousEndsAt: detailsText(details, 'endsAt'),
-              },
-            ],
-          }
+          rescheduleHistory: [
+            ...rescheduleHistory,
+            {
+              requestedAt: now,
+              reason: rescheduleReason,
+              previousStartsAt: detailsText(details, 'startsAt'),
+              previousEndsAt: detailsText(details, 'endsAt'),
+            },
+          ],
+        }
         : {}),
       ...(nextStatus === 'in_progress' && !details['startedAt'] ? { startedAt: now } : {}),
       ...(nextStatus === 'finished' ? { finishedAt: now } : {}),
@@ -1197,6 +1208,12 @@ function SpecialMeetingWorkspace({
             </output>
             <p className="text-muted-foreground text-xs">Inicio real: {date(startedAt || null)}</p>
           </section>
+        ) : null}
+        {['cancelled', 'not_held'].includes(status) ? (
+          <p className="rounded-md border p-3 text-sm">
+            <strong>Motivo: </strong>
+            {detailsText(details, 'statusReason') || 'Sin motivo registrado.'}
+          </p>
         ) : null}
         <form className="space-y-4" onSubmit={submit}>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1478,6 +1495,16 @@ function SpecialMeetingWorkspace({
               />
             </Label>
           ) : null}
+          {['preparation', 'scheduled'].includes(status) ? (
+            <Label>
+              Motivo de cancelación o no celebración
+              <Textarea
+                name="meetingStatusReason"
+                disabled={!canManage}
+                placeholder="Indica qué ha ocurrido…"
+              />
+            </Label>
+          ) : null}
           {status === 'in_progress' || status === 'finished' ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Label>
@@ -1640,8 +1667,8 @@ function MeetingDetailsCard({
   const contactIds = storedContactIds.length
     ? storedContactIds
     : participants.flatMap((participant) =>
-        participant.contactoId ? [participant.contactoId] : [],
-      )
+      participant.contactoId ? [participant.contactoId] : [],
+    )
   const userIds = detailsIds(details, 'attendeeUserIds')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

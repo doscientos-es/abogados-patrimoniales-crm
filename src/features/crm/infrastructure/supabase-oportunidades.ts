@@ -165,6 +165,25 @@ export function useOportunidades(firmId: string | undefined) {
   })
 }
 
+export function useOportunidadesCompletas(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['crm', 'oportunidades-completas', firmId],
+    enabled: Boolean(firmId),
+    queryFn: async (): Promise<OportunidadPersistida[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_opportunities')
+        .select('*')
+        .eq('firm_id', firmId)
+        .is('archived_at', null)
+        .order('updated_at', { ascending: false })
+      if (error) throw error
+      return data.map(oportunidadFromRow)
+    },
+  })
+}
+
 export function useOportunidad(firmId: string | undefined, id: string) {
   return useQuery({
     queryKey: ['crm', 'oportunidades', firmId, id],
@@ -301,6 +320,7 @@ export function useActualizarOportunidad(firmId: string | undefined) {
         queryKey: ['crm', 'oportunidades', firmId],
         exact: true,
       })
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] })
     },
   })
 }
@@ -328,6 +348,7 @@ export function useActualizarDetallesOportunidad(firmId: string | undefined) {
         queryKey: ['crm', 'oportunidades', firmId],
         exact: true,
       })
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] })
       void queryClient.invalidateQueries({
         queryKey: ['crm', 'opportunity-events', firmId, oportunidad.id],
       })
@@ -379,7 +400,10 @@ export function useCrearOportunidad(firmId: string | undefined) {
       return resumenFromRow(data)
     },
     onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades', firmId] }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades', firmId] }),
+        queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] }),
+      ]).then(() => undefined),
   })
 }
 
@@ -407,6 +431,7 @@ export function useTransicionarOportunidad(firmId: string | undefined) {
         queryKey: ['crm', 'oportunidades', firmId],
         exact: true,
       })
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] })
     },
   })
 }
@@ -434,6 +459,7 @@ export function useArchivarOportunidad(firmId: string | undefined) {
       return id
     },
     onSuccess: (id) => {
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] })
       queryClient.setQueryData<OportunidadResumen[]>(['crm', 'oportunidades', firmId], (actuales) =>
         actuales?.filter((actual) => actual.id !== id),
       )

@@ -52,6 +52,7 @@ export type DetallesReunion = {
     previousStartsAt: string
     previousEndsAt: string
   }>
+  statusReason?: string
   startedAt?: string
   finishedAt?: string
   actualDurationMinutes?: number

@@ -353,6 +353,39 @@ describe('TaskDetail', () => {
     )
   })
 
+  it('requires and records a reason when a special meeting is cancelled', async () => {
+    mocks.role = 'owner'
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'scheduled',
+      startsAt: '2026-09-25T09:00:00.000Z',
+      endsAt: '2026-09-25T10:00:00.000Z',
+      mode: 'office_bilbao',
+      location: 'Sala Bilbao',
+      meetingUrl: '',
+      preparation: '',
+      attendeeContactIds: [],
+      attendeeUserIds: [],
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Motivo de cancelación o no celebración' }),
+      { target: { value: 'La persona asistente ha cancelado.' } },
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar reunión' }))
+
+    await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          status: 'cancelled',
+          statusReason: 'La persona asistente ha cancelado.',
+        }),
+      }),
+    )
+  })
+
   it('shows an elapsed timer while a special meeting is in progress', () => {
     mocks.meetingDetails = {
       specialType: 'meeting',

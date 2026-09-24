@@ -24,18 +24,21 @@ beforeEach(() => {
 })
 
 function renderProfile() {
+  const memberRole = 'lawyer' as const
   render(
     <ContactProfileTab
       firmId="firm-1"
-      contact={{
-        id: 'contact-1',
-        version: 3,
-        origen: 'Web',
-        creado: '24/09/2026',
-        profile: undefined,
-      } as never}
+      contact={
+        {
+          id: 'contact-1',
+          version: 3,
+          origen: 'Web',
+          creado: '24/09/2026',
+          profile: undefined,
+        } as never
+      }
       userId="user-1"
-      role="lawyer"
+      role={memberRole}
     />,
   )
 }

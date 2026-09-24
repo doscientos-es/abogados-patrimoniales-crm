@@ -195,6 +195,12 @@ export function LeadWorkspace({
     const version = Math.max(1, Number(formText(form, 'quoteVersion')) || 1)
     const status = formText(form, 'quoteStatus')
     const owner = formText(form, 'quoteOwner')
+    const previousVersion =
+      typeof quote['version'] === 'number' && Number.isFinite(quote['version'])
+        ? quote['version']
+        : 1
+    const history = Array.isArray(quote['historial']) ? quote['historial'] : []
+    const historyChanged = version !== previousVersion || status !== text(quote['estado'])
     try {
       await saveDetails.mutateAsync({
         id: opportunity.id,
@@ -218,10 +224,12 @@ export function LeadWorkspace({
             formaPago: formText(form, 'quotePayment'),
             gastos: formText(form, 'quoteExpenses'),
             condiciones: formText(form, 'quoteConditions'),
-            historial: [
-              ...(Array.isArray(quote['historial']) ? quote['historial'] : []),
-              { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
-            ],
+            historial: historyChanged
+              ? [
+                  ...history,
+                  { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+                ]
+              : history,
           },
         },
       })
@@ -635,7 +643,10 @@ export function LeadWorkspace({
               </p>
             </CardHeader>
             <CardContent>
-              <form className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" onSubmit={saveQuote}>
+              <form
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                onSubmit={(event) => void saveQuote(event)}
+              >
                 <Field
                   name="quoteReference"
                   label="Referencia"
@@ -821,7 +832,10 @@ export function LeadWorkspace({
             </p>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveRequestedDocuments}>
+            <form
+              className="grid gap-4 sm:grid-cols-2"
+              onSubmit={(event) => void saveRequestedDocuments(event)}
+            >
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="lead-requested-documents">
                   Documentos solicitados (uno por línea)

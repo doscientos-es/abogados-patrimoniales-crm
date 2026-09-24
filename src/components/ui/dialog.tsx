@@ -1,9 +1,9 @@
 import {
   Dialog,
   DialogClose,
-  DialogContent,
+  DialogContent as DoscientosDialogContent,
   DialogDescription,
-  DialogFooter,
+  DialogFooter as DoscientosDialogFooter,
   DialogHeader,
   DialogOverlay,
   DialogPortal,
@@ -17,13 +17,30 @@ import { cn } from '@/lib/utils'
 export {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogOverlay,
   DialogPortal,
   DialogTrigger,
+}
+
+export function DialogContent({
+  className,
+  ...props
+}: ComponentProps<typeof DoscientosDialogContent>) {
+  return (
+    <DoscientosDialogContent
+      {...props}
+      className={cn('max-h-[calc(100dvh-2rem)] overflow-y-auto', className)}
+    />
+  )
+}
+
+export function DialogFooter({
+  className,
+  ...props
+}: ComponentProps<typeof DoscientosDialogFooter>) {
+  return <DoscientosDialogFooter {...props} className={cn('sticky bottom-0 z-10', className)} />
 }
 
 export function DialogTitle({ className, ...props }: ComponentProps<typeof DoscientosDialogTitle>) {

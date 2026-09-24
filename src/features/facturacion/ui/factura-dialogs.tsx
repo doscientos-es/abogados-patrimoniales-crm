@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -138,14 +140,14 @@ export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }
               Total: {formatCurrency(factura.importeTotal, factura.moneda)}
             </p>
           </div>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={printInvoice}>
               <Printer className="h-4 w-4" /> Imprimir / Guardar PDF
             </Button>
             <Button type="button" onClick={printInvoice}>
               <FileDown className="h-4 w-4" /> Descargar PDF
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       )}
     />
@@ -182,7 +184,7 @@ function DialogShell({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+        {description ? <DialogDescription>{description}</DialogDescription> : null}
         {open ? render(() => setOpen(false)) : null}
       </DialogContent>
     </Dialog>
@@ -436,9 +438,11 @@ function BorradorFacturaForm({
           Total: {formatCurrency(totales.total, moneda)}
         </span>
       </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Guardando…' : 'Guardar borrador'}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Guardando…' : 'Guardar borrador'}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }
@@ -510,9 +514,11 @@ function EmitirFacturaForm({
       <p className="text-muted-foreground text-sm">
         Importe total: {formatCurrency(factura.importeTotal, factura.moneda)}
       </p>
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Emitiendo…' : 'Emitir factura'}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Emitiendo…' : 'Emitir factura'}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }
@@ -617,9 +623,11 @@ function RegistrarCobroForm({
       <p className="text-muted-foreground text-sm">
         Pendiente: {formatCurrency(factura.importePendiente, factura.moneda)}
       </p>
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Registrando…' : 'Registrar cobro'}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Registrando…' : 'Registrar cobro'}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }
@@ -696,9 +704,11 @@ function MotivoForm({
           required
         />
       </Campo>
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Procesando…' : etiqueta}
-      </Button>
+      <DialogFooter>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Procesando…' : etiqueta}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }

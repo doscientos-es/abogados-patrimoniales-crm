@@ -39,6 +39,14 @@ describe('ContactAIIntake', () => {
     render(<ContactAIIntake firmId="firm-1" onApply={onApply} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Dar de alta con IA' }))
+    const dialog = screen.getByRole('dialog', { name: 'Leer documentos para el contacto' })
+    expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]')
+    expect(dialog.className).toContain('overflow-y-auto')
+    expect(
+      screen
+        .getByRole('button', { name: 'Aplicar datos confirmados' })
+        .closest('[data-slot="dialog-footer"]')?.className,
+    ).toContain('sticky')
     expect(screen.getByText(/los enviará a OpenAI/)).toBeTruthy()
     expect(
       screen.getByRole('button', { name: 'Añadir PDF o imagen' }).hasAttribute('disabled'),
