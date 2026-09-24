@@ -185,7 +185,7 @@ export function ContactAIIntake({
           <Sparkles className="h-4 w-4" /> Dar de alta con IA
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Leer documentos para el contacto</DialogTitle>
           <DialogDescription>

@@ -4,6 +4,7 @@ import {
   calendarSlotHour,
   canMoveTaskInBoard,
   layoutCalendarEvents,
+  specialMeetingCreationIssue,
   sortTasksForAgenda,
   taskBoardColumn,
   taskStatusForBoardColumn,
@@ -118,5 +119,64 @@ describe('layoutCalendarEvents', () => {
       [0, 1],
       [0, 1],
     ])
+  })
+
+  it('uses a special meeting duration when sizing and checking agenda overlaps', () => {
+    const layouts = layoutCalendarEvents([
+      task({
+        id: 'meeting',
+        titulo: 'Reunión de dos horas',
+        tipo: 'Evento',
+        venceEn: '2026-09-10T10:00:00',
+        reunion: {
+          specialType: 'meeting',
+          startsAt: '2026-09-10T10:00:00',
+          endsAt: '2026-09-10T12:00:00',
+        },
+      }),
+      task({ id: 'later', titulo: 'Otra tarea', venceEn: '2026-09-10T11:00:00' }),
+    ])
+
+    expect(layouts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          task: expect.objectContaining({ id: 'meeting' }),
+          height: 156,
+          columnCount: 2,
+        }),
+        expect.objectContaining({
+          task: expect.objectContaining({ id: 'later' }),
+          columnCount: 2,
+        }),
+      ]),
+    )
+  })
+})
+
+describe('specialMeetingCreationIssue', () => {
+  const meeting = {
+    startsAt: '',
+    endsAt: '',
+    mode: 'office_bilbao' as const,
+    location: '',
+    meetingUrl: '',
+    preparation: '',
+    specialType: 'meeting' as const,
+    attendeeContactIds: [],
+    attendeeUserIds: [],
+  }
+
+  it('requires a subject and at least one attendee when creating a special meeting', () => {
+    expect(specialMeetingCreationIssue(meeting)).toBe('Indica el objeto de la reunión.')
+    expect(specialMeetingCreationIssue({ ...meeting, subject: 'Consulta' })).toBe(
+      'Añade al menos una persona asistente.',
+    )
+    expect(
+      specialMeetingCreationIssue({
+        ...meeting,
+        subject: 'Consulta',
+        attendeeNames: ['  Cliente  '],
+      }),
+    ).toBeNull()
   })
 })

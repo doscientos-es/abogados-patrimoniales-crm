@@ -43,5 +43,7 @@ export function AlertDialogFooter({
   className,
   ...props
 }: ComponentProps<typeof DoscientosAlertDialogFooter>) {
-  return <DoscientosAlertDialogFooter {...props} className={cn('sticky bottom-0 z-10', className)} />
+  return (
+    <DoscientosAlertDialogFooter {...props} className={cn('sticky bottom-0 z-10', className)} />
+  )
 }

@@ -15,6 +15,10 @@ import {
   filterLeadCommunications,
 } from '@/features/comunicaciones/application/communication-filters'
 import { useComunicacionesOportunidad, useMiembrosDespacho } from '@/features/crm'
+import {
+  useComunicacionesExpedientesDespacho,
+  useExpedientesPersistentes,
+} from '@/features/expedientes'
 import { useConfirmarLectura, useCrearConversacion, useNotasRemotas } from '@/features/notas'
 
 export const Route = createFileRoute('/comunicaciones')({
@@ -34,6 +38,8 @@ export function ComunicacionesPage() {
   const notes = useNotasRemotas(membership.data?.firmId)
   const members = useMiembrosDespacho(membership.data?.firmId)
   const leadCommunications = useComunicacionesOportunidad(membership.data?.firmId)
+  const caseCommunications = useComunicacionesExpedientesDespacho(membership.data?.firmId)
+  const cases = useExpedientesPersistentes(membership.data?.firmId)
   const createConversation = useCrearConversacion(membership.data?.firmId)
   const confirmRead = useConfirmarLectura(membership.data?.firmId)
   const [message, setMessage] = useState('')
@@ -82,7 +88,9 @@ export function ComunicacionesPage() {
     membership.isPending ||
     notes.isPending ||
     members.isPending ||
-    leadCommunications.isPending
+    leadCommunications.isPending ||
+    caseCommunications.isPending ||
+    cases.isPending
   )
     return <PendingPanel title="Cargando comunicaciones" description="Consultando el despacho…" />
   if (session.status !== 'signed-in' || !membership.data)
@@ -92,7 +100,13 @@ export function ComunicacionesPage() {
         description="Necesitas una membresía activa."
       />
     )
-  if (notes.isError || members.isError || leadCommunications.isError)
+  if (
+    notes.isError ||
+    members.isError ||
+    leadCommunications.isError ||
+    caseCommunications.isError ||
+    cases.isError
+  )
     return (
       <PendingPanel
         title="No se pudieron cargar las comunicaciones"
@@ -111,8 +125,8 @@ export function ComunicacionesPage() {
           <div>
             <p className="font-medium">Registrar una comunicación</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              Las llamadas, reuniones y borradores de email se registran desde la ficha del Lead o
-              del Onboarding para conservar el contexto.
+              Registra cada comunicación desde el Lead, el expediente o el Onboarding para conservar
+              su contexto y consultarla desde esta página.
             </p>
           </div>
           <div className="flex gap-2">
@@ -127,6 +141,63 @@ export function ComunicacionesPage() {
               Ir a Onboarding
             </Link>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Comunicaciones de expedientes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {caseCommunications.data?.length ? (
+            <ol className="divide-y rounded-xl border">
+              {caseCommunications.data.map((communication) => {
+                const caseRecord = cases.data?.find((item) => item.id === communication.case_id)
+                return (
+                  <li key={communication.id} className="flex flex-wrap gap-3 p-4">
+                    <Phone
+                      className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      {caseRecord ? (
+                        <Link
+                          to="/expedientes/$id"
+                          params={{ id: caseRecord.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {communication.subject ||
+                            communication.communication_type.replaceAll('_', ' ')}{' '}
+                          · {caseRecord.referencia} · {caseRecord.titulo}
+                        </Link>
+                      ) : (
+                        <p className="font-medium">
+                          {communication.subject ||
+                            communication.communication_type.replaceAll('_', ' ')}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground mt-1 text-sm whitespace-pre-wrap">
+                        {communication.content}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {communication.direction === 'inbound' ? 'Entrante' : 'Saliente'} ·{' '}
+                        {communication.channel.replaceAll('_', ' ')}
+                      </p>
+                    </div>
+                    <time
+                      dateTime={communication.occurred_at}
+                      className="text-muted-foreground text-xs"
+                    >
+                      {new Date(communication.occurred_at).toLocaleString('es-ES')}
+                    </time>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p className="text-muted-foreground py-5 text-center text-sm">
+              Todavía no hay comunicaciones registradas en expedientes.
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>

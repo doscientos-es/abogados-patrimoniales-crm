@@ -303,6 +303,26 @@ export function useComunicacionesExpediente(firmId: string | undefined, caseId: 
   })
 }
 
+export function useComunicacionesExpedientesDespacho(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, 'comunicaciones'],
+    enabled: Boolean(firmId),
+    queryFn: async (): Promise<CaseCommunicationRow[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .not('case_id', 'is', null)
+        .order('occurred_at', { ascending: false })
+        .limit(200)
+      if (error) throw error
+      return data
+    },
+  })
+}
+
 export type RegistrarComunicacionExpedienteInput = Pick<
   CaseCommunicationInsert,
   | 'contact_id'
@@ -342,8 +362,11 @@ export function useCrearComunicacionExpediente(firmId: string | undefined, caseI
       return data
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'comunicaciones'] }),
+      ]).then(() => undefined),
   })
 }

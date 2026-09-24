@@ -394,9 +394,8 @@ describe('Documents', () => {
     fireEvent.click(await screen.findByRole('button', { name: /flujo documental/i }))
 
     expect(await screen.findByRole('heading', { name: 'Flujo documental' })).toBeTruthy()
-    expect(screen.getByRole('textbox', { name: 'Buscar documento' }).className).toContain(
-      'leading-normal',
-    )
+    const searchInput = screen.getByRole('textbox', { name: 'Buscar documento' })
+    expect(searchInput.className).toContain('leading-normal')
     expect(screen.getByRole('heading', { name: 'Pendiente de tratar' })).toBeTruthy()
     expect(screen.getByText('Poder notarial.pdf')).toBeTruthy()
     expect(screen.getByText('Poder notarial archivado.pdf')).toBeTruthy()

@@ -79,6 +79,14 @@ describe('TeamAccess', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
 
     await screen.findByText(/tiene 2 registros asignados/i)
+    const dialog = screen.getByRole('alertdialog', { name: 'Eliminar usuario definitivamente' })
+    expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]')
+    expect(dialog.className).toContain('overflow-y-auto')
+    expect(
+      screen
+        .getByRole('button', { name: 'Eliminar usuario' })
+        .closest('[data-slot="alert-dialog-footer"]')?.className,
+    ).toContain('sticky')
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar usuario' }))
 
     await waitFor(() =>

@@ -80,6 +80,7 @@ const CALENDAR_EVENT_DURATION_MINUTES = 50
 export type CalendarEventLayout = {
   task: TareaPersistida
   top: number
+  height: number
   column: number
   columnCount: number
 }
@@ -116,6 +117,18 @@ const formatTaskDate = (value: string | null) => {
 function taskDateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
+}
+
+export function specialMeetingCreationIssue(details: DetallesReunion): string | null {
+  if (!details.subject?.trim()) return 'Indica el objeto de la reunión.'
+  if (
+    !details.attendeeContactIds.length &&
+    !details.attendeeUserIds.length &&
+    !details.attendeeNames?.some((name) => name.trim())
+  ) {
+    return 'Añade al menos una persona asistente.'
+  }
+  return null
 }
 
 /** Orden cronológico estable para que las acciones más próximas nunca queden ocultas. */
@@ -164,7 +177,33 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
       const date = new Date(task.venceEn)
       const minutes = date.getHours() * 60 + date.getMinutes()
       const start = Math.min(Math.max(minutes, startOfDay), endOfDay - 1)
-      return { task, start, end: Math.min(start + CALENDAR_EVENT_DURATION_MINUTES, endOfDay) }
+      const reunion =
+        task.reunion && typeof task.reunion === 'object' && !Array.isArray(task.reunion)
+          ? task.reunion
+          : {}
+      const meetingStartsAt = reunion['startsAt']
+      const meetingEndsAt = reunion['endsAt']
+      const actualMeetingDuration =
+        task.tipo === 'Evento' &&
+        reunion['specialType'] === 'meeting' &&
+        typeof meetingStartsAt === 'string' &&
+        typeof meetingEndsAt === 'string'
+          ? (Date.parse(meetingEndsAt) - Date.parse(meetingStartsAt)) / 60_000
+          : Number.NaN
+      const displayDuration =
+        Number.isFinite(actualMeetingDuration) && actualMeetingDuration > 0
+          ? Math.max(CALENDAR_EVENT_DURATION_MINUTES, Math.ceil(actualMeetingDuration))
+          : CALENDAR_EVENT_DURATION_MINUTES
+      const end = Math.min(start + displayDuration, endOfDay)
+      return {
+        task,
+        start,
+        end,
+        height: Math.max(
+          CALENDAR_EVENT_DURATION_MINUTES - 4,
+          ((end - start) / 60) * CALENDAR_HOUR_HEIGHT - 4,
+        ),
+      }
     })
     .sort(
       (first, second) =>
@@ -192,6 +231,7 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
     layouts.push({
       task: event.task,
       top: ((event.start - startOfDay) / 60) * CALENDAR_HOUR_HEIGHT,
+      height: event.height,
       column,
       columnCount: 1,
       end: event.end,
@@ -990,7 +1030,7 @@ function CalendarDayColumn({
         />
       ))}
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 border-b" />
-      {layouts.map(({ task, top, column, columnCount }) => (
+      {layouts.map(({ task, top, height, column, columnCount }) => (
         <button
           type="button"
           onClick={() => onEdit(task)}
@@ -1002,7 +1042,7 @@ function CalendarDayColumn({
             top: top + 2,
             left: `calc(${(column / columnCount) * 100}% + 0.25rem)`,
             width: `calc(${100 / columnCount}% - 0.5rem)`,
-            minHeight: CALENDAR_EVENT_DURATION_MINUTES - 4,
+            minHeight: height,
           }}
         >
           <span className="block opacity-75">
@@ -1527,6 +1567,13 @@ function TaskCreateDialog({
               communicationOriginalContent: text(data, 'communicationOriginalContent'),
             }
           : undefined
+      if (meeting?.specialType === 'meeting') {
+        const issue = specialMeetingCreationIssue(meeting)
+        if (issue) {
+          toast.error(issue)
+          return
+        }
+      }
       await onCreate({
         expedienteId: text(data, 'case'),
         oportunidadId: null,

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -49,6 +49,7 @@ function renderDetail(
   onCreateTask = vi.fn().mockResolvedValue(undefined),
   notas = [] as never[],
   eventos = [] as never[],
+  onCreateCommunication = vi.fn().mockResolvedValue(undefined),
 ) {
   return render(
     <CaseDetail
@@ -113,7 +114,7 @@ function renderDetail(
       taskPending={false}
       onCreateTask={onCreateTask}
       communicationPending={false}
-      onCreateCommunication={vi.fn().mockResolvedValue(undefined)}
+      onCreateCommunication={onCreateCommunication}
       editor={<div>Editor del expediente</div>}
       notas={notas}
       relatedForms={{
@@ -218,6 +219,32 @@ describe('CaseDetail', () => {
 
     expect(onCreateTask).toHaveBeenCalledWith(
       expect.objectContaining({ expedienteId: 'case-1', titulo: 'Enviar borrador' }),
+    )
+  })
+
+  it('registers an outbound phone communication with the expediente and main contact', async () => {
+    const onCreateCommunication = vi.fn().mockResolvedValue(undefined)
+    renderDetail(undefined, [], [], onCreateCommunication)
+    fireEvent.click(screen.getByRole('tab', { name: /comunicaciones/i }))
+    fireEvent.change(screen.getByLabelText('Asunto'), { target: { value: 'Seguimiento' } })
+    fireEvent.change(screen.getByLabelText('Resumen y acuerdos'), {
+      target: { value: 'Se confirmó la reunión para la próxima semana.' },
+    })
+    const form = screen.getByRole('button', { name: 'Registrar comunicación' }).closest('form')
+    if (!form) throw new Error('No se encontró el formulario de comunicación.')
+    fireEvent.submit(form)
+
+    await waitFor(() =>
+      expect(onCreateCommunication).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contact_id: 'contact-1',
+          direction: 'outbound',
+          communication_type: 'phone_call',
+          channel: 'phone',
+          subject: 'Seguimiento',
+          content: 'Se confirmó la reunión para la próxima semana.',
+        }),
+      ),
     )
   })
 

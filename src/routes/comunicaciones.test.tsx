@@ -47,6 +47,11 @@ vi.mock('@/features/crm', () => ({
   }),
 }))
 
+vi.mock('@/features/expedientes', () => ({
+  useComunicacionesExpedientesDespacho: () => ({ data: [], isPending: false, isError: false }),
+  useExpedientesPersistentes: () => ({ data: [], isPending: false, isError: false }),
+}))
+
 vi.mock('@/features/notas', () => ({
   useConfirmarLectura: () => ({ isPending: false, mutate: vi.fn() }),
   useCrearConversacion: () => ({ isPending: false, mutate: vi.fn() }),
