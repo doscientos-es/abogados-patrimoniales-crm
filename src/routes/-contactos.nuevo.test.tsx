@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   createContact: vi.fn().mockResolvedValue({ id: 'contact-1' }),
   navigate: vi.fn(),
+  aiValues: {} as Record<string, string>,
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
@@ -27,7 +28,25 @@ vi.mock('@/features/auth', () => ({
 }))
 
 vi.mock('@/features/contactos', () => ({
+  useContactos: () => ({ data: [] }),
   useCrearContacto: () => ({ isPending: false, mutateAsync: mocks.createContact }),
+}))
+
+vi.mock('@/features/contactos/ui/contact-ai-intake', () => ({
+  ContactAIIntake: ({
+    onApply,
+  }: {
+    firmId: string
+    onApply: (values: Record<string, string>) => void
+  }) => (
+    <button type="button" onClick={() => onApply(mocks.aiValues)}>
+      Aplicar datos de prueba
+    </button>
+  ),
+}))
+
+vi.mock('@/features/notas', () => ({
+  useCrearNotaPersona: () => ({ mutateAsync: vi.fn() }),
 }))
 
 import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
@@ -36,6 +55,7 @@ afterEach(() => {
   cleanup()
   mocks.createContact.mockReset().mockResolvedValue({ id: 'contact-1' })
   mocks.navigate.mockClear()
+  mocks.aiValues = {}
 })
 
 describe('NuevoContactoPage', () => {
@@ -46,7 +66,7 @@ describe('NuevoContactoPage', () => {
       screen.getByRole('form', { name: 'Formulario de nuevo contacto' }).getAttribute('aria-busy'),
     ).toBe('false')
     expect((screen.getByLabelText('País') as HTMLInputElement).value).toBe('España')
-    expect((screen.getByLabelText('Origen') as HTMLInputElement).value).toBe('Web')
+    expect((screen.getByLabelText(/^Origen/) as HTMLInputElement).value).toBe('Web')
 
     const postalCode = screen.getByLabelText('Código postal')
     expect(postalCode.getAttribute('inputmode')).toBe('numeric')
@@ -78,5 +98,60 @@ describe('NuevoContactoPage', () => {
       to: '/contactos/$id',
       params: { id: 'contact-1' },
     })
+  })
+
+  it('aplica los datos confirmados por IA al formulario sin crear el contacto automáticamente', async () => {
+    mocks.aiValues = {
+      naturaleza: 'Persona física',
+      nombre: 'Ana',
+      primerApellido: 'López García',
+      documento: '12345678Z',
+      codigoPostal: '28013',
+      municipio: 'Madrid',
+      fechaNacimiento: '1990-01-02',
+    }
+    render(<NuevoContactoPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar datos de prueba' }))
+
+    await waitFor(() =>
+      expect((screen.getByLabelText(/^Nombre/) as HTMLInputElement).value).toBe('Ana'),
+    )
+    expect((screen.getByLabelText('Apellidos') as HTMLInputElement).value).toBe('López García')
+    expect((screen.getByLabelText('NIF / CIF') as HTMLInputElement).value).toBe('12345678Z')
+    expect((screen.getByLabelText('Código postal') as HTMLInputElement).value).toBe('28013')
+    expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Madrid')
+    expect((screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement).value).toBe(
+      '1990-01-02',
+    )
+    expect(mocks.createContact).not.toHaveBeenCalled()
+
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    await waitFor(() =>
+      expect(mocks.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          valores: expect.objectContaining({
+            nombre: 'Ana',
+            primerApellido: 'López García',
+            documento: '12345678Z',
+            codigoPostal: '28013',
+            municipio: 'Madrid',
+          }),
+        }),
+      ),
+    )
+  })
+
+  it('cambia la naturaleza antes de aplicar los datos específicos de persona jurídica', () => {
+    mocks.aiValues = { naturaleza: 'Persona jurídica', razonSocial: 'Acme S.L.' }
+    render(<NuevoContactoPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar datos de prueba' }))
+
+    expect((screen.getByLabelText('Naturaleza') as HTMLSelectElement).value).toBe(
+      'Persona jurídica',
+    )
+    expect((screen.getByLabelText(/^Denominación/) as HTMLInputElement).value).toBe('Acme S.L.')
+    expect(mocks.createContact).not.toHaveBeenCalled()
   })
 })

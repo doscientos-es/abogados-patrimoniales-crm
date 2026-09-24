@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
-import { useState, type FormEvent, type InputHTMLAttributes } from 'react'
+import { useRef, useState, type FormEvent, type InputHTMLAttributes } from 'react'
+import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -8,8 +9,17 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useCrearContacto, type Naturaleza, type RelacionDespacho } from '@/features/contactos'
+import {
+  useContactos,
+  useCrearContacto,
+  type Naturaleza,
+  type RelacionDespacho,
+} from '@/features/contactos'
+import { useCrearNotaPersona } from '@/features/notas'
+
+import { ContactAIIntake } from './contact-ai-intake'
 
 const NATURES: Naturaleza[] = ['Persona física', 'Persona jurídica', 'Órgano judicial', 'Público']
 const RELATIONSHIPS: RelacionDespacho[] = [
@@ -33,7 +43,7 @@ const CONTACT_FIELD_NAMES = [
   'municipio',
   'provincia',
   'pais',
-  'canal',
+  'recommendedById',
   'fechaNacimiento',
   'telefono2',
   'email2',
@@ -55,8 +65,32 @@ export function NuevoContactoPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const createContact = useCrearContacto(firmId)
+  const contacts = useContactos(firmId)
+  const createNote = useCrearNotaPersona(firmId)
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
+  const [origin, setOrigin] = useState('Web')
+  const [recommendedById, setRecommendedById] = useState('')
+  const [recommenderQuery, setRecommenderQuery] = useState('')
+  const [notes, setNotes] = useState<
+    { title: string; content: string; highlighted: boolean; critical: boolean }[]
+  >([])
+  const formRef = useRef<HTMLFormElement>(null)
+
+  const applyAIValues = (values: Record<string, string>) => {
+    const extractedNature = values['naturaleza']
+    if (NATURES.includes(extractedNature as Naturaleza) && extractedNature !== nature)
+      flushSync(() => setNature(extractedNature as Naturaleza))
+    for (const [name, value] of Object.entries(values)) {
+      if (name === 'naturaleza') continue
+      const field = formRef.current?.elements.namedItem(name)
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement)) continue
+      if (name === 'codigoPostal' || name === 'numeroOrgano') field.value = value.replace(/\D/g, '')
+      else if (name === 'telefono' || name === 'telefono2')
+        field.value = value.replace(/[^\d+()\s-]/g, '')
+      else field.value = value
+    }
+  }
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Preparando alta" description="Consultando el despacho…" />
@@ -91,6 +125,23 @@ export function NuevoContactoPage() {
         relacion: relationship,
         valores: values,
       })
+      try {
+        for (const note of notes) {
+          await createNote.mutateAsync({
+            contactoId: contact.id,
+            etiquetaOrigen: displayName,
+            titulo: note.title,
+            contenido: note.content,
+            destacada: note.highlighted,
+            critica: note.critical,
+          })
+        }
+      } catch (error) {
+        toast.error(
+          'El contacto se creó, pero alguna nota interna no se pudo guardar. Puedes reintentar desde la ficha.',
+        )
+        throw error
+      }
       toast.success('Contacto creado correctamente.')
       await navigate({ to: '/contactos/$id', params: { id: contact.id } })
     } catch (error) {
@@ -105,130 +156,228 @@ export function NuevoContactoPage() {
       </Link>
       <SectionHeader
         title="Nuevo contacto"
-        subtitle="La ficha se guardará en el despacho activo."
+        subtitle="La ficha y sus notas se guardarán en el despacho activo."
+        actions={<ContactAIIntake firmId={firmId} onApply={applyAIValues} />}
       />
-      <Card>
-        <CardContent className="pt-6">
-          <form
-            aria-busy={createContact.isPending}
-            aria-label="Formulario de nuevo contacto"
-            className="grid gap-4 sm:grid-cols-2"
-            onSubmit={(event) => void submit(event)}
-          >
-            <Choice
-              name="naturaleza"
-              label="Naturaleza"
-              value={nature}
-              options={NATURES}
-              onChange={(value) => setNature(value as Naturaleza)}
-            />
-            <Choice
-              name="relacion"
-              label="Relación"
-              value={relationship}
-              options={RELATIONSHIPS}
-              onChange={(value) => setRelationship(value as RelacionDespacho)}
-            />
-            {nature === 'Persona física' ? (
-              <>
-                <Field name="nombre" label="Nombre" autoComplete="given-name" required />
-                <Field name="primerApellido" label="Apellidos" autoComplete="family-name" />
-                <Field
-                  name="fechaNacimiento"
-                  label="Fecha de nacimiento"
-                  type="date"
-                  autoComplete="bday"
-                />
-              </>
-            ) : nature === 'Órgano judicial' ? (
-              <>
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="space-y-2 pt-6">
+            <p className="text-muted-foreground text-sm">
+              La naturaleza indica qué es el contacto y la relación indica su vínculo con el
+              despacho.
+            </p>
+            <form
+              ref={formRef}
+              aria-busy={createContact.isPending}
+              aria-label="Formulario de nuevo contacto"
+              className="grid gap-4 sm:grid-cols-2"
+              onSubmit={(event) => void submit(event)}
+            >
+              <Choice
+                name="naturaleza"
+                label="Naturaleza"
+                value={nature}
+                options={NATURES}
+                onChange={(value) => setNature(value as Naturaleza)}
+              />
+              <Choice
+                name="relacion"
+                label="Relación con el despacho"
+                value={relationship}
+                options={RELATIONSHIPS}
+                onChange={(value) => setRelationship(value as RelacionDespacho)}
+              />
+              {nature === 'Persona física' ? (
+                <>
+                  <Field name="nombre" label="Nombre" autoComplete="given-name" required />
+                  <Field name="primerApellido" label="Apellidos" autoComplete="family-name" />
+                  <Field
+                    name="fechaNacimiento"
+                    label="Fecha de nacimiento"
+                    type="date"
+                    autoComplete="bday"
+                  />
+                </>
+              ) : nature === 'Órgano judicial' ? (
+                <>
+                  <Field
+                    name="razonSocial"
+                    label="Denominación"
+                    autoComplete="organization"
+                    required
+                  />
+                  <Field
+                    name="numeroOrgano"
+                    label="Número"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    digitsOnly
+                    required
+                  />
+                  <Field name="partidoJudicial" label="Partido judicial" required />
+                  <Field name="codigoOrgano" label="Código del órgano" />
+                </>
+              ) : nature === 'Público' ? (
+                <>
+                  <Field
+                    name="razonSocial"
+                    label="Denominación"
+                    autoComplete="organization"
+                    required
+                  />
+                  <Field name="organismo" label="Organismo" />
+                  <Field name="unidadAdministrativa" label="Unidad administrativa" />
+                </>
+              ) : (
                 <Field
                   name="razonSocial"
                   label="Denominación"
                   autoComplete="organization"
                   required
                 />
-                <Field
-                  name="numeroOrgano"
-                  label="Número"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  digitsOnly
-                  required
+              )}
+              <Field
+                name="documento"
+                label="NIF / CIF"
+                autoCapitalize="characters"
+                spellCheck={false}
+              />
+              <Field name="email" label="Correo" type="email" autoComplete="email" />
+              <Field name="email2" label="Correo alternativo" type="email" autoComplete="email" />
+              <Field
+                name="telefono"
+                label="Teléfono"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                pattern="[0-9+() -]+"
+                maxLength={20}
+              />
+              <Field
+                name="telefono2"
+                label="Teléfono alternativo"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                pattern="[0-9+() -]+"
+                maxLength={20}
+              />
+              {(nature === 'Persona jurídica' || nature === 'Público') && (
+                <>
+                  <Field name="personaContacto" label="Persona de contacto" />
+                  <Field name="cargo" label="Cargo" />
+                </>
+              )}
+              <Field name="direccion" label="Dirección" autoComplete="street-address" />
+              <Field
+                name="codigoPostal"
+                label="Código postal"
+                autoComplete="postal-code"
+                inputMode="numeric"
+                pattern="[0-9]{5}"
+                maxLength={5}
+                description="Introduce los cinco dígitos del código postal."
+                digitsOnly
+              />
+              <Field name="municipio" label="Municipio" autoComplete="address-level2" />
+              <Field name="provincia" label="Provincia" autoComplete="address-level1" />
+              <Field name="pais" label="País" autoComplete="country-name" defaultValue="España" />
+              <div className="space-y-1.5">
+                <Label htmlFor="contact-origen">Origen del contacto</Label>
+                <Input
+                  id="contact-origen"
+                  name="origen"
+                  value={origin}
+                  onChange={(event) => {
+                    setOrigin(event.target.value)
+                    if (!/recomend/i.test(event.target.value)) {
+                      setRecommendedById('')
+                      setRecommenderQuery('')
+                    }
+                  }}
                 />
-                <Field name="partidoJudicial" label="Partido judicial" required />
-                <Field name="codigoOrgano" label="Código del órgano" />
-              </>
-            ) : nature === 'Público' ? (
-              <>
-                <Field
-                  name="razonSocial"
-                  label="Denominación"
-                  autoComplete="organization"
-                  required
-                />
-                <Field name="organismo" label="Organismo" />
-                <Field name="unidadAdministrativa" label="Unidad administrativa" />
-              </>
-            ) : (
-              <Field name="razonSocial" label="Denominación" autoComplete="organization" required />
-            )}
-            <Field
-              name="documento"
-              label="NIF / CIF"
-              autoCapitalize="characters"
-              spellCheck={false}
-            />
-            <Field name="email" label="Correo" type="email" autoComplete="email" />
-            <Field name="email2" label="Correo alternativo" type="email" autoComplete="email" />
-            <Field
-              name="telefono"
-              label="Teléfono"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              pattern="[0-9+() -]+"
-              maxLength={20}
-            />
-            <Field
-              name="telefono2"
-              label="Teléfono alternativo"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              pattern="[0-9+() -]+"
-              maxLength={20}
-            />
-            {(nature === 'Persona jurídica' || nature === 'Público') && (
-              <>
-                <Field name="personaContacto" label="Persona de contacto" />
-                <Field name="cargo" label="Cargo" />
-              </>
-            )}
-            <Field name="direccion" label="Dirección" autoComplete="street-address" />
-            <Field
-              name="codigoPostal"
-              label="Código postal"
-              autoComplete="postal-code"
-              inputMode="numeric"
-              pattern="[0-9]{5}"
-              maxLength={5}
-              description="Introduce los cinco dígitos del código postal."
-              digitsOnly
-            />
-            <Field name="municipio" label="Municipio" autoComplete="address-level2" />
-            <Field name="provincia" label="Provincia" autoComplete="address-level1" />
-            <Field name="pais" label="País" autoComplete="country-name" defaultValue="España" />
-            <Field name="origen" label="Origen" defaultValue="Web" />
-            <Field name="canal" label="Canal" />
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={createContact.isPending}>
-                {createContact.isPending ? 'Creando…' : 'Crear contacto'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              </div>
+              {/recomend/i.test(origin) ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact-recommendedById">Recomendado por</Label>
+                  <Input
+                    id="contact-recommendedById"
+                    list="contact-recommenders"
+                    aria-label="Contacto que ha recomendado a esta persona"
+                    placeholder="Busca por nombre o referencia"
+                    value={recommenderQuery}
+                    onChange={(event) => {
+                      setRecommenderQuery(event.target.value)
+                      const match = (contacts.data ?? []).find(
+                        (item) =>
+                          `${item.nombre} ${item.apellidos ?? item.razonSocial ?? ''} · ${item.referencia ?? ''}` ===
+                          event.target.value,
+                      )
+                      setRecommendedById(match?.id ?? '')
+                    }}
+                    required
+                  />
+                  <datalist id="contact-recommenders">
+                    {(contacts.data ?? []).map((item) => (
+                      <option
+                        key={item.id}
+                        value={`${item.nombre} ${item.apellidos ?? item.razonSocial ?? ''} · ${item.referencia ?? ''}`}
+                      >
+                        {item.nombre} {item.apellidos ?? item.razonSocial ?? ''}
+                      </option>
+                    ))}
+                  </datalist>
+                  <input
+                    type="hidden"
+                    name="recommendedById"
+                    value={recommendedById}
+                    aria-label="Identificador del contacto recomendador"
+                  />
+                </div>
+              ) : null}
+              <div className="sm:col-span-2">
+                <p className="text-sm font-medium">Notas internas</p>
+                <p className="text-muted-foreground text-xs">
+                  Se guardarán vinculadas al contacto cuando lo crees.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {notes.map((note, index) => (
+                    <article
+                      key={index}
+                      className="w-full max-w-xs rotate-[-1deg] border border-amber-300 bg-amber-100 p-4 text-sm shadow-md"
+                    >
+                      <strong>{note.title || 'Nota interna'}</strong>
+                      <p className="mt-2 whitespace-pre-wrap">{note.content}</p>
+                      <div className="mt-2 flex justify-between text-xs">
+                        <span>
+                          {note.critical
+                            ? 'Advertencia crítica'
+                            : note.highlighted
+                              ? 'Destacada'
+                              : 'Interna'}
+                        </span>
+                        <button
+                          type="button"
+                          className="underline"
+                          onClick={() => setNotes((old) => old.filter((_, i) => i !== index))}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                  <DraftNote onAdd={(note) => setNotes((old) => [...old, note])} />
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={createContact.isPending}>
+                  {createContact.isPending ? 'Creando…' : 'Crear contacto'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   )
 }
@@ -315,6 +464,65 @@ function Choice({
           <option key={option}>{option}</option>
         ))}
       </select>
+    </div>
+  )
+}
+
+function DraftNote({
+  onAdd,
+}: {
+  onAdd: (note: { title: string; content: string; highlighted: boolean; critical: boolean }) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [highlighted, setHighlighted] = useState(false)
+  const [critical, setCritical] = useState(false)
+  return (
+    <div className="w-full max-w-xs rotate-1 border border-amber-300 bg-amber-100 p-4 shadow-md">
+      <Input
+        aria-label="Título de nota interna"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder="Título de la nota (opcional)"
+      />
+      <Textarea
+        className="mt-2 bg-transparent"
+        rows={4}
+        aria-label="Contenido de nota interna"
+        value={content}
+        onChange={(event) => setContent(event.target.value)}
+        placeholder="Escribe aquí la anotación…"
+      />
+      <label className="mt-2 flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={highlighted}
+          onChange={(event) => setHighlighted(event.target.checked)}
+        />{' '}
+        Destacada
+      </label>
+      <label className="mt-1 flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={critical}
+          onChange={(event) => setCritical(event.target.checked)}
+        />{' '}
+        Advertencia crítica
+      </label>
+      <Button
+        type="button"
+        className="mt-3 w-full"
+        disabled={!content.trim()}
+        onClick={() => {
+          onAdd({ title, content: content.trim(), highlighted, critical })
+          setTitle('')
+          setContent('')
+          setHighlighted(false)
+          setCritical(false)
+        }}
+      >
+        Añadir nota
+      </Button>
     </div>
   )
 }

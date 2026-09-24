@@ -26,6 +26,7 @@ import {
   contactosParaAutocompletado,
   type ContactAutocompleteOption,
 } from '@/features/crm/application/contact-autocomplete'
+import { LeadNextActionDialog } from '@/features/crm/ui/lead-next-action-dialog'
 import { useCrearNotaOportunidad } from '@/features/notas'
 import { useCrearTarea } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
@@ -63,6 +64,10 @@ export function NuevaOportunidadPage() {
   const [hasChangedContact, setHasChangedContact] = useState(false)
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [participantSearch, setParticipantSearch] = useState('')
+  const [createdOpportunity, setCreatedOpportunity] = useState<{
+    id: string
+    reference: string
+  } | null>(null)
   const preselectedContact = useMemo(
     () => (contacts.data ?? []).find((item) => item.id === search.contactId),
     [contacts.data, search.contactId],
@@ -192,7 +197,7 @@ export function NuevaOportunidadPage() {
         })
       }
       toast.success('Lead guardado en la fase Entrada.')
-      await navigate({ to: '/oportunidades/$id', params: { id: opportunity.id } })
+      setCreatedOpportunity({ id: opportunity.id, reference: opportunity.referencia })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el Lead.')
     }
@@ -459,6 +464,19 @@ export function NuevaOportunidadPage() {
           </Button>
         </div>
       </form>
+      {createdOpportunity ? (
+        <LeadNextActionDialog
+          open
+          firmId={firmId}
+          opportunityId={createdOpportunity.id}
+          reference={createdOpportunity.reference}
+          onFinish={() => {
+            const { id } = createdOpportunity
+            setCreatedOpportunity(null)
+            void navigate({ to: '/oportunidades/$id', params: { id } })
+          }}
+        />
+      ) : null}
     </main>
   )
 }

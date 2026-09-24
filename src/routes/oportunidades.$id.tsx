@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@doscientos/ui'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ExternalLink, Pencil } from 'lucide-react'
+import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ContactRound, Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -41,6 +41,7 @@ import {
   useTransicionarOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
+import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
 import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
@@ -49,6 +50,7 @@ export type LeadDetailTab =
   | 'summary'
   | 'contact'
   | 'qualification'
+  | 'firstMeeting'
   | 'tasks'
   | 'communications'
   | 'notes'
@@ -59,6 +61,7 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: 'summary', label: 'Resumen' },
   { id: 'contact', label: 'Contacto' },
   { id: 'qualification', label: 'Cualificación' },
+  { id: 'firstMeeting', label: 'Primera cita' },
   { id: 'tasks', label: 'Tareas' },
   { id: 'communications', label: 'Comunicaciones' },
   { id: 'notes', label: 'Notas internas' },
@@ -174,11 +177,21 @@ function FichaOportunidadPage() {
               {data.descripcion || 'Sin descripción registrada.'}
             </p>
           </div>
-          <LeadHeroActions
-            stage={data.fase}
-            canEdit={!data.archivadoEn}
-            onSelectTab={setActiveTab}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/contactos/$id"
+              params={{ id: data.contactoId }}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              <ContactRound className="h-4 w-4" aria-hidden="true" />
+              Ver contacto
+            </Link>
+            <LeadHeroActions
+              stage={data.fase}
+              canEdit={!data.archivadoEn}
+              onSelectTab={setActiveTab}
+            />
+          </div>
         </div>
       </header>
       <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
@@ -221,16 +234,6 @@ function FichaOportunidadPage() {
                 miembrosCargando={miembros.isPending}
                 miembrosError={miembros.isError}
                 guardando={actualizar.isPending}
-                headerAction={
-                  <Link
-                    to="/contactos/$id"
-                    params={{ id: data.contactoId }}
-                    className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 transition-colors"
-                  >
-                    Ver ficha del contacto{' '}
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Link>
-                }
                 onSave={async (input) => {
                   await actualizar.mutateAsync(input)
                 }}
@@ -243,6 +246,18 @@ function FichaOportunidadPage() {
             opportunity={data}
             firmId={membership.data.firmId}
             section="qualification"
+          />
+        ) : null}
+        {activeTab === 'firstMeeting' ? (
+          <LeadFirstMeetingTab
+            opportunity={data}
+            firmId={membership.data.firmId}
+            members={miembros.data ?? []}
+            contactId={data.contactoId}
+            contactName={contacto.data ? contactName(contacto.data) : 'Contacto principal'}
+            currentUserId={session.user.id}
+            memberRole={membership.data.role}
+            canEdit={!data.archivadoEn}
           />
         ) : null}
         {activeTab === 'tasks' ? (
@@ -747,11 +762,22 @@ function nextLeadAction(tasks: TareaPersistida[]) {
 
 function firstMeetingStatus(tasks: TareaPersistida[]) {
   const meeting = [...tasks]
-    .filter((task) => task.tipo === 'Evento' && task.estado !== 'Cancelada')
+    .filter(
+      (task) =>
+        task.tipo === 'Evento' &&
+        task.estado !== 'Cancelada' &&
+        asRecord(task.reunion['primeraCita'])['estado'] !== undefined,
+    )
     .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0]
   if (!meeting) return 'Sin programar'
-  if (!meeting.venceEn) return 'Pendiente de programar'
-  return `${meeting.estado === 'Completada' ? 'Celebrada' : 'Programada'} · ${formatDate(meeting.venceEn)}`
+  const metadata = asRecord(meeting.reunion['primeraCita'])
+  const status = textValue(metadata['estado'])
+  const date = textValue(meeting.reunion['startsAt']) || meeting.venceEn
+  if (status === 'No comparece' || status === 'Reprogramación pendiente') return status
+  if (status === 'Celebrada' || meeting.estado === 'Completada')
+    return `Celebrada${date ? ` · ${formatDate(date)}` : ''}`
+  if (!date) return 'Pendiente de programar'
+  return `Programada · ${formatDate(date)}`
 }
 
 function quoteStatus(stage: OpportunityStage) {

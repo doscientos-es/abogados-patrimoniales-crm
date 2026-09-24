@@ -23,11 +23,14 @@ import {
   buildMonthGrid,
   calendarEntries,
   dayKey,
+  EMPTY_CALENDAR_FILTERS,
+  filterCalendarEntries,
   isSameDay,
   isSameMonth,
   shiftMonth,
   startOfMonth,
   type CalendarEntry,
+  type CalendarEntryFilters,
 } from '@/features/calendar/application/calendar-model'
 import { useMiembrosDespacho } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
@@ -44,7 +47,6 @@ const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const EVENT_LIMIT_PER_DAY = 3
 
 type CalendarView = 'month' | 'agenda'
-type CalendarFilter = 'all' | TareaPersistida['tipo']
 
 const eventStyle: Record<TareaPersistida['tipo'], string> = {
   Tarea: 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -88,18 +90,27 @@ export function CalendarPage() {
   const createTask = useCrearTarea(firmId)
   const editTask = useEditarTarea(firmId)
   const [view, setView] = useState<CalendarView>('month')
-  const [filter, setFilter] = useState<CalendarFilter>('all')
+  const [filters, setFilters] = useState<CalendarEntryFilters>(EMPTY_CALENDAR_FILTERS)
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const [createDay, setCreateDay] = useState<Date | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null)
+  const caseNames = useMemo(
+    () =>
+      new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
+    [cases.data],
+  )
 
   const entries = useMemo(
-    () =>
-      calendarEntries(tasks.data ?? []).filter(
-        (entry) => filter === 'all' || entry.task.tipo === filter,
-      ),
-    [filter, tasks.data],
+    () => filterCalendarEntries(calendarEntries(tasks.data ?? []), filters, caseNames),
+    [caseNames, filters, tasks.data],
   )
+  const activeFilterCount =
+    Number(filters.tipo !== 'all') +
+    Number(Boolean(filters.expedienteId)) +
+    Number(Boolean(filters.desde)) +
+    Number(Boolean(filters.hasta)) +
+    Number(Boolean(filters.busqueda.trim())) +
+    Number(filters.soloPrioritarias)
   const days = useMemo(() => buildMonthGrid(month), [month])
   const entriesByDay = useMemo(() => {
     const grouped = new Map<string, CalendarEntry[]>()
@@ -150,54 +161,149 @@ export function CalendarPage() {
         }
       />
 
-      <section className="flex flex-wrap items-center gap-2" aria-label="Controles del calendario">
-        <div
-          className="border-border bg-muted/30 flex rounded-lg border p-1"
-          role="tablist"
-          aria-label="Vista"
-        >
-          <CalendarViewButton
-            active={view === 'month'}
-            onClick={() => setView('month')}
-            label="Mes"
+      <section className="space-y-3" aria-label="Controles del calendario">
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="border-border bg-muted/30 flex rounded-lg border p-1"
+            role="tablist"
+            aria-label="Vista"
           >
-            <CalendarDays className="h-4 w-4" aria-hidden="true" />
-          </CalendarViewButton>
-          <CalendarViewButton
-            active={view === 'agenda'}
-            onClick={() => setView('agenda')}
-            label="Agenda"
-          >
-            <List className="h-4 w-4" aria-hidden="true" />
-          </CalendarViewButton>
-        </div>
-        <fieldset className="border-border bg-card flex overflow-x-auto rounded-lg border p-1">
-          <legend className="sr-only">Filtrar por tipo</legend>
-          {(['all', 'Tarea', 'Evento', 'Plazo', 'Recordatorio'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={filter === value}
-              onClick={() => setFilter(value)}
-              className={cn(
-                'rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
-                filter === value
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
+            <CalendarViewButton
+              active={view === 'month'}
+              onClick={() => setView('month')}
+              label="Mes"
             >
-              {value === 'all' ? 'Todo' : eventLabel[value]}
-            </button>
-          ))}
-        </fieldset>
-        <Badge variant="secondary" className="h-8 px-2.5 tabular-nums">
-          {monthEntries.length} {monthEntries.length === 1 ? 'fecha' : 'fechas'}
-        </Badge>
-        {criticalCount ? (
-          <Badge variant="destructive" className="h-8 px-2.5 tabular-nums">
-            {criticalCount} prioritarias
+              <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            </CalendarViewButton>
+            <CalendarViewButton
+              active={view === 'agenda'}
+              onClick={() => setView('agenda')}
+              label="Agenda"
+            >
+              <List className="h-4 w-4" aria-hidden="true" />
+            </CalendarViewButton>
+          </div>
+          <fieldset className="border-border bg-card flex overflow-x-auto rounded-lg border p-1">
+            <legend className="sr-only">Filtrar por tipo</legend>
+            {(['all', 'Tarea', 'Evento', 'Plazo', 'Recordatorio'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={filters.tipo === value}
+                onClick={() => setFilters((current) => ({ ...current, tipo: value }))}
+                className={cn(
+                  'rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
+                  filters.tipo === value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {value === 'all' ? 'Todo' : eventLabel[value]}
+              </button>
+            ))}
+          </fieldset>
+          <Badge variant="secondary" className="h-8 px-2.5 tabular-nums">
+            {monthEntries.length} {monthEntries.length === 1 ? 'fecha' : 'fechas'} en el mes
           </Badge>
-        ) : null}
+          {criticalCount ? (
+            <Badge variant="destructive" className="h-8 px-2.5 tabular-nums">
+              {criticalCount} prioritarias
+            </Badge>
+          ) : null}
+        </div>
+        <Card className="border-border/70 shadow-none">
+          <CardContent className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="calendar-search" className="text-muted-foreground text-xs">
+                Buscar
+              </Label>
+              <Input
+                id="calendar-search"
+                value={filters.busqueda}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, busqueda: event.target.value }))
+                }
+                placeholder="Título, descripción o expediente…"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="calendar-case" className="text-muted-foreground text-xs">
+                Expediente
+              </Label>
+              <select
+                id="calendar-case"
+                value={filters.expedienteId}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, expedienteId: event.target.value }))
+                }
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              >
+                <option value="">Todos los expedientes</option>
+                {(cases.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {caseNames.get(item.id)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="calendar-from" className="text-muted-foreground text-xs">
+                Desde
+              </Label>
+              <Input
+                id="calendar-from"
+                type="date"
+                value={filters.desde}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, desde: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="calendar-to" className="text-muted-foreground text-xs">
+                Hasta
+              </Label>
+              <Input
+                id="calendar-to"
+                type="date"
+                value={filters.hasta}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, hasta: event.target.value }))
+                }
+              />
+            </div>
+            <label
+              htmlFor="calendar-priority"
+              className="flex items-center gap-2 self-end pb-2 text-sm sm:col-span-2"
+            >
+              <input
+                id="calendar-priority"
+                type="checkbox"
+                checked={filters.soloPrioritarias}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    soloPrioritarias: event.target.checked,
+                  }))
+                }
+                className="border-input accent-primary h-4 w-4 rounded"
+              />
+              Solo prioritarias (críticas y plazos)
+            </label>
+            {activeFilterCount ? (
+              <div className="flex items-end justify-start sm:col-span-2 sm:justify-end xl:col-span-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFilters(EMPTY_CALENDAR_FILTERS)}
+                >
+                  Limpiar filtros ({activeFilterCount})
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </section>
 
       <Card className="border-border/80 overflow-hidden shadow-sm">

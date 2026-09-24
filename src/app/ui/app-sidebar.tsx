@@ -5,6 +5,9 @@ import {
   CheckSquare,
   Contact,
   FileText,
+  Activity,
+  BellRing,
+  Scale,
   Gauge,
   Handshake,
   ChartNoAxesCombined,
@@ -29,6 +32,7 @@ import { cn } from '@/lib/utils'
 
 const general = [
   { title: 'Inicio', url: '/', icon: Gauge },
+  { title: 'Alertas y control', url: '/alertas', icon: BellRing },
   { title: 'Informes', url: '/informes', icon: ChartNoAxesCombined },
   { title: 'CRM', url: '/crm', icon: Sparkles },
 ] as const
@@ -41,6 +45,8 @@ const comercial = [
 
 const operativa = [
   { title: 'Expedientes', url: '/expedientes', icon: Briefcase },
+  { title: 'Actuaciones', url: '/actuaciones', icon: Activity },
+  { title: 'Ejecuciones', url: '/ejecuciones', icon: Scale },
   { title: 'Calendario', url: '/calendario', icon: CalendarDays },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
 ] as const

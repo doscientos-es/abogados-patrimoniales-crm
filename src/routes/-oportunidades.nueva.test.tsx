@@ -1,10 +1,11 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: { contactId: 'contact-1' },
+  createOpportunity: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
@@ -33,9 +34,15 @@ vi.mock('@/features/contactos', () => ({
     isPending: false,
   }),
 }))
-vi.mock('@/features/crm', () => ({ useCrearOportunidad: () => ({ isPending: false }) }))
+vi.mock('@/features/crm', () => ({
+  useCrearOportunidad: () => ({ isPending: false, mutateAsync: mocks.createOpportunity }),
+  useMiembrosDespacho: () => ({ data: [] }),
+}))
 vi.mock('@/features/notas', () => ({ useCrearNotaOportunidad: () => ({ isPending: false }) }))
-vi.mock('@/features/tareas', () => ({ useCrearTarea: () => ({ isPending: false }) }))
+vi.mock('@/features/tareas', () => ({
+  useCrearTarea: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useMarcarSiguienteAccion: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}))
 
 import { NuevaOportunidadPage } from './oportunidades.nueva'
 
@@ -56,6 +63,29 @@ describe('NuevaOportunidadPage', () => {
     )
     expect((screen.getByRole('button', { name: 'Crear Lead' }) as HTMLButtonElement).disabled).toBe(
       false,
+    )
+  })
+
+  it('pregunta por la siguiente acción tras guardar y permite continuar a la ficha', async () => {
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    const { container } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), {
+      target: { value: 'Consulta inicial' },
+    })
+
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+
+    expect(await screen.findByText(/El Lead LD-1 ya está guardado/)).toBeTruthy()
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Ahora no procede' }))
+
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/oportunidades/$id',
+        params: { id: 'opportunity-1' },
+      }),
     )
   })
 })

@@ -27,6 +27,7 @@ import {
   type OportunidadPersistida,
 } from '@/features/crm'
 import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
+import { LeadCommunicationsTimeline } from '@/features/crm/ui/lead-communications-timeline'
 import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import {
@@ -135,6 +136,7 @@ export function LeadWorkspace({
     qualificationQuestions(details['preguntasCualificacion']),
   )
   const [newQuestion, setNewQuestion] = useState('')
+  const [questionsDirty, setQuestionsDirty] = useState(false)
   const saveQualification = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -172,6 +174,7 @@ export function LeadWorkspace({
           },
         },
       })
+      setQuestionsDirty(false)
       toast.success('Cualificación del Lead actualizada.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar la cualificación.')
@@ -220,6 +223,7 @@ export function LeadWorkspace({
     const question = value.trim()
     if (!question) return
     setQuestions((current) => [...current, { id: crypto.randomUUID(), text: question }])
+    setQuestionsDirty(true)
     setNewQuestion('')
   }
 
@@ -227,6 +231,7 @@ export function LeadWorkspace({
     setQuestions((current) =>
       current.map((question) => (question.id === id ? { ...question, text: value } : question)),
     )
+    setQuestionsDirty(true)
   }
 
   const moveQuestion = (index: number, direction: -1 | 1) => {
@@ -239,12 +244,34 @@ export function LeadWorkspace({
       if (!source || !target) return current
       reordered[index] = target
       reordered[destination] = source
+      setQuestionsDirty(true)
       return reordered
     })
   }
 
   const removeQuestion = (id: string) => {
     setQuestions((current) => current.filter((question) => question.id !== id))
+    setQuestionsDirty(true)
+  }
+
+  const saveQuestions = async () => {
+    try {
+      await saveDetails.mutateAsync({
+        id: opportunity.id,
+        versionEsperada: opportunity.version,
+        detalles: {
+          ...details,
+          preguntasCualificacion: questions.map((question) => ({
+            id: question.id,
+            texto: question.text,
+          })),
+        },
+      })
+      setQuestionsDirty(false)
+      toast.success('Preguntas de cualificación guardadas.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron guardar las preguntas.')
+    }
   }
 
   const addCommunication = async (
@@ -427,6 +454,9 @@ export function LeadWorkspace({
           onUpdateQuestion={updateQuestion}
           onMoveQuestion={moveQuestion}
           onRemoveQuestion={removeQuestion}
+          onSave={() => void saveQuestions()}
+          saving={saveDetails.isPending}
+          dirty={questionsDirty}
         />
       ) : null}
       {section === 'tasks' ? (
@@ -501,9 +531,12 @@ export function LeadWorkspace({
             />
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground border-t pt-4 text-sm">
-              Los registros quedan disponibles en el histórico del Lead para todo el despacho.
-            </p>
+            <LeadCommunicationsTimeline
+              events={events.data ?? []}
+              loading={events.isPending}
+              error={events.isError}
+              memberNames={memberNames}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -595,6 +628,9 @@ export function QualificationQuestions({
   onUpdateQuestion,
   onMoveQuestion,
   onRemoveQuestion,
+  onSave = () => undefined,
+  saving = false,
+  dirty = true,
 }: {
   questions: QualificationQuestion[]
   newQuestion: string
@@ -603,6 +639,9 @@ export function QualificationQuestions({
   onUpdateQuestion: (id: string, value: string) => void
   onMoveQuestion: (index: number, direction: -1 | 1) => void
   onRemoveQuestion: (id: string) => void
+  onSave?: () => void
+  saving?: boolean
+  dirty?: boolean
 }) {
   return (
     <Card className="lg:col-span-2">
@@ -698,9 +737,14 @@ export function QualificationQuestions({
             </Button>
           ))}
         </div>
-        <p className="text-muted-foreground text-xs">
-          Guarda la cualificación para conservar los cambios de las preguntas.
-        </p>
+        <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+          <Button type="button" onClick={onSave} disabled={!dirty || saving}>
+            {saving ? 'Guardando…' : 'Guardar preguntas'}
+          </Button>
+          <p className="text-muted-foreground text-xs">
+            {dirty ? 'Tienes cambios de preguntas sin guardar.' : 'Las preguntas están guardadas.'}
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

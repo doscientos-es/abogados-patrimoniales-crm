@@ -1,4 +1,5 @@
 export {
+  useActualizarPerfilContacto,
   useActualizarContacto,
   useActualizarEstadoContacto,
   useEliminarContacto,
@@ -8,6 +9,12 @@ export {
   useCrearContacto,
   useOrígenesContacto,
 } from './infrastructure/supabase-contactos'
+export {
+  useContactBankAccounts,
+  useReplaceContactBankAccount,
+  type ContactBankAccountInput,
+} from './infrastructure/supabase-contact-bank-accounts'
+export * from './application/contact-profile'
 export type {
   ContactListFilters,
   ContactListPage,

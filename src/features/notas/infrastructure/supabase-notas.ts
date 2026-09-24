@@ -239,6 +239,73 @@ export function useCrearNotaOportunidad(firmId: string | undefined) {
   })
 }
 
+export function useCrearNotaPersona(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      contactoId: string
+      etiquetaOrigen: string
+      titulo: string
+      contenido: string
+      destacada: boolean
+      critica: boolean
+      scope?: 'person' | 'case' | 'opportunity'
+      originId?: string
+      originLabel?: string
+      caseId?: string
+      opportunityId?: string
+      contactIds?: string[]
+      requiresAcknowledgement?: boolean
+      validity?: 'permanent' | 'temporary'
+      reviewOn?: string
+      expiresOn?: string
+      expiryAction?: 'archive' | 'confirm'
+      triggers?: string[]
+      visibility?: 'team' | 'restricted'
+      permittedUserIds?: string[]
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.contenido.trim() || input.contenido.length > 20_000)
+        throw new Error(
+          'El contenido de la nota es obligatorio y no puede superar 20.000 caracteres.',
+        )
+      const { error } = await client.rpc('crm_save_note', {
+        target_firm_id: firmId,
+        target_note_id: null,
+        event_type: 'created',
+        event_detail: 'Nota interna creada al dar de alta un contacto.',
+        target_payload: {
+          scope: input.scope ?? 'person',
+          origin_id: input.originId ?? input.contactoId,
+          origin_label: input.originLabel ?? input.etiquetaOrigen,
+          title: input.titulo.trim(),
+          content: input.contenido.trim(),
+          case_id: input.caseId ?? '',
+          opportunity_id: input.opportunityId ?? '',
+          status: 'active',
+          highlighted: input.destacada,
+          critical: input.critica,
+          requires_acknowledgement: input.requiresAcknowledgement ?? false,
+          validity: input.validity ?? 'permanent',
+          starts_on: '',
+          review_on: input.reviewOn ?? '',
+          expires_on: input.expiresOn ?? '',
+          expiry_action: input.expiryAction ?? 'archive',
+          review_pending: Boolean(input.reviewOn),
+          snoozed_until: '',
+          visibility: input.visibility ?? 'team',
+          details: { triggers: input.triggers ?? ['abrir-contacto'] },
+          contact_ids: input.contactIds ?? [input.contactoId],
+          permitted_user_ids: input.permittedUserIds ?? [],
+        },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
+}
+
 export function useCrearConversacion(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({

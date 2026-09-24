@@ -51,9 +51,11 @@ describe('LeadHeroActions', () => {
     const onSelectTab = vi.fn()
     render(<LeadDetailTabs activeTab="summary" onSelectTab={onSelectTab} />)
 
-    expect(screen.getAllByRole('tab')).toHaveLength(8)
+    expect(screen.getAllByRole('tab')).toHaveLength(9)
     expect(screen.getByRole('tab', { name: 'Resumen' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByRole('tab', { name: 'Contacto' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: 'Primera cita' }))
+    expect(onSelectTab).toHaveBeenCalledWith('firstMeeting')
     fireEvent.click(screen.getByRole('tab', { name: 'Tareas' }))
     expect(onSelectTab).toHaveBeenCalledWith('tasks')
   })

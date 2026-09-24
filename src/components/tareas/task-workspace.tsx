@@ -647,7 +647,7 @@ export function TaskWorkspace() {
   )
 }
 
-function TaskInbox({
+export function TaskInbox({
   items,
   tasks,
   pending,
@@ -660,6 +660,8 @@ function TaskInbox({
   onCapture: (captureText: string, taskId: string | null) => Promise<void>
   onMove: (itemId: string, stage: TaskInboxItemRow['stage']) => Promise<void>
 }) {
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
+  const [dropStage, setDropStage] = useState<TaskInboxItemRow['stage'] | null>(null)
   const titles = new Map(tasks.map((task) => [task.id, task.titulo]))
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -686,6 +688,9 @@ function TaskInbox({
           </div>
           <Badge variant="secondary">{items.length}</Badge>
         </div>
+        <p id="task-inbox-drag-help" className="text-muted-foreground sr-only">
+          Arrastra una entrada a otra etapa o utiliza su selector para cambiarla.
+        </p>
         <form
           className="grid gap-2 sm:grid-cols-[1fr_14rem_auto]"
           onSubmit={(event) => void submit(event)}
@@ -716,18 +721,62 @@ function TaskInbox({
           {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map((stage) => {
             const stageItems = items.filter((item) => item.stage === stage)
             return (
-              <section key={stage} className="bg-muted/30 space-y-2 rounded-md border p-3">
+              <section
+                key={stage}
+                data-testid={`task-inbox-stage-${stage}`}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  setDropStage(stage)
+                }}
+                onDragLeave={(event) => {
+                  const nextTarget = event.relatedTarget
+                  if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+                  setDropStage((current) => (current === stage ? null : current))
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  const itemId = event.dataTransfer.getData('text/plain')
+                  setDropStage(null)
+                  setDraggedItemId(null)
+                  if (itemId && items.some((item) => item.id === itemId && item.stage !== stage))
+                    void onMove(itemId, stage)
+                }}
+                className={`bg-muted/30 space-y-2 rounded-md border p-3 transition-colors ${dropStage === stage ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
+              >
                 <h3 className="text-xs font-semibold tracking-wide uppercase">
                   {INBOX_STAGE_LABELS[stage]} · {stageItems.length}
                 </h3>
                 {stageItems.map((item) => (
                   <article
                     key={item.id}
-                    className="bg-background space-y-2 rounded border p-2 text-sm"
+                    className={`bg-background space-y-2 rounded border p-2 text-sm ${draggedItemId === item.id ? 'opacity-50' : ''}`}
                   >
-                    <p>
-                      {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
-                    </p>
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        draggable={!pending}
+                        disabled={pending}
+                        aria-label={`Arrastrar entrada ${item.capture_text || 'del INBOX'}`}
+                        aria-describedby="task-inbox-drag-help"
+                        onDragStart={(event) => {
+                          event.dataTransfer.effectAllowed = 'move'
+                          event.dataTransfer.setData('text/plain', item.id)
+                          setDraggedItemId(item.id)
+                        }}
+                        onDragEnd={() => {
+                          setDraggedItemId(null)
+                          setDropStage(null)
+                        }}
+                        className="text-muted-foreground hover:bg-muted mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-not-allowed"
+                      >
+                        <GripVertical className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <p>
+                        {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
+                      </p>
+                    </div>
                     {item.task_id ? (
                       <Link
                         to="/tareas/$taskId"

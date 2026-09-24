@@ -66,6 +66,14 @@ export type Database = {
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>
+      crm_contact_documents: Table<ContactDocumentRow, ContactDocumentInsert, never>
+      crm_contact_bank_accounts: Table<ContactBankAccountRow, never, never>
+      crm_executions: Table<
+        ExecutionRow,
+        ExecutionInsert,
+        Partial<ExecutionInsert> & { version?: number }
+      >
+      crm_execution_events: Table<ExecutionEventRow, never, never>
       crm_document_folders: Table<DocumentFolderRow, never, never>
       crm_document_task_links: Table<DocumentTaskLinkRow, never, never>
       crm_drive_connections: Table<DriveConnectionRow, DriveConnectionInsert>
@@ -123,6 +131,18 @@ export type Database = {
       crm_merge_task_labels: {
         Args: { source_label_id: string; target_label_id: string }
         Returns: undefined
+      }
+      crm_derive_execution: {
+        Args: { target_execution_id: string; target_expected_version: number }
+        Returns: ExecutionRow
+      }
+      crm_replace_contact_bank_account: {
+        Args: { target_firm_id: string; target_contact_id: string; bank_data: Json }
+        Returns: ContactBankAccountRow
+      }
+      crm_update_contact_profile: {
+        Args: { target_contact_id: string; target_expected_version: number; new_profile: Json }
+        Returns: ContactRow
       }
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
       crm_queue_drive_sync: {
@@ -702,6 +722,106 @@ export type ContactInsert = {
   phone?: string | null
   source?: string | null
   details?: Json
+}
+
+export type ContactDocumentType = 'identification' | 'privacy' | 'authority' | 'power' | 'other'
+export type ContactDocumentRow = {
+  id: string
+  firm_id: string
+  contact_id: string
+  document_type: ContactDocumentType
+  name: string
+  original_name: string
+  storage_path: string
+  mime_type: string
+  size_bytes: number
+  document_status: 'current' | 'pending' | 'expiring' | 'expired' | 'revoked' | 'not_applicable'
+  document_number: string
+  issued_on: string | null
+  expires_on: string | null
+  signed_on: string | null
+  observations: string
+  tags: string[]
+  uploaded_by: string
+  created_at: string
+}
+export type ContactDocumentInsert = Omit<
+  ContactDocumentRow,
+  'id' | 'created_at' | 'uploaded_by'
+> & {
+  id?: string
+  created_at?: string
+  uploaded_by?: string
+}
+export type ContactBankAccountRow = {
+  id: string
+  firm_id: string
+  contact_id: string
+  holder: string
+  tax_id: string
+  iban: string
+  bank_name: string
+  bic: string
+  sepa_mandate: boolean
+  sepa_signed_on: string | null
+  mandate_status: 'current' | 'pending' | 'revoked' | 'not_applicable'
+  observations: string
+  valid_from: string
+  valid_until: string | null
+  created_by: string
+  created_at: string
+}
+
+export type ExecutionRow = {
+  id: string
+  firm_id: string
+  case_id: string
+  workstream_id: string | null
+  modality: 'judicial' | 'extrajudicial'
+  execution_type: string
+  status: string
+  title: string
+  object: string
+  debtor: string
+  beneficiary: string
+  performance: string
+  claimed_amount: number
+  recovered_amount: number
+  responsible_id: string | null
+  started_on: string
+  current_position: string
+  next_action: string
+  dependency: string
+  scope: string
+  budget_status: string
+  next_review_on: string | null
+  derived_from_id: string | null
+  original_nature: string
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+export type ExecutionInsert = Omit<
+  ExecutionRow,
+  'id' | 'version' | 'created_by' | 'updated_by' | 'created_at' | 'updated_at'
+> & {
+  id?: string
+  version?: number
+  created_by?: string | null
+  updated_by?: string | null
+  created_at?: string
+  updated_at?: string
+}
+export type ExecutionEventRow = {
+  id: string
+  firm_id: string
+  execution_id: string
+  event_type: 'created' | 'updated' | 'derived'
+  changed_fields: string[]
+  actor_id: string | null
+  created_at: string
 }
 
 export type CaseRow = {

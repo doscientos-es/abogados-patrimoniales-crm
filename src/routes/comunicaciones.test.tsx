@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -12,6 +12,15 @@ const mocks = vi.hoisted(() => ({
       tipo: 'phone_call' as const,
       resumen: 'Consulta sobre la partición de la herencia.',
       creadoEn: '2026-09-15T10:00:00Z',
+    },
+    {
+      id: 'event-2',
+      leadId: 'lead-2',
+      leadReferencia: 'OP-2026-0009',
+      leadTitulo: 'Consulta de testamento',
+      tipo: 'meeting' as const,
+      resumen: 'Revisar documentación del testamento.',
+      creadoEn: '2026-09-16T10:00:00Z',
     },
   ],
 }))
@@ -59,5 +68,14 @@ describe('ComunicacionesPage', () => {
     expect(screen.getByRole('heading', { name: 'Comunicaciones' })).toBeTruthy()
     expect(screen.getByText('Llamada · OP-2026-0008 · Herencia familiar')).toBeTruthy()
     expect(screen.getByText('Consulta sobre la partición de la herencia.')).toBeTruthy()
+  })
+
+  it('filters recent lead communications by type', () => {
+    render(<ComunicacionesPage />)
+
+    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'meeting' } })
+
+    expect(screen.getByText('Reunión · OP-2026-0009 · Consulta de testamento')).toBeTruthy()
+    expect(screen.queryByText('Llamada · OP-2026-0008 · Herencia familiar')).toBeNull()
   })
 })

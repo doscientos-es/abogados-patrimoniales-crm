@@ -11,6 +11,8 @@ import {
   type Json,
 } from '@/shared/infrastructure/supabase'
 
+import { contactProfileFromJson, type ContactProfile } from '../application/contact-profile'
+
 export type Naturaleza = 'Persona física' | 'Persona jurídica' | 'Órgano judicial' | 'Público'
 export type RelacionDespacho =
   | 'Lead'
@@ -50,6 +52,8 @@ export type ContactoPersistido = {
   cargoContacto?: string
   origen: string
   canal: string
+  recommendedById?: string
+  profile: ContactProfile
   creado: string
   creadoEn?: string
   modificado: string
@@ -88,6 +92,12 @@ const inputSchema = z.object({
 })
 
 export type NuevoContactoInput = z.infer<typeof inputSchema>
+
+export function createContactDetails(values: Record<string, string>) {
+  const { canal: _canal, recommendedById, ...details } = values
+  if (recommendedById) details['recommendedById'] = recommendedById
+  return details as Json
+}
 
 const natureToDatabase: Record<Naturaleza, ContactNature> = {
   'Persona física': 'person',
@@ -147,6 +157,10 @@ function spanishDate(value: string) {
 
 export function contactoFromRow(row: ContactRow): ContactoPersistido {
   const details = asObject(row.details)
+  const detailsJson =
+    row.details !== null && !Array.isArray(row.details) && typeof row.details === 'object'
+      ? row.details
+      : {}
   return {
     id: row.id,
     referencia: row.reference,
@@ -179,12 +193,43 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     ...(details['cargo'] ? { cargoContacto: details['cargo'] } : {}),
     origen: row.source ?? '',
     canal: details['canal'] ?? '',
+    ...(details['recommendedById'] ? { recommendedById: details['recommendedById'] } : {}),
+    profile: contactProfileFromJson(detailsJson['profile']),
     creado: spanishDate(row.created_at),
     creadoEn: row.created_at,
     modificado: spanishDate(row.updated_at),
     modificadoEn: row.updated_at,
     version: row.version,
   }
+}
+
+export function useActualizarPerfilContacto(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      contactId,
+      version,
+      profile,
+    }: {
+      contactId: string
+      version: number
+      profile: ContactProfile
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_contact_profile', {
+        target_contact_id: contactId,
+        target_expected_version: version,
+        new_profile: profile as unknown as Json,
+      })
+      if (error) throw error
+      return contactoFromRow(data)
+    },
+    onSuccess: (contact) => {
+      queryClient.setQueryData(['crm', 'contactos', firmId, contact.id], contact)
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'contactos', firmId] })
+    },
+  })
 }
 
 export function useContacto(firmId: string | undefined, id: string) {
@@ -234,7 +279,7 @@ export function useActualizarContacto(firmId: string | undefined) {
         pais: contacto.pais,
         personaContacto: contacto.personaContacto ?? '',
         cargo: contacto.cargoContacto ?? '',
-        canal: contacto.canal,
+        recommendedById: contacto.recommendedById ?? '',
       }
       const { data: actual, error: actualError } = await client
         .from('crm_contacts')
@@ -246,6 +291,7 @@ export function useActualizarContacto(firmId: string | undefined) {
       if (!actual || actual.version !== version) {
         throw new Error('El contacto cambió en otra sesión. Recarga antes de guardar.')
       }
+      const { canal: _canal, ...existingDetails } = asObject(actual.details)
       const { data, error } = await client
         .from('crm_contacts')
         .update({
@@ -259,7 +305,7 @@ export function useActualizarContacto(firmId: string | undefined) {
           phone: contacto.telefono || null,
           relationship: relationshipToDatabase[contacto.relacion],
           source: contacto.origen || null,
-          details: { ...asObject(actual.details), ...details } as Json,
+          details: { ...existingDetails, ...details } as Json,
           version: version + 1,
         })
         .eq('id', contacto.id)
@@ -297,7 +343,7 @@ function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
     email: valores['email']?.trim().toLowerCase() || null,
     phone: valores['telefono']?.trim() || null,
     source: valores['origen']?.trim() || null,
-    details: valores as Json,
+    details: createContactDetails(valores),
   }
 }
 

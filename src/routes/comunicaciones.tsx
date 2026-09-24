@@ -6,9 +6,14 @@ import { toast } from 'sonner'
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
+import {
+  EMPTY_COMMUNICATION_FILTERS,
+  filterLeadCommunications,
+} from '@/features/comunicaciones/application/communication-filters'
 import { useComunicacionesOportunidad, useMiembrosDespacho } from '@/features/crm'
 import { useConfirmarLectura, useCrearConversacion, useNotasRemotas } from '@/features/notas'
 
@@ -35,6 +40,16 @@ export function ComunicacionesPage() {
   const [title, setTitle] = useState('')
   const [requiresAck, setRequiresAck] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [communicationFilters, setCommunicationFilters] = useState(EMPTY_COMMUNICATION_FILTERS)
+  const filteredLeadCommunications = useMemo(
+    () => filterLeadCommunications(leadCommunications.data ?? [], communicationFilters),
+    [communicationFilters, leadCommunications.data],
+  )
+  const activeCommunicationFilterCount =
+    Number(communicationFilters.tipo !== 'all') +
+    Number(Boolean(communicationFilters.desde)) +
+    Number(Boolean(communicationFilters.hasta)) +
+    Number(Boolean(communicationFilters.busqueda.trim()))
   const activity = useMemo(
     () =>
       (notes.data ?? []).filter(
@@ -121,9 +136,89 @@ export function ComunicacionesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {leadCommunications.data?.length ? (
+          <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="space-y-1.5 sm:col-span-2 xl:col-span-2">
+              <Label htmlFor="communications-search">Buscar por Lead o resumen</Label>
+              <Input
+                id="communications-search"
+                value={communicationFilters.busqueda}
+                onChange={(event) =>
+                  setCommunicationFilters((current) => ({
+                    ...current,
+                    busqueda: event.target.value,
+                  }))
+                }
+                placeholder="Referencia, asunto o contenido…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="communications-type">Tipo</Label>
+              <select
+                id="communications-type"
+                value={communicationFilters.tipo}
+                onChange={(event) =>
+                  setCommunicationFilters((current) => ({
+                    ...current,
+                    tipo: event.target.value as typeof current.tipo,
+                  }))
+                }
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              >
+                <option value="all">Todos los tipos</option>
+                <option value="email_draft">Borradores de email</option>
+                <option value="phone_call">Llamadas</option>
+                <option value="meeting">Reuniones</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="communications-from">Desde</Label>
+              <Input
+                id="communications-from"
+                type="date"
+                value={communicationFilters.desde}
+                onChange={(event) =>
+                  setCommunicationFilters((current) => ({
+                    ...current,
+                    desde: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="communications-until">Hasta</Label>
+              <Input
+                id="communications-until"
+                type="date"
+                value={communicationFilters.hasta}
+                onChange={(event) =>
+                  setCommunicationFilters((current) => ({
+                    ...current,
+                    hasta: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 xl:col-span-5">
+              <p className="text-muted-foreground text-xs" aria-live="polite">
+                Mostrando {filteredLeadCommunications.length} de{' '}
+                {leadCommunications.data?.length ?? 0} comunicaciones recientes. La consulta recoge
+                como máximo las 20 últimas.
+              </p>
+              {activeCommunicationFilterCount ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCommunicationFilters(EMPTY_COMMUNICATION_FILTERS)}
+                >
+                  Limpiar filtros ({activeCommunicationFilterCount})
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {filteredLeadCommunications.length ? (
             <ol className="divide-y rounded-xl border">
-              {leadCommunications.data.map((communication) => {
+              {filteredLeadCommunications.map((communication) => {
                 const TypeIcon = communicationIcon[communication.tipo]
                 return (
                   <li key={communication.id} className="flex gap-3 p-4">
@@ -151,6 +246,10 @@ export function ComunicacionesPage() {
                 )
               })}
             </ol>
+          ) : leadCommunications.data?.length ? (
+            <p className="text-muted-foreground py-5 text-center text-sm">
+              No hay comunicaciones recientes que coincidan con los filtros.
+            </p>
           ) : (
             <p className="text-muted-foreground py-5 text-center text-sm">
               Todavía no hay llamadas, emails ni reuniones registradas en Leads.

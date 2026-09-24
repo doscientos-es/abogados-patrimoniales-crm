@@ -2,6 +2,36 @@ export type TipoTarea = 'Tarea' | 'Recordatorio' | 'Evento' | 'Plazo'
 export type EstadoTarea = 'Pendiente' | 'En curso' | 'En espera' | 'Completada' | 'Cancelada'
 export type ValidacionPlazo = 'No aplica' | 'Propuesto' | 'Validado' | 'Rechazado'
 
+export type EstadoPrimeraCita =
+  | 'Programada'
+  | 'Celebrada'
+  | 'No comparece'
+  | 'Reprogramación pendiente'
+
+export type DetallesPrimeraCita = {
+  estado: EstadoPrimeraCita
+  duracion: string
+  asistentesAdicionales: string
+  resumen: string
+  documentacionAportada: string
+  resultado: string
+  observaciones: string
+  autorizadaPresupuesto: boolean
+  tipoServicioPreliminar: string
+}
+
+export type DetallesReunion = {
+  startsAt: string
+  endsAt: string
+  mode: 'office_bilbao' | 'office_recalde' | 'phone' | 'outside_office'
+  location: string
+  meetingUrl: string
+  preparation: string
+  attendeeContactIds: string[]
+  attendeeUserIds: string[]
+  primeraCita?: DetallesPrimeraCita
+}
+
 export type EtiquetaTarea = {
   id: string
   nombre: string
@@ -60,6 +90,7 @@ export type CrearTareaInput = {
   asignadoId: string | null
   mensajeInicial?: string
   etiquetaIds?: string[]
+  detallesReunion?: DetallesReunion
 }
 
 export type TransicionEsperaInput = {

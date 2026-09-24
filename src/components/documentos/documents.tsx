@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
+import { ContactDocuments } from '@/components/documentos/contact-documents'
 import { DocumentDetailSheet } from '@/components/documentos/document-detail-sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -82,7 +83,7 @@ const FOLDER_DRAG_TYPE = 'application/x-lex-folder-id'
 type DocumentConfidentiality = CaseDocumentRow['confidentiality']
 type DocumentLocation = { caseId: string | null; folderId: string | null }
 type DocumentView = 'grid' | 'list'
-type DocumentsMode = 'explorer' | 'workflow'
+type DocumentsMode = 'explorer' | 'workflow' | 'contacts'
 type DocumentWorkflowStatus = CaseDocumentRow['workflow_status']
 type WorkflowBoardStatus = DocumentWorkflowStatus | 'archived'
 
@@ -948,6 +949,15 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
             >
               <Columns3 className="h-4 w-4" aria-hidden="true" /> Flujo documental
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'contacts' ? 'secondary' : 'ghost'}
+              aria-pressed={mode === 'contacts'}
+              onClick={() => setMode('contacts')}
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" /> Contactos
+            </Button>
           </fieldset>
         </div>
       </header>
@@ -972,6 +982,8 @@ export function Documents({ location, onLocationChange, rootActions }: Documents
           }}
           onInspect={(document) => setSelectedLogicalDocumentId(document.logical_document_id)}
         />
+      ) : mode === 'contacts' ? (
+        <ContactDocuments />
       ) : !activeCase ? (
         <section className="space-y-3" aria-labelledby="document-case-list-title">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

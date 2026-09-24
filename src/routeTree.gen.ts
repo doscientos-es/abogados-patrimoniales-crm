@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActuacionesRouteImport } from './routes/actuaciones'
+import { Route as AlertasRouteImport } from './routes/alertas'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ComunicacionesRouteImport } from './routes/comunicaciones'
 import { Route as CondicionesRouteImport } from './routes/condiciones'
@@ -17,6 +19,7 @@ import { Route as ConfiguracionRouteImport } from './routes/configuracion'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentosRouteImport } from './routes/documentos'
+import { Route as EjecucionesRouteImport } from './routes/ejecuciones'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as NotasRouteImport } from './routes/notas'
@@ -38,6 +41,16 @@ import { Route as TareasTaskIdRouteImport } from './routes/tareas.$taskId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActuacionesRoute = ActuacionesRouteImport.update({
+  id: '/actuaciones',
+  path: '/actuaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlertasRoute = AlertasRouteImport.update({
+  id: '/alertas',
+  path: '/alertas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarioRoute = CalendarioRouteImport.update({
@@ -73,6 +86,11 @@ const CrmRoute = CrmRouteImport.update({
 const DocumentosRoute = DocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EjecucionesRoute = EjecucionesRouteImport.update({
+  id: '/ejecuciones',
+  path: '/ejecuciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FacturacionRoute = FacturacionRouteImport.update({
@@ -163,6 +181,8 @@ const TareasTaskIdRoute = TareasTaskIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/actuaciones': typeof ActuacionesRoute
+  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -170,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
+  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
@@ -190,6 +211,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/actuaciones': typeof ActuacionesRoute
+  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -197,6 +220,7 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
+  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
@@ -218,6 +242,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/actuaciones': typeof ActuacionesRoute
+  '/alertas': typeof AlertasRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -225,6 +251,7 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/crm': typeof CrmRoute
   '/documentos': typeof DocumentosRoute
+  '/ejecuciones': typeof EjecucionesRoute
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
@@ -247,6 +274,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/actuaciones'
+    | '/alertas'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -254,6 +283,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/crm'
     | '/documentos'
+    | '/ejecuciones'
     | '/facturacion'
     | '/informes'
     | '/notas'
@@ -274,6 +304,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/actuaciones'
+    | '/alertas'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -281,6 +313,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/crm'
     | '/documentos'
+    | '/ejecuciones'
     | '/facturacion'
     | '/informes'
     | '/notas'
@@ -301,6 +334,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/actuaciones'
+    | '/alertas'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -308,6 +343,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/crm'
     | '/documentos'
+    | '/ejecuciones'
     | '/facturacion'
     | '/informes'
     | '/notas'
@@ -329,6 +365,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActuacionesRoute: typeof ActuacionesRoute
+  AlertasRoute: typeof AlertasRoute
   CalendarioRoute: typeof CalendarioRoute
   ComunicacionesRoute: typeof ComunicacionesRoute
   CondicionesRoute: typeof CondicionesRoute
@@ -336,6 +374,7 @@ export interface RootRouteChildren {
   CookiesRoute: typeof CookiesRoute
   CrmRoute: typeof CrmRoute
   DocumentosRoute: typeof DocumentosRoute
+  EjecucionesRoute: typeof EjecucionesRoute
   FacturacionRoute: typeof FacturacionRoute
   InformesRoute: typeof InformesRoute
   NotasRoute: typeof NotasRoute
@@ -361,6 +400,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/actuaciones': {
+      id: '/actuaciones'
+      path: '/actuaciones'
+      fullPath: '/actuaciones'
+      preLoaderRoute: typeof ActuacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alertas': {
+      id: '/alertas'
+      path: '/alertas'
+      fullPath: '/alertas'
+      preLoaderRoute: typeof AlertasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendario': {
@@ -410,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/documentos'
       fullPath: '/documentos'
       preLoaderRoute: typeof DocumentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ejecuciones': {
+      id: '/ejecuciones'
+      path: '/ejecuciones'
+      fullPath: '/ejecuciones'
+      preLoaderRoute: typeof EjecucionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/facturacion': {
@@ -547,6 +607,8 @@ const TareasRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActuacionesRoute: ActuacionesRoute,
+  AlertasRoute: AlertasRoute,
   CalendarioRoute: CalendarioRoute,
   ComunicacionesRoute: ComunicacionesRoute,
   CondicionesRoute: CondicionesRoute,
@@ -554,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   CrmRoute: CrmRoute,
   DocumentosRoute: DocumentosRoute,
+  EjecucionesRoute: EjecucionesRoute,
   FacturacionRoute: FacturacionRoute,
   InformesRoute: InformesRoute,
   NotasRoute: NotasRoute,

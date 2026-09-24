@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CompletarTareaInput,
   CrearTareaInput,
+  DetallesReunion,
   EtiquetaTarea,
   TareaPersistida,
   TransicionEsperaInput,
@@ -224,6 +225,9 @@ export function useCrearTarea(firmId: string | undefined) {
           ? (input.clasePlazo.toLowerCase() as 'judicial' | 'extrajudicial')
           : null,
         initial_message: input.mensajeInicial?.trim() || null,
+        ...(input.detallesReunion
+          ? { new_meeting_details: input.detallesReunion as Json }
+          : {}),
       })
       if (error) throw error
       if (input.etiquetaIds?.length) {
@@ -513,17 +517,6 @@ export function useEliminarDependenciaTarea(firmId: string | undefined) {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
   })
-}
-
-export type DetallesReunion = {
-  startsAt: string
-  endsAt: string
-  mode: 'office_bilbao' | 'office_recalde' | 'phone' | 'outside_office'
-  location: string
-  meetingUrl: string
-  preparation: string
-  attendeeContactIds: string[]
-  attendeeUserIds: string[]
 }
 
 export function useActualizarReunionTarea(firmId: string | undefined) {

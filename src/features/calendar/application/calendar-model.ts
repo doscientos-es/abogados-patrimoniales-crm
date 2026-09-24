@@ -6,6 +6,24 @@ export type CalendarEntry = {
   dayKey: string
 }
 
+export type CalendarEntryFilters = {
+  tipo: 'all' | TareaPersistida['tipo']
+  expedienteId: string
+  desde: string
+  hasta: string
+  busqueda: string
+  soloPrioritarias: boolean
+}
+
+export const EMPTY_CALENDAR_FILTERS: CalendarEntryFilters = {
+  tipo: 'all',
+  expedienteId: '',
+  desde: '',
+  hasta: '',
+  busqueda: '',
+  soloPrioritarias: false,
+}
+
 export function startOfMonth(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), 1)
 }
@@ -53,4 +71,51 @@ export function calendarEntries(tasks: TareaPersistida[]): CalendarEntry[] {
       if (first.task.critico !== second.task.critico) return first.task.critico ? -1 : 1
       return first.task.titulo.localeCompare(second.task.titulo, 'es')
     })
+}
+
+function dateBoundary(value: string) {
+  const parts = value.split('-').map(Number)
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) return null
+  const [year, month, day] = parts
+  if (!year || !month || !day) return null
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day)
+    return null
+  return date.getTime()
+}
+
+function searchable(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+}
+
+/** Applies the calendar's composable filters to persisted task entries only. */
+export function filterCalendarEntries(
+  entries: CalendarEntry[],
+  filters: CalendarEntryFilters,
+  caseNames: ReadonlyMap<string, string> = new Map(),
+) {
+  const from = filters.desde ? dateBoundary(filters.desde) : null
+  const to = filters.hasta ? dateBoundary(filters.hasta) : null
+  const query = searchable(filters.busqueda.trim())
+
+  return entries.filter(({ task, date }) => {
+    if (filters.tipo !== 'all' && task.tipo !== filters.tipo) return false
+    if (filters.expedienteId && task.expedienteId !== filters.expedienteId) return false
+    if (filters.soloPrioritarias && !task.critico && task.tipo !== 'Plazo') return false
+
+    const calendarDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    if (from !== null && calendarDay < from) return false
+    if (to !== null && calendarDay > to) return false
+
+    if (query) {
+      const caseName = caseNames.get(task.expedienteId ?? '') ?? ''
+      const text = searchable(`${task.titulo} ${task.descripcion} ${task.tipo} ${caseName}`)
+      if (!text.includes(query)) return false
+    }
+
+    return true
+  })
 }

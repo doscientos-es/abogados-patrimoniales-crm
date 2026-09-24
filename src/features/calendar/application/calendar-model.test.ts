@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildMonthGrid, calendarEntries, dayKey } from './calendar-model'
+import {
+  buildMonthGrid,
+  calendarEntries,
+  dayKey,
+  EMPTY_CALENDAR_FILTERS,
+  filterCalendarEntries,
+} from './calendar-model'
 
 const task = (overrides: Record<string, unknown> = {}) =>
   ({
@@ -34,5 +40,64 @@ describe('calendarEntries', () => {
     ])
 
     expect(entries.map((entry) => entry.task.id)).toEqual(['critical', 'normal'])
+  })
+})
+
+describe('filterCalendarEntries', () => {
+  it('combines type, case, date range, and accent-insensitive search filters', () => {
+    const entries = calendarEntries([
+      task({
+        id: 'meeting',
+        titulo: 'Reunión de sucesión',
+        tipo: 'Evento',
+        descripcion: 'Preparar documentación',
+        expedienteId: 'case-1',
+        venceEn: '2026-09-15T08:00:00',
+      }),
+      task({
+        id: 'other-case',
+        titulo: 'Reunión de sucesión',
+        tipo: 'Evento',
+        expedienteId: 'case-2',
+        venceEn: '2026-09-15T09:00:00',
+      }),
+      task({
+        id: 'outside-range',
+        titulo: 'Reunión de sucesión',
+        tipo: 'Evento',
+        expedienteId: 'case-1',
+        venceEn: '2026-09-16T09:00:00',
+      }),
+    ])
+
+    const filtered = filterCalendarEntries(
+      entries,
+      {
+        ...EMPTY_CALENDAR_FILTERS,
+        tipo: 'Evento',
+        expedienteId: 'case-1',
+        desde: '2026-09-15',
+        hasta: '2026-09-15',
+        busqueda: 'reunion',
+      },
+      new Map([['case-1', 'EXP-001 · Sucesión']]),
+    )
+
+    expect(filtered.map((entry) => entry.task.id)).toEqual(['meeting'])
+  })
+
+  it('treats legal deadlines as priority entries even when they are not manually marked critical', () => {
+    const entries = calendarEntries([
+      task({ id: 'task', tipo: 'Tarea', critico: false }),
+      task({ id: 'deadline', tipo: 'Plazo', critico: false }),
+      task({ id: 'critical-event', tipo: 'Evento', critico: true }),
+    ])
+
+    const filtered = filterCalendarEntries(entries, {
+      ...EMPTY_CALENDAR_FILTERS,
+      soloPrioritarias: true,
+    })
+
+    expect(filtered.map((entry) => entry.task.id)).toEqual(['critical-event', 'deadline'])
   })
 })
