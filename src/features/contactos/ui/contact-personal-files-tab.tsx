@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { FileUp, Search } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -6,6 +7,14 @@ import { PendingPanel } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,6 +66,8 @@ export function ContactPersonalFilesTab({
   const [category, setCategory] = useState<ContactDocumentType>('identification')
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const documents = useQuery({
     queryKey: ['contact-documents', firmId, contactId],
     enabled: canManage,
@@ -78,6 +89,15 @@ export function ContactPersonalFilesTab({
     relationship === 'Lead' ? ['identification', 'privacy'] : []
   const missing = requiredTypes.filter(
     (type) => !rows.some((row) => row.document_type === type && row.document_status === 'current'),
+  )
+  const normalizedSearch = search.trim().toLocaleLowerCase('es')
+  const visibleRows = rows.filter(
+    (row) =>
+      !normalizedSearch ||
+      [row.name, row.original_name, row.document_number, row.observations, ...row.tags]
+        .join(' ')
+        .toLocaleLowerCase('es')
+        .includes(normalizedSearch),
   )
 
   const upload = async (event: FormEvent<HTMLFormElement>) => {
@@ -136,6 +156,7 @@ export function ContactPersonalFilesTab({
       await queryClient.invalidateQueries({ queryKey: ['contact-documents', firmId, contactId] })
       formElement.reset()
       setFile(null)
+      setUploadOpen(false)
       toast.success('Documento guardado en el archivo personal del contacto.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el documento.')
@@ -147,14 +168,21 @@ export function ContactPersonalFilesTab({
   const openDocument = async (document: ContactDocumentRow) => {
     const client = getSupabaseBrowserClient()
     if (!client) return
+    const preview = window.open('', '_blank')
+    if (!preview) {
+      toast.error('Permite las ventanas emergentes para ver este documento.')
+      return
+    }
+    preview.opener = null
     const { data, error } = await client.storage
       .from('contact-documents')
       .createSignedUrl(document.storage_path, 60)
     if (error || !data?.signedUrl) {
+      preview.close()
       toast.error('No se pudo abrir el documento.')
       return
     }
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    preview.location.href = data.signedUrl
   }
 
   if (!canManage)
@@ -183,63 +211,77 @@ export function ContactPersonalFilesTab({
       />
     )
 
+  const sections: Array<{
+    id: string
+    title: string
+    types: ContactDocumentType[]
+  }> = [
+    { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
+    { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
+    { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
+    { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
+  ]
+
   return (
     <section className="space-y-4" aria-label="Archivos personales">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Estado documental</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Los archivos se guardan en almacenamiento privado del despacho. La falta de
-            documentación se señala automáticamente para los leads.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {requiredTypes.length ? (
-            requiredTypes.map((type) => {
-              const complete = rows.some(
-                (row) => row.document_type === type && row.document_status === 'current',
-              )
-              return (
-                <div
-                  key={type}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                >
-                  <span>{CATEGORIES.find((item) => item.type === type)?.label}</span>
-                  <Badge variant={complete ? 'default' : 'secondary'}>
-                    {complete ? 'Completa' : 'Pendiente'}
-                  </Badge>
-                </div>
-              )
-            })
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Este contacto no tiene requisitos documentales obligatorios por su relación actual con
-              el despacho.
-            </p>
-          )}
-          {missing.length ? (
-            <p className="text-warning-foreground text-sm">
-              Falta incorporar:{' '}
-              {missing
-                .map((type) => CATEGORIES.find((item) => item.type === type)?.label)
-                .join(', ')}
-              .
-            </p>
-          ) : null}
+        <CardContent className="flex flex-wrap items-center gap-3 pt-5">
+          <div className="relative min-w-[220px] flex-1">
+            <Search
+              className="text-muted-foreground absolute top-2.5 left-3 size-4"
+              aria-hidden="true"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por nombre, tipo o etiqueta"
+              aria-label="Buscar documentos personales"
+              className="pl-9"
+            />
+          </div>
+          <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
+            <FileUp className="size-4" aria-hidden="true" />
+            Subir documento
+          </Button>
+          <Badge variant={missing.length ? 'secondary' : 'outline'}>
+            {requiredTypes.length
+              ? missing.length
+                ? `${missing.length} requisito${missing.length === 1 ? '' : 's'} pendiente${missing.length === 1 ? '' : 's'}`
+                : 'Documentación completa'
+              : relationship === 'Cliente'
+                ? 'Archivo del cliente'
+                : 'Archivo opcional'}
+          </Badge>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Añadir documento personal</CardTitle>
-          <p className="text-muted-foreground text-xs">
-            PDF, JPG o PNG · máximo 25 MB · acceso por perfiles autorizados.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            onSubmit={(event) => void upload(event)}
-          >
+
+      {relationship !== 'Cliente' ? (
+        <p className="bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+          Este contacto no es cliente: la documentación se archiva de forma opcional y no genera
+          requisitos obligatorios.
+        </p>
+      ) : null}
+      {relationship === 'Lead' ? (
+        <p className="bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+          Para un lead se solicita identificación y protección de datos antes de continuar.
+        </p>
+      ) : null}
+      {missing.length ? (
+        <p className="border-warning/40 bg-warning/5 text-warning-foreground rounded-md border px-3 py-2 text-sm">
+          Falta incorporar:{' '}
+          {missing.map((type) => CATEGORIES.find((item) => item.type === type)?.label).join(', ')}.
+        </p>
+      ) : null}
+
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Subir documento personal</DialogTitle>
+            <DialogDescription>
+              Se guardará en el almacenamiento privado del despacho. PDF, JPG o PNG de hasta 25 MB.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void upload(event)}>
             <div className="space-y-1.5">
               <Label htmlFor="personal-file-category">Categoría</Label>
               <select
@@ -280,7 +322,7 @@ export function ContactPersonalFilesTab({
               </select>
             </div>
             <TextField name="tags" label="Etiquetas" placeholder="identificación, vigente" />
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="personal-file-upload">Archivo</Label>
               <Input
                 id="personal-file-upload"
@@ -292,73 +334,242 @@ export function ContactPersonalFilesTab({
                 required
               />
             </div>
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="personal-file-observations">Observaciones</Label>
               <Textarea id="personal-file-observations" name="observations" rows={2} />
             </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Button type="submit" disabled={uploading}>
-                {uploading ? 'Guardando…' : 'Guardar en el archivo personal'}
+            <DialogFooter className="sm:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => setUploadOpen(false)}
+              >
+                Cancelar
               </Button>
-            </div>
+              <Button type="submit" disabled={uploading}>
+                {uploading ? 'Subiendo…' : 'Guardar documento'}
+              </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
-      {CATEGORIES.map((categoryItem) => {
-        const categoryRows = rows.filter((row) => row.document_type === categoryItem.type)
+        </DialogContent>
+      </Dialog>
+
+      {sections.map((section) => {
+        const sectionRows = visibleRows.filter((row) => section.types.includes(row.document_type))
+        const sectionMissing = requiredTypes.some(
+          (type) => section.types.includes(type) && missing.includes(type),
+        )
         return (
-          <Card key={categoryItem.type}>
-            <CardHeader>
-              <CardTitle className="text-base">{categoryItem.label}</CardTitle>
+          <Card key={section.id}>
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">{section.title}</CardTitle>
+                {sectionMissing ? (
+                  <Badge variant="secondary">Pendiente</Badge>
+                ) : sectionRows.length ? (
+                  <Badge variant="outline">
+                    {sectionRows.length} documento{sectionRows.length === 1 ? '' : 's'}
+                  </Badge>
+                ) : null}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {categoryRows.length ? (
-                categoryRows.map((document) => (
-                  <article
-                    key={document.id}
-                    className="grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-[1fr_auto]"
-                  >
-                    <div>
-                      <button
-                        type="button"
-                        className="text-primary font-medium underline"
-                        onClick={() => void openDocument(document)}
-                      >
-                        {document.original_name}
-                      </button>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {document.name} · {document.document_number || 'Sin número'} · subido{' '}
-                        {formatDate(document.created_at)}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {document.issued_on ? `Expedido: ${formatDate(document.issued_on)} · ` : ''}
-                        {document.expires_on ? `Caduca: ${formatDate(document.expires_on)} · ` : ''}
-                        {document.signed_on ? `Firmado: ${formatDate(document.signed_on)}` : ''}
-                      </p>
-                      {document.tags.length ? (
-                        <p className="text-muted-foreground text-xs">
-                          Etiquetas: {document.tags.join(', ')}
-                        </p>
-                      ) : null}
-                      {document.observations ? (
-                        <p className="mt-1 text-xs">{document.observations}</p>
-                      ) : null}
-                    </div>
-                    <Badge
-                      variant={document.document_status === 'current' ? 'default' : 'secondary'}
-                    >
-                      {STATUS_LABELS[document.document_status]}
-                    </Badge>
-                  </article>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-sm">Sin documentos registrados.</p>
-              )}
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-left text-sm">
+                  <thead className="text-muted-foreground border-b text-xs">
+                    {section.id === 'identification' ? (
+                      <tr>
+                        <th className="py-2 pr-4">Tipo de documento</th>
+                        <th className="py-2 pr-4">Número</th>
+                        <th className="py-2 pr-4">Expedición</th>
+                        <th className="py-2 pr-4">Caducidad</th>
+                        <th className="py-2 pr-4">Estado</th>
+                        <th className="py-2 pr-4">Archivo</th>
+                        <th className="py-2">Subido</th>
+                      </tr>
+                    ) : null}
+                    {section.id === 'privacy' ? (
+                      <tr>
+                        <th className="py-2 pr-4">Tipo de documento</th>
+                        <th className="py-2 pr-4">Fecha de firma</th>
+                        <th className="py-2 pr-4">Estado</th>
+                        <th className="py-2 pr-4">Archivo</th>
+                        <th className="py-2">Observaciones</th>
+                      </tr>
+                    ) : null}
+                    {section.id === 'authority' ? (
+                      <tr>
+                        <th className="py-2 pr-4">Tipo</th>
+                        <th className="py-2 pr-4">Número</th>
+                        <th className="py-2 pr-4">Otorgamiento</th>
+                        <th className="py-2 pr-4">Caducidad</th>
+                        <th className="py-2 pr-4">Estado</th>
+                        <th className="py-2">Archivo</th>
+                      </tr>
+                    ) : null}
+                    {section.id === 'other' ? (
+                      <tr>
+                        <th className="py-2 pr-4">Nombre o descripción</th>
+                        <th className="py-2 pr-4">Categoría</th>
+                        <th className="py-2 pr-4">Fecha</th>
+                        <th className="py-2 pr-4">Caducidad</th>
+                        <th className="py-2 pr-4">Etiquetas</th>
+                        <th className="py-2">Archivo</th>
+                      </tr>
+                    ) : null}
+                  </thead>
+                  <tbody className="divide-y">
+                    {sectionRows.map((document) => (
+                      <tr key={document.id}>
+                        <td className="py-3 pr-4 font-medium">{document.name}</td>
+                        {section.id === 'identification' ? (
+                          <>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.document_number || '—'}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.issued_on ? formatDate(document.issued_on) : '—'}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.expires_on ? formatDate(document.expires_on) : '—'}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Badge
+                                variant={
+                                  document.document_status === 'current' ? 'default' : 'secondary'
+                                }
+                              >
+                                {STATUS_LABELS[document.document_status]}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <DocumentLink document={document} onOpen={openDocument} />
+                            </td>
+                            <td className="text-muted-foreground py-3">
+                              {formatDate(document.created_at)}
+                            </td>
+                          </>
+                        ) : null}
+                        {section.id === 'privacy' ? (
+                          <>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.signed_on ? formatDate(document.signed_on) : '—'}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Badge
+                                variant={
+                                  document.document_status === 'current' ? 'default' : 'secondary'
+                                }
+                              >
+                                {STATUS_LABELS[document.document_status]}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <DocumentLink document={document} onOpen={openDocument} />
+                            </td>
+                            <td className="text-muted-foreground py-3">
+                              {document.observations || '—'}
+                            </td>
+                          </>
+                        ) : null}
+                        {section.id === 'authority' ? (
+                          <>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.document_number || '—'}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.issued_on ? formatDate(document.issued_on) : '—'}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.expires_on ? formatDate(document.expires_on) : '—'}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Badge
+                                variant={
+                                  document.document_status === 'current' ? 'default' : 'secondary'
+                                }
+                              >
+                                {STATUS_LABELS[document.document_status]}
+                              </Badge>
+                            </td>
+                            <td className="py-3">
+                              <DocumentLink document={document} onOpen={openDocument} />
+                            </td>
+                          </>
+                        ) : null}
+                        {section.id === 'other' ? (
+                          <>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {
+                                CATEGORIES.find((item) => item.type === document.document_type)
+                                  ?.label
+                              }
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {formatDate(document.created_at)}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.expires_on ? formatDate(document.expires_on) : '—'}
+                            </td>
+                            <td className="text-muted-foreground py-3 pr-4">
+                              {document.tags.length ? document.tags.join(', ') : '—'}
+                            </td>
+                            <td className="py-3">
+                              <DocumentLink document={document} onOpen={openDocument} />
+                            </td>
+                          </>
+                        ) : null}
+                      </tr>
+                    ))}
+                    {!sectionRows.length ? (
+                      <tr>
+                        <td
+                          colSpan={
+                            section.id === 'identification'
+                              ? 7
+                              : section.id === 'privacy'
+                                ? 5
+                                : section.id === 'authority'
+                                  ? 6
+                                  : 6
+                          }
+                          className="text-muted-foreground py-5 text-sm"
+                        >
+                          {normalizedSearch
+                            ? 'No hay documentos que coincidan con la búsqueda.'
+                            : sectionMissing
+                              ? `Falta el documento requerido de ${section.id === 'identification' ? 'identificación' : 'protección de datos'}.`
+                              : 'Sin documentos registrados.'}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         )
       })}
     </section>
+  )
+}
+
+function DocumentLink({
+  document,
+  onOpen,
+}: {
+  document: ContactDocumentRow
+  onOpen: (document: ContactDocumentRow) => Promise<void>
+}) {
+  return (
+    <button
+      type="button"
+      className="text-primary max-w-56 truncate font-medium underline underline-offset-2"
+      onClick={() => void onOpen(document)}
+    >
+      {document.original_name}
+    </button>
   )
 }
 

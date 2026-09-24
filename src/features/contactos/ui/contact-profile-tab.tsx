@@ -41,13 +41,15 @@ export function ContactProfileTab({
   const [incidentDescription, setIncidentDescription] = useState('')
   const canManage = role === 'owner' || role === 'admin' || role === 'lawyer'
 
-  const persist = async (next: ContactProfile, success: string) => {
+  const persist = async (next: ContactProfile, success: string): Promise<boolean> => {
     try {
       await update.mutateAsync({ contactId: contact.id, version: contact.version, profile: next })
       setProfile(next)
       toast.success(success)
+      return true
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el perfil.')
+      toast.error(profileErrorMessage(error))
+      return false
     }
   }
 
@@ -71,7 +73,9 @@ export function ContactProfileTab({
         satisfactionHistory: [record, ...profile.satisfactionHistory],
       },
       'Valoración registrada en el historial.',
-    ).then(() => setRatingNotes(''))
+    ).then((saved) => {
+      if (saved) setRatingNotes('')
+    })
   }
 
   const addIncident = () => {
@@ -88,7 +92,9 @@ export function ContactProfileTab({
     void persist(
       { ...profile, incidents: [incident, ...profile.incidents] },
       'Incidencia registrada.',
-    ).then(() => setIncidentDescription(''))
+    ).then((saved) => {
+      if (saved) setIncidentDescription('')
+    })
   }
 
   const setIncident = (incidentId: string, patch: Partial<ContactIncident>) => {
@@ -132,13 +138,13 @@ export function ContactProfileTab({
               <ProfileInput
                 label="Idioma"
                 value={profile.language}
-                disabled={!canManage}
+                disabled={!canManage || update.isPending}
                 onChange={(language) => setProfile({ ...profile, language })}
               />
               <ProfileInput
                 label="Horario preferido"
                 value={profile.preferredHours}
-                disabled={!canManage}
+                disabled={!canManage || update.isPending}
                 onChange={(preferredHours) => setProfile({ ...profile, preferredHours })}
               />
               <div className="space-y-1.5">
@@ -146,7 +152,7 @@ export function ContactProfileTab({
                 <select
                   id="contact-attention"
                   value={profile.attention}
-                  disabled={!canManage}
+                  disabled={!canManage || update.isPending}
                   onChange={(event) =>
                     setProfile({
                       ...profile,
@@ -165,7 +171,7 @@ export function ContactProfileTab({
               <ProfileInput
                 label="Tratamiento"
                 value={profile.treatment}
-                disabled={!canManage}
+                disabled={!canManage || update.isPending}
                 onChange={(treatment) => setProfile({ ...profile, treatment })}
               />
               <div className="space-y-1.5 sm:col-span-2">
@@ -174,7 +180,7 @@ export function ContactProfileTab({
                   id="contact-profile-instructions"
                   rows={3}
                   value={profile.instructions}
-                  disabled={!canManage}
+                  disabled={!canManage || update.isPending}
                   onChange={(event) => setProfile({ ...profile, instructions: event.target.value })}
                 />
               </div>
@@ -184,7 +190,7 @@ export function ContactProfileTab({
                   id="contact-treatment-notes"
                   rows={3}
                   value={profile.treatmentNotes}
-                  disabled={!canManage}
+                  disabled={!canManage || update.isPending}
                   onChange={(event) =>
                     setProfile({ ...profile, treatmentNotes: event.target.value })
                   }
@@ -225,6 +231,7 @@ export function ContactProfileTab({
               <select
                 aria-label="Nuevo nivel de satisfacción"
                 value={nextRating}
+                disabled={update.isPending}
                 onChange={(event) => setNextRating(event.target.value as SatisfactionLevel)}
                 className="border-input bg-background h-9 rounded-md border px-3 text-sm"
               >
@@ -237,6 +244,7 @@ export function ContactProfileTab({
                 onChange={(event) => setRatingNotes(event.target.value)}
                 placeholder="Observación de la valoración"
                 aria-label="Observación de la valoración"
+                disabled={update.isPending}
               />
               <Button type="button" disabled={update.isPending} onClick={addRating}>
                 Registrar valoración
@@ -278,6 +286,7 @@ export function ContactProfileTab({
               <select
                 aria-label="Tipo de incidencia"
                 value={incidentType}
+                disabled={update.isPending}
                 onChange={(event) => setIncidentType(event.target.value)}
                 className="border-input bg-background h-9 rounded-md border px-3 text-sm"
               >
@@ -290,6 +299,7 @@ export function ContactProfileTab({
                 onChange={(event) => setIncidentDescription(event.target.value)}
                 placeholder="Descripción de la incidencia"
                 aria-label="Descripción de la incidencia"
+                disabled={update.isPending}
               />
               <Button
                 type="button"
@@ -315,6 +325,7 @@ export function ContactProfileTab({
                     <select
                       aria-label={`Estado de ${incident.type}`}
                       value={incident.status}
+                      disabled={update.isPending}
                       onChange={(event) =>
                         setIncident(incident.id, { status: event.target.value as IncidentStatus })
                       }
@@ -334,7 +345,7 @@ export function ContactProfileTab({
                       id={`incident-resolution-${incident.id}`}
                       rows={2}
                       value={incident.resolution}
-                      disabled={!canManage}
+                      disabled={!canManage || update.isPending}
                       onChange={(event) =>
                         setProfile({
                           ...profile,
@@ -352,13 +363,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                    ...item,
-                                    resolution: (
-                                      document.getElementById(
-                                        `incident-resolution-${incident.id}`,
-                                      ) as HTMLTextAreaElement
-                                    ).value,
-                                  }
+                                  ...item,
+                                  resolution: (
+                                    document.getElementById(
+                                      `incident-resolution-${incident.id}`,
+                                    ) as HTMLTextAreaElement
+                                  ).value,
+                                }
                                 : item,
                             ),
                           }
@@ -373,7 +384,7 @@ export function ContactProfileTab({
                       id={`incident-notes-${incident.id}`}
                       rows={2}
                       value={incident.observations}
-                      disabled={!canManage}
+                      disabled={!canManage || update.isPending}
                       onChange={(event) =>
                         setProfile({
                           ...profile,
@@ -391,13 +402,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                    ...item,
-                                    observations: (
-                                      document.getElementById(
-                                        `incident-notes-${incident.id}`,
-                                      ) as HTMLTextAreaElement
-                                    ).value,
-                                  }
+                                  ...item,
+                                  observations: (
+                                    document.getElementById(
+                                      `incident-notes-${incident.id}`,
+                                    ) as HTMLTextAreaElement
+                                  ).value,
+                                }
                                 : item,
                             ),
                           }
@@ -457,7 +468,20 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : new Intl.DateTimeFormat('es-ES', {
-        dateStyle: 'medium',
-        ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
-      }).format(date)
+      dateStyle: 'medium',
+      ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
+    }).format(date)
+}
+
+function profileErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (
+    error !== null &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return error.message
+  }
+  return 'No se pudo guardar el perfil.'
 }

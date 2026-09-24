@@ -292,7 +292,7 @@ export function useCrearNotaPersona(firmId: string | undefined) {
           review_on: input.reviewOn ?? '',
           expires_on: input.expiresOn ?? '',
           expiry_action: input.expiryAction ?? 'archive',
-          review_pending: Boolean(input.reviewOn),
+          review_pending: false,
           snoozed_until: '',
           visibility: input.visibility ?? 'team',
           details: { triggers: input.triggers ?? ['abrir-contacto'] },

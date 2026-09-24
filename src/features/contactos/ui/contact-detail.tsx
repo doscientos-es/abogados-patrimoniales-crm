@@ -756,7 +756,6 @@ export function ContactDetail({ contactId }: { contactId: string }) {
           loading={notesQuery.isPending}
           error={notesQuery.isError}
           contactId={contact.id}
-          contactName={displayName(contact)}
           contactOptions={contactsQuery.data ?? [contact]}
           caseOptions={cases}
           opportunityOptions={opportunities}
@@ -766,7 +765,11 @@ export function ContactDetail({ contactId }: { contactId: string }) {
           membersLoading={membersQuery.isPending}
           creating={createNote.isPending}
           onCreate={(input) => {
-            const scopes = { persona: 'person', expediente: 'case', oportunidad: 'opportunity' } as const
+            const scopes = {
+              persona: 'person',
+              expediente: 'case',
+              oportunidad: 'opportunity',
+            } as const
             return createNote.mutateAsync({
               contactoId: contact.id,
               etiquetaOrigen: displayName(contact),
@@ -790,7 +793,6 @@ export function ContactDetail({ contactId }: { contactId: string }) {
               permittedUserIds: input.permittedUserIds,
             })
           }}
-          }
           onCreated={() => toast.success('Nota interna guardada.')}
           onError={(error) =>
             toast.error(error instanceof Error ? error.message : 'No se pudo guardar la nota.')
@@ -832,11 +834,50 @@ function ContactNotePostit({ note }: { note: ReturnType<typeof notaDesdeRemota> 
   )
 }
 
+type ContactNoteScope = 'persona' | 'expediente' | 'oportunidad'
+type ContactNoteValidity = 'permanent' | 'temporary'
+type ContactNoteVisibility = 'team' | 'restricted'
+type ContactNoteDraft = {
+  scope: ContactNoteScope
+  originId: string
+  originLabel: string
+  title: string
+  content: string
+  highlighted: boolean
+  critical: boolean
+  requiresAcknowledgement: boolean
+  contactIds: string[]
+  validity: ContactNoteValidity
+  reviewOn: string
+  expiresOn: string
+  expiryAction: 'archive' | 'confirm'
+  triggers: DisparadorNota[]
+  visibility: ContactNoteVisibility
+  permittedUserIds: string[]
+}
+
+const NOTE_TRIGGERS: Array<{ id: DisparadorNota; label: string }> = [
+  { id: 'abrir-contacto', label: 'Al abrir el contacto' },
+  { id: 'abrir-expediente', label: 'Al abrir el expediente' },
+  { id: 'antes-contactar', label: 'Antes de contactar con la persona' },
+  { id: 'llamada', label: 'Al iniciar o registrar una llamada' },
+  { id: 'comunicacion', label: 'Al redactar una comunicación' },
+  { id: 'proxima-cita', label: 'En la próxima cita' },
+  { id: 'siempre', label: 'Siempre mientras esté activa' },
+]
+
 function ContactInternalNotes({
   notes,
   loading,
   error,
-  contactName,
+  contactId,
+  contactOptions,
+  caseOptions,
+  opportunityOptions,
+  memberOptions,
+  casesLoading,
+  opportunitiesLoading,
+  membersLoading,
   creating,
   onCreate,
   onCreated,
@@ -845,34 +886,125 @@ function ContactInternalNotes({
   notes: ReturnType<typeof notaDesdeRemota>[]
   loading: boolean
   error: boolean
-  contactName: string
+  contactId: string
+  contactOptions: ContactoPersistido[]
+  caseOptions: Array<{ id: string; referencia: string; titulo: string }>
+  opportunityOptions: Array<{ id: string; referencia: string; titulo: string }>
+  memberOptions: Array<{ id: string; nombre: string; rol: string }>
+  casesLoading: boolean
+  opportunitiesLoading: boolean
+  membersLoading: boolean
   creating: boolean
-  onCreate: (
-    title: string,
-    content: string,
-    highlighted: boolean,
-    critical: boolean,
-  ) => Promise<unknown>
+  onCreate: (input: ContactNoteDraft) => Promise<unknown>
   onCreated: () => void
   onError: (error: unknown) => void
 }) {
+  const [scope, setScope] = useState<ContactNoteScope>('persona')
+  const [originId, setOriginId] = useState(contactId)
+  const [relatedContacts, setRelatedContacts] = useState<string[]>([contactId])
+  const [validity, setValidity] = useState<ContactNoteValidity>('permanent')
+  const [expiryAction, setExpiryAction] = useState<'archive' | 'confirm'>('archive')
+  const [visibility, setVisibility] = useState<ContactNoteVisibility>('team')
+  const [triggers, setTriggers] = useState<DisparadorNota[]>([])
+  const [permittedUsers, setPermittedUsers] = useState<string[]>([])
+
+  const selectableContacts = contactOptions.some((item) => item.id === contactId)
+    ? contactOptions
+    : [...contactOptions, ...contactOptions.filter((item) => item.id === contactId)]
+  const relatedOptions =
+    scope === 'persona'
+      ? selectableContacts.map((item) => ({ id: item.id, label: displayName(item) }))
+      : scope === 'expediente'
+        ? caseOptions.map((item) => ({ id: item.id, label: `${item.referencia} · ${item.titulo}` }))
+        : opportunityOptions.map((item) => ({
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+          }))
+  const selectedRelated = relatedOptions.find((item) => item.id === originId)
+
+  const changeScope = (next: ContactNoteScope) => {
+    setScope(next)
+    const nextOptions =
+      next === 'persona'
+        ? selectableContacts.map((item) => ({ id: item.id }))
+        : next === 'expediente'
+          ? caseOptions
+          : opportunityOptions
+    setOriginId(nextOptions.find((item) => item.id === contactId)?.id ?? nextOptions[0]?.id ?? '')
+  }
+
+  const toggleContact = (id: string, checked: boolean) => {
+    setRelatedContacts((current) =>
+      checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id),
+    )
+  }
+  const toggleUser = (id: string, checked: boolean) => {
+    setPermittedUsers((current) =>
+      checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id),
+    )
+  }
+  const toggleTrigger = (id: DisparadorNota, checked: boolean) => {
+    setTriggers((current) =>
+      checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id),
+    )
+  }
+
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
+    const content = text(data, 'noteContent')
+    if (!content) {
+      onError(new Error('El contenido de la nota es obligatorio.'))
+      return
+    }
+    if (!selectedRelated) {
+      onError(new Error('Selecciona el elemento al que quedará vinculada la nota.'))
+      return
+    }
+    const expiresOn = text(data, 'noteExpiresOn')
+    if (validity === 'temporary' && !expiresOn) {
+      onError(new Error('Indica la fecha de vencimiento de la nota temporal.'))
+      return
+    }
+    if (visibility === 'restricted' && !permittedUsers.length) {
+      onError(new Error('Selecciona al menos un usuario autorizado.'))
+      return
+    }
     try {
-      await onCreate(
-        text(data, 'noteTitle'),
-        text(data, 'noteContent'),
-        data.has('noteHighlighted'),
-        data.has('noteCritical'),
-      )
+      await onCreate({
+        scope,
+        originId,
+        originLabel: selectedRelated.label,
+        title: text(data, 'noteTitle'),
+        content,
+        highlighted: data.has('noteHighlighted'),
+        critical: data.has('noteCritical'),
+        requiresAcknowledgement: data.has('noteAcknowledgement'),
+        contactIds: relatedContacts,
+        validity,
+        reviewOn: text(data, 'noteReviewOn'),
+        expiresOn: validity === 'temporary' ? expiresOn : '',
+        expiryAction,
+        triggers,
+        visibility,
+        permittedUserIds: visibility === 'restricted' ? permittedUsers : [],
+      })
       form.reset()
+      setScope('persona')
+      setOriginId(contactId)
+      setRelatedContacts([contactId])
+      setValidity('permanent')
+      setExpiryAction('archive')
+      setVisibility('team')
+      setTriggers([])
+      setPermittedUsers([])
       onCreated()
     } catch (cause) {
       onError(cause)
     }
   }
+
   return (
     <section
       id="contact-panel-notes"
@@ -884,40 +1016,239 @@ function ContactInternalNotes({
         <CardHeader>
           <CardTitle className="text-base">Nueva nota interna</CardTitle>
           <p className="text-muted-foreground text-sm">
-            Las notas quedan vinculadas a {contactName} y son visibles para el equipo según los
-            permisos de la nota.
+            Añade información interna de contexto. No forma parte de las comunicaciones con el
+            cliente ni será visible para terceros.
           </p>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void save(event)}>
+          <form className="space-y-4" onSubmit={(event) => void save(event)}>
             <div className="space-y-1.5">
-              <Label htmlFor="contact-note-title">Título</Label>
-              <Input
-                id="contact-note-title"
-                name="noteTitle"
-                placeholder="Ej. Preferencias de contacto"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-4 sm:pt-7">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="noteHighlighted" /> Destacada
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="noteCritical" /> Crítica
-              </label>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="contact-note-content">Contenido</Label>
+              <Label htmlFor="contact-note-content">Contenido (obligatorio)</Label>
               <Textarea
                 id="contact-note-content"
                 name="noteContent"
-                rows={4}
+                rows={5}
                 maxLength={20000}
                 required
-                placeholder="Escribe aquí la nota interna…"
+                placeholder="Ej.: prefiere que le llamemos por la tarde; está preocupado por los costes…"
               />
             </div>
-            <div className="sm:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="contact-note-title">Título (opcional)</Label>
+                <Input id="contact-note-title" name="noteTitle" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="contact-note-scope">Tipo de nota</Label>
+                <select
+                  id="contact-note-scope"
+                  value={scope}
+                  onChange={(event) => changeScope(event.target.value as ContactNoteScope)}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                >
+                  <option value="persona">Nota de la persona</option>
+                  <option value="expediente" disabled={!caseOptions.length || casesLoading}>
+                    Nota del expediente
+                  </option>
+                  <option
+                    value="oportunidad"
+                    disabled={!opportunityOptions.length || opportunitiesLoading}
+                  >
+                    Nota del Lead
+                  </option>
+                  <option value="ejecucion" disabled>
+                    Nota de la ejecución (próximamente)
+                  </option>
+                  <option value="presupuesto" disabled>
+                    Nota del presupuesto (próximamente)
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-note-related">Elemento relacionado</Label>
+              <select
+                id="contact-note-related"
+                value={originId}
+                onChange={(event) => setOriginId(event.target.value)}
+                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                disabled={!relatedOptions.length}
+                required
+              >
+                {relatedOptions.length ? (
+                  relatedOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">
+                    {scope === 'expediente' && casesLoading
+                      ? 'Cargando expedientes…'
+                      : scope === 'oportunidad' && opportunitiesLoading
+                        ? 'Cargando Leads…'
+                        : 'No hay elementos disponibles'}
+                  </option>
+                )}
+              </select>
+              <p className="text-muted-foreground text-xs">
+                {selectedRelated
+                  ? `La nota quedará vinculada a: ${selectedRelated.label}`
+                  : 'Selecciona el elemento de procedencia de la nota.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <Label>Contactos relacionados</Label>
+                <span className="text-muted-foreground text-xs">
+                  {relatedContacts.length} contacto(s)
+                </span>
+              </div>
+              <details className="rounded-md border px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Elegir contactos relacionados
+                </summary>
+                <div className="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {selectableContacts.map((item) => (
+                    <label key={item.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={relatedContacts.includes(item.id)}
+                        onChange={(event) => toggleContact(item.id, event.target.checked)}
+                      />
+                      {displayName(item)}
+                    </label>
+                  ))}
+                </div>
+              </details>
+              {relatedContacts.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectableContacts
+                    .filter((item) => relatedContacts.includes(item.id))
+                    .map((item) => (
+                      <Badge key={item.id} variant="secondary" className="font-normal">
+                        {displayName(item)}
+                      </Badge>
+                    ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+              <NoteCheckbox name="noteHighlighted" label="Destacada" />
+              <NoteCheckbox name="noteCritical" label="Advertencia crítica" />
+              <NoteCheckbox name="noteAcknowledgement" label="Requerir confirmación de lectura" />
+            </div>
+            <details className="group rounded-md border">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-medium">
+                Opciones avanzadas (vigencia, avisos y visibilidad)
+                <ArrowRight
+                  className="size-4 transition-transform group-open:rotate-90"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="space-y-4 border-t p-3">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contact-note-validity">Vigencia</Label>
+                    <select
+                      id="contact-note-validity"
+                      value={validity}
+                      onChange={(event) => setValidity(event.target.value as ContactNoteValidity)}
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    >
+                      <option value="permanent">Permanente</option>
+                      <option value="temporary">Temporal (hasta una fecha)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contact-note-review">Fecha de revisión (opcional)</Label>
+                    <Input id="contact-note-review" name="noteReviewOn" type="date" />
+                  </div>
+                  {validity === 'temporary' ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="contact-note-expires">Fecha de vencimiento</Label>
+                        <Input
+                          id="contact-note-expires"
+                          name="noteExpiresOn"
+                          type="date"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="contact-note-expiry-action">Al vencer</Label>
+                        <select
+                          id="contact-note-expiry-action"
+                          value={expiryAction}
+                          onChange={(event) =>
+                            setExpiryAction(event.target.value as 'archive' | 'confirm')
+                          }
+                          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                        >
+                          <option value="archive">Archivar automáticamente</option>
+                          <option value="confirm">Dejar pendiente de confirmación</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">Mostrar esta nota cuando…</legend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {NOTE_TRIGGERS.map((trigger) => (
+                      <NoteCheckbox
+                        key={trigger.id}
+                        name={`trigger-${trigger.id}`}
+                        label={trigger.label}
+                        checked={triggers.includes(trigger.id)}
+                        onChange={(checked) => toggleTrigger(trigger.id, checked)}
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contact-note-visibility">Visibilidad</Label>
+                    <select
+                      id="contact-note-visibility"
+                      value={visibility}
+                      onChange={(event) =>
+                        setVisibility(event.target.value as ContactNoteVisibility)
+                      }
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    >
+                      <option value="team">Equipo del despacho</option>
+                      <option value="restricted">Restringida a usuarios concretos</option>
+                    </select>
+                  </div>
+                  {visibility === 'restricted' ? (
+                    <fieldset className="space-y-2">
+                      <legend className="text-sm font-medium">Usuarios autorizados</legend>
+                      {membersLoading ? (
+                        <p className="text-muted-foreground text-sm">Cargando usuarios…</p>
+                      ) : memberOptions.length ? (
+                        <div className="grid max-h-40 gap-2 overflow-y-auto">
+                          {memberOptions.map((member) => (
+                            <NoteCheckbox
+                              key={member.id}
+                              name={`user-${member.id}`}
+                              label={`${member.nombre} · ${member.rol}`}
+                              checked={permittedUsers.includes(member.id)}
+                              onChange={(checked) => toggleUser(member.id, checked)}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">
+                          No hay usuarios disponibles.
+                        </p>
+                      )}
+                    </fieldset>
+                  ) : null}
+                </div>
+              </div>
+            </details>
+            <div className="flex justify-end">
               <Button type="submit" disabled={creating}>
                 {creating ? 'Guardando…' : 'Guardar nota'}
               </Button>
@@ -946,6 +1277,31 @@ function ContactInternalNotes({
         </Card>
       )}
     </section>
+  )
+}
+
+function NoteCheckbox({
+  name,
+  label,
+  checked,
+  onChange,
+}: {
+  name: string
+  label: string
+  checked?: boolean
+  onChange?: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        name={name}
+        checked={checked}
+        onChange={onChange ? (event) => onChange(event.target.checked) : undefined}
+        className="accent-primary size-4"
+      />
+      {label}
+    </label>
   )
 }
 

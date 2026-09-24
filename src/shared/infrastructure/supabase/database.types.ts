@@ -286,6 +286,14 @@ export type Database = {
         }
         Returns: TaskRow
       }
+      crm_update_special_meeting: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          new_meeting_details: Json
+        }
+        Returns: TaskRow
+      }
       crm_reassign_task: {
         Args: {
           target_task_id: string

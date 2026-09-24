@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   cancelTask: vi.fn().mockResolvedValue(undefined),
   rejectTask: vi.fn().mockResolvedValue(undefined),
   updateMeeting: vi.fn().mockResolvedValue(undefined),
+  updateSpecialMeeting: vi.fn().mockResolvedValue(undefined),
+  meetingDetails: {} as Record<string, unknown>,
   role: 'paralegal',
 }))
 
@@ -80,7 +82,7 @@ vi.mock('@/features/tareas', () => ({
         motivoRechazo: '',
         rechazadaEn: null,
         tareaPadreId: null,
-        reunion: {},
+        reunion: mocks.meetingDetails,
         bloqueada: false,
         etiquetas: [{ id: 'label-1', nombre: 'Urgente', color: '#f00' }],
         version: 1,
@@ -109,6 +111,10 @@ vi.mock('@/features/tareas', () => ({
   useCancelarTarea: () => ({ mutateAsync: mocks.cancelTask, isPending: false }),
   useRechazarTarea: () => ({ mutateAsync: mocks.rejectTask, isPending: false }),
   useActualizarReunionTarea: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
+  useActualizarReunionEspecial: () => ({
+    mutateAsync: mocks.updateSpecialMeeting,
+    isPending: false,
+  }),
   usePonerTareaEnEspera: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCompletarTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useMarcarSiguienteAccion: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -125,6 +131,7 @@ import { TaskDetail } from './task-detail'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  mocks.meetingDetails = {}
   mocks.role = 'paralegal'
 })
 
@@ -175,6 +182,60 @@ describe('TaskDetail', () => {
         details: expect.objectContaining({
           attendeeContactIds: ['contact-1'],
           mode: 'office_bilbao',
+        }),
+      }),
+    )
+  })
+
+  it.each([
+    ['preparation', 'Agendar reunión', 'scheduled', 'owner'],
+    ['scheduled', 'Comenzar reunión', 'in_progress', 'paralegal'],
+    ['in_progress', 'Finalizar reunión', 'finished', 'paralegal'],
+  ])('transitions a special meeting from %s to %s', async (status, button, nextStatus, role) => {
+    mocks.role = role
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status,
+      startsAt: '2026-09-20T09:00:00.000Z',
+      endsAt: '2026-09-20T10:00:00.000Z',
+      mode: 'office_bilbao',
+      location: 'Sala Bilbao',
+      preferredLocation: 'Sala Bilbao',
+      meetingUrl: '',
+      preparation: 'Revisar documentación',
+      internalInstructions: 'Llevar escritura',
+      meetingType: 'Seguimiento',
+      subject: 'Estado del expediente',
+      attendeeContactIds: ['contact-1'],
+      attendeeUserIds: ['user-2'],
+      attendeeNames: ['Asistente externo'],
+      durationMinutes: 60,
+      preferredDate: '2026-09-20',
+      preferredTimeSlot: 'Mañana',
+      summary: 'Resumen guardado',
+      decisions: 'Decisiones guardadas',
+      outcome: 'Resultado guardado',
+      transcription: 'Transcripción guardada',
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: button }))
+
+    await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          status: nextStatus,
+          startsAt: '2026-09-20T09:00:00.000Z',
+          endsAt: '2026-09-20T10:00:00.000Z',
+          location: 'Sala Bilbao',
+          attendeeContactIds: ['contact-1'],
+          attendeeUserIds: ['user-2'],
+          attendeeNames: ['Asistente externo'],
+          summary: 'Resumen guardado',
+          decisions: 'Decisiones guardadas',
+          outcome: 'Resultado guardado',
+          transcription: 'Transcripción guardada',
         }),
       }),
     )

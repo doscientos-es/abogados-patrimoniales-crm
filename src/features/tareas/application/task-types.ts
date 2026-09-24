@@ -27,6 +27,30 @@ export type DetallesReunion = {
   location: string
   meetingUrl: string
   preparation: string
+  specialType?: 'meeting' | 'communication'
+  status?: 'preparation' | 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'not_held'
+  meetingType?: string
+  subject?: string
+  attendeeNames?: string[]
+  durationMinutes?: number
+  preferredDate?: string
+  preferredTimeSlot?: string
+  preferredLocation?: string
+  internalInstructions?: string
+  startedAt?: string
+  finishedAt?: string
+  actualDurationMinutes?: number
+  internalNotes?: string[]
+  outcome?: string
+  decisions?: string
+  transcription?: string
+  summary?: string
+  communicationChannel?: 'Email' | 'WhatsApp' | 'Llamada'
+  communicationDirection?: 'Entrada' | 'Salida'
+  communicationContact?: string
+  communicationPhone?: string
+  communicationSubject?: string
+  communicationOriginalContent?: string
   attendeeContactIds: string[]
   attendeeUserIds: string[]
   primeraCita?: DetallesPrimeraCita

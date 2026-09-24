@@ -35,7 +35,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
-import { useExpedientesPersistentes } from '@/features/expedientes'
+import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
 import {
   useCambiarEstadoTarea,
   useCapturarInboxTarea,
@@ -47,6 +47,7 @@ import {
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
+  type DetallesReunion,
   type TaskInboxItemRow,
   type TareaPersistida,
 } from '@/features/tareas'
@@ -397,6 +398,7 @@ export function TaskWorkspace() {
         subtitle="Fechas compartidas con zona horaria, responsable y trazabilidad."
         actions={
           <TaskCreateDialog
+            firmId={firmId}
             cases={cases.data ?? []}
             members={members.data ?? []}
             labels={labels.data ?? []}
@@ -1449,12 +1451,14 @@ function TaskCard({
 }
 
 function TaskCreateDialog({
+  firmId,
   cases,
   members,
   labels,
   pending,
   onCreate,
 }: {
+  firmId: string
   cases: { id: string; referencia: string; titulo: string }[]
   members: { id: string; nombre: string }[]
   labels: { id: string; nombre: string; color: string }[]
@@ -1463,11 +1467,66 @@ function TaskCreateDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<CrearTareaInput['tipo']>('Tarea')
+  const [isSpecialMeeting, setIsSpecialMeeting] = useState(false)
+  const [isSpecialCommunication, setIsSpecialCommunication] = useState(false)
+  const [caseId, setCaseId] = useState('')
+  const participants = useParticipantesPersistentes(firmId, caseId)
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
     try {
+      const meeting: DetallesReunion | undefined = isSpecialMeeting
+        ? {
+            startsAt: '',
+            endsAt: '',
+            mode: text(data, 'meetingMode') as DetallesReunion['mode'],
+            location: text(data, 'meetingPreferredLocation'),
+            meetingUrl: '',
+            preparation: text(data, 'meetingPreparation'),
+            attendeeContactIds: data
+              .getAll('meetingContacts')
+              .filter((value): value is string => typeof value === 'string'),
+            attendeeUserIds: data
+              .getAll('meetingUsers')
+              .filter((value): value is string => typeof value === 'string'),
+            specialType: 'meeting',
+            status: 'preparation',
+            meetingType: text(data, 'meetingType'),
+            subject: text(data, 'meetingSubject'),
+            attendeeNames: text(data, 'meetingOtherAttendees')
+              .split(',')
+              .map((name) => name.trim())
+              .filter(Boolean),
+            durationMinutes: Number(text(data, 'meetingDuration')) || 60,
+            preferredDate: text(data, 'meetingPreferredDate'),
+            preferredTimeSlot: text(data, 'meetingTimeSlot'),
+            preferredLocation: text(data, 'meetingPreferredLocation'),
+            internalInstructions: text(data, 'meetingInstructions'),
+          }
+        : isSpecialCommunication
+          ? {
+              startsAt: '',
+              endsAt: '',
+              mode: 'office_bilbao',
+              location: '',
+              meetingUrl: '',
+              preparation: '',
+              attendeeContactIds: [],
+              attendeeUserIds: [],
+              specialType: 'communication',
+              communicationChannel: text(data, 'communicationChannel') as NonNullable<
+                DetallesReunion['communicationChannel']
+              >,
+              communicationDirection: text(data, 'communicationDirection') as NonNullable<
+                DetallesReunion['communicationDirection']
+              >,
+              communicationContact: text(data, 'communicationContact'),
+              communicationPhone: text(data, 'communicationPhone'),
+              communicationSubject: text(data, 'communicationSubject'),
+              communicationOriginalContent: text(data, 'communicationOriginalContent'),
+            }
+          : undefined
       await onCreate({
         expedienteId: text(data, 'case'),
         oportunidadId: null,
@@ -1483,10 +1542,14 @@ function TaskCreateDialog({
         asignadoId: text(data, 'assignee') || null,
         mensajeInicial: text(data, 'initialMessage'),
         etiquetaIds: data.get('label') ? [text(data, 'label')] : [],
+        ...(meeting ? { detallesReunion: meeting } : {}),
       })
       toast.success(kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.')
       form.reset()
       setKind('Tarea')
+      setIsSpecialMeeting(false)
+      setIsSpecialCommunication(false)
+      setCaseId('')
       setOpen(false)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
@@ -1529,7 +1592,11 @@ function TaskCreateDialog({
                 name="case"
                 label="Expediente *"
                 required
-                options={cases.map((item) => [item.id, `${item.referencia} · ${item.titulo}`])}
+                onValueChange={setCaseId}
+                options={[
+                  ['', 'Selecciona expediente'],
+                  ...cases.map((item) => [item.id, `${item.referencia} · ${item.titulo}`]),
+                ]}
               />
               <div className="space-y-1.5">
                 <Label htmlFor="task-kind">Tipo</Label>
@@ -1583,6 +1650,142 @@ function TaskCreateDialog({
               <label className="flex items-center gap-2 text-sm">
                 <input name="critical" type="checkbox" /> Marcar como crítica
               </label>
+              {kind === 'Evento' ? (
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={isSpecialMeeting}
+                    onChange={(event) => {
+                      setIsSpecialMeeting(event.target.checked)
+                      if (event.target.checked) setIsSpecialCommunication(false)
+                    }}
+                  />
+                  Crear como tarea especial · Reunión
+                </label>
+              ) : null}
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={isSpecialCommunication}
+                  onChange={(event) => {
+                    setIsSpecialCommunication(event.target.checked)
+                    if (event.target.checked) setIsSpecialMeeting(false)
+                  }}
+                />
+                Crear como tarea especial · Comunicación
+              </label>
+              {isSpecialCommunication ? (
+                <div className="bg-muted/30 grid gap-4 rounded-md border p-4 sm:col-span-2 sm:grid-cols-2">
+                  <Select
+                    name="communicationChannel"
+                    label="Canal"
+                    options={['Email', 'WhatsApp', 'Llamada'].map((value) => [value, value])}
+                  />
+                  <Select
+                    name="communicationDirection"
+                    label="Sentido"
+                    options={['Entrada', 'Salida'].map((value) => [value, value])}
+                  />
+                  <Field name="communicationContact" label="Contacto" />
+                  <Field name="communicationPhone" label="Teléfono" />
+                  <Field
+                    name="communicationSubject"
+                    label="Asunto original"
+                    className="sm:col-span-2"
+                  />
+                  <Field
+                    name="communicationOriginalContent"
+                    label="Resumen de la comunicación original"
+                    className="sm:col-span-2"
+                  />
+                  <p className="text-muted-foreground text-xs sm:col-span-2">
+                    La tarea se cerrará al marcarla como contestada. Si aparece trabajo jurídico
+                    adicional, crea otra tarea.
+                  </p>
+                </div>
+              ) : null}
+              {isSpecialMeeting ? (
+                <div className="bg-muted/30 space-y-4 rounded-md border p-4 sm:col-span-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                      name="meetingType"
+                      label="Tipo de reunión"
+                      required
+                      options={[
+                        'Primera cita',
+                        'Seguimiento',
+                        'Firma / formalización',
+                        'Económica',
+                        'Interna',
+                        'Externa',
+                      ].map((value) => [value, value])}
+                    />
+                    <Field name="meetingSubject" label="Objeto de la reunión" required />
+                    <Label>
+                      Contactos asistentes
+                      <select name="meetingContacts" multiple size={3} className={selectClassName}>
+                        {(participants.data ?? [])
+                          .filter((person) => person.contactoId)
+                          .map((person) => (
+                            <option key={person.id} value={person.contactoId ?? ''}>
+                              {person.nombre}
+                            </option>
+                          ))}
+                      </select>
+                    </Label>
+                    <Label>
+                      Equipo asistente
+                      <select name="meetingUsers" multiple size={3} className={selectClassName}>
+                        {members.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </Label>
+                    <Field name="meetingOtherAttendees" label="Otros asistentes" />
+                    <Select
+                      name="meetingDuration"
+                      label="Duración estimada"
+                      options={['15', '30', '45', '60', '90'].map((value) => [
+                        value,
+                        `${value} minutos`,
+                      ])}
+                    />
+                    <Field name="meetingPreferredDate" label="Preferencia de fecha" type="date" />
+                    <Select
+                      name="meetingTimeSlot"
+                      label="Franja preferida"
+                      options={['Indiferente', 'Mañana', 'Tarde'].map((value) => [value, value])}
+                    />
+                    <Select
+                      name="meetingMode"
+                      label="Modalidad / lugar"
+                      options={[
+                        ['office_bilbao', 'Despacho Bilbao'],
+                        ['office_recalde', 'Despacho Rekalde'],
+                        ['phone', 'Teléfono'],
+                        ['outside_office', 'Fuera del despacho / videollamada'],
+                      ]}
+                    />
+                    <Field name="meetingPreferredLocation" label="Lugar / dirección" />
+                    <Field
+                      name="meetingPreparation"
+                      label="Preparación previa"
+                      className="sm:col-span-2"
+                    />
+                    <Field
+                      name="meetingInstructions"
+                      label="Indicaciones internas"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    La reunión se crea en preparación. Las fechas definitivas se guardan al
+                    agendarla.
+                  </p>
+                </div>
+              ) : null}
             </div>
             <DialogFooter className="gap-2 border-t pt-5 sm:justify-end">
               <Button
@@ -1644,6 +1847,7 @@ function Field({
   name,
   label,
   className,
+  defaultValue,
   ...props
 }: {
   name: string
@@ -1651,11 +1855,12 @@ function Field({
   type?: string
   required?: boolean
   className?: string
+  defaultValue?: string
 }) {
   return (
     <div className={`space-y-1.5 ${className ?? ''}`}>
       <Label htmlFor={`task-${name}`}>{label}</Label>
-      <Input id={`task-${name}`} name={name} {...props} />
+      <Input id={`task-${name}`} name={name} defaultValue={defaultValue} {...props} />
     </div>
   )
 }
@@ -1665,16 +1870,24 @@ function Select({
   label,
   options,
   required,
+  onValueChange,
 }: {
   name: string
   label: string
   options: string[][]
   required?: boolean
+  onValueChange?: (value: string) => void
 }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`task-${name}`}>{label}</Label>
-      <select id={`task-${name}`} name={name} required={required} className={selectClassName}>
+      <select
+        id={`task-${name}`}
+        name={name}
+        required={required}
+        onChange={(event) => onValueChange?.(event.target.value)}
+        className={selectClassName}
+      >
         {options.map(([value, labelValue]) => (
           <option key={`${name}-${value}`} value={value}>
             {labelValue}

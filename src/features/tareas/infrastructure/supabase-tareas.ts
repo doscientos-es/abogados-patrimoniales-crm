@@ -225,9 +225,7 @@ export function useCrearTarea(firmId: string | undefined) {
           ? (input.clasePlazo.toLowerCase() as 'judicial' | 'extrajudicial')
           : null,
         initial_message: input.mensajeInicial?.trim() || null,
-        ...(input.detallesReunion
-          ? { new_meeting_details: input.detallesReunion as Json }
-          : {}),
+        ...(input.detallesReunion ? { new_meeting_details: input.detallesReunion as Json } : {}),
       })
       if (error) throw error
       if (input.etiquetaIds?.length) {
@@ -526,6 +524,26 @@ export function useActualizarReunionTarea(firmId: string | undefined) {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const { data, error } = await client.rpc('crm_update_task_meeting', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        new_meeting_details: details as Json,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la reunión. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useActualizarReunionEspecial(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ task, details }: { task: TareaPersistida; details: DetallesReunion }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_special_meeting', {
         target_task_id: task.id,
         target_expected_version: task.version,
         new_meeting_details: details as Json,

@@ -125,8 +125,9 @@ export function NuevoContactoPage() {
         relacion: relationship,
         valores: values,
       })
-      try {
-        for (const note of notes) {
+      let notesSaved = true
+      for (const note of notes) {
+        try {
           await createNote.mutateAsync({
             contactoId: contact.id,
             etiquetaOrigen: displayName,
@@ -135,14 +136,15 @@ export function NuevoContactoPage() {
             destacada: note.highlighted,
             critica: note.critical,
           })
+        } catch {
+          notesSaved = false
+          toast.error(
+            'El contacto se creó, pero alguna nota no se pudo guardar. Puedes crearla desde la ficha.',
+          )
+          break
         }
-      } catch (error) {
-        toast.error(
-          'El contacto se creó, pero alguna nota interna no se pudo guardar. Puedes reintentar desde la ficha.',
-        )
-        throw error
       }
-      toast.success('Contacto creado correctamente.')
+      if (notesSaved) toast.success('Contacto creado correctamente.')
       await navigate({ to: '/contactos/$id', params: { id: contact.id } })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear el contacto.')

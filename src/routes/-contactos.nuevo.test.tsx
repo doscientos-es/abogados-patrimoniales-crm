@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   createContact: vi.fn().mockResolvedValue({ id: 'contact-1' }),
+  createNote: vi.fn().mockResolvedValue(undefined),
   navigate: vi.fn(),
   aiValues: {} as Record<string, string>,
 }))
@@ -46,7 +47,7 @@ vi.mock('@/features/contactos/ui/contact-ai-intake', () => ({
 }))
 
 vi.mock('@/features/notas', () => ({
-  useCrearNotaPersona: () => ({ mutateAsync: vi.fn() }),
+  useCrearNotaPersona: () => ({ mutateAsync: mocks.createNote }),
 }))
 
 import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
@@ -54,6 +55,7 @@ import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
 afterEach(() => {
   cleanup()
   mocks.createContact.mockReset().mockResolvedValue({ id: 'contact-1' })
+  mocks.createNote.mockReset().mockResolvedValue(undefined)
   mocks.navigate.mockClear()
   mocks.aiValues = {}
 })
@@ -153,5 +155,27 @@ describe('NuevoContactoPage', () => {
     )
     expect((screen.getByLabelText(/^Denominación/) as HTMLInputElement).value).toBe('Acme S.L.')
     expect(mocks.createContact).not.toHaveBeenCalled()
+  })
+
+  it('abre la ficha creada si falla el guardado de una nota para evitar duplicar el contacto', async () => {
+    mocks.createContact.mockResolvedValue({ id: 'contact-2' })
+    mocks.createNote.mockRejectedValueOnce(new Error('Fallo de persistencia'))
+    render(<NuevoContactoPage />)
+
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
+      target: { value: 'Información relevante' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+
+    await waitFor(() => expect(mocks.createNote).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/contactos/$id',
+        params: { id: 'contact-2' },
+      }),
+    )
+    expect(mocks.createContact).toHaveBeenCalledOnce()
   })
 })

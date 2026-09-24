@@ -22,6 +22,7 @@ import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/feat
 import {
   useAbrirTarea,
   useActualizarReunionTarea,
+  useActualizarReunionEspecial,
   useAnadirEvidenciaTarea,
   useAnadirMensajeTarea,
   useCambiarEstadoTarea,
@@ -48,8 +49,8 @@ import {
 const date = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
-        new Date(value),
-      )
+      new Date(value),
+    )
     : 'Sin fecha'
 
 const formText = (data: FormData, name: string) => {
@@ -90,6 +91,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const cancel = useCancelarTarea(firmId)
   const reject = useRechazarTarea(firmId)
   const updateMeeting = useActualizarReunionTarea(firmId)
+  const updateSpecialMeeting = useActualizarReunionEspecial(firmId)
   const nextAction = useMarcarSiguienteAccion(firmId)
   const addMessage = useAnadirMensajeTarea(firmId, taskId)
   const addEvidence = useAnadirEvidenciaTarea(firmId, taskId)
@@ -322,7 +324,81 @@ export function TaskDetail({ taskId }: { taskId: string }) {
               ) : null}
             </CardContent>
           </Card>
-          {task.tipo === 'Evento' ? (
+          {task.reunion['specialType'] === 'communication' ? (
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">Tarea especial · Comunicación</h2>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      El encargo consiste en comunicar. Si surge trabajo jurídico, regístralo como
+                      otra tarea.
+                    </p>
+                  </div>
+                  <Badge variant={task.estado === 'Completada' ? 'secondary' : 'outline'}>
+                    {task.estado === 'Completada'
+                      ? 'Contestado'
+                      : detailsText(task.reunion, 'communicationChannel')}
+                  </Badge>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <p>
+                    <span className="text-muted-foreground">Canal: </span>
+                    {detailsText(task.reunion, 'communicationChannel')}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Sentido: </span>
+                    {detailsText(task.reunion, 'communicationDirection')}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Contacto: </span>
+                    {detailsText(task.reunion, 'communicationContact') || '—'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Teléfono: </span>
+                    {detailsText(task.reunion, 'communicationPhone') || '—'}
+                  </p>
+                  <p className="sm:col-span-2">
+                    <span className="text-muted-foreground">Asunto original: </span>
+                    {detailsText(task.reunion, 'communicationSubject') || '—'}
+                  </p>
+                </div>
+                <div className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap">
+                  {detailsText(task.reunion, 'communicationOriginalContent') ||
+                    'Sin resumen de comunicación original.'}
+                </div>
+                {isOpen ? (
+                  <Button
+                    type="button"
+                    disabled={!canWork || complete.isPending}
+                    onClick={() =>
+                      void run(
+                        () => complete.mutateAsync({ task, resultado: 'Comunicación contestada.' }),
+                        'Comunicación marcada como contestada.',
+                      )
+                    }
+                  >
+                    Marcar como contestado
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : task.tipo === 'Evento' && task.reunion['specialType'] === 'meeting' ? (
+            <SpecialMeetingWorkspace
+              task={task}
+              members={members.data ?? []}
+              participants={participants.data ?? []}
+              canManage={canManage}
+              canWork={canWork}
+              pending={updateSpecialMeeting.isPending}
+              onSave={(details) =>
+                run(
+                  () => updateSpecialMeeting.mutateAsync({ task, details }),
+                  'Reunión actualizada.',
+                )
+              }
+            />
+          ) : task.tipo === 'Evento' ? (
             <MeetingDetailsCard
               task={task}
               participants={participants.data ?? []}
@@ -812,6 +888,461 @@ function TaskReasonDialog({
   )
 }
 
+function SpecialMeetingWorkspace({
+  task,
+  members,
+  participants,
+  canManage,
+  canWork,
+  pending,
+  onSave,
+}: {
+  task: TareaPersistida
+  members: Array<{ id: string; nombre: string }>
+  participants: Array<{ id: string; contactoId: string | null; nombre: string }>
+  canManage: boolean
+  canWork: boolean
+  pending: boolean
+  onSave: (details: DetallesReunion) => Promise<unknown>
+}) {
+  const details = task.reunion
+  const status = detailsText(details, 'status') || 'preparation'
+  const statusLabels: Record<string, string> = {
+    preparation: 'Preparación',
+    scheduled: 'Agendada',
+    in_progress: 'En reunión',
+    finished: 'Finalizada',
+    cancelled: 'Cancelada',
+    not_held: 'No celebrada',
+  }
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form, (event.nativeEvent as SubmitEvent).submitter)
+    const nextStatus = formText(data, 'meetingStatus') || status
+    const startInput = canManage
+      ? formText(data, 'specialStartsAt')
+      : detailsText(details, 'startsAt')
+    const endInput = canManage ? formText(data, 'specialEndsAt') : detailsText(details, 'endsAt')
+    const startsAt = startInput ? new Date(startInput).toISOString() : ''
+    const endsAt = endInput ? new Date(endInput).toISOString() : ''
+    if (
+      ['scheduled', 'in_progress', 'finished'].includes(nextStatus) &&
+      (!startsAt || !endsAt || Date.parse(endsAt) <= Date.parse(startsAt))
+    ) {
+      toast.error('Para agendar indica inicio y fin; el fin debe ser posterior al inicio.')
+      return
+    }
+    const now = new Date().toISOString()
+    const oldNotes = Array.isArray(details['internalNotes'])
+      ? details['internalNotes'].filter((item): item is string => typeof item === 'string')
+      : []
+    const newNote = formText(data, 'meetingInternalNote').trim()
+    const actualDurationMinutes =
+      nextStatus === 'finished' && detailsText(details, 'startedAt')
+        ? Math.max(
+          0,
+          Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
+        )
+        : typeof details['actualDurationMinutes'] === 'number'
+          ? details['actualDurationMinutes']
+          : undefined
+    const result: DetallesReunion = {
+      ...(details as unknown as DetallesReunion),
+      startsAt,
+      endsAt,
+      mode: (canManage
+        ? formText(data, 'specialMode')
+        : detailsText(details, 'mode')) as DetallesReunion['mode'],
+      location: canManage
+        ? formText(data, 'specialPreferredLocation')
+        : detailsText(details, 'location'),
+      meetingUrl: canManage ? formText(data, 'specialUrl') : detailsText(details, 'meetingUrl'),
+      preparation: canManage
+        ? formText(data, 'specialPreparation')
+        : detailsText(details, 'preparation'),
+      internalInstructions: canManage
+        ? formText(data, 'specialInstructions')
+        : detailsText(details, 'internalInstructions'),
+      meetingType: canManage
+        ? formText(data, 'specialType')
+        : detailsText(details, 'meetingType'),
+      subject: canManage ? formText(data, 'specialSubject') : detailsText(details, 'subject'),
+      status: nextStatus as NonNullable<DetallesReunion['status']>,
+      attendeeContactIds: canManage
+        ? data
+          .getAll('specialContacts')
+          .filter((value): value is string => typeof value === 'string')
+        : detailsIds(details, 'attendeeContactIds'),
+      attendeeUserIds: canManage
+        ? data.getAll('specialUsers').filter((value): value is string => typeof value === 'string')
+        : detailsIds(details, 'attendeeUserIds'),
+      attendeeNames: canManage
+        ? formText(data, 'specialOtherAttendees')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+        : Array.isArray(details['attendeeNames'])
+          ? details['attendeeNames'].filter((item): item is string => typeof item === 'string')
+          : [],
+      durationMinutes: canManage
+        ? Number(formText(data, 'specialDuration')) || 60
+        : typeof details['durationMinutes'] === 'number'
+          ? details['durationMinutes']
+          : 60,
+      preferredDate: canManage
+        ? formText(data, 'specialPreferredDate')
+        : detailsText(details, 'preferredDate'),
+      preferredTimeSlot: canManage
+        ? formText(data, 'specialTimeSlot')
+        : detailsText(details, 'preferredTimeSlot'),
+      preferredLocation: canManage
+        ? formText(data, 'specialPreferredLocation')
+        : detailsText(details, 'preferredLocation'),
+      ...(nextStatus === 'in_progress' && !details['startedAt'] ? { startedAt: now } : {}),
+      ...(nextStatus === 'finished' ? { finishedAt: now } : {}),
+      ...(actualDurationMinutes === undefined ? {} : { actualDurationMinutes }),
+      internalNotes: newNote ? [...oldNotes, newNote] : oldNotes,
+      outcome: canManage && data.has('meetingOutcome')
+        ? formText(data, 'meetingOutcome')
+        : detailsText(details, 'outcome'),
+      decisions: canManage && data.has('meetingDecisions')
+        ? formText(data, 'meetingDecisions')
+        : detailsText(details, 'decisions'),
+      transcription: canManage && data.has('meetingTranscription')
+        ? formText(data, 'meetingTranscription')
+        : detailsText(details, 'transcription'),
+      summary: canManage && data.has('meetingSummary')
+        ? formText(data, 'meetingSummary')
+        : detailsText(details, 'summary'),
+    }
+    void onSave(result)
+  }
+  const contactIds = detailsIds(details, 'attendeeContactIds')
+  const userIds = detailsIds(details, 'attendeeUserIds')
+  const notes = Array.isArray(details['internalNotes'])
+    ? details['internalNotes'].filter((item): item is string => typeof item === 'string')
+    : []
+  return (
+    <Card>
+      <CardContent className="space-y-4 pt-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Tarea especial · Reunión</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              La reunión mantiene su preparación, agenda, asistentes y resultado en este expediente.
+            </p>
+          </div>
+          <Badge variant="secondary">{statusLabels[status] ?? statusLabels['preparation']}</Badge>
+        </div>
+        <div className="flex flex-wrap gap-2" aria-label="Fases de la reunión">
+          {['Preparación', 'Agendada', 'En reunión', 'Finalizada'].map((phase, index) => {
+            const keys = ['preparation', 'scheduled', 'in_progress', 'finished']
+            return (
+              <Badge key={phase} variant={keys.indexOf(status) >= index ? 'default' : 'outline'}>
+                {phase}
+              </Badge>
+            )
+          })}
+        </div>
+        <form className="space-y-4" onSubmit={submit}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Label>
+              Tipo de reunión
+              <Input
+                name="specialType"
+                defaultValue={detailsText(details, 'meetingType')}
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Objeto de la reunión
+              <Input
+                name="specialSubject"
+                defaultValue={detailsText(details, 'subject')}
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Contactos asistentes
+              <select
+                name="specialContacts"
+                multiple
+                size={3}
+                disabled={!canManage}
+                defaultValue={contactIds}
+                className="border-input bg-background min-h-20 w-full rounded-md border px-3 py-2 text-sm"
+              >
+                {participants
+                  .filter((person) => person.contactoId)
+                  .map((person) => (
+                    <option key={person.id} value={person.contactoId ?? ''}>
+                      {person.nombre}
+                    </option>
+                  ))}
+              </select>
+            </Label>
+            <Label>
+              Equipo asistente
+              <select
+                name="specialUsers"
+                multiple
+                size={3}
+                disabled={!canManage}
+                defaultValue={userIds}
+                className="border-input bg-background min-h-20 w-full rounded-md border px-3 py-2 text-sm"
+              >
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.nombre}
+                  </option>
+                ))}
+              </select>
+            </Label>
+            <Label>
+              Otros asistentes
+              <Input
+                name="specialOtherAttendees"
+                defaultValue={
+                  Array.isArray(details['attendeeNames']) ? details['attendeeNames'].join(', ') : ''
+                }
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Duración estimada (minutos)
+              <Input
+                name="specialDuration"
+                type="number"
+                min="1"
+                defaultValue={
+                  typeof details['durationMinutes'] === 'number'
+                    ? String(details['durationMinutes'])
+                    : '60'
+                }
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Preferencia de fecha
+              <Input
+                name="specialPreferredDate"
+                type="date"
+                defaultValue={detailsText(details, 'preferredDate')}
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Franja preferida
+              <select
+                name="specialTimeSlot"
+                defaultValue={detailsText(details, 'preferredTimeSlot') || 'Indiferente'}
+                disabled={!canManage}
+                className="border-input bg-background h-10 w-full rounded-md border px-3"
+              >
+                <option>Indiferente</option>
+                <option>Mañana</option>
+                <option>Tarde</option>
+              </select>
+            </Label>
+            <Label>
+              Modalidad
+              <select
+                name="specialMode"
+                defaultValue={detailsText(details, 'mode') || 'office_bilbao'}
+                disabled={!canManage}
+                className="border-input bg-background h-10 w-full rounded-md border px-3"
+              >
+                <option value="office_bilbao">Despacho Bilbao</option>
+                <option value="office_recalde">Despacho Rekalde</option>
+                <option value="phone">Teléfono</option>
+                <option value="outside_office">Fuera del despacho / videollamada</option>
+              </select>
+            </Label>
+            <Label>
+              Lugar / dirección
+              <Input
+                name="specialPreferredLocation"
+                defaultValue={
+                  detailsText(details, 'preferredLocation') || detailsText(details, 'location')
+                }
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Indicaciones internas
+              <Textarea
+                name="specialInstructions"
+                defaultValue={detailsText(details, 'internalInstructions')}
+                disabled={!canManage}
+              />
+            </Label>
+            <Label>
+              Preparación previa
+              <Textarea
+                name="specialPreparation"
+                defaultValue={detailsText(details, 'preparation')}
+                disabled={!canManage}
+              />
+            </Label>
+          </div>
+          <div className="border-t pt-4">
+            <h3 className="font-medium">Concretar la reunión</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Label>
+                Inicio
+                <Input
+                  name="specialStartsAt"
+                  type="datetime-local"
+                  defaultValue={toDateTimeLocal(detailsText(details, 'startsAt'))}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Fin
+                <Input
+                  name="specialEndsAt"
+                  type="datetime-local"
+                  defaultValue={toDateTimeLocal(detailsText(details, 'endsAt'))}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Enlace de reunión
+                <Input
+                  name="specialUrl"
+                  type="url"
+                  defaultValue={detailsText(details, 'meetingUrl')}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Registro de nota interna
+                <Textarea
+                  name="meetingInternalNote"
+                  disabled={!canWork}
+                  placeholder="Añadir una nota al historial…"
+                />
+              </Label>
+            </div>
+          </div>
+          {status === 'in_progress' || status === 'finished' ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Label>
+                Resumen
+                <Textarea
+                  name="meetingSummary"
+                  defaultValue={detailsText(details, 'summary')}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Decisiones
+                <Textarea
+                  name="meetingDecisions"
+                  defaultValue={detailsText(details, 'decisions')}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Resultado
+                <Textarea
+                  name="meetingOutcome"
+                  defaultValue={detailsText(details, 'outcome')}
+                  disabled={!canManage}
+                />
+              </Label>
+              <Label>
+                Transcripción
+                <Textarea
+                  name="meetingTranscription"
+                  defaultValue={detailsText(details, 'transcription')}
+                  disabled={!canManage}
+                />
+              </Label>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              name="meetingStatus"
+              value={status}
+              disabled={!canManage || pending}
+            >
+              Guardar cambios
+            </Button>
+            {status === 'preparation' ? (
+              <Button
+                type="submit"
+                name="meetingStatus"
+                value="scheduled"
+                disabled={!canManage || pending}
+              >
+                Agendar reunión
+              </Button>
+            ) : null}
+            {status === 'scheduled' ? (
+              <Button
+                type="submit"
+                name="meetingStatus"
+                value="in_progress"
+                disabled={!canWork || pending}
+              >
+                Comenzar reunión
+              </Button>
+            ) : null}
+            {status === 'in_progress' ? (
+              <Button
+                type="submit"
+                name="meetingStatus"
+                value="finished"
+                disabled={!canWork || pending}
+              >
+                Finalizar reunión
+              </Button>
+            ) : null}
+            {['preparation', 'scheduled'].includes(status) ? (
+              <Button
+                type="submit"
+                variant="outline"
+                name="meetingStatus"
+                value="not_held"
+                disabled={!canManage || pending}
+              >
+                No celebrada
+              </Button>
+            ) : null}
+            {['preparation', 'scheduled'].includes(status) ? (
+              <Button
+                type="submit"
+                variant="outline"
+                name="meetingStatus"
+                value="cancelled"
+                disabled={!canManage || pending}
+              >
+                Cancelar reunión
+              </Button>
+            ) : null}
+          </div>
+        </form>
+        {notes.length ? (
+          <div className="space-y-2 border-t pt-4">
+            <h3 className="font-medium">Notas internas</h3>
+            {notes.map((note, index) => (
+              <p
+                key={`${index}-${note}`}
+                className="bg-muted rounded-md p-3 text-sm whitespace-pre-wrap"
+              >
+                {note}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
 function MeetingDetailsCard({
   task,
   participants,
@@ -832,8 +1363,8 @@ function MeetingDetailsCard({
   const contactIds = storedContactIds.length
     ? storedContactIds
     : participants.flatMap((participant) =>
-        participant.contactoId ? [participant.contactoId] : [],
-      )
+      participant.contactoId ? [participant.contactoId] : [],
+    )
   const userIds = detailsIds(details, 'attendeeUserIds')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
