@@ -64,6 +64,7 @@ export type Database = {
       crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
       crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
+      crm_case_communications: Table<CaseCommunicationRow, CaseCommunicationInsert>
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>
       crm_contact_documents: Table<ContactDocumentRow, ContactDocumentInsert, never>
@@ -992,6 +993,47 @@ export type CaseParticipantInsert = {
   name: string
   role: string
   confidentiality?: CaseParticipantRow['confidentiality']
+  details?: Json
+}
+
+export type CaseCommunicationRow = {
+  id: string
+  firm_id: string
+  case_id: string | null
+  workstream_id: string | null
+  contact_id: string | null
+  direction: 'inbound' | 'outbound'
+  communication_type: string
+  channel: string
+  subject: string
+  content: string
+  occurred_at: string
+  assigned_to: string | null
+  triage_status: string
+  sent_status: string
+  details: Json
+  version: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CaseCommunicationInsert = {
+  id?: string
+  firm_id: string
+  case_id?: string | null
+  workstream_id?: string | null
+  contact_id?: string | null
+  direction: CaseCommunicationRow['direction']
+  communication_type: string
+  channel: string
+  subject?: string
+  content?: string
+  occurred_at?: string
+  assigned_to?: string | null
+  triage_status?: string
+  sent_status?: string
   details?: Json
 }
 

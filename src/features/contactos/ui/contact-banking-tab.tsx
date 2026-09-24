@@ -6,6 +6,15 @@ import { PendingPanel } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -87,162 +96,181 @@ export function ContactBankingTab({
 
   return (
     <section className="space-y-4" aria-label="Datos bancarios">
-      <Card className="border-warning/50 bg-warning/5">
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Cuenta bancaria vigente
-            </CardTitle>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Visibles solo para perfiles autorizados. Al registrar una cuenta nueva, la anterior
-              pasa al histórico.
-            </p>
-          </div>
-          <Button type="button" size="sm" onClick={() => setShowForm((open) => !open)}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            {showForm ? 'Cerrar' : 'Nuevos datos bancarios'}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {current ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Value label="Titular de la cuenta" value={current.holder} />
-              <Value label="NIF del titular" value={current.tax_id} />
-              <div>
-                <p className="text-muted-foreground text-xs">Número de cuenta / IBAN</p>
-                <div className="bg-background mt-1 flex min-h-10 items-center justify-between rounded-md border px-3 py-2">
-                  <span className="font-mono text-xs">
-                    {showIban ? current.iban : maskIban(current.iban)}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={showIban ? 'Ocultar IBAN' : 'Mostrar IBAN'}
-                    onClick={() => setShowIban((visible) => !visible)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    {showIban ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <Value label="Entidad bancaria" value={current.bank_name} />
-              <Value label="Código BIC / SWIFT" value={current.bic} />
-              <Value label="Vigente desde" value={formatDate(current.valid_from)} />
-              <Value
-                label="Mandato SEPA"
-                value={current.sepa_mandate ? 'Firmado' : 'Sin mandato'}
-              />
-              <Value
-                label="Fecha del mandato"
-                value={current.sepa_signed_on ? formatDate(current.sepa_signed_on) : ''}
-              />
-              <div>
-                <p className="text-muted-foreground text-xs">Estado del mandato</p>
-                <Badge variant="outline" className="mt-1">
-                  {MANDATE_LABELS[current.mandate_status]}
-                </Badge>
-              </div>
-              {current.observations ? (
-                <Value label="Observaciones bancarias" value={current.observations} wide />
-              ) : null}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <Card className="border-warning/50 bg-warning/5">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Cuenta bancaria vigente
+              </CardTitle>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Visibles solo para perfiles autorizados. Al registrar una cuenta nueva, la anterior
+                pasa al histórico.
+              </p>
             </div>
-          ) : (
-            <p className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
-              No hay datos bancarios vigentes registrados.
-            </p>
-          )}
-          {showForm ? (
-            <form onSubmit={(event) => void submit(event)} className="space-y-4 border-t pt-4">
+            <DialogTrigger asChild>
+              <Button type="button" size="sm">
+                <Plus className="h-4 w-4" aria-hidden="true" /> Nuevos datos bancarios
+              </Button>
+            </DialogTrigger>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {current ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Field
-                  label="Titular"
-                  name="bank-holder"
-                  value={form.holder}
-                  required
-                  onChange={(holder) => setForm({ ...form, holder })}
-                />
-                <Field
-                  label="NIF del titular"
-                  name="bank-tax-id"
-                  value={form.tax_id}
-                  onChange={(tax_id) => setForm({ ...form, tax_id })}
-                />
-                <Field
-                  label="IBAN"
-                  name="bank-iban"
-                  value={form.iban}
-                  required
-                  onChange={(iban) => setForm({ ...form, iban })}
-                />
-                <Field
-                  label="Entidad"
-                  name="bank-name"
-                  value={form.bank_name}
-                  onChange={(bank_name) => setForm({ ...form, bank_name })}
-                />
-                <Field
-                  label="BIC / SWIFT"
-                  name="bank-bic"
-                  value={form.bic}
-                  onChange={(bic) => setForm({ ...form, bic })}
-                />
-                <Field
-                  label="Fecha del mandato SEPA"
-                  name="bank-sepa-date"
-                  value={form.sepa_signed_on ?? ''}
-                  type="date"
-                  onChange={(sepa_signed_on) =>
-                    setForm({ ...form, sepa_signed_on: sepa_signed_on || null })
-                  }
-                />
-                <div className="space-y-1.5">
-                  <Label htmlFor="bank-mandate-status">Estado del mandato</Label>
-                  <select
-                    id="bank-mandate-status"
-                    value={form.mandate_status}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        mandate_status: event.target
-                          .value as ContactBankAccountInput['mandate_status'],
-                      })
-                    }
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                  >
-                    {Object.entries(MANDATE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                <Value label="Titular de la cuenta" value={current.holder} />
+                <Value label="NIF del titular" value={current.tax_id} />
+                <div>
+                  <p className="text-muted-foreground text-xs">Número de cuenta / IBAN</p>
+                  <div className="bg-background mt-1 flex min-h-10 items-center justify-between rounded-md border px-3 py-2">
+                    <span className="font-mono text-xs">
+                      {showIban ? current.iban : maskIban(current.iban)}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={showIban ? 'Ocultar IBAN' : 'Mostrar IBAN'}
+                      onClick={() => setShowIban((visible) => !visible)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {showIban ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-                <label className="flex items-center gap-2 self-end pb-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.sepa_mandate}
-                    onChange={(event) => setForm({ ...form, sepa_mandate: event.target.checked })}
-                  />
-                  Mandato SEPA firmado
-                </label>
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <Label htmlFor="bank-observations">Observaciones</Label>
-                  <Textarea
-                    id="bank-observations"
-                    value={form.observations}
-                    onChange={(event) => setForm({ ...form, observations: event.target.value })}
-                    rows={3}
-                  />
+                <Value label="Entidad bancaria" value={current.bank_name} />
+                <Value label="Código BIC / SWIFT" value={current.bic} />
+                <Value label="Vigente desde" value={formatDate(current.valid_from)} />
+                <Value
+                  label="Mandato SEPA"
+                  value={current.sepa_mandate ? 'Firmado' : 'Sin mandato'}
+                />
+                <Value
+                  label="Fecha del mandato"
+                  value={current.sepa_signed_on ? formatDate(current.sepa_signed_on) : ''}
+                />
+                <div>
+                  <p className="text-muted-foreground text-xs">Estado del mandato</p>
+                  <Badge variant="outline" className="mt-1">
+                    {MANDATE_LABELS[current.mandate_status]}
+                  </Badge>
                 </div>
+                {current.observations ? (
+                  <Value label="Observaciones bancarias" value={current.observations} wide />
+                ) : null}
               </div>
+            ) : (
+              <p className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
+                No hay datos bancarios vigentes registrados.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nuevos datos bancarios</DialogTitle>
+            <DialogDescription>
+              Al guardar, estos datos quedarán vigentes y la cuenta actual pasará al histórico.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => void submit(event)} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field
+                label="Titular"
+                name="bank-holder"
+                value={form.holder}
+                required
+                onChange={(holder) => setForm({ ...form, holder })}
+              />
+              <Field
+                label="NIF del titular"
+                name="bank-tax-id"
+                value={form.tax_id}
+                onChange={(tax_id) => setForm({ ...form, tax_id })}
+              />
+              <Field
+                label="IBAN"
+                name="bank-iban"
+                value={form.iban}
+                required
+                onChange={(iban) => setForm({ ...form, iban })}
+              />
+              <Field
+                label="Entidad"
+                name="bank-name"
+                value={form.bank_name}
+                onChange={(bank_name) => setForm({ ...form, bank_name })}
+              />
+              <Field
+                label="BIC / SWIFT"
+                name="bank-bic"
+                value={form.bic}
+                onChange={(bic) => setForm({ ...form, bic })}
+              />
+              <Field
+                label="Fecha del mandato SEPA"
+                name="bank-sepa-date"
+                value={form.sepa_signed_on ?? ''}
+                type="date"
+                onChange={(sepa_signed_on) =>
+                  setForm({ ...form, sepa_signed_on: sepa_signed_on || null })
+                }
+              />
+              <div className="space-y-1.5">
+                <Label htmlFor="bank-mandate-status">Estado del mandato</Label>
+                <select
+                  id="bank-mandate-status"
+                  value={form.mandate_status}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      mandate_status: event.target
+                        .value as ContactBankAccountInput['mandate_status'],
+                    })
+                  }
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                >
+                  {Object.entries(MANDATE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 self-end pb-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.sepa_mandate}
+                  onChange={(event) => setForm({ ...form, sepa_mandate: event.target.checked })}
+                />
+                Mandato SEPA firmado
+              </label>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Label htmlFor="bank-observations">Observaciones</Label>
+                <Textarea
+                  id="bank-observations"
+                  value={form.observations}
+                  onChange={(event) => setForm({ ...form, observations: event.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={replace.isPending}
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </Button>
               <Button
                 type="submit"
                 disabled={replace.isPending || !form.holder.trim() || !form.iban.trim()}
               >
                 {replace.isPending ? 'Guardando…' : 'Guardar y archivar la cuenta anterior'}
               </Button>
-            </form>
-          ) : null}
-        </CardContent>
-      </Card>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Histórico de cuentas</CardTitle>

@@ -9,9 +9,11 @@ import {
   CaseEditForm,
   CaseRelatedForms,
   CaseDetail,
+  useComunicacionesExpediente,
   useActuacionesPersistentes,
   useActualizarExpediente,
   useCrearActuacion,
+  useCrearComunicacionExpediente,
   useCrearLinea,
   useCrearParticipante,
   useDocumentosExpediente,
@@ -45,6 +47,7 @@ function CaseRoute() {
   const activities = useActuacionesPersistentes(firmId, id)
   const participants = useParticipantesPersistentes(firmId, id)
   const events = useEventosExpediente(firmId, id)
+  const communications = useComunicacionesExpediente(firmId, id)
   const documents = useDocumentosExpediente(firmId, id)
   const tasks = useTareasPersistentes(firmId)
   const notes = useNotasRemotas(firmId)
@@ -71,6 +74,7 @@ function CaseRoute() {
   const createParticipant = useCrearParticipante(firmId)
   const createWorkstream = useCrearLinea(firmId)
   const createActivity = useCrearActuacion(firmId)
+  const createCommunication = useCrearComunicacionExpediente(firmId, id)
   const createTask = useCrearTarea(firmId)
   const queries = [
     caseQuery,
@@ -78,6 +82,7 @@ function CaseRoute() {
     activities,
     participants,
     events,
+    communications,
     documents,
     tasks,
     contacts,
@@ -118,6 +123,7 @@ function CaseRoute() {
       actuaciones={activities.data ?? []}
       participantes={participants.data ?? []}
       eventos={events.data ?? []}
+      comunicaciones={communications.data ?? []}
       documentos={documents.data ?? []}
       tareas={tasks.data ?? []}
       notas={notes.data ?? []}
@@ -129,6 +135,8 @@ function CaseRoute() {
       }
       taskPending={createTask.isPending}
       onCreateTask={(input) => createTask.mutateAsync(input)}
+      communicationPending={createCommunication.isPending}
+      onCreateCommunication={(input) => createCommunication.mutateAsync(input)}
       editor={
         <CaseEditForm
           expediente={expediente}

@@ -80,6 +80,7 @@ function renderDetail(
         ] as never
       }
       eventos={eventos}
+      comunicaciones={[]}
       documentos={
         [
           {
@@ -111,6 +112,8 @@ function renderDetail(
       clienteNombre="Inversiones Torrelodones, S.L."
       taskPending={false}
       onCreateTask={onCreateTask}
+      communicationPending={false}
+      onCreateCommunication={vi.fn().mockResolvedValue(undefined)}
       editor={<div>Editor del expediente</div>}
       notas={notas}
       relatedForms={{

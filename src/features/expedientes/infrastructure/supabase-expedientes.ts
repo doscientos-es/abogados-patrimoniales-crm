@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
   ActuacionPersistida,
@@ -11,6 +11,8 @@ import type {
 import {
   getSupabaseBrowserClient,
   type CaseActivityRow,
+  type CaseCommunicationInsert,
+  type CaseCommunicationRow,
   type CaseDocumentRow,
   type CaseEventRow,
   type CaseParticipantRow,
@@ -279,5 +281,69 @@ export function useEventosExpediente(firmId: string | undefined, caseId: string)
       if (error) throw error
       return data.map(eventoFromRow)
     },
+  })
+}
+
+export function useComunicacionesExpediente(firmId: string | undefined, caseId: string) {
+  return useQuery({
+    queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
+    enabled: Boolean(firmId && caseId),
+    queryFn: async (): Promise<CaseCommunicationRow[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('occurred_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export type RegistrarComunicacionExpedienteInput = Pick<
+  CaseCommunicationInsert,
+  | 'contact_id'
+  | 'direction'
+  | 'communication_type'
+  | 'channel'
+  | 'subject'
+  | 'content'
+  | 'occurred_at'
+>
+
+export function useCrearComunicacionExpediente(firmId: string | undefined, caseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: RegistrarComunicacionExpedienteInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const content = input.content?.trim() ?? ''
+      if (!content) throw new Error('Escribe el resumen de la comunicación.')
+      const payload: CaseCommunicationInsert = {
+        firm_id: firmId,
+        case_id: caseId,
+        contact_id: input.contact_id ?? null,
+        direction: input.direction,
+        communication_type: input.communication_type,
+        channel: input.channel,
+        subject: input.subject?.trim() ?? '',
+        content,
+        occurred_at: input.occurred_at || new Date().toISOString(),
+      }
+      const { data, error } = await client
+        .from('crm_case_communications')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
+      }),
   })
 }
