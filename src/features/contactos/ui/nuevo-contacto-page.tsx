@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import { useRef, useState, type FormEvent, type InputHTMLAttributes } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
@@ -7,6 +7,15 @@ import { toast } from 'sonner'
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -475,57 +484,78 @@ function DraftNote({
 }: {
   onAdd: (note: { title: string; content: string; highlighted: boolean; critical: boolean }) => void
 }) {
+  const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [highlighted, setHighlighted] = useState(false)
   const [critical, setCritical] = useState(false)
   return (
-    <div className="w-full max-w-xs rotate-1 border border-amber-300 bg-amber-100 p-4 shadow-md">
-      <Input
-        aria-label="Título de nota interna"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Título de la nota (opcional)"
-      />
-      <Textarea
-        className="mt-2 bg-transparent"
-        rows={4}
-        aria-label="Contenido de nota interna"
-        value={content}
-        onChange={(event) => setContent(event.target.value)}
-        placeholder="Escribe aquí la anotación…"
-      />
-      <label className="mt-2 flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={highlighted}
-          onChange={(event) => setHighlighted(event.target.checked)}
-        />{' '}
-        Destacada
-      </label>
-      <label className="mt-1 flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={critical}
-          onChange={(event) => setCritical(event.target.checked)}
-        />{' '}
-        Advertencia crítica
-      </label>
-      <Button
-        type="button"
-        className="mt-3 w-full"
-        disabled={!content.trim()}
-        onClick={() => {
-          onAdd({ title, content: content.trim(), highlighted, critical })
-          setTitle('')
-          setContent('')
-          setHighlighted(false)
-          setCritical(false)
-        }}
-      >
-        Añadir nota
-      </Button>
-    </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <Plus className="size-4" aria-hidden="true" /> Crear nota interna
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nueva nota interna</DialogTitle>
+          <DialogDescription>Se guardará vinculada al contacto cuando lo crees.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 rounded-md border border-amber-300 bg-amber-100 p-4">
+          <Input
+            aria-label="Título de nota interna"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Título de la nota (opcional)"
+          />
+          <Textarea
+            className="bg-transparent"
+            rows={4}
+            aria-label="Contenido de nota interna"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Escribe aquí la anotación…"
+          />
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={highlighted}
+              onChange={(event) => setHighlighted(event.target.checked)}
+            />{' '}
+            Destacada
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={critical}
+              onChange={(event) => setCritical(event.target.checked)}
+            />{' '}
+            Advertencia crítica
+          </label>
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={!content.trim()}
+              onClick={() => {
+                onAdd({ title, content: content.trim(), highlighted, critical })
+                setTitle('')
+                setContent('')
+                setHighlighted(false)
+                setCritical(false)
+                setOpen(false)
+              }}
+            >
+              Añadir nota
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

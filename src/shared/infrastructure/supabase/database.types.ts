@@ -224,6 +224,8 @@ export type Database = {
           initial_message?: string | null
           new_parent_task_id?: string | null
           new_meeting_details?: Json
+          new_workstream_id?: string | null
+          new_critical?: boolean
         }
         Returns: TaskRow
       }

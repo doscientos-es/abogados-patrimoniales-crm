@@ -17,6 +17,14 @@ import { PendingPanel } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -866,7 +874,7 @@ const NOTE_TRIGGERS: Array<{ id: DisparadorNota; label: string }> = [
   { id: 'siempre', label: 'Siempre mientras esté activa' },
 ]
 
-function ContactInternalNotes({
+export function ContactInternalNotes({
   notes,
   loading,
   error,
@@ -899,6 +907,7 @@ function ContactInternalNotes({
   onCreated: () => void
   onError: (error: unknown) => void
 }) {
+  const [createNoteOpen, setCreateNoteOpen] = useState(false)
   const [scope, setScope] = useState<ContactNoteScope>('persona')
   const [originId, setOriginId] = useState(contactId)
   const [relatedContacts, setRelatedContacts] = useState<string[]>([contactId])
@@ -1000,6 +1009,7 @@ function ContactInternalNotes({
       setTriggers([])
       setPermittedUsers([])
       onCreated()
+      setCreateNoteOpen(false)
     } catch (cause) {
       onError(cause)
     }
@@ -1012,250 +1022,271 @@ function ContactInternalNotes({
       aria-labelledby="contact-tab-notes"
       className="space-y-4"
     >
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Nueva nota interna</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Añade información interna de contexto. No forma parte de las comunicaciones con el
-            cliente ni será visible para terceros.
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold">Notas internas</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Información de contexto para el equipo, no visible para el cliente ni terceros.
           </p>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={(event) => void save(event)}>
-            <div className="space-y-1.5">
-              <Label htmlFor="contact-note-content">Contenido (obligatorio)</Label>
-              <Textarea
-                id="contact-note-content"
-                name="noteContent"
-                rows={5}
-                maxLength={20000}
-                required
-                placeholder="Ej.: prefiere que le llamemos por la tarde; está preocupado por los costes…"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+        </div>
+        <Dialog open={createNoteOpen} onOpenChange={setCreateNoteOpen}>
+          <DialogTrigger asChild>
+            <Button type="button">
+              <Plus className="size-4" aria-hidden="true" /> Crear nota interna
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Nueva nota interna</DialogTitle>
+              <DialogDescription>
+                Añade información interna de contexto. No forma parte de las comunicaciones con el
+                cliente ni será visible para terceros.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={(event) => void save(event)}>
               <div className="space-y-1.5">
-                <Label htmlFor="contact-note-title">Título (opcional)</Label>
-                <Input id="contact-note-title" name="noteTitle" />
+                <Label htmlFor="contact-note-content">Contenido (obligatorio)</Label>
+                <Textarea
+                  id="contact-note-content"
+                  name="noteContent"
+                  rows={5}
+                  maxLength={20000}
+                  required
+                  placeholder="Ej.: prefiere que le llamemos por la tarde; está preocupado por los costes…"
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="contact-note-scope">Tipo de nota</Label>
-                <select
-                  id="contact-note-scope"
-                  value={scope}
-                  onChange={(event) => changeScope(event.target.value as ContactNoteScope)}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="persona">Nota de la persona</option>
-                  <option value="expediente" disabled={!caseOptions.length || casesLoading}>
-                    Nota del expediente
-                  </option>
-                  <option
-                    value="oportunidad"
-                    disabled={!opportunityOptions.length || opportunitiesLoading}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact-note-title">Título (opcional)</Label>
+                  <Input id="contact-note-title" name="noteTitle" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact-note-scope">Tipo de nota</Label>
+                  <select
+                    id="contact-note-scope"
+                    value={scope}
+                    onChange={(event) => changeScope(event.target.value as ContactNoteScope)}
+                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                   >
-                    Nota del Lead
-                  </option>
-                  <option value="ejecucion" disabled>
-                    Nota de la ejecución (próximamente)
-                  </option>
-                  <option value="presupuesto" disabled>
-                    Nota del presupuesto (próximamente)
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="contact-note-related">Elemento relacionado</Label>
-              <select
-                id="contact-note-related"
-                value={originId}
-                onChange={(event) => setOriginId(event.target.value)}
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                disabled={!relatedOptions.length}
-                required
-              >
-                {relatedOptions.length ? (
-                  relatedOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
+                    <option value="persona">Nota de la persona</option>
+                    <option value="expediente" disabled={!caseOptions.length || casesLoading}>
+                      Nota del expediente
                     </option>
-                  ))
-                ) : (
-                  <option value="">
-                    {scope === 'expediente' && casesLoading
-                      ? 'Cargando expedientes…'
-                      : scope === 'oportunidad' && opportunitiesLoading
-                        ? 'Cargando Leads…'
-                        : 'No hay elementos disponibles'}
-                  </option>
-                )}
-              </select>
-              <p className="text-muted-foreground text-xs">
-                {selectedRelated
-                  ? `La nota quedará vinculada a: ${selectedRelated.label}`
-                  : 'Selecciona el elemento de procedencia de la nota.'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <Label>Contactos relacionados</Label>
-                <span className="text-muted-foreground text-xs">
-                  {relatedContacts.length} contacto(s)
-                </span>
+                    <option
+                      value="oportunidad"
+                      disabled={!opportunityOptions.length || opportunitiesLoading}
+                    >
+                      Nota del Lead
+                    </option>
+                    <option value="ejecucion" disabled>
+                      Nota de la ejecución (próximamente)
+                    </option>
+                    <option value="presupuesto" disabled>
+                      Nota del presupuesto (próximamente)
+                    </option>
+                  </select>
+                </div>
               </div>
-              <details className="rounded-md border px-3 py-2">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Elegir contactos relacionados
+              <div className="space-y-1.5">
+                <Label htmlFor="contact-note-related">Elemento relacionado</Label>
+                <select
+                  id="contact-note-related"
+                  value={originId}
+                  onChange={(event) => setOriginId(event.target.value)}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  disabled={!relatedOptions.length}
+                  required
+                >
+                  {relatedOptions.length ? (
+                    relatedOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">
+                      {scope === 'expediente' && casesLoading
+                        ? 'Cargando expedientes…'
+                        : scope === 'oportunidad' && opportunitiesLoading
+                          ? 'Cargando Leads…'
+                          : 'No hay elementos disponibles'}
+                    </option>
+                  )}
+                </select>
+                <p className="text-muted-foreground text-xs">
+                  {selectedRelated
+                    ? `La nota quedará vinculada a: ${selectedRelated.label}`
+                    : 'Selecciona el elemento de procedencia de la nota.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <Label>Contactos relacionados</Label>
+                  <span className="text-muted-foreground text-xs">
+                    {relatedContacts.length} contacto(s)
+                  </span>
+                </div>
+                <details className="rounded-md border px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Elegir contactos relacionados
+                  </summary>
+                  <div className="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                    {selectableContacts.map((item) => (
+                      <label key={item.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={relatedContacts.includes(item.id)}
+                          onChange={(event) => toggleContact(item.id, event.target.checked)}
+                        />
+                        {displayName(item)}
+                      </label>
+                    ))}
+                  </div>
+                </details>
+                {relatedContacts.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectableContacts
+                      .filter((item) => relatedContacts.includes(item.id))
+                      .map((item) => (
+                        <Badge key={item.id} variant="secondary" className="font-normal">
+                          {displayName(item)}
+                        </Badge>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-x-5 gap-y-3">
+                <NoteCheckbox name="noteHighlighted" label="Destacada" />
+                <NoteCheckbox name="noteCritical" label="Advertencia crítica" />
+                <NoteCheckbox name="noteAcknowledgement" label="Requerir confirmación de lectura" />
+              </div>
+              <details className="group rounded-md border">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-medium">
+                  Opciones avanzadas (vigencia, avisos y visibilidad)
+                  <ArrowRight
+                    className="size-4 transition-transform group-open:rotate-90"
+                    aria-hidden="true"
+                  />
                 </summary>
-                <div className="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
-                  {selectableContacts.map((item) => (
-                    <label key={item.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={relatedContacts.includes(item.id)}
-                        onChange={(event) => toggleContact(item.id, event.target.checked)}
-                      />
-                      {displayName(item)}
-                    </label>
-                  ))}
+                <div className="space-y-4 border-t p-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="contact-note-validity">Vigencia</Label>
+                      <select
+                        id="contact-note-validity"
+                        value={validity}
+                        onChange={(event) => setValidity(event.target.value as ContactNoteValidity)}
+                        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      >
+                        <option value="permanent">Permanente</option>
+                        <option value="temporary">Temporal (hasta una fecha)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="contact-note-review">Fecha de revisión (opcional)</Label>
+                      <Input id="contact-note-review" name="noteReviewOn" type="date" />
+                    </div>
+                    {validity === 'temporary' ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="contact-note-expires">Fecha de vencimiento</Label>
+                          <Input
+                            id="contact-note-expires"
+                            name="noteExpiresOn"
+                            type="date"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="contact-note-expiry-action">Al vencer</Label>
+                          <select
+                            id="contact-note-expiry-action"
+                            value={expiryAction}
+                            onChange={(event) =>
+                              setExpiryAction(event.target.value as 'archive' | 'confirm')
+                            }
+                            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                          >
+                            <option value="archive">Archivar automáticamente</option>
+                            <option value="confirm">Dejar pendiente de confirmación</option>
+                          </select>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium">Mostrar esta nota cuando…</legend>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {NOTE_TRIGGERS.map((trigger) => (
+                        <NoteCheckbox
+                          key={trigger.id}
+                          name={`trigger-${trigger.id}`}
+                          label={trigger.label}
+                          checked={triggers.includes(trigger.id)}
+                          onChange={(checked) => toggleTrigger(trigger.id, checked)}
+                        />
+                      ))}
+                    </div>
+                  </fieldset>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="contact-note-visibility">Visibilidad</Label>
+                      <select
+                        id="contact-note-visibility"
+                        value={visibility}
+                        onChange={(event) =>
+                          setVisibility(event.target.value as ContactNoteVisibility)
+                        }
+                        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      >
+                        <option value="team">Equipo del despacho</option>
+                        <option value="restricted">Restringida a usuarios concretos</option>
+                      </select>
+                    </div>
+                    {visibility === 'restricted' ? (
+                      <fieldset className="space-y-2">
+                        <legend className="text-sm font-medium">Usuarios autorizados</legend>
+                        {membersLoading ? (
+                          <p className="text-muted-foreground text-sm">Cargando usuarios…</p>
+                        ) : memberOptions.length ? (
+                          <div className="grid max-h-40 gap-2 overflow-y-auto">
+                            {memberOptions.map((member) => (
+                              <NoteCheckbox
+                                key={member.id}
+                                name={`user-${member.id}`}
+                                label={`${member.nombre} · ${member.rol}`}
+                                checked={permittedUsers.includes(member.id)}
+                                onChange={(checked) => toggleUser(member.id, checked)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">
+                            No hay usuarios disponibles.
+                          </p>
+                        )}
+                      </fieldset>
+                    ) : null}
+                  </div>
                 </div>
               </details>
-              {relatedContacts.length ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectableContacts
-                    .filter((item) => relatedContacts.includes(item.id))
-                    .map((item) => (
-                      <Badge key={item.id} variant="secondary" className="font-normal">
-                        {displayName(item)}
-                      </Badge>
-                    ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-3">
-              <NoteCheckbox name="noteHighlighted" label="Destacada" />
-              <NoteCheckbox name="noteCritical" label="Advertencia crítica" />
-              <NoteCheckbox name="noteAcknowledgement" label="Requerir confirmación de lectura" />
-            </div>
-            <details className="group rounded-md border">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-medium">
-                Opciones avanzadas (vigencia, avisos y visibilidad)
-                <ArrowRight
-                  className="size-4 transition-transform group-open:rotate-90"
-                  aria-hidden="true"
-                />
-              </summary>
-              <div className="space-y-4 border-t p-3">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="contact-note-validity">Vigencia</Label>
-                    <select
-                      id="contact-note-validity"
-                      value={validity}
-                      onChange={(event) => setValidity(event.target.value as ContactNoteValidity)}
-                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    >
-                      <option value="permanent">Permanente</option>
-                      <option value="temporary">Temporal (hasta una fecha)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="contact-note-review">Fecha de revisión (opcional)</Label>
-                    <Input id="contact-note-review" name="noteReviewOn" type="date" />
-                  </div>
-                  {validity === 'temporary' ? (
-                    <>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="contact-note-expires">Fecha de vencimiento</Label>
-                        <Input
-                          id="contact-note-expires"
-                          name="noteExpiresOn"
-                          type="date"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="contact-note-expiry-action">Al vencer</Label>
-                        <select
-                          id="contact-note-expiry-action"
-                          value={expiryAction}
-                          onChange={(event) =>
-                            setExpiryAction(event.target.value as 'archive' | 'confirm')
-                          }
-                          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                        >
-                          <option value="archive">Archivar automáticamente</option>
-                          <option value="confirm">Dejar pendiente de confirmación</option>
-                        </select>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-                <fieldset className="space-y-2">
-                  <legend className="text-sm font-medium">Mostrar esta nota cuando…</legend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {NOTE_TRIGGERS.map((trigger) => (
-                      <NoteCheckbox
-                        key={trigger.id}
-                        name={`trigger-${trigger.id}`}
-                        label={trigger.label}
-                        checked={triggers.includes(trigger.id)}
-                        onChange={(checked) => toggleTrigger(trigger.id, checked)}
-                      />
-                    ))}
-                  </div>
-                </fieldset>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="contact-note-visibility">Visibilidad</Label>
-                    <select
-                      id="contact-note-visibility"
-                      value={visibility}
-                      onChange={(event) =>
-                        setVisibility(event.target.value as ContactNoteVisibility)
-                      }
-                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    >
-                      <option value="team">Equipo del despacho</option>
-                      <option value="restricted">Restringida a usuarios concretos</option>
-                    </select>
-                  </div>
-                  {visibility === 'restricted' ? (
-                    <fieldset className="space-y-2">
-                      <legend className="text-sm font-medium">Usuarios autorizados</legend>
-                      {membersLoading ? (
-                        <p className="text-muted-foreground text-sm">Cargando usuarios…</p>
-                      ) : memberOptions.length ? (
-                        <div className="grid max-h-40 gap-2 overflow-y-auto">
-                          {memberOptions.map((member) => (
-                            <NoteCheckbox
-                              key={member.id}
-                              name={`user-${member.id}`}
-                              label={`${member.nombre} · ${member.rol}`}
-                              checked={permittedUsers.includes(member.id)}
-                              onChange={(checked) => toggleUser(member.id, checked)}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">
-                          No hay usuarios disponibles.
-                        </p>
-                      )}
-                    </fieldset>
-                  ) : null}
-                </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCreateNoteOpen(false)}
+                  disabled={creating}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={creating}>
+                  {creating ? 'Guardando…' : 'Guardar nota'}
+                </Button>
               </div>
-            </details>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={creating}>
-                {creating ? 'Guardando…' : 'Guardar nota'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
       {loading ? (
         <PendingPanel title="Cargando notas" description="Consultando las notas internas…" />
       ) : error ? (

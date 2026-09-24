@@ -163,6 +163,8 @@ describe('NuevoContactoPage', () => {
     render(<NuevoContactoPage />)
 
     fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    expect(screen.queryByLabelText('Contenido de nota interna')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Crear nota interna' }))
     fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
       target: { value: 'Información relevante' },
     })

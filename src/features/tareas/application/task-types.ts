@@ -37,6 +37,21 @@ export type DetallesReunion = {
   preferredTimeSlot?: string
   preferredLocation?: string
   internalInstructions?: string
+  preparationItems?: Array<{
+    id: string
+    text: string
+    done: boolean
+    category?: string
+    createdById?: string
+    createdByName?: string
+    createdAt?: string
+  }>
+  rescheduleHistory?: Array<{
+    requestedAt: string
+    reason: string
+    previousStartsAt: string
+    previousEndsAt: string
+  }>
   startedAt?: string
   finishedAt?: string
   actualDurationMinutes?: number
@@ -103,6 +118,7 @@ export type TareaPersistida = {
 export type CrearTareaInput = {
   expedienteId: string | null
   oportunidadId: string | null
+  lineaId?: string | null
   tipo: TipoTarea
   titulo: string
   descripcion: string

@@ -54,6 +54,8 @@ export type LeadDetailTab =
   | 'tasks'
   | 'communications'
   | 'notes'
+  | 'quote'
+  | 'documents'
   | 'acceptance'
   | 'history'
 
@@ -65,6 +67,8 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: 'tasks', label: 'Tareas' },
   { id: 'communications', label: 'Comunicaciones' },
   { id: 'notes', label: 'Notas internas' },
+  { id: 'quote', label: 'Presupuesto' },
+  { id: 'documents', label: 'Documentación' },
   { id: 'acceptance', label: 'Validación y aceptación' },
   { id: 'history', label: 'Histórico' },
 ]
@@ -272,6 +276,12 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === 'notes' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="notes" />
+        ) : null}
+        {activeTab === 'quote' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="quote" />
+        ) : null}
+        {activeTab === 'documents' ? (
+          <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="documents" />
         ) : null}
         {activeTab === 'history' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="history" />

@@ -97,6 +97,7 @@ function renderDetail(
           {
             id: 'task-1',
             expedienteId: 'case-1',
+            lineaId: 'line-1',
             titulo: 'Preparar firma',
             tipo: 'Tarea',
             estado: 'Pendiente',
@@ -136,6 +137,7 @@ describe('CaseDetail', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
     expect(screen.getByText('Due diligence')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Preparar firma' })).toBeTruthy()
     expect(
       screen.getByText(/Frentes autónomos del expediente: cada uno con objetivo propio/i),
     ).toBeTruthy()
@@ -213,6 +215,26 @@ describe('CaseDetail', () => {
 
     expect(onCreateTask).toHaveBeenCalledWith(
       expect.objectContaining({ expedienteId: 'case-1', titulo: 'Enviar borrador' }),
+    )
+  })
+
+  it('creates a task from a workstream and persists its line context', () => {
+    const onCreateTask = vi.fn().mockResolvedValue(undefined)
+    renderDetail(onCreateTask)
+    fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
+    fireEvent.change(screen.getByLabelText('Nueva tarea para Due diligence'), {
+      target: { value: 'Revisar cargas registrales' },
+    })
+    const form = screen.getByRole('button', { name: 'Añadir tarea' }).closest('form')
+    if (!form) throw new Error('No se encontró el formulario de tarea de la línea.')
+    fireEvent.submit(form)
+
+    expect(onCreateTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expedienteId: 'case-1',
+        lineaId: 'line-1',
+        titulo: 'Revisar cargas registrales',
+      }),
     )
   })
 })

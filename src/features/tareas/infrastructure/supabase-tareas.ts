@@ -226,6 +226,8 @@ export function useCrearTarea(firmId: string | undefined) {
           : null,
         initial_message: input.mensajeInicial?.trim() || null,
         ...(input.detallesReunion ? { new_meeting_details: input.detallesReunion as Json } : {}),
+        new_workstream_id: input.lineaId ?? null,
+        new_critical: input.critico,
       })
       if (error) throw error
       if (input.etiquetaIds?.length) {

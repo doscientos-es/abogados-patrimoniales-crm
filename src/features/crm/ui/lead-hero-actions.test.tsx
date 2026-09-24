@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
 import {
-  LeadNoteForm,
+  LeadNoteDialog,
   LeadHistoryTimeline,
   LeadTaskCreateDialog,
   LeadTasksTable,
@@ -152,9 +152,9 @@ describe('LeadHeroActions', () => {
     expect(onAddQuestion).toHaveBeenCalledWith('¿Está suficientemente explicado el asunto?')
   })
 
-  it('labels the new internal note fields and associates their helper text', () => {
+  it('keeps the internal note form in a dialog and associates helper text with its fields', () => {
     render(
-      <LeadNoteForm
+      <LeadNoteDialog
         title=""
         content=""
         highlighted={false}
@@ -162,13 +162,16 @@ describe('LeadHeroActions', () => {
         onTitleChange={() => undefined}
         onContentChange={() => undefined}
         onHighlightedChange={() => undefined}
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={async (event) => {
+          event.preventDefault()
+          return true
+        }}
       />,
     )
 
-    expect(screen.getByRole('form', { name: 'Nueva nota' }).getAttribute('aria-describedby')).toBe(
-      'lead-new-note-help',
-    )
+    expect(screen.queryByLabelText('Contenido *')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Crear nota interna' }))
+    expect(screen.getByRole('form', { name: 'Formulario de nueva nota interna' })).toBeTruthy()
     expect(screen.getByLabelText('Título (opcional)').getAttribute('aria-describedby')).toBe(
       'lead-note-title-help',
     )

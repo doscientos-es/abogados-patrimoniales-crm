@@ -240,4 +240,137 @@ describe('TaskDetail', () => {
       }),
     )
   })
+
+  it('persists preparation checklist items for a special meeting', async () => {
+    mocks.role = 'owner'
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'preparation',
+      startsAt: '',
+      endsAt: '',
+      mode: 'office_bilbao',
+      location: '',
+      meetingUrl: '',
+      preparation: '',
+      attendeeContactIds: [],
+      attendeeUserIds: [],
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Clase del punto' }), {
+      target: { value: 'Documentación a solicitar' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Punto de preparación' }), {
+      target: { value: 'Solicitar escritura' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir punto de preparación' }))
+
+    await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          status: 'preparation',
+          preparationItems: [
+            expect.objectContaining({
+              text: 'Solicitar escritura',
+              done: false,
+              category: 'Documentación a solicitar',
+              createdById: 'user-1',
+              createdByName: 'Ana Responsable',
+              createdAt: expect.any(String),
+            }),
+          ],
+        }),
+      }),
+    )
+  })
+
+  it('removes a preparation point from a special meeting', async () => {
+    mocks.role = 'owner'
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'preparation',
+      startsAt: '',
+      endsAt: '',
+      mode: 'office_bilbao',
+      location: '',
+      meetingUrl: '',
+      preparation: '',
+      preparationItems: [{ id: 'prep-1', text: 'Solicitar escritura', done: false }],
+      attendeeContactIds: [],
+      attendeeUserIds: [],
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar punto: Solicitar escritura' }))
+
+    await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({ preparationItems: [] }),
+      }),
+    )
+  })
+
+  it('records the reason and previous schedule when reprogramming a special meeting', async () => {
+    mocks.role = 'owner'
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'scheduled',
+      startsAt: '2026-09-25T09:00:00.000Z',
+      endsAt: '2026-09-25T10:00:00.000Z',
+      mode: 'office_bilbao',
+      location: 'Sala Bilbao',
+      meetingUrl: '',
+      preparation: '',
+      attendeeContactIds: [],
+      attendeeUserIds: [],
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Motivo de reprogramación' }), {
+      target: { value: 'El cliente no puede acudir.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Reprogramar reunión' }))
+
+    await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
+    expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          status: 'preparation',
+          startsAt: '',
+          endsAt: '',
+          rescheduleHistory: [
+            expect.objectContaining({
+              reason: 'El cliente no puede acudir.',
+              previousStartsAt: '2026-09-25T09:00:00.000Z',
+              previousEndsAt: '2026-09-25T10:00:00.000Z',
+            }),
+          ],
+          internalNotes: ['Reprogramación: El cliente no puede acudir.'],
+        }),
+      }),
+    )
+  })
+
+  it('shows an elapsed timer while a special meeting is in progress', () => {
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'in_progress',
+      startsAt: '2026-09-25T09:00:00.000Z',
+      endsAt: '2026-09-25T10:00:00.000Z',
+      startedAt: new Date(Date.now() - 65_000).toISOString(),
+      mode: 'office_bilbao',
+      location: 'Sala Bilbao',
+      meetingUrl: '',
+      preparation: '',
+      attendeeContactIds: [],
+      attendeeUserIds: [],
+    }
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(
+      screen.getByRole('timer', { name: 'Tiempo transcurrido de la reunión' }).textContent,
+    ).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+  })
 })

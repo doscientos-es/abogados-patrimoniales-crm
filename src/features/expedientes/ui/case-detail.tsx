@@ -182,8 +182,12 @@ export function CaseDetail({
         {activeTab === 'workstreams' ? (
           <WorkstreamsSection
             lineas={lineas}
+            tasks={caseTasks}
             miembros={miembros}
             expedienteReferencia={item.referencia}
+            expedienteId={item.id}
+            pending={taskPending}
+            onCreateTask={onCreateTask}
             createForm={relatedForms.workstream}
           />
         ) : null}
@@ -451,8 +455,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-        .filter((item): item is string => typeof item === 'string' && item.length > 0)
+      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+      .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
@@ -580,13 +584,21 @@ type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
 
 function WorkstreamsSection({
   lineas,
+  tasks,
   miembros,
   expedienteReferencia,
+  expedienteId,
+  pending,
+  onCreateTask,
   createForm,
 }: {
   lineas: LineaPersistida[]
+  tasks: TareaPersistida[]
   miembros: MiembroDespacho[]
   expedienteReferencia: string
+  expedienteId: string
+  pending: boolean
+  onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   createForm: ReactNode
 }) {
   const [status, setStatus] = useState('all')
@@ -694,6 +706,10 @@ function WorkstreamsSection({
           <WorkstreamCard
             key={line.id}
             line={line}
+            tasks={tasks.filter((task) => task.lineaId === line.id)}
+            expedienteId={expedienteId}
+            pending={pending}
+            onCreateTask={onCreateTask}
             memberName={memberNames.get(line.asignadoId ?? '')}
           />
         ))}
@@ -745,11 +761,47 @@ function WorkstreamSelect({
 
 function WorkstreamCard({
   line,
+  tasks,
+  expedienteId,
+  pending,
+  onCreateTask,
   memberName,
 }: {
   line: LineaPersistida
+  tasks: TareaPersistida[]
+  expedienteId: string
+  pending: boolean
+  onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   memberName: string | undefined
 }) {
+  const submitTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const titulo = text(data, 'workstreamTaskTitle')
+    if (!titulo.trim()) return
+    try {
+      await onCreateTask({
+        expedienteId,
+        oportunidadId: null,
+        lineaId: line.id,
+        tipo: 'Tarea',
+        titulo: titulo.trim(),
+        descripcion: '',
+        prioridad: 'Media',
+        venceEn: dateTime(text(data, 'workstreamTaskDue')),
+        recordarEn: null,
+        clasePlazo: null,
+        critico: false,
+        asignadoId: line.asignadoId,
+      })
+      form.reset()
+      toast.success('Tarea vinculada a la línea de trabajo.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
+    }
+  }
+
   return (
     <Card>
       <CardContent className="space-y-3 pt-5">
@@ -766,6 +818,44 @@ function WorkstreamCard({
           <span>Responsable: {memberName ?? 'Sin asignar'}</span>
           <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
           <span>Prioridad: {line.prioridad}</span>
+        </div>
+        <div className="space-y-2 border-t pt-3">
+          <p className="text-sm font-medium">Tareas de esta línea · {tasks.length}</p>
+          {tasks.map((task) => (
+            <div key={task.id} className="flex items-center justify-between gap-3 text-sm">
+              <Link
+                to="/tareas/$taskId"
+                params={{ taskId: task.id }}
+                className="min-w-0 truncate underline-offset-4 hover:underline"
+              >
+                {task.titulo}
+              </Link>
+              <span className="text-muted-foreground shrink-0 text-xs">{task.estado}</span>
+            </div>
+          ))}
+          {!tasks.length ? (
+            <p className="text-muted-foreground text-xs">Todavía no hay tareas en esta línea.</p>
+          ) : null}
+          <form
+            className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"
+            onSubmit={(event) => void submitTask(event)}
+          >
+            <Input
+              name="workstreamTaskTitle"
+              aria-label={`Nueva tarea para ${line.titulo}`}
+              placeholder="Qué hay que hacer"
+              required
+              maxLength={240}
+            />
+            <Input
+              name="workstreamTaskDue"
+              aria-label={`Fecha de tarea para ${line.titulo}`}
+              type="date"
+            />
+            <Button type="submit" size="sm" disabled={pending}>
+              Añadir tarea
+            </Button>
+          </form>
         </div>
       </CardContent>
     </Card>
@@ -1069,9 +1159,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-        'es-ES',
-        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-      )
+      'es-ES',
+      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+    )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

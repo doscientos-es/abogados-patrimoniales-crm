@@ -62,6 +62,8 @@ export type LeadWorkspaceSection =
   | 'tasks'
   | 'communications'
   | 'notes'
+  | 'quote'
+  | 'documents'
   | 'acceptance'
   | 'history'
 
@@ -120,6 +122,12 @@ export function LeadWorkspace({
   const initial = asRecord(details['informacionInicial'] ?? {})
   const role = asRecord(details['rolContacto'] ?? {})
   const urgency = asRecord(details['urgencia'] ?? {})
+  const quote = asRecord(details['presupuesto'] ?? {})
+  const requestedDocuments = Array.isArray(details['documentacionSolicitada'])
+    ? details['documentacionSolicitada'].filter(
+        (value): value is string => typeof value === 'string',
+      )
+    : []
   const participants = Array.isArray(details['otrosIntervinientes'])
     ? details['otrosIntervinientes']
     : []
@@ -181,6 +189,73 @@ export function LeadWorkspace({
     }
   }
 
+  const saveQuote = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const version = Math.max(1, Number(formText(form, 'quoteVersion')) || 1)
+    const status = formText(form, 'quoteStatus')
+    const owner = formText(form, 'quoteOwner')
+    try {
+      await saveDetails.mutateAsync({
+        id: opportunity.id,
+        versionEsperada: opportunity.version,
+        detalles: {
+          ...details,
+          presupuesto: {
+            ...quote,
+            referencia: formText(form, 'quoteReference'),
+            estado: status,
+            version,
+            responsable: owner,
+            fechaPreparacion: formText(form, 'quotePreparedAt'),
+            fechaEnvio: formText(form, 'quoteSentAt'),
+            destinatario: formText(form, 'quoteRecipient'),
+            vigencia: formText(form, 'quoteValidity'),
+            alcance: formText(form, 'quoteScope'),
+            exclusiones: formText(form, 'quoteExclusions'),
+            honorarios: formText(form, 'quoteFees'),
+            impuestos: formText(form, 'quoteTaxes'),
+            formaPago: formText(form, 'quotePayment'),
+            gastos: formText(form, 'quoteExpenses'),
+            condiciones: formText(form, 'quoteConditions'),
+            historial: [
+              ...(Array.isArray(quote['historial']) ? quote['historial'] : []),
+              { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+            ],
+          },
+        },
+      })
+      toast.success('Seguimiento y condiciones del presupuesto guardados.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el presupuesto.')
+    }
+  }
+
+  const saveRequestedDocuments = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const list = formText(form, 'requestedDocuments')
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 100)
+    try {
+      await saveDetails.mutateAsync({
+        id: opportunity.id,
+        versionEsperada: opportunity.version,
+        detalles: {
+          ...details,
+          documentacionSolicitada: list,
+          situacionDocumental: formText(form, 'documentStatus'),
+          observacionesDocumentales: formText(form, 'documentNotes'),
+        },
+      })
+      toast.success('Documentación solicitada actualizada.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar la documentación.')
+    }
+  }
+
   const addTask = async (
     input: Omit<CrearTareaInput, 'expedienteId' | 'oportunidadId' | 'clasePlazo' | 'critico'>,
   ) => {
@@ -214,8 +289,10 @@ export function LeadWorkspace({
       setNoteContent('')
       setNoteHighlighted(false)
       toast.success('Nota interna creada.')
+      return true
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear la nota.')
+      return false
     }
   }
 
@@ -502,7 +579,7 @@ export function LeadWorkspace({
             {!relatedNotes.length && !notes.isPending ? (
               <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
             ) : null}
-            <LeadNoteForm
+            <LeadNoteDialog
               title={noteTitle}
               content={noteContent}
               highlighted={noteHighlighted}
@@ -510,7 +587,7 @@ export function LeadWorkspace({
               onTitleChange={setNoteTitle}
               onContentChange={setNoteContent}
               onHighlightedChange={setNoteHighlighted}
-              onSubmit={(event) => void addNote(event)}
+              onSubmit={(event) => addNote(event)}
             />
           </CardContent>
         </Card>
@@ -546,6 +623,252 @@ export function LeadWorkspace({
           loading={events.isPending}
           memberNames={memberNames}
         />
+      ) : null}
+      {section === 'quote' ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card className="xl:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Presupuesto vinculado al Lead</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Guarda las condiciones, el seguimiento y las versiones de la propuesta. El envío
+                real, la firma y el cobro se registran únicamente cuando se producen.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" onSubmit={saveQuote}>
+                <Field
+                  name="quoteReference"
+                  label="Referencia"
+                  defaultValue={text(quote['referencia'])}
+                  placeholder="PR-2026-0001"
+                />
+                <Field
+                  name="quoteVersion"
+                  label="Versión"
+                  type="number"
+                  min="1"
+                  defaultValue={String(typeof quote['version'] === 'number' ? quote['version'] : 1)}
+                  required
+                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="lead-quoteStatus">Estado</Label>
+                  <select
+                    id="lead-quoteStatus"
+                    name="quoteStatus"
+                    defaultValue={text(quote['estado']) || 'En preparación'}
+                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  >
+                    {[
+                      'En preparación',
+                      'Pendiente de validación',
+                      'Validado',
+                      'Enviado al cliente',
+                      'Requiere modificación',
+                      'Aceptado',
+                      'Rechazado',
+                    ].map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+                <Field
+                  name="quoteOwner"
+                  label="Responsable"
+                  defaultValue={text(quote['responsable'])}
+                />
+                <Field
+                  name="quotePreparedAt"
+                  label="Fecha de preparación"
+                  type="date"
+                  defaultValue={text(quote['fechaPreparacion'])}
+                />
+                <Field
+                  name="quoteSentAt"
+                  label="Fecha de envío efectivo"
+                  type="date"
+                  defaultValue={text(quote['fechaEnvio'])}
+                />
+                <Field
+                  name="quoteRecipient"
+                  label="Destinatario"
+                  defaultValue={text(quote['destinatario'])}
+                />
+                <Field
+                  name="quoteValidity"
+                  label="Vigencia"
+                  defaultValue={text(quote['vigencia'])}
+                  placeholder="30 días"
+                />
+                <Field
+                  name="quoteFees"
+                  label="Honorarios"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={
+                    text(quote['honorarios']) ||
+                    (opportunity.valorEstimado === null ? '' : String(opportunity.valorEstimado))
+                  }
+                />
+                <Field
+                  name="quoteTaxes"
+                  label="Impuestos"
+                  defaultValue={text(quote['impuestos'])}
+                />
+                <Field
+                  name="quotePayment"
+                  label="Forma y calendario de pago"
+                  defaultValue={text(quote['formaPago'])}
+                />
+                <Field
+                  name="quoteExpenses"
+                  label="Suplidos y gastos"
+                  defaultValue={text(quote['gastos'])}
+                />
+                <Field
+                  name="quoteScope"
+                  label="Alcance incluido"
+                  defaultValue={text(quote['alcance'])}
+                  multiline
+                />
+                <Field
+                  name="quoteExclusions"
+                  label="Exclusiones"
+                  defaultValue={text(quote['exclusiones'])}
+                  multiline
+                />
+                <Field
+                  name="quoteConditions"
+                  label="Condiciones y observaciones"
+                  defaultValue={text(quote['condiciones'])}
+                  multiline
+                />
+                <div className="flex items-end sm:col-span-2 xl:col-span-3">
+                  <Button type="submit" disabled={saveDetails.isPending}>
+                    {saveDetails.isPending ? 'Guardando…' : 'Guardar presupuesto'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Versiones e historial</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.isArray(quote['historial']) && quote['historial'].length ? (
+                <ol className="space-y-2">
+                  {[...quote['historial']].reverse().map((value, index) => {
+                    const entry = asRecord(value)
+                    return (
+                      <li
+                        key={`${text(entry['fecha'])}-${index}`}
+                        className="border-border flex flex-wrap justify-between gap-2 border-b pb-2 text-sm"
+                      >
+                        <span>
+                          Versión {typeof entry['version'] === 'number' ? entry['version'] : '—'} ·{' '}
+                          {text(entry['estado'])}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {text(entry['fecha'])
+                            ? dateText(text(entry['fecha']))
+                            : 'Fecha no indicada'}{' '}
+                          · {text(entry['responsable']) || 'Responsable sin indicar'}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ol>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Al guardar cambios se conservará un registro de versión.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Validación y envío</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>
+                Validación interna:{' '}
+                <strong>
+                  {text(quote['validadoPor'])
+                    ? `Validado por ${text(quote['validadoPor'])}`
+                    : 'Pendiente de registrar'}
+                </strong>
+              </p>
+              <p>
+                Envío efectivo:{' '}
+                <strong>{text(quote['fechaEnvio']) || 'Pendiente de registrar'}</strong>
+              </p>
+              <p className="text-muted-foreground">
+                El estado de la propuesta se guarda arriba. Esta ficha no envía correos ni firma
+                documentos automáticamente.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+      {section === 'documents' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Documentación necesaria para este Lead</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Registra lo que se ha solicitado y su estado. Los archivos se gestionan en Documentos
+              o en la ficha del contacto.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveRequestedDocuments}>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="lead-requested-documents">
+                  Documentos solicitados (uno por línea)
+                </Label>
+                <Textarea
+                  id="lead-requested-documents"
+                  name="requestedDocuments"
+                  rows={7}
+                  defaultValue={requestedDocuments.join('\n')}
+                  placeholder={
+                    'DNI/NIE por ambas caras\nJustificante de domicilio\nDocumentación específica del asunto'
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lead-document-status">Situación</Label>
+                <select
+                  id="lead-document-status"
+                  name="documentStatus"
+                  defaultValue={text(details['situacionDocumental']) || 'Pendiente'}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                >
+                  {[
+                    'Pendiente',
+                    'Solicitada',
+                    'Parcialmente recibida',
+                    'Completa',
+                    'No aplicable',
+                  ].map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+              <Field
+                name="documentNotes"
+                label="Observaciones"
+                defaultValue={text(details['observacionesDocumentales'])}
+                multiline
+              />
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={saveDetails.isPending}>
+                  {saveDetails.isPending ? 'Guardando…' : 'Guardar documentación solicitada'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       ) : null}
       {section === 'acceptance' ? (
         <Card>
@@ -750,7 +1073,7 @@ export function QualificationQuestions({
   )
 }
 
-export function LeadNoteForm({
+export function LeadNoteDialog({
   title,
   content,
   highlighted,
@@ -767,67 +1090,86 @@ export function LeadNoteForm({
   onTitleChange: (value: string) => void
   onContentChange: (value: string) => void
   onHighlightedChange: (value: boolean) => void
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<boolean>
 }) {
+  const [open, setOpen] = useState(false)
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void onSubmit(event).then((created) => {
+      if (created) setOpen(false)
+    })
+  }
+
   return (
-    <form
-      className="space-y-3 border-t pt-4"
-      aria-labelledby="lead-new-note-title"
-      aria-describedby="lead-new-note-help"
-      onSubmit={onSubmit}
-    >
-      <div>
-        <h3 id="lead-new-note-title" className="text-sm font-medium">
-          Nueva nota
-        </h3>
-        <p id="lead-new-note-help" className="text-muted-foreground mt-1 text-xs">
-          Las notas son internas y nunca se envían al cliente ni a terceros.
-        </p>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="lead-note-title">Título (opcional)</Label>
-        <Input
-          id="lead-note-title"
-          value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
-          placeholder="Ej. Contexto de la primera llamada"
-          maxLength={300}
-          aria-describedby="lead-note-title-help"
-        />
-        <p id="lead-note-title-help" className="text-muted-foreground text-xs">
-          Resume el contenido para que el equipo pueda localizarlo después.
-        </p>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="lead-note-content">Contenido *</Label>
-        <Textarea
-          id="lead-note-content"
-          value={content}
-          onChange={(event) => onContentChange(event.target.value)}
-          placeholder="Contexto interno que debe conservarse"
-          required
-          maxLength={20_000}
-          rows={3}
-          aria-describedby="lead-note-content-help"
-        />
-        <p id="lead-note-content-help" className="text-muted-foreground text-xs">
-          Obligatorio. Máximo 20.000 caracteres.
-        </p>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <input
-          id="lead-note-highlighted"
-          type="checkbox"
-          checked={highlighted}
-          onChange={(event) => onHighlightedChange(event.target.checked)}
-        />
-        <Label htmlFor="lead-note-highlighted">Destacar nota</Label>
-      </div>
-      <Button type="submit" size="sm" disabled={pending}>
-        <NotebookPen className="h-4 w-4" />
-        Guardar nota
-      </Button>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button">
+          <NotebookPen className="h-4 w-4" aria-hidden="true" /> Crear nota interna
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nueva nota interna</DialogTitle>
+          <DialogDescription>
+            Las notas son internas y nunca se envían al cliente ni a terceros.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" aria-label="Formulario de nueva nota interna" onSubmit={submit}>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-note-title">Título (opcional)</Label>
+            <Input
+              id="lead-note-title"
+              value={title}
+              onChange={(event) => onTitleChange(event.target.value)}
+              placeholder="Ej. Contexto de la primera llamada"
+              maxLength={300}
+              aria-describedby="lead-note-title-help"
+            />
+            <p id="lead-note-title-help" className="text-muted-foreground text-xs">
+              Resume el contenido para que el equipo pueda localizarlo después.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lead-note-content">Contenido *</Label>
+            <Textarea
+              id="lead-note-content"
+              value={content}
+              onChange={(event) => onContentChange(event.target.value)}
+              placeholder="Contexto interno que debe conservarse"
+              required
+              maxLength={20_000}
+              rows={3}
+              aria-describedby="lead-note-content-help"
+            />
+            <p id="lead-note-content-help" className="text-muted-foreground text-xs">
+              Obligatorio. Máximo 20.000 caracteres.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <input
+              id="lead-note-highlighted"
+              type="checkbox"
+              checked={highlighted}
+              onChange={(event) => onHighlightedChange(event.target.checked)}
+            />
+            <Label htmlFor="lead-note-highlighted">Destacar nota</Label>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Guardando…' : 'Guardar nota'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

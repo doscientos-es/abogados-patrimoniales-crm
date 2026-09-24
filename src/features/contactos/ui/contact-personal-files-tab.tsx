@@ -94,7 +94,14 @@ export function ContactPersonalFilesTab({
   const visibleRows = rows.filter(
     (row) =>
       !normalizedSearch ||
-      [row.name, row.original_name, row.document_number, row.observations, ...row.tags]
+      [
+        row.name,
+        row.original_name,
+        CATEGORIES.find((item) => item.type === row.document_type)?.label,
+        row.document_number,
+        row.observations,
+        ...row.tags,
+      ]
         .join(' ')
         .toLocaleLowerCase('es')
         .includes(normalizedSearch),
