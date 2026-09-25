@@ -70,6 +70,7 @@ const task: TaskRow = {
   validated_at: null,
   completed_at: null,
   critical: false,
+  board_position: null,
   assigned_to: null,
   is_next_action: false,
   waiting_reason: null,
@@ -152,27 +153,27 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
             order: async () => ({
               data: hasFolders
                 ? [
-                  {
-                    id: 'folder-1',
-                    firm_id: 'firm-1',
-                    case_id: 'case-1',
-                    parent_id: null,
-                    name: 'Escritos',
-                    created_by: 'user-1',
-                    created_at: '2026-01-01',
-                    updated_at: '2026-01-01',
-                  },
-                  {
-                    id: 'folder-2',
-                    firm_id: 'firm-1',
-                    case_id: 'case-1',
-                    parent_id: null,
-                    name: 'Pruebas',
-                    created_by: 'user-1',
-                    created_at: '2026-01-01',
-                    updated_at: '2026-01-01',
-                  },
-                ]
+                    {
+                      id: 'folder-1',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Escritos',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
+                    {
+                      id: 'folder-2',
+                      firm_id: 'firm-1',
+                      case_id: 'case-1',
+                      parent_id: null,
+                      name: 'Pruebas',
+                      created_by: 'user-1',
+                      created_at: '2026-01-01',
+                      updated_at: '2026-01-01',
+                    },
+                  ]
                 : [],
               error: null,
             }),

@@ -39,7 +39,7 @@
 
 | Orden | Tarea                        | Est. | Dependencias                                            |
 | ----: | ---------------------------- | ---: | ------------------------------------------------------- |
-|     5 | Onboarding y SOPs trazables  | 32 h | contactos, oportunidades, documentos e identidad        |
+|     5 | Onboarding jurídico trazable | 32 h | contactos, oportunidades, documentos e identidad        |
 |     6 | Comunicaciones persistentes  | 40 h | documentos, roles, proveedor transaccional y reintentos |
 |     7 | Facturación, pagos y emisión | 40 h | onboarding, expedientes, permisos y reglas fiscales     |
 

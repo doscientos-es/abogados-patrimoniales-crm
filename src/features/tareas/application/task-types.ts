@@ -113,6 +113,7 @@ export type TareaPersistida = {
   reunion: Record<string, unknown>
   bloqueada: boolean
   etiquetas: EtiquetaTarea[]
+  boardPosition: number | null
   version: number
 }
 

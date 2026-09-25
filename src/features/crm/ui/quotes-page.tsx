@@ -87,14 +87,37 @@ export function QuotesPage() {
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
       <SectionHeader
         title="Presupuestos"
-        subtitle="Controla la preparación, validación, envío y aceptación de cada propuesta comercial."
+        subtitle="Prepara y sigue las propuestas comerciales desde la ficha de cada Lead."
         meta={`${items.length} en seguimiento`}
         actions={
           <Link to="/oportunidades/nueva" search={{}} className={buttonVariants({ size: 'sm' })}>
-            <Plus className="h-4 w-4" /> Nuevo Lead
+            <Plus className="h-4 w-4" /> Crear Lead para presupuestar
           </Link>
         }
       />
+      <Card>
+        <CardContent className="grid gap-4 pt-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="space-y-2">
+            <h2 className="font-semibold">¿Cómo se crea un presupuesto?</h2>
+            <ol className="text-muted-foreground list-inside list-decimal space-y-1 text-sm">
+              <li>Abre un Lead existente o crea uno nuevo.</li>
+              <li>En su ficha, entra en «Presupuesto», completa las condiciones y guarda.</li>
+              <li>Registra allí el estado y la fecha cuando lo envíes o recibas respuesta.</li>
+            </ol>
+            <p className="text-sm">
+              Esta sección centraliza el seguimiento;{' '}
+              <strong>no genera un PDF ni envía el presupuesto</strong>.
+            </p>
+          </div>
+          <Link
+            to="/oportunidades"
+            search={{ vista: 'todas', abrir: '' }}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Ver Leads
+          </Link>
+        </CardContent>
+      </Card>
       {!items.length ? (
         <Card>
           <CardContent className="text-muted-foreground flex flex-col items-center gap-3 py-12 text-center text-sm">

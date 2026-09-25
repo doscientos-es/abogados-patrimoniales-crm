@@ -89,6 +89,10 @@ export function FacturacionPage() {
     () => (casesQuery.data ?? []).filter((expediente) => !expediente.fechaCierre),
     [casesQuery.data],
   )
+  const expedientesFacturables = useMemo(
+    () => expedientes.filter((expediente) => expediente.contactoPrincipalId),
+    [expedientes],
+  )
   const resumen = useMemo(() => resumenFacturacion(facturas, new Date().getFullYear()), [facturas])
   const rectificadas = useMemo(() => facturasRectificadas(facturas), [facturas])
   const nombreCliente = (contactoId: string) =>
@@ -108,7 +112,7 @@ export function FacturacionPage() {
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader
         title="Facturación"
-        subtitle="Borradores, facturas emitidas, cobros y rectificativas por expediente."
+        subtitle="Crea facturas desde un expediente y gestiona su emisión y cobro desde aquí."
         logo
         actions={
           <div className="flex gap-2">
@@ -116,8 +120,12 @@ export function FacturacionPage() {
               Exportar CSV
             </Button>
             <BorradorFacturaDialog
-              trigger={<Button type="button">Nueva factura</Button>}
-              expedientes={expedientes}
+              trigger={
+                <Button type="button" disabled={!expedientesFacturables.length}>
+                  Crear factura
+                </Button>
+              }
+              expedientes={expedientesFacturables}
               nombreCliente={nombreCliente}
               pending={guardarBorrador.isPending}
               onGuardar={(input) => guardarBorrador.mutateAsync(input)}
@@ -125,6 +133,36 @@ export function FacturacionPage() {
           </div>
         }
       />
+      <Card className="mb-4">
+        <CardContent className="space-y-3 pt-5">
+          <div>
+            <h2 className="font-semibold">¿Dónde y cómo se crea una factura?</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Usa «Crear factura» arriba: elige un expediente abierto con contacto principal, añade
+              concepto y líneas, y guarda el borrador. El borrador todavía no está emitido.
+            </p>
+          </div>
+          <ol className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
+            <li>
+              <strong className="text-foreground">1. Borrador.</strong> Se crea desde esta página.
+            </li>
+            <li>
+              <strong className="text-foreground">2. Emisión.</strong> Revisa y emite para asignar
+              numeración fiscal.
+            </li>
+            <li>
+              <strong className="text-foreground">3. Cobro.</strong> Registra después los pagos
+              recibidos.
+            </li>
+          </ol>
+          {!expedientesFacturables.length ? (
+            <output className="text-sm">
+              No hay expedientes abiertos con contacto principal. Abre o crea un expediente y
+              vincula un contacto para poder crear una factura.
+            </output>
+          ) : null}
+        </CardContent>
+      </Card>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
           compact

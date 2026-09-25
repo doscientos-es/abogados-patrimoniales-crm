@@ -62,7 +62,11 @@ export type Database = {
       >
       crm_cases: Table<CaseRow, CaseInsert, Partial<CaseInsert> & { id?: string; version?: number }>
       crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
-      crm_case_activities: Table<CaseActivityRow, CaseActivityInsert, never>
+      crm_case_activities: Table<
+        CaseActivityRow,
+        CaseActivityInsert,
+        Partial<CaseActivityInsert> & { id?: string; version?: number }
+      >
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_communications: Table<CaseCommunicationRow, CaseCommunicationInsert>
       crm_case_events: Table<CaseEventRow, never, never>
@@ -178,6 +182,18 @@ export type Database = {
         }
         Returns: CaseRow
       }
+      crm_register_client_report: {
+        Args: {
+          target_case_id: string
+          target_contact_id: string
+          report_subject: string
+          report_content: string
+          report_channel: string
+          report_occurred_at: string
+          reported_activities: Json
+        }
+        Returns: string
+      }
       crm_create_case: {
         Args: {
           target_firm_id: string
@@ -263,6 +279,10 @@ export type Database = {
       crm_set_next_action: {
         Args: { target_task_id: string; target_expected_version: number; enabled: boolean }
         Returns: TaskRow
+      }
+      crm_set_task_board_order: {
+        Args: { target_firm_id: string; target_status: string; ordered_task_ids: string[] }
+        Returns: undefined
       }
       crm_add_task_message: {
         Args: { target_task_id: string; message_body: string }
@@ -432,7 +452,22 @@ export type Database = {
         Returns: OpportunityRow
       }
       crm_update_opportunity_details: {
-        Args: { target_opportunity_id: string; target_expected_version: number; new_details: Json }
+        Args: {
+          target_opportunity_id: string
+          target_expected_version: number
+          new_details: Json
+        }
+        Returns: OpportunityRow
+      }
+      crm_save_opportunity_details: {
+        Args: {
+          target_opportunity_id: string
+          target_expected_version: number
+          new_details: Json
+          transition_stage: OpportunityStage | null
+          transition_substage: string | null
+          transition_reason: string | null
+        }
         Returns: OpportunityRow
       }
       crm_log_opportunity_communication: {
@@ -476,6 +511,23 @@ export type Database = {
       crm_acknowledge_note: {
         Args: { target_note_id: string }
         Returns: undefined
+      }
+      crm_update_note_state: {
+        Args: {
+          target_note_id: string
+          new_status?: string | null
+          new_highlighted?: boolean | null
+          new_critical?: boolean | null
+          new_requires_acknowledgement?: boolean | null
+          new_review_pending?: boolean | null
+          new_review_on?: string | null
+          new_expires_on?: string | null
+          new_snoozed_until?: string | null
+          conversion?: Json | null
+          event_type?: string | null
+          event_detail?: string | null
+        }
+        Returns: NoteRow
       }
       crm_create_onboarding: {
         Args: {
@@ -1155,6 +1207,7 @@ export type TaskRow = {
   validated_at: string | null
   completed_at: string | null
   critical: boolean
+  board_position: number | null
   assigned_to: string | null
   is_next_action: boolean
   waiting_reason: string | null

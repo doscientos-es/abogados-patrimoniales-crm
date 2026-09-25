@@ -12,6 +12,7 @@ export type NotaRemota = NoteRow & {
   contactIds: string[]
   permittedUserIds: string[]
   acknowledgedUserIds: string[]
+  acknowledgements: { userId: string; acknowledgedAt: string }[]
   events: {
     id: string
     event_type: string
@@ -136,7 +137,10 @@ export function useNotasRemotas(firmId: string | undefined) {
           .select('note_id, user_id')
           .eq('firm_id', firmId)
           .in('note_id', noteIds),
-        client.from('crm_note_acknowledgements').select('note_id, user_id').in('note_id', noteIds),
+        client
+          .from('crm_note_acknowledgements')
+          .select('note_id, user_id, acknowledged_at')
+          .in('note_id', noteIds),
         client
           .from('crm_note_events')
           .select('id, note_id, event_type, detail, actor_id, created_at')
@@ -158,6 +162,7 @@ export function useNotasRemotas(firmId: string | undefined) {
               note.archived_by,
             ]),
             ...events.data.map((event) => event.actor_id),
+            ...acknowledgements.data.map((acknowledgement) => acknowledgement.user_id),
           ].filter((id): id is string => Boolean(id)),
         ),
       )
@@ -179,6 +184,9 @@ export function useNotasRemotas(firmId: string | undefined) {
         acknowledgedUserIds: acknowledgements.data
           .filter((item) => item.note_id === note.id)
           .map((item) => item.user_id),
+        acknowledgements: acknowledgements.data
+          .filter((item) => item.note_id === note.id)
+          .map((item) => ({ userId: item.user_id, acknowledgedAt: item.acknowledged_at })),
         events: events.data.filter((event) => event.note_id === note.id),
         actorNames,
       }))
@@ -365,6 +373,170 @@ export function useConfirmarLectura(firmId: string | undefined) {
       const { error } = await client
         .from('crm_note_acknowledgements')
         .upsert({ note_id: noteId, user_id: user.id })
+      if (error) throw error
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
+}
+
+export type GuardarNotaInput = {
+  noteId?: string
+  status?: 'active' | 'resolved' | 'archived'
+  scope: 'person' | 'case' | 'opportunity'
+  originId: string
+  originLabel: string
+  title: string
+  content: string
+  contactIds: string[]
+  highlighted: boolean
+  critical: boolean
+  requiresAcknowledgement: boolean
+  validity: 'permanent' | 'temporary'
+  reviewOn: string | null
+  expiresOn: string | null
+  expiryAction: 'archive' | 'confirm'
+  triggers: string[]
+  visibility: 'team' | 'restricted'
+  permittedUserIds: string[]
+  caseId?: string | null
+  opportunityId?: string | null
+}
+
+export function useGuardarNota(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: GuardarNotaInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.content.trim()) throw new Error('El contenido de la nota es obligatorio.')
+      if (input.validity === 'temporary' && !input.expiresOn)
+        throw new Error('Indica la fecha de vencimiento de la nota temporal.')
+      const { error } = await client.rpc('crm_save_note', {
+        target_firm_id: firmId,
+        target_note_id: input.noteId ?? null,
+        event_type: input.noteId ? 'updated' : 'created',
+        event_detail: input.noteId ? 'Nota editada desde el muro.' : 'Nota creada desde el muro.',
+        target_payload: {
+          scope: input.scope,
+          origin_id: input.originId,
+          origin_label: input.originLabel,
+          title: input.title.trim(),
+          content: input.content.trim(),
+          case_id: input.caseId ?? '',
+          opportunity_id: input.opportunityId ?? '',
+          status: input.status ?? 'active',
+          highlighted: input.highlighted,
+          critical: input.critical,
+          requires_acknowledgement: input.requiresAcknowledgement,
+          validity: input.validity,
+          starts_on: '',
+          review_on: input.reviewOn ?? '',
+          expires_on: input.validity === 'temporary' ? (input.expiresOn ?? '') : '',
+          expiry_action: input.expiryAction,
+          review_pending: Boolean(input.reviewOn),
+          snoozed_until: '',
+          visibility: input.visibility,
+          details: { triggers: input.triggers },
+          contact_ids: input.contactIds,
+          permitted_user_ids: input.visibility === 'restricted' ? input.permittedUserIds : [],
+        },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
+  })
+}
+
+export function useConvertirNotaEnTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      noteId: string
+      title: string
+      description: string
+      dueAt: string | null
+      assignedTo: string | null
+      caseId: string | null
+      opportunityId: string | null
+      priority: 'low' | 'medium' | 'high'
+      critical: boolean
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.caseId && !input.opportunityId)
+        throw new Error('La nota debe estar vinculada a un expediente o lead para crear una tarea.')
+      const { data: task, error } = await client.rpc('crm_create_task', {
+        target_firm_id: firmId,
+        target_case_id: input.caseId,
+        target_opportunity_id: input.opportunityId,
+        new_kind: 'task',
+        new_title: input.title.trim(),
+        new_description: input.description.trim(),
+        new_priority: input.priority,
+        new_due_at: input.dueAt,
+        new_reminder_at: null,
+        new_assigned_to: input.assignedTo,
+        new_deadline_class: null,
+        initial_message: `Creada desde la nota interna ${input.noteId}.`,
+        new_critical: input.critical,
+      })
+      if (error) throw error
+      const conversion: ConversionNota = {
+        tipo: 'tarea',
+        referenciaId: task.id,
+        etiqueta: input.title.trim(),
+        fecha: new Date().toISOString(),
+        usuario: 'Usuario activo',
+      }
+      const { error: auditError } = await client.rpc('crm_update_note_state', {
+        target_note_id: input.noteId,
+        conversion: conversion as unknown as Json,
+        event_type: 'converted_to_task',
+        event_detail: `Tarea persistente creada: ${input.title.trim()} (${task.id}).`,
+      })
+      if (auditError) throw auditError
+      return task
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['tareas', firmId] })
+    },
+  })
+}
+
+export function useActualizarEstadoNota(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      noteId: string
+      status?: 'active' | 'resolved' | 'archived'
+      highlighted?: boolean
+      critical?: boolean
+      requiresAcknowledgement?: boolean
+      reviewPending?: boolean
+      reviewOn?: string | null
+      expiresOn?: string | null
+      snoozedUntil?: string | null
+      conversion?: ConversionNota
+      eventType: string
+      eventDetail?: string
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_update_note_state', {
+        target_note_id: input.noteId,
+        new_status: input.status ?? null,
+        new_highlighted: input.highlighted ?? null,
+        new_critical: input.critical ?? null,
+        new_requires_acknowledgement: input.requiresAcknowledgement ?? null,
+        new_review_pending: input.reviewPending ?? null,
+        new_review_on: input.reviewOn ?? null,
+        new_expires_on: input.expiresOn ?? null,
+        new_snoozed_until: input.snoozedUntil ?? null,
+        conversion: input.conversion ? (input.conversion as unknown as Json) : null,
+        event_type: input.eventType,
+        event_detail: input.eventDetail ?? null,
+      })
       if (error) throw error
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),

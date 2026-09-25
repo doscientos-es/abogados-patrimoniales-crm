@@ -107,6 +107,7 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   bloqueada,
   version: row.version,
   etiquetas: [],
+  boardPosition: row.board_position,
 })
 
 type LabelAssignment = { task_id: string; label_id: string }
@@ -137,6 +138,7 @@ export function useTareasPersistentes(firmId: string | undefined) {
         .from('crm_tasks')
         .select('*')
         .eq('firm_id', firmId)
+        .order('board_position', { ascending: true, nullsFirst: false })
         .order('updated_at', { ascending: false })
       if (error) throw error
       const [
@@ -196,6 +198,56 @@ export function useEtiquetasTarea(firmId: string | undefined) {
         color: label.color,
       }))
     },
+  })
+}
+
+export function useEtiquetarTareasEnBloque(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ taskIds, labelId }: { taskIds: string[]; labelId: string }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!taskIds.length || !labelId) throw new Error('Selecciona tareas y una etiqueta.')
+      const { data: existing, error: readError } = await client
+        .from('crm_task_label_assignments')
+        .select('task_id,label_id')
+        .eq('label_id', labelId)
+        .in('task_id', taskIds)
+      if (readError) throw readError
+      const alreadyAssigned = new Set((existing ?? []).map((item) => item.task_id))
+      const toInsert = taskIds
+        .filter((taskId) => !alreadyAssigned.has(taskId))
+        .map((taskId) => ({ task_id: taskId, label_id: labelId }))
+      if (toInsert.length) {
+        const { error } = await client.from('crm_task_label_assignments').insert(toInsert)
+        if (error) throw error
+      }
+      return toInsert.length
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useReordenarTableroTareas(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      status,
+      taskIds,
+    }: {
+      status: 'pending' | 'in_progress'
+      taskIds: string[]
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_set_task_board_order', {
+        target_firm_id: firmId,
+        target_status: status,
+        ordered_task_ids: taskIds,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
   })
 }
 

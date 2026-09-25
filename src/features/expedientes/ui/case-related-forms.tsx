@@ -1,8 +1,8 @@
-import { Plus } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { toast } from 'sonner'
+import { Plus } from "lucide-react";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,19 +10,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import type { ContactoPersistido } from '@/features/contactos'
-import type { MiembroDespacho } from '@/features/crm'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { ContactoPersistido } from "@/features/contactos";
+import type { MiembroDespacho } from "@/features/crm";
 import type {
   CrearActuacionInput,
   CrearLineaInput,
   CrearParticipanteInput,
   LineaPersistida,
-} from '@/features/expedientes/application/case-types'
+} from "@/features/expedientes/application/case-types";
 
-export type RelatedFormSection = 'participant' | 'workstream' | 'activity'
+export type RelatedFormSection = "participant" | "workstream" | "activity";
 
 export function CaseRelatedForms({
   expedienteId,
@@ -35,33 +35,33 @@ export function CaseRelatedForms({
   onWorkstream,
   onActivity,
 }: {
-  expedienteId: string
-  contactos: ContactoPersistido[]
-  miembros: MiembroDespacho[]
-  lineas: LineaPersistida[]
-  pending: boolean
-  section: RelatedFormSection
-  onParticipant: (input: CrearParticipanteInput) => Promise<void>
-  onWorkstream: (input: CrearLineaInput) => Promise<void>
-  onActivity: (input: CrearActuacionInput) => Promise<void>
+  expedienteId: string;
+  contactos: ContactoPersistido[];
+  miembros: MiembroDespacho[];
+  lineas: LineaPersistida[];
+  pending: boolean;
+  section: RelatedFormSection;
+  onParticipant: (input: CrearParticipanteInput) => Promise<void>;
+  onWorkstream: (input: CrearLineaInput) => Promise<void>;
+  onActivity: (input: CrearActuacionInput) => Promise<void>;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   const execute = async (
     event: FormEvent<HTMLFormElement>,
     action: (data: FormData) => Promise<void>,
     success: string,
   ) => {
-    event.preventDefault()
-    const form = event.currentTarget
+    event.preventDefault();
+    const form = event.currentTarget;
     try {
-      await action(new FormData(form))
-      toast.success(success)
-      form.reset()
-      setOpen(false)
+      await action(new FormData(form));
+      toast.success(success);
+      form.reset();
+      setOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo guardar.')
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar.");
     }
-  }
+  };
   const assignees = (
     <>
       <option value="">Sin asignar</option>
@@ -71,9 +71,9 @@ export function CaseRelatedForms({
         </option>
       ))}
     </>
-  )
+  );
   const content =
-    section === 'participant' ? (
+    section === "participant" ? (
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(event) =>
@@ -82,15 +82,15 @@ export function CaseRelatedForms({
             async (data) =>
               onParticipant({
                 expedienteId,
-                contactoId: formText(data, 'contacto') || null,
-                nombre: formText(data, 'nombre'),
-                rol: formText(data, 'rol'),
+                contactoId: formText(data, "contacto") || null,
+                nombre: formText(data, "nombre"),
+                rol: formText(data, "rol"),
                 confidencialidad: formText(
                   data,
-                  'confidencialidad',
-                ) as CrearParticipanteInput['confidencialidad'],
+                  "confidencialidad",
+                ) as CrearParticipanteInput["confidencialidad"],
               }),
-            'Participante añadido.',
+            "Participante añadido.",
           )
         }
       >
@@ -113,7 +113,7 @@ export function CaseRelatedForms({
           Añadir interviniente
         </Button>
       </form>
-    ) : section === 'workstream' ? (
+    ) : section === "workstream" ? (
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(event) =>
@@ -122,14 +122,14 @@ export function CaseRelatedForms({
             async (data) =>
               onWorkstream({
                 expedienteId,
-                titulo: formText(data, 'titulo'),
-                tipo: formText(data, 'tipo'),
-                descripcion: formText(data, 'descripcion'),
-                prioridad: formText(data, 'prioridad') as CrearLineaInput['prioridad'],
-                asignadoId: formText(data, 'asignado') || null,
-                fechaObjetivo: formText(data, 'objetivo') || null,
+                titulo: formText(data, "titulo"),
+                tipo: formText(data, "tipo"),
+                descripcion: formText(data, "descripcion"),
+                prioridad: formText(data, "prioridad") as CrearLineaInput["prioridad"],
+                asignadoId: formText(data, "asignado") || null,
+                fechaObjetivo: formText(data, "objetivo") || null,
               }),
-            'Línea creada.',
+            "Línea creada.",
           )
         }
       >
@@ -162,17 +162,18 @@ export function CaseRelatedForms({
             async (data) =>
               onActivity({
                 expedienteId,
-                lineaId: formText(data, 'linea') || null,
-                tipo: formText(data, 'tipo'),
-                titulo: formText(data, 'titulo'),
-                descripcion: formText(data, 'descripcion'),
-                asignadoId: formText(data, 'asignado') || null,
-                resultado: formText(data, 'resultado'),
-                proximaAccion: formText(data, 'proxima'),
-                horas: Number(data.get('horas') || 0),
-                facturable: data.get('facturable') === 'on',
+                lineaId: formText(data, "linea") || null,
+                tipo: formText(data, "tipo"),
+                titulo: formText(data, "titulo"),
+                descripcion: formText(data, "descripcion"),
+                asignadoId: formText(data, "asignado") || null,
+                resultado: formText(data, "resultado"),
+                proximaAccion: formText(data, "proxima"),
+                horas: Number(data.get("horas") || 0),
+                facturable: data.get("facturable") === "on",
+                visibleCliente: data.get("visibleCliente") === "on",
               }),
-            'Actuación registrada.',
+            "Actuación registrada.",
           )
         }
       >
@@ -198,28 +199,31 @@ export function CaseRelatedForms({
         <label className="flex items-center gap-2 self-end text-sm">
           <input name="facturable" type="checkbox" /> Facturable
         </label>
+        <label className="flex items-center gap-2 text-sm sm:col-span-2">
+          <input name="visibleCliente" type="checkbox" /> Incluir en próximos reportes al cliente
+        </label>
         <Button type="submit" className="sm:col-span-2" disabled={pending}>
           Registrar actuación
         </Button>
       </form>
-    )
+    );
   const config = {
     participant: {
-      title: 'Añadir interviniente',
-      description: 'Relaciona una persona o entidad con este expediente.',
-      trigger: 'Añadir interviniente',
+      title: "Añadir interviniente",
+      description: "Relaciona una persona o entidad con este expediente.",
+      trigger: "Añadir interviniente",
     },
     workstream: {
-      title: 'Nueva línea de trabajo',
-      description: 'Define un frente autónomo con objetivo, responsable y seguimiento.',
-      trigger: 'Nueva línea',
+      title: "Nueva línea de trabajo",
+      description: "Define un frente autónomo con objetivo, responsable y seguimiento.",
+      trigger: "Nueva línea",
     },
     activity: {
-      title: 'Registrar actuación',
-      description: 'Deja trazabilidad del trabajo realizado en este expediente.',
-      trigger: 'Registrar actuación',
+      title: "Registrar actuación",
+      description: "Deja trazabilidad del trabajo realizado en este expediente.",
+      trigger: "Registrar actuación",
     },
-  }[section]
+  }[section];
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -238,12 +242,12 @@ export function CaseRelatedForms({
         <div className="px-6 py-6">{content}</div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function formText(data: FormData, name: string) {
-  const value = data.get(name)
-  return typeof value === 'string' ? value : ''
+  const value = data.get(name);
+  return typeof value === "string" ? value : "";
 }
 
 function Field({
@@ -251,28 +255,28 @@ function Field({
   label,
   ...inputProps
 }: {
-  name: string
-  label: string
-  type?: string
-  required?: boolean
-  min?: string
-  step?: string
+  name: string;
+  label: string;
+  type?: string;
+  required?: boolean;
+  min?: string;
+  step?: string;
 }) {
   return (
     <div className="space-y-1">
       <Label htmlFor={`related-${name}`}>{label}</Label>
       <Input id={`related-${name}`} name={name} {...inputProps} />
     </div>
-  )
+  );
 }
 function NativeSelect({
   name,
   label,
   children,
 }: {
-  name: string
-  label: string
-  children: ReactNode
+  name: string;
+  label: string;
+  children: ReactNode;
 }) {
   return (
     <div className="space-y-1">
@@ -285,5 +289,5 @@ function NativeSelect({
         {children}
       </select>
     </div>
-  )
+  );
 }

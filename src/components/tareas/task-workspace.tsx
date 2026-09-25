@@ -41,9 +41,11 @@ import {
   useCapturarInboxTarea,
   useCrearTarea,
   useEditarTarea,
+  useEtiquetarTareasEnBloque,
   useEtiquetasTarea,
   useInboxTareas,
   useMoverInboxTarea,
+  useReordenarTableroTareas,
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
@@ -290,6 +292,8 @@ export function TaskWorkspace() {
   const inbox = useInboxTareas(firmId, session.user?.id)
   const captureInbox = useCapturarInboxTarea(firmId, session.user?.id)
   const moveInbox = useMoverInboxTarea(firmId, session.user?.id)
+  const bulkLabels = useEtiquetarTareasEnBloque(firmId)
+  const reorderBoard = useReordenarTableroTareas(firmId)
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CrearTareaInput['tipo']>('all')
@@ -302,6 +306,7 @@ export function TaskWorkspace() {
   const [view, setView] = useState<TaskView>('kanban')
   const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
   const [calendarEditTask, setCalendarEditTask] = useState<TareaPersistida | null>(null)
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
   const caseNames = useMemo(
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
@@ -359,7 +364,15 @@ export function TaskWorkspace() {
       matchesStatus
     )
   })
-  const orderedVisible = sortTasksForAgenda(visible)
+  const orderedVisible =
+    view === 'kanban'
+      ? [...visible].sort(
+          (a, b) =>
+            (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
+              (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+            sortTasksForAgenda([a, b])[0]?.id.localeCompare(a.id)!,
+        )
+      : sortTasksForAgenda(visible)
   const activeFilterCount = [
     typeFilter,
     priorityFilter,
@@ -503,6 +516,49 @@ export function TaskWorkspace() {
         onCapture={addInboxItem}
         onMove={changeInboxStage}
       />
+      {selectedTaskIds.length ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3 py-3">
+            <span className="text-sm font-medium">
+              {selectedTaskIds.length} tareas seleccionadas
+            </span>
+            <select
+              aria-label="Etiqueta para tareas seleccionadas"
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              defaultValue=""
+              disabled={bulkLabels.isPending}
+              onChange={(event) => {
+                const labelId = event.target.value
+                if (!labelId) return
+                const target = event.currentTarget
+                void bulkLabels.mutateAsync({ taskIds: selectedTaskIds, labelId }).then(
+                  (count) => {
+                    toast.success(`Etiqueta aplicada a ${count} tarea(s).`)
+                    setSelectedTaskIds([])
+                    target.value = ''
+                  },
+                  (error: unknown) =>
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'No se pudieron etiquetar las tareas.',
+                    ),
+                )
+              }}
+            >
+              <option value="">Etiquetar selección…</option>
+              {(labels.data ?? []).map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.nombre}
+                </option>
+              ))}
+            </select>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedTaskIds([])}>
+              Deseleccionar
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="task-search" className="relative min-w-56 flex-1">
           <span className="sr-only">Buscar tareas y plazos</span>
@@ -646,6 +702,23 @@ export function TaskWorkspace() {
           onEdit={editTask}
           canEdit={canEditTasks}
           memberOptions={members.data ?? []}
+          selectedTaskIds={selectedTaskIds}
+          onSelectTask={(taskId) =>
+            setSelectedTaskIds((current) =>
+              current.includes(taskId)
+                ? current.filter((id) => id !== taskId)
+                : [...current, taskId],
+            )
+          }
+          onReorder={async (status, taskIds) => {
+            try {
+              await reorderBoard.mutateAsync({ status, taskIds })
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : 'No se pudo guardar el orden del tablero.',
+              )
+            }
+          }}
         />
       ) : (
         <section aria-label="Lista de tareas" className="space-y-3">
@@ -1069,6 +1142,9 @@ function TaskKanban({
   onEdit,
   canEdit,
   memberOptions,
+  selectedTaskIds,
+  onSelectTask,
+  onReorder,
 }: {
   tasks: TareaPersistida[]
   canValidate: boolean
@@ -1085,12 +1161,17 @@ function TaskKanban({
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
   canEdit: boolean
   memberOptions: Array<{ id: string; nombre: string }>
+  selectedTaskIds: string[]
+  onSelectTask: (taskId: string) => void
+  onReorder: (status: 'pending' | 'in_progress', taskIds: string[]) => Promise<void>
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
+  const [draggedForOrder, setDraggedForOrder] = useState<TareaPersistida | null>(null)
+  const [orderDropId, setOrderDropId] = useState<string | null>(null)
   const canDropIn = (column: TaskBoardColumnId) =>
     Boolean(dragged && canMoveTaskInBoard(dragged, column))
-  const startDrag = (event: DragEvent<HTMLElement>, task: TareaPersistida) => {
+  const startDrag = (event: DragEvent<HTMLButtonElement>, task: TareaPersistida) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', task.id)
     setDragged(task)
@@ -1137,30 +1218,76 @@ function TaskKanban({
               </header>
               <div className="space-y-2.5">
                 {items.map((task) => (
-                  <TaskCard
+                  <div
                     key={task.id}
-                    task={task}
-                    canValidate={canValidate}
-                    pending={pending}
-                    compact
-                    caseName={caseNames.get(task.expedienteId ?? '')}
-                    assigneeName={memberNames.get(task.asignadoId ?? '')}
-                    onChangeStatus={onChangeStatus}
-                    onValidate={onValidate}
-                    onEdit={onEdit}
-                    canEdit={canEdit}
-                    memberOptions={memberOptions}
-                    {...(canMoveTaskInBoard(task, 'pending') ||
-                    canMoveTaskInBoard(task, 'in-progress')
-                      ? {
-                          drag: {
-                            onStart: (event) => startDrag(event, task),
-                            onEnd: () => setDragged(null),
-                            isDragged: dragged?.id === task.id,
-                          },
-                        }
-                      : {})}
-                  />
+                    className={`relative ${orderDropId === task.id ? 'before:bg-primary before:absolute before:-top-1 before:left-0 before:h-1 before:w-full before:rounded' : ''}`}
+                    draggable={false}
+                    onDragOver={(event) => {
+                      if (
+                        !draggedForOrder ||
+                        taskBoardColumn(draggedForOrder) !== column.id ||
+                        draggedForOrder.id === task.id
+                      )
+                        return
+                      event.preventDefault()
+                      setOrderDropId(task.id)
+                    }}
+                    onDragLeave={() =>
+                      setOrderDropId((current) => (current === task.id ? null : current))
+                    }
+                    onDrop={(event) => {
+                      const draggedId = event.dataTransfer.getData('application/x-lex-task-order')
+                      const source = draggedId && items.find((item) => item.id === draggedId)
+                      if (!source || source.id === task.id) return
+                      event.preventDefault()
+                      const next = items.filter((item) => item.id !== source.id)
+                      const index = next.findIndex((item) => item.id === task.id)
+                      next.splice(index < 0 ? next.length : index, 0, source)
+                      void onReorder(
+                        column.id === 'pending' ? 'pending' : 'in_progress',
+                        next.map((item) => item.id),
+                      )
+                      setDraggedForOrder(null)
+                      setOrderDropId(null)
+                    }}
+                  >
+                    <label
+                      className="bg-background/90 absolute top-2 right-2 z-10 rounded p-1"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label={`Seleccionar ${task.titulo}`}
+                        checked={selectedTaskIds.includes(task.id)}
+                        onChange={() => onSelectTask(task.id)}
+                      />
+                    </label>
+                    <TaskCard
+                      task={task}
+                      canValidate={canValidate}
+                      pending={pending}
+                      compact
+                      caseName={caseNames.get(task.expedienteId ?? '')}
+                      assigneeName={memberNames.get(task.asignadoId ?? '')}
+                      onChangeStatus={onChangeStatus}
+                      onValidate={onValidate}
+                      onEdit={onEdit}
+                      canEdit={canEdit}
+                      memberOptions={memberOptions}
+                      drag={{
+                        onStart: (event) => {
+                          event.dataTransfer.setData('application/x-lex-task-order', task.id)
+                          event.dataTransfer.effectAllowed = 'move'
+                          setDraggedForOrder(task)
+                        },
+                        onEnd: () => {
+                          setDraggedForOrder(null)
+                          setOrderDropId(null)
+                        },
+                        isDragged: draggedForOrder?.id === task.id || dragged?.id === task.id,
+                      }}
+                    />
+                  </div>
                 ))}
                 {!items.length ? (
                   <p className="text-muted-foreground rounded-md border border-dashed bg-transparent px-3 py-9 text-center text-xs">

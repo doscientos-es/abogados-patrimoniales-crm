@@ -151,6 +151,7 @@ export function useCrearActuacion(firmId: string | undefined) {
         next_action: input.proximaAccion,
         time_spent_hours: input.horas,
         billable: input.facturable,
+        client_visible: input.visibleCliente ?? false,
       }
       const { error } = await client.from('crm_case_activities').insert(payload)
       if (error) throw error

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -49,7 +49,8 @@ function renderDetail(
   onCreateTask = vi.fn().mockResolvedValue(undefined),
   notas = [] as never[],
   eventos = [] as never[],
-  onCreateCommunication = vi.fn().mockResolvedValue(undefined),
+  onSetNextAction = vi.fn().mockResolvedValue(undefined),
+  canManageNextAction = () => true,
 ) {
   return render(
     <CaseDetail
@@ -81,7 +82,6 @@ function renderDetail(
         ] as never
       }
       eventos={eventos}
-      comunicaciones={[]}
       documentos={
         [
           {
@@ -101,11 +101,13 @@ function renderDetail(
             expedienteId: 'case-1',
             lineaId: 'line-1',
             titulo: 'Preparar firma',
+            creadaPorId: 'member-1',
             tipo: 'Tarea',
             estado: 'Pendiente',
             esSiguienteAccion: true,
             prioridad: 'Alta',
             venceEn: '2026-08-10T09:00:00Z',
+            version: 1,
           },
         ] as never
       }
@@ -113,8 +115,9 @@ function renderDetail(
       clienteNombre="Inversiones Torrelodones, S.L."
       taskPending={false}
       onCreateTask={onCreateTask}
-      communicationPending={false}
-      onCreateCommunication={onCreateCommunication}
+      onSetNextAction={onSetNextAction}
+      canManageNextAction={canManageNextAction}
+      nextActionPending={false}
       editor={<div>Editor del expediente</div>}
       notas={notas}
       relatedForms={{
@@ -142,6 +145,9 @@ describe('CaseDetail', () => {
     fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
     expect(screen.getByText('Due diligence')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Preparar firma' })).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: 'Abrir siguiente acción: Preparar firma' }),
+    ).toBeTruthy()
     expect(
       screen.getByText(/Frentes autónomos del expediente: cada uno con objetivo propio/i),
     ).toBeTruthy()
@@ -210,10 +216,13 @@ describe('CaseDetail', () => {
     const onCreateTask = vi.fn().mockResolvedValue(undefined)
     renderDetail(onCreateTask)
     fireEvent.click(screen.getByRole('tab', { name: /tareas\s*1/i }))
+    expect(screen.queryByLabelText('Título de tarea')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir tarea' }))
+    expect(screen.getByRole('dialog', { name: 'Nueva tarea para el expediente' })).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Título de tarea'), {
       target: { value: 'Enviar borrador' },
     })
-    const form = screen.getByRole('button', { name: 'Añadir tarea' }).closest('form')
+    const form = screen.getByRole('dialog').querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta de tarea.')
     fireEvent.submit(form)
 
@@ -222,40 +231,17 @@ describe('CaseDetail', () => {
     )
   })
 
-  it('registers an outbound phone communication with the expediente and main contact', async () => {
-    const onCreateCommunication = vi.fn().mockResolvedValue(undefined)
-    renderDetail(undefined, [], [], onCreateCommunication)
-    fireEvent.click(screen.getByRole('tab', { name: /comunicaciones/i }))
-    fireEvent.change(screen.getByLabelText('Asunto'), { target: { value: 'Seguimiento' } })
-    fireEvent.change(screen.getByLabelText('Resumen y acuerdos'), {
-      target: { value: 'Se confirmó la reunión para la próxima semana.' },
-    })
-    const form = screen.getByRole('button', { name: 'Registrar comunicación' }).closest('form')
-    if (!form) throw new Error('No se encontró el formulario de comunicación.')
-    fireEvent.submit(form)
-
-    await waitFor(() =>
-      expect(onCreateCommunication).toHaveBeenCalledWith(
-        expect.objectContaining({
-          contact_id: 'contact-1',
-          direction: 'outbound',
-          communication_type: 'phone_call',
-          channel: 'phone',
-          subject: 'Seguimiento',
-          content: 'Se confirmó la reunión para la próxima semana.',
-        }),
-      ),
-    )
-  })
-
   it('creates a task from a workstream and persists its line context', () => {
     const onCreateTask = vi.fn().mockResolvedValue(undefined)
     renderDetail(onCreateTask)
     fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
+    expect(screen.queryByLabelText('Nueva tarea para Due diligence')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir tarea' }))
+    expect(screen.getByRole('dialog', { name: 'Nueva tarea para la línea' })).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Nueva tarea para Due diligence'), {
       target: { value: 'Revisar cargas registrales' },
     })
-    const form = screen.getByRole('button', { name: 'Añadir tarea' }).closest('form')
+    const form = screen.getByRole('dialog').querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de tarea de la línea.')
     fireEvent.submit(form)
 
@@ -266,5 +252,15 @@ describe('CaseDetail', () => {
         titulo: 'Revisar cargas registrales',
       }),
     )
+  })
+
+  it('marks and unmarks the next action from its workstream', async () => {
+    const onSetNextAction = vi.fn().mockResolvedValue(undefined)
+    renderDetail(undefined, [], [], onSetNextAction)
+    fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar siguiente acción: Preparar firma' }))
+    await expect.poll(() => onSetNextAction.mock.calls.length).toBe(1)
+    expect(onSetNextAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), false)
   })
 })

@@ -7,7 +7,7 @@ Aplicación web operativa para la gestión comercial y operativa de despachos de
 - Autenticación, usuarios y pertenencia a despacho mediante Supabase.
 - Gestión persistente de contactos, Leads, oportunidades y tareas.
 - Pipeline comercial con trazabilidad de creación y cambios de fase.
-- Módulos de expedientes, comunicaciones, documentos, calendario, facturación, informes y SOPs en evolución.
+- Módulos de expedientes, comunicaciones, documentos, calendario, facturación e informes en evolución.
 
 Las migraciones de base de datos residen en `supabase/migrations`. La aplicación cliente utiliza exclusivamente `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`; no incorpores claves de servicio, contraseñas ni datos reales al repositorio o a entornos de prueba.
 
@@ -142,8 +142,6 @@ Facturación.
 
 Informes.
 
-SOPs.
-
 Configuración.
 
 Dashboard
@@ -203,28 +201,6 @@ Tiempo y coste.
 Presupuesto y facturación.
 
 Incluye un indicador visual del recorrido por las seis fases.
-
-## Biblioteca de SOPs
-
-La biblioteca de SOPs incorpora procedimientos como:
-
-Primera cita.
-
-Acta de encargo.
-
-Designación del trabajo.
-
-Reunión de traspaso.
-
-Acta de cierre.
-
-Adenda del encargo.
-
-Archivo.
-
-Información periódica en ejecuciones.
-
-El contenido y la automatización de cada SOP se desarrollan de forma progresiva y requieren validación funcional antes de su activación.
 
 Diseño
 

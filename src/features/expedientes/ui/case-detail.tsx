@@ -10,6 +10,7 @@ import {
   Layers3,
   MessageSquareText,
   Pencil,
+  Plus,
   ShieldAlert,
   UsersRound,
 } from 'lucide-react'
@@ -23,15 +24,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import type { MiembroDespacho } from '@/features/crm'
-import type { RegistrarComunicacionExpedienteInput } from '@/features/expedientes'
 import {
   caseAlerts,
   caseDependency,
@@ -48,7 +47,7 @@ import type {
 } from '@/features/expedientes/application/case-types'
 import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
-import type { CaseCommunicationRow, CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
 type CaseDetailTab =
   | 'summary'
@@ -79,15 +78,15 @@ export function CaseDetail({
   actuaciones,
   participantes,
   eventos,
-  comunicaciones,
   documentos,
   tareas,
   miembros,
   clienteNombre,
   taskPending,
   onCreateTask,
-  communicationPending,
-  onCreateCommunication,
+  onSetNextAction,
+  canManageNextAction,
+  nextActionPending,
   editor,
   relatedForms,
   notas = [],
@@ -98,15 +97,15 @@ export function CaseDetail({
   actuaciones: ActuacionPersistida[]
   participantes: ParticipantePersistido[]
   eventos: EventoExpediente[]
-  comunicaciones: CaseCommunicationRow[]
   documentos: CaseDocumentRow[]
   tareas: TareaPersistida[]
   miembros: MiembroDespacho[]
   clienteNombre: string
   taskPending: boolean
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
-  communicationPending: boolean
-  onCreateCommunication: (input: RegistrarComunicacionExpedienteInput) => Promise<unknown>
+  onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
+  canManageNextAction: (task: TareaPersistida) => boolean
+  nextActionPending: boolean
   editor: ReactNode
   relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode }
   notas?: NotaRemota[]
@@ -124,7 +123,8 @@ export function CaseDetail({
     participants: participantes.length,
     activities: actuaciones.length,
     documents: documentos.length,
-    communications: comunicaciones.length,
+    communications: notas.filter((note) => note.scope === 'case' && note.case_id === item.id)
+      .length,
     tasks: openTasks.length,
     deadlines: deadlines.length,
   }
@@ -196,6 +196,9 @@ export function CaseDetail({
             expedienteId={item.id}
             pending={taskPending}
             onCreateTask={onCreateTask}
+            onSetNextAction={onSetNextAction}
+            canManageNextAction={canManageNextAction}
+            nextActionPending={nextActionPending}
             createForm={relatedForms.workstream}
           />
         ) : null}
@@ -237,11 +240,6 @@ export function CaseDetail({
         ) : null}
         {activeTab === 'communications' ? (
           <CaseCommunications
-            caseId={item.id}
-            contactId={item.contactoPrincipalId}
-            communications={comunicaciones}
-            pending={communicationPending}
-            onCreate={onCreateCommunication}
             notes={notas.filter((note) => note.scope === 'case' && note.case_id === item.id)}
           />
         ) : null}
@@ -379,193 +377,42 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
   )
 }
 
-function CaseCommunications({
-  caseId,
-  contactId,
-  communications,
-  pending,
-  onCreate,
-  notes,
-}: {
-  caseId: string
-  contactId: string
-  communications: CaseCommunicationRow[]
-  pending: boolean
-  onCreate: (input: RegistrarComunicacionExpedienteInput) => Promise<unknown>
-  notes: NotaRemota[]
-}) {
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const formElement = event.currentTarget
-    const form = new FormData(formElement)
-    const get = (name: string) => {
-      const value = form.get(name)
-      return typeof value === 'string' ? value.trim() : ''
-    }
-    const occurredAt = get('occurredAt')
-    try {
-      await onCreate({
-        contact_id: contactId,
-        direction: get('direction') === 'inbound' ? 'inbound' : 'outbound',
-        communication_type: get('type'),
-        channel: get('channel'),
-        subject: get('subject'),
-        content: get('content'),
-        ...(occurredAt ? { occurred_at: new Date(occurredAt).toISOString() } : {}),
-      })
-      formElement.reset()
-      toast.success('Comunicación registrada en el expediente.')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo registrar la comunicación.')
-    }
-  }
-
+function CaseCommunications({ notes }: { notes: NotaRemota[] }) {
   return (
     <DetailSection
       title="Comunicaciones"
-      subtitle="Registro de llamadas, reuniones y mensajes vinculados al asunto."
+      subtitle="Conversaciones y notas internas vinculadas a este expediente."
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Registrar comunicación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
-              <div className="space-y-1.5">
-                <Label htmlFor={`case-communication-type-${caseId}`}>Tipo</Label>
-                <select
-                  id={`case-communication-type-${caseId}`}
-                  name="type"
-                  defaultValue="phone_call"
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="phone_call">Llamada</option>
-                  <option value="email">Email</option>
-                  <option value="meeting">Reunión</option>
-                  <option value="message">Mensaje</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`case-communication-direction-${caseId}`}>Dirección</Label>
-                <select
-                  id={`case-communication-direction-${caseId}`}
-                  name="direction"
-                  defaultValue="outbound"
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="outbound">Saliente</option>
-                  <option value="inbound">Entrante</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`case-communication-channel-${caseId}`}>Canal</Label>
-                <select
-                  id={`case-communication-channel-${caseId}`}
-                  name="channel"
-                  defaultValue="phone"
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="phone">Teléfono</option>
-                  <option value="email">Correo electrónico</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="in_person">Presencial</option>
-                  <option value="video">Videollamada</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`case-communication-date-${caseId}`}>Fecha y hora</Label>
-                <Input
-                  id={`case-communication-date-${caseId}`}
-                  name="occurredAt"
-                  type="datetime-local"
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor={`case-communication-subject-${caseId}`}>Asunto</Label>
-                <Input id={`case-communication-subject-${caseId}`} name="subject" maxLength={300} />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor={`case-communication-content-${caseId}`}>Resumen y acuerdos</Label>
-                <Textarea
-                  id={`case-communication-content-${caseId}`}
-                  name="content"
-                  rows={4}
-                  maxLength={10000}
-                  required
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Button type="submit" disabled={pending}>
-                  {pending ? 'Guardando…' : 'Registrar comunicación'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle className="text-base">Historial del expediente</CardTitle>
-            <Link
-              to="/comunicaciones"
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              Bandeja
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {communications.map((communication) => (
-              <article key={communication.id} className="bg-muted/30 rounded-xl border p-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <span className="text-sm font-semibold">
-                    {communication.subject || communication.communication_type.replaceAll('_', ' ')}{' '}
-                    · {communication.direction === 'inbound' ? 'Entrante' : 'Saliente'}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDate(communication.occurred_at, true)}
-                  </span>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Canal: {communication.channel.replaceAll('_', ' ')}
-                </p>
-                <p className="mt-2 text-sm whitespace-pre-wrap">{communication.content}</p>
-              </article>
-            ))}
-            {!communications.length ? (
-              <EmptyState message="Este expediente aún no tiene comunicaciones registradas." />
-            ) : null}
-          </CardContent>
-        </Card>
+      <div className="flex justify-end">
+        <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          Abrir bandeja de conversaciones
+        </Link>
       </div>
-      {notes.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notas internas del expediente</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {notes.map((note) => (
-              <article key={note.id} className="bg-muted/30 rounded-xl border p-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <span className="text-sm font-semibold">
-                    {note.actorNames[note.created_by ?? ''] ?? 'Miembro del despacho'}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDate(note.created_at, true)}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm whitespace-pre-wrap">{note.content}</p>
-                {note.requires_acknowledgement ? (
-                  <Badge className="mt-2" variant="outline">
-                    Requiere confirmación de lectura
-                  </Badge>
-                ) : null}
-              </article>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          {notes.map((note) => (
+            <article key={note.id} className="bg-muted/30 rounded-xl border p-3">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="text-sm font-semibold">
+                  {note.actorNames[note.created_by ?? ''] ?? 'Miembro del despacho'}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {formatDate(note.created_at, true)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm whitespace-pre-wrap">{note.content}</p>
+              {note.requires_acknowledgement ? (
+                <Badge className="mt-2" variant="outline">
+                  Requiere confirmación de lectura
+                </Badge>
+              ) : null}
+            </article>
+          ))}
+          {!notes.length ? (
+            <EmptyState message="Este expediente todavía no tiene comunicaciones internas." />
+          ) : null}
+        </CardContent>
+      </Card>
     </DetailSection>
   )
 }
@@ -619,8 +466,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-        .filter((item): item is string => typeof item === 'string' && item.length > 0)
+      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+      .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
@@ -754,6 +601,9 @@ function WorkstreamsSection({
   expedienteId,
   pending,
   onCreateTask,
+  onSetNextAction,
+  canManageNextAction,
+  nextActionPending,
   createForm,
 }: {
   lineas: LineaPersistida[]
@@ -763,6 +613,9 @@ function WorkstreamsSection({
   expedienteId: string
   pending: boolean
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
+  onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
+  canManageNextAction: (task: TareaPersistida) => boolean
+  nextActionPending: boolean
   createForm: ReactNode
 }) {
   const [status, setStatus] = useState('all')
@@ -874,6 +727,9 @@ function WorkstreamsSection({
             expedienteId={expedienteId}
             pending={pending}
             onCreateTask={onCreateTask}
+            onSetNextAction={onSetNextAction}
+            canManageNextAction={canManageNextAction}
+            nextActionPending={nextActionPending}
             memberName={memberNames.get(line.asignadoId ?? '')}
           />
         ))}
@@ -929,6 +785,9 @@ function WorkstreamCard({
   expedienteId,
   pending,
   onCreateTask,
+  onSetNextAction,
+  canManageNextAction,
+  nextActionPending,
   memberName,
 }: {
   line: LineaPersistida
@@ -936,33 +795,22 @@ function WorkstreamCard({
   expedienteId: string
   pending: boolean
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
+  onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
+  canManageNextAction: (task: TareaPersistida) => boolean
+  nextActionPending: boolean
   memberName: string | undefined
 }) {
-  const submitTask = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    const titulo = text(data, 'workstreamTaskTitle')
-    if (!titulo.trim()) return
+  const nextAction = tasks.find((task) => task.esSiguienteAccion) ?? null
+
+  const updateNextAction = async (task: TareaPersistida) => {
+    const enabled = !task.esSiguienteAccion
     try {
-      await onCreateTask({
-        expedienteId,
-        oportunidadId: null,
-        lineaId: line.id,
-        tipo: 'Tarea',
-        titulo: titulo.trim(),
-        descripcion: '',
-        prioridad: 'Media',
-        venceEn: dateTime(text(data, 'workstreamTaskDue')),
-        recordarEn: null,
-        clasePlazo: null,
-        critico: false,
-        asignadoId: line.asignadoId,
-      })
-      form.reset()
-      toast.success('Tarea vinculada a la línea de trabajo.')
+      await onSetNextAction(task, enabled)
+      toast.success(enabled ? 'Siguiente acción actualizada.' : 'Siguiente acción retirada.')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
+      toast.error(
+        error instanceof Error ? error.message : 'No se pudo actualizar la siguiente acción.',
+      )
     }
   }
 
@@ -983,43 +831,70 @@ function WorkstreamCard({
           <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
           <span>Prioridad: {line.prioridad}</span>
         </div>
+        <div className="border-primary/20 bg-primary/5 rounded-md border px-3 py-2">
+          <p className="text-primary text-xs font-semibold">Siguiente acción</p>
+          {nextAction ? (
+            <Link
+              to="/tareas/$taskId"
+              params={{ taskId: nextAction.id }}
+              aria-label={`Abrir siguiente acción: ${nextAction.titulo}`}
+              className="mt-1 inline-block text-sm font-medium underline-offset-4 hover:underline"
+            >
+              {nextAction.titulo}
+            </Link>
+          ) : (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Sin siguiente acción definida para esta línea.
+            </p>
+          )}
+        </div>
         <div className="space-y-2 border-t pt-3">
           <p className="text-sm font-medium">Tareas de esta línea · {tasks.length}</p>
           {tasks.map((task) => (
-            <div key={task.id} className="flex items-center justify-between gap-3 text-sm">
-              <Link
-                to="/tareas/$taskId"
-                params={{ taskId: task.id }}
-                className="min-w-0 truncate underline-offset-4 hover:underline"
-              >
-                {task.titulo}
-              </Link>
-              <span className="text-muted-foreground shrink-0 text-xs">{task.estado}</span>
+            <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div className="min-w-0 flex-1">
+                <Link
+                  to="/tareas/$taskId"
+                  params={{ taskId: task.id }}
+                  className="truncate underline-offset-4 hover:underline"
+                >
+                  {task.titulo}
+                </Link>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {task.estado} · {task.prioridad}
+                  {task.venceEn ? ` · ${formatDate(task.venceEn)}` : ''}
+                  {task.esSiguienteAccion ? ' · Siguiente acción' : ''}
+                </p>
+              </div>
+              {!['Completada', 'Cancelada'].includes(task.estado) ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={nextActionPending || !canManageNextAction(task)}
+                  aria-label={`${task.esSiguienteAccion ? 'Quitar' : 'Marcar'} siguiente acción: ${task.titulo}`}
+                  onClick={() => void updateNextAction(task)}
+                >
+                  {task.esSiguienteAccion ? 'Quitar siguiente acción' : 'Marcar siguiente acción'}
+                </Button>
+              ) : null}
             </div>
           ))}
           {!tasks.length ? (
             <p className="text-muted-foreground text-xs">Todavía no hay tareas en esta línea.</p>
           ) : null}
-          <form
-            className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"
-            onSubmit={(event) => void submitTask(event)}
-          >
-            <Input
-              name="workstreamTaskTitle"
-              aria-label={`Nueva tarea para ${line.titulo}`}
-              placeholder="Qué hay que hacer"
-              required
-              maxLength={240}
-            />
-            <Input
-              name="workstreamTaskDue"
-              aria-label={`Fecha de tarea para ${line.titulo}`}
-              type="date"
-            />
-            <Button type="submit" size="sm" disabled={pending}>
-              Añadir tarea
-            </Button>
-          </form>
+          <CaseTaskCreateDialog
+            expedienteId={expedienteId}
+            lineaId={line.id}
+            asignadoId={line.asignadoId}
+            pending={pending}
+            onCreate={onCreateTask}
+            triggerLabel="Añadir tarea"
+            dialogTitle="Nueva tarea para la línea"
+            description={`Quedará vinculada a «${line.titulo}».`}
+            titleAriaLabel={`Nueva tarea para ${line.titulo}`}
+            dueAriaLabel={`Fecha de tarea para ${line.titulo}`}
+          />
         </div>
       </CardContent>
     </Card>
@@ -1138,34 +1013,24 @@ function TasksSection({
   onCreate: (input: CrearTareaInput) => Promise<unknown>
   titleTemplates: string[]
 }) {
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    try {
-      await onCreate({
-        expedienteId: expediente.id,
-        oportunidadId: null,
-        tipo: 'Tarea',
-        titulo: text(data, 'title'),
-        descripcion: '',
-        prioridad: 'Media',
-        venceEn: dateTime(text(data, 'due')),
-        recordarEn: null,
-        clasePlazo: null,
-        critico: false,
-        asignadoId: expediente.asignadoId,
-      })
-      form.reset()
-      toast.success('Tarea vinculada al expediente.')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
-    }
-  }
   return (
     <DetailSection
       title="Tareas"
       subtitle="Trabajo pendiente y completado vinculado a este expediente."
+      actions={
+        <CaseTaskCreateDialog
+          expedienteId={expediente.id}
+          asignadoId={expediente.asignadoId}
+          pending={pending}
+          onCreate={onCreate}
+          titleTemplates={titleTemplates}
+          triggerLabel="Añadir tarea"
+          dialogTitle="Nueva tarea para el expediente"
+          description={`Quedará vinculada al expediente ${expediente.referencia}.`}
+          titleAriaLabel="Título de tarea"
+          dueAriaLabel="Fecha prevista"
+        />
+      }
     >
       <Card>
         <CardContent className="divide-y pt-2">
@@ -1175,38 +1040,121 @@ function TasksSection({
           {!tasks.length ? <EmptyState message="No hay tareas registradas." /> : null}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Añadir tarea</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"
-            onSubmit={(event) => void submit(event)}
-          >
+    </DetailSection>
+  )
+}
+
+function CaseTaskCreateDialog({
+  expedienteId,
+  lineaId,
+  asignadoId,
+  pending,
+  onCreate,
+  titleTemplates = [],
+  triggerLabel,
+  dialogTitle,
+  description,
+  titleAriaLabel,
+  dueAriaLabel,
+}: {
+  expedienteId: string
+  lineaId?: string
+  asignadoId: string | null
+  pending: boolean
+  onCreate: (input: CrearTareaInput) => Promise<unknown>
+  titleTemplates?: string[]
+  triggerLabel: string
+  dialogTitle: string
+  description: string
+  titleAriaLabel: string
+  dueAriaLabel: string
+}) {
+  const [open, setOpen] = useState(false)
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const titulo = text(data, 'title').trim()
+    if (!titulo) return
+    try {
+      await onCreate({
+        expedienteId,
+        oportunidadId: null,
+        ...(lineaId ? { lineaId } : {}),
+        tipo: 'Tarea',
+        titulo,
+        descripcion: '',
+        prioridad: 'Media',
+        venceEn: dateTime(text(data, 'due')),
+        recordarEn: null,
+        clasePlazo: null,
+        critico: false,
+        asignadoId,
+      })
+      form.reset()
+      setOpen(false)
+      toast.success(lineaId ? 'Tarea vinculada a la línea de trabajo.' : 'Tarea vinculada al expediente.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" size="sm">
+          <Plus className="size-4" aria-hidden="true" /> {triggerLabel}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+          <div className="space-y-1.5">
+            <label htmlFor="case-quick-task-title" className="text-sm font-medium">
+              Título de tarea
+            </label>
             <Input
+              id="case-quick-task-title"
               name="title"
-              aria-label="Título de tarea"
+              aria-label={titleAriaLabel}
               placeholder="Qué hay que hacer"
               required
               maxLength={240}
-              list="case-task-title-templates"
+              list={titleTemplates.length ? 'case-task-title-templates' : undefined}
             />
-            <datalist id="case-task-title-templates">
-              {titleTemplates.map((title) => (
-                <option key={title} value={title}>
-                  {title}
-                </option>
-              ))}
-            </datalist>
-            <Input name="due" aria-label="Fecha prevista" type="date" />
-            <Button type="submit" disabled={pending}>
-              Añadir tarea
+            {titleTemplates.length ? (
+              <datalist id="case-task-title-templates">
+                {titleTemplates.map((title) => (
+                  <option key={title} value={title} />
+                ))}
+              </datalist>
+            ) : null}
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="case-quick-task-due" className="text-sm font-medium">
+              Fecha prevista (opcional)
+            </label>
+            <Input
+              id="case-quick-task-due"
+              name="due"
+              aria-label={dueAriaLabel}
+              type="date"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+              Cancelar
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </DetailSection>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Guardando…' : triggerLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1323,9 +1271,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-        'es-ES',
-        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-      )
+      'es-ES',
+      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+    )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

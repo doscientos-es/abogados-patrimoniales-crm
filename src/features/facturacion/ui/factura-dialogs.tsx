@@ -228,8 +228,8 @@ export function BorradorFacturaDialog({
   return (
     <DialogShell
       trigger={trigger}
-      title={factura ? `Editar borrador ${factura.referencia}` : 'Nueva factura'}
-      description="El borrador no tiene numeración fiscal hasta que se emite."
+      title={factura ? `Editar borrador ${factura.referencia}` : 'Crear borrador de factura'}
+      description="Al guardar se crea un borrador, todavía sin numeración fiscal. Después tendrás que emitirlo desde la lista de facturas."
       wide
       render={(cerrar) => (
         <BorradorFacturaForm
@@ -337,7 +337,7 @@ function BorradorFacturaForm({
             {contactoId ? nombreCliente(contactoId) : 'Se completa al elegir expediente'}
           </div>
         </Campo>
-        <Campo label="Fecha de factura">
+        <Campo label="Fecha de emisión prevista">
           <Input
             type="date"
             value={emision}
