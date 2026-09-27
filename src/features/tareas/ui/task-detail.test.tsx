@@ -1,10 +1,21 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   openTask: vi.fn().mockResolvedValue(undefined),
   changeStatus: vi.fn().mockResolvedValue(undefined),
+  completeTask: vi.fn().mockResolvedValue(undefined),
+  completeTaskAsActivity: vi.fn().mockResolvedValue(undefined),
+  addSubtask: vi.fn().mockResolvedValue(undefined),
+  setSubtaskDone: vi.fn().mockResolvedValue(undefined),
+  subtasks: [] as Array<{
+    id: string
+    texto: string
+    hecha: boolean
+    creadaPorId: string | null
+    creadaEn: string
+  }>,
   cancelTask: vi.fn().mockResolvedValue(undefined),
   rejectTask: vi.fn().mockResolvedValue(undefined),
   updateMeeting: vi.fn().mockResolvedValue(undefined),
@@ -83,6 +94,7 @@ vi.mock('@/features/tareas', () => ({
         rechazadaEn: null,
         tareaPadreId: null,
         reunion: mocks.meetingDetails,
+        subtareas: mocks.subtasks,
         bloqueada: false,
         etiquetas: [{ id: 'label-1', nombre: 'Urgente', color: '#f00' }],
         version: 1,
@@ -116,7 +128,13 @@ vi.mock('@/features/tareas', () => ({
     isPending: false,
   }),
   usePonerTareaEnEspera: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCompletarTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCompletarTarea: () => ({ mutateAsync: mocks.completeTask, isPending: false }),
+  useCompletarTareaComoActuacion: () => ({
+    mutateAsync: mocks.completeTaskAsActivity,
+    isPending: false,
+  }),
+  useAnadirSubtareaTarea: () => ({ mutateAsync: mocks.addSubtask, isPending: false }),
+  useMarcarSubtareaTarea: () => ({ mutateAsync: mocks.setSubtaskDone, isPending: false }),
   useMarcarSiguienteAccion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useAnadirMensajeTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useAnadirEvidenciaTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -132,10 +150,48 @@ afterEach(() => {
   cleanup()
   vi.clearAllMocks()
   mocks.meetingDetails = {}
+  mocks.subtasks = []
   mocks.role = 'paralegal'
 })
 
 describe('TaskDetail', () => {
+  it('adds a checklist item to the persistent task', async () => {
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Nueva subtarea' }), {
+      target: { value: 'Revisar escritura' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+
+    await expect.poll(() => mocks.addSubtask.mock.calls.length).toBe(1)
+    expect(mocks.addSubtask).toHaveBeenCalledWith({
+      task: expect.objectContaining({ id: 'task-1', version: 1 }),
+      texto: 'Revisar escritura',
+    })
+  })
+
+  it('marks a checklist item complete through the versioned task mutation', async () => {
+    mocks.subtasks = [
+      {
+        id: 'subtask-1',
+        texto: 'Revisar escritura',
+        hecha: false,
+        creadaPorId: 'user-1',
+        creadaEn: '2026-09-27T09:00:00Z',
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Revisar escritura' }))
+
+    await expect.poll(() => mocks.setSubtaskDone.mock.calls.length).toBe(1)
+    expect(mocks.setSubtaskDone).toHaveBeenCalledWith({
+      task: expect.objectContaining({ id: 'task-1', version: 1 }),
+      subtaskId: 'subtask-1',
+      completed: true,
+    })
+  })
+
   it('shows task traceability and lets the responsible user work without managing protected fields', async () => {
     render(<TaskDetail taskId="task-1" />)
 
@@ -162,6 +218,51 @@ describe('TaskDetail', () => {
     expect(mocks.rejectTask).toHaveBeenCalledWith(
       expect.objectContaining({ motivo: 'Falta documentación' }),
     )
+  })
+
+  it('completes a case task and records it as an activity when selected', async () => {
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Completar' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Resultado'), {
+      target: { value: 'Escritura revisada.' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Al completar'), {
+      target: { value: 'activity' },
+    })
+    const form = dialog.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario para completar la tarea.')
+    fireEvent.submit(form)
+
+    await expect.poll(() => mocks.completeTaskAsActivity.mock.calls.length).toBe(1)
+    expect(mocks.completeTaskAsActivity).toHaveBeenCalledWith({
+      task: expect.objectContaining({ id: 'task-1', expedienteId: 'case-1' }),
+      resultado: 'Escritura revisada.',
+      continuidad: 'create_next_task',
+    })
+    expect(mocks.completeTask).not.toHaveBeenCalled()
+  })
+
+  it('keeps ordinary task completion as the default', async () => {
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Completar' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Resultado'), {
+      target: { value: 'Revisión terminada.' },
+    })
+    const form = dialog.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario para completar la tarea.')
+    fireEvent.submit(form)
+
+    await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
+    expect(mocks.completeTask).toHaveBeenCalledWith({
+      task: expect.objectContaining({ id: 'task-1' }),
+      resultado: 'Revisión terminada.',
+      continuidad: 'create_next_task',
+    })
+    expect(mocks.completeTaskAsActivity).not.toHaveBeenCalled()
   })
 
   it('preselects case contacts and saves enriched meeting details for a manager', async () => {

@@ -217,10 +217,10 @@ export function ContactDetail({ contactId }: { contactId: string }) {
               </span>
             </div>
           </div>
-          <div className="col-span-2 flex flex-wrap items-center justify-between gap-3 xl:col-span-1 xl:ml-auto xl:justify-end">
+          <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 xl:col-span-1 xl:ml-auto">
             {contact.relacion === 'Lead' ? (
               opportunitiesQuery.isPending ? (
-                <Button type="button" size="sm" disabled>
+                <Button type="button" size="sm" className="whitespace-nowrap" disabled>
                   <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
                   Comprobando leads…
                 </Button>
@@ -228,7 +228,11 @@ export function ContactDetail({ contactId }: { contactId: string }) {
                 <Link
                   to="/oportunidades"
                   search={{ vista: 'todas', abrir: '' }}
-                  className={buttonVariants({ size: 'sm', variant: 'default' })}
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'default',
+                    className: 'whitespace-nowrap',
+                  })}
                 >
                   <BriefcaseBusiness className="size-4" aria-hidden="true" />
                   Revisar leads
@@ -237,7 +241,11 @@ export function ContactDetail({ contactId }: { contactId: string }) {
                 <Link
                   to="/oportunidades/$id"
                   params={{ id: leadToView.id }}
-                  className={buttonVariants({ size: 'sm', variant: 'default' })}
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'default',
+                    className: 'whitespace-nowrap',
+                  })}
                 >
                   <ArrowUpRight className="size-4" aria-hidden="true" />
                   Ver lead
@@ -246,37 +254,41 @@ export function ContactDetail({ contactId }: { contactId: string }) {
                 <Link
                   to="/oportunidades/nueva"
                   search={{ contactId: contact.id }}
-                  className={buttonVariants({ size: 'sm', variant: 'default' })}
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'default',
+                    className: 'whitespace-nowrap',
+                  })}
                 >
                   <Plus className="size-4" aria-hidden="true" />
                   Crear lead
                 </Link>
               )
             ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setActiveTab('general')}
-              >
-                Editar ficha
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={updateStatus.isPending || contact.estado === 'Archivado'}
-                onClick={() =>
-                  void updateStatus
-                    .mutateAsync({ id: contact.id, status: 'archived' })
-                    .then(() => toast.success('Contacto archivado.'))
-                    .catch(() => toast.error('No se pudo archivar.'))
-                }
-              >
-                Archivar
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="whitespace-nowrap"
+              onClick={() => setActiveTab('general')}
+            >
+              Editar ficha
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="whitespace-nowrap"
+              disabled={updateStatus.isPending || contact.estado === 'Archivado'}
+              onClick={() =>
+                void updateStatus
+                  .mutateAsync({ id: contact.id, status: 'archived' })
+                  .then(() => toast.success('Contacto archivado.'))
+                  .catch(() => toast.error('No se pudo archivar.'))
+              }
+            >
+              Archivar
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -932,9 +944,9 @@ export function ContactInternalNotes({
       : scope === 'expediente'
         ? caseOptions.map((item) => ({ id: item.id, label: `${item.referencia} · ${item.titulo}` }))
         : opportunityOptions.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+        }))
   const selectedRelated = relatedOptions.find((item) => item.id === originId)
 
   const changeScope = (next: ContactNoteScope) => {

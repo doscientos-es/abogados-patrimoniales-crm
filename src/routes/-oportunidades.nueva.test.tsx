@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: { contactId: 'contact-1' },
   createOpportunity: vi.fn(),
+  contactRefetch: vi.fn().mockResolvedValue({ isError: false }),
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
@@ -32,6 +33,7 @@ vi.mock('@/features/contactos', () => ({
   useContactos: () => ({
     data: [{ id: 'contact-1', nombre: 'Ana', apellidos: 'López' }],
     isPending: false,
+    refetch: mocks.contactRefetch,
   }),
 }))
 vi.mock('@/features/crm', () => ({
@@ -49,6 +51,7 @@ import { NuevaOportunidadPage } from './oportunidades.nueva'
 afterEach(() => {
   cleanup()
   mocks.navigate.mockClear()
+  mocks.contactRefetch.mockClear()
   mocks.search = { contactId: 'contact-1' }
 })
 
@@ -64,6 +67,25 @@ describe('NuevaOportunidadPage', () => {
     expect((screen.getByRole('button', { name: 'Crear Lead' }) as HTMLButtonElement).disabled).toBe(
       false,
     )
+  })
+
+  it('keeps the Lead form in memory and refreshes contacts after creating one in another tab', async () => {
+    render(<NuevaOportunidadPage />)
+
+    const title = screen.getByLabelText('Título del Lead') as HTMLInputElement
+    fireEvent.change(title, { target: { value: 'Consulta inicial' } })
+    const createContact = screen.getByRole('link', { name: 'Crear contacto en otra pestaña' })
+    expect(createContact.getAttribute('href')).toBe('/contactos/nuevo')
+    expect(createContact.getAttribute('target')).toBe('_blank')
+    expect(createContact.getAttribute('rel')).toContain('noopener')
+
+    createContact.addEventListener('click', (event) => event.preventDefault(), { once: true })
+    fireEvent.click(createContact)
+
+    expect(title.value).toBe('Consulta inicial')
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar contactos' }))
+    await waitFor(() => expect(mocks.contactRefetch).toHaveBeenCalledOnce())
+    expect(screen.queryByRole('button', { name: 'Actualizar contactos' })).toBeNull()
   })
 
   it('pregunta por la siguiente acción tras guardar y permite continuar a la ficha', async () => {

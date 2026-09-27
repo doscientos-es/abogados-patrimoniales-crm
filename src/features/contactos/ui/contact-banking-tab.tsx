@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Plus, ShieldCheck } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useState, type ComponentProps, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
@@ -50,8 +50,14 @@ export function ContactBankingTab({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const iban = form.iban.replace(/\s/g, '').toUpperCase()
+    if (iban.length < 15 || iban.length > 34) {
+      toast.error('El IBAN debe tener entre 15 y 34 caracteres, sin contar espacios.')
+      return
+    }
+
     try {
-      await replace.mutateAsync({ ...form, holder: form.holder.trim(), iban: form.iban.trim() })
+      await replace.mutateAsync({ ...form, holder: form.holder.trim(), iban })
       toast.success(
         'Los nuevos datos bancarios se han guardado. La cuenta anterior queda en el histórico.',
       )
@@ -59,8 +65,18 @@ export function ContactBankingTab({
       setShowForm(false)
       setShowIban(false)
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error !== null && 'message' in error
+            ? error.message
+            : undefined
       toast.error(
-        error instanceof Error ? error.message : 'No se pudieron guardar los datos bancarios.',
+        typeof message === 'string' && message.includes('IBAN is invalid')
+          ? 'El IBAN debe tener entre 15 y 34 caracteres, sin contar espacios.'
+          : error instanceof Error
+            ? error.message
+            : 'No se pudieron guardar los datos bancarios.',
       )
     }
   }
@@ -177,12 +193,15 @@ export function ContactBankingTab({
                 name="bank-holder"
                 value={form.holder}
                 required
+                maxLength={240}
+                autoComplete="name"
                 onChange={(holder) => setForm({ ...form, holder })}
               />
               <Field
                 label="NIF del titular"
                 name="bank-tax-id"
                 value={form.tax_id}
+                autoComplete="off"
                 onChange={(tax_id) => setForm({ ...form, tax_id })}
               />
               <Field
@@ -190,18 +209,30 @@ export function ContactBankingTab({
                 name="bank-iban"
                 value={form.iban}
                 required
+                autoComplete="off"
+                autoCapitalize="characters"
+                inputMode="text"
+                pattern="[A-Za-z]{2}[0-9]{2}(?: ?[A-Za-z0-9]){11,30}"
+                title="Introduce un IBAN con 2 letras de país, 2 dígitos y entre 11 y 30 caracteres alfanuméricos; se permiten espacios."
                 onChange={(iban) => setForm({ ...form, iban })}
               />
               <Field
                 label="Entidad"
                 name="bank-name"
                 value={form.bank_name}
+                autoComplete="off"
                 onChange={(bank_name) => setForm({ ...form, bank_name })}
               />
               <Field
                 label="BIC / SWIFT"
                 name="bank-bic"
                 value={form.bic}
+                maxLength={11}
+                autoComplete="off"
+                autoCapitalize="characters"
+                inputMode="text"
+                pattern="[A-Za-z]{4}[A-Za-z]{2}[A-Za-z0-9]{2}(?:[A-Za-z0-9]{3})?"
+                title="El BIC / SWIFT debe tener 8 u 11 letras y números."
                 onChange={(bic) => setForm({ ...form, bic })}
               />
               <Field
@@ -312,6 +343,23 @@ export function ContactBankingTab({
   )
 }
 
+type FieldProps = {
+  label: string
+  name: string
+  value: string
+  onChange: (value: string) => void
+} & Pick<
+  ComponentProps<typeof Input>,
+  | 'autoCapitalize'
+  | 'autoComplete'
+  | 'inputMode'
+  | 'maxLength'
+  | 'pattern'
+  | 'required'
+  | 'title'
+  | 'type'
+>
+
 function Field({
   label,
   name,
@@ -319,14 +367,8 @@ function Field({
   type = 'text',
   required = false,
   onChange,
-}: {
-  label: string
-  name: string
-  value: string
-  type?: string
-  required?: boolean
-  onChange: (value: string) => void
-}) {
+  ...inputProps
+}: FieldProps) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name}>{label}</Label>
@@ -336,6 +378,7 @@ function Field({
         value={value}
         required={required}
         onChange={(event) => onChange(event.target.value)}
+        {...inputProps}
       />
     </div>
   )

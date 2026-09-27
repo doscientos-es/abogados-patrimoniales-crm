@@ -43,6 +43,7 @@ import {
 import type {
   ActuacionPersistida,
   EventoExpediente,
+  ActualizarLineaInput,
   ExpedientePersistido,
   LineaPersistida,
   ParticipantePersistido,
@@ -56,6 +57,7 @@ import type { FacturaPersistida } from '@/features/facturacion/application/factu
 import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
 import type { CaseCommunicationRow, CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
 
 type CaseDetailTab =
   | 'summary'
@@ -97,6 +99,7 @@ export function CaseDetail({
   taskPending,
   onCreateTask,
   onSetNextAction,
+  onUpdateWorkstream,
   canManageNextAction,
   nextActionPending,
   communicationPending = false,
@@ -105,6 +108,7 @@ export function CaseDetail({
   onUpdateActivityVisibility = async () => undefined,
   reportPending = false,
   onRegisterClientReport = async () => undefined,
+  workstreamPending = false,
   editor,
   relatedForms,
   notas = [],
@@ -124,6 +128,8 @@ export function CaseDetail({
   taskPending: boolean
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
+  onUpdateWorkstream: (input: ActualizarLineaInput) => Promise<unknown>
+  workstreamPending?: boolean
   canManageNextAction: (task: TareaPersistida) => boolean
   nextActionPending: boolean
   communicationPending?: boolean
@@ -219,13 +225,18 @@ export function CaseDetail({
         {activeTab === 'workstreams' ? (
           <WorkstreamsSection
             lineas={lineas}
+            actuaciones={actuaciones}
+            documentos={documentos}
+            eventos={eventos}
             tasks={caseTasks}
             miembros={miembros}
             expedienteReferencia={item.referencia}
             expedienteId={item.id}
             pending={taskPending}
+            updatePending={workstreamPending}
             onCreateTask={onCreateTask}
             onSetNextAction={onSetNextAction}
+            onUpdateWorkstream={onUpdateWorkstream}
             canManageNextAction={canManageNextAction}
             nextActionPending={nextActionPending}
             createForm={relatedForms.workstream}
@@ -719,8 +730,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-        .filter((item): item is string => typeof item === 'string' && item.length > 0)
+      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+      .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
@@ -848,25 +859,35 @@ type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
 
 function WorkstreamsSection({
   lineas,
+  actuaciones,
+  documentos,
+  eventos,
   tasks,
   miembros,
   expedienteReferencia,
   expedienteId,
   pending,
+  updatePending,
   onCreateTask,
   onSetNextAction,
+  onUpdateWorkstream,
   canManageNextAction,
   nextActionPending,
   createForm,
 }: {
   lineas: LineaPersistida[]
+  actuaciones: ActuacionPersistida[]
+  documentos: CaseDocumentRow[]
+  eventos: EventoExpediente[]
   tasks: TareaPersistida[]
   miembros: MiembroDespacho[]
   expedienteReferencia: string
   expedienteId: string
   pending: boolean
+  updatePending: boolean
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
+  onUpdateWorkstream: (input: ActualizarLineaInput) => Promise<unknown>
   canManageNextAction: (task: TareaPersistida) => boolean
   nextActionPending: boolean
   createForm: ReactNode
@@ -920,7 +941,7 @@ function WorkstreamsSection({
         <WorkstreamSelect ariaLabel="Estado de línea" value={status} onChange={setStatus}>
           <option value="all">Todos los estados</option>
           {statuses.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>{workstreamStatusLabel(option)}</option>
           ))}
         </WorkstreamSelect>
         <WorkstreamSelect
@@ -976,9 +997,16 @@ function WorkstreamsSection({
           <WorkstreamCard
             key={line.id}
             line={line}
+            lineas={lineas}
+            actuaciones={actuaciones}
+            documentos={documentos}
+            eventos={eventos}
             tasks={tasks.filter((task) => task.lineaId === line.id)}
+            miembros={miembros}
             expedienteId={expedienteId}
             pending={pending}
+            updatePending={updatePending}
+            onUpdateWorkstream={onUpdateWorkstream}
             onCreateTask={onCreateTask}
             onSetNextAction={onSetNextAction}
             canManageNextAction={canManageNextAction}
@@ -1034,9 +1062,16 @@ function WorkstreamSelect({
 
 function WorkstreamCard({
   line,
+  lineas,
+  actuaciones,
+  documentos,
+  eventos,
   tasks,
+  miembros,
   expedienteId,
   pending,
+  updatePending,
+  onUpdateWorkstream,
   onCreateTask,
   onSetNextAction,
   canManageNextAction,
@@ -1044,9 +1079,16 @@ function WorkstreamCard({
   memberName,
 }: {
   line: LineaPersistida
+  lineas: LineaPersistida[]
+  actuaciones: ActuacionPersistida[]
+  documentos: CaseDocumentRow[]
+  eventos: EventoExpediente[]
   tasks: TareaPersistida[]
+  miembros: MiembroDespacho[]
   expedienteId: string
   pending: boolean
+  updatePending: boolean
+  onUpdateWorkstream: (input: ActualizarLineaInput) => Promise<unknown>
   onCreateTask: (input: CrearTareaInput) => Promise<unknown>
   onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
   canManageNextAction: (task: TareaPersistida) => boolean
@@ -1077,7 +1119,21 @@ function WorkstreamCard({
               {line.descripcion || line.tipo || 'Sin descripción'}
             </p>
           </div>
-          <Badge variant="outline">{line.estado}</Badge>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Badge variant="outline">{workstreamStatusLabel(line.estado)}</Badge>
+            <WorkstreamDetailDialog
+              line={line}
+              lineas={lineas}
+              miembros={miembros}
+              tareas={tasks}
+              actuaciones={actuaciones}
+              documentos={documentos}
+              eventos={eventos}
+              memberNames={new Map(miembros.map((member) => [member.id, member.nombre]))}
+              pending={updatePending}
+              onSave={onUpdateWorkstream}
+            />
+          </div>
         </div>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <span>Responsable: {memberName ?? 'Sin asignar'}</span>
@@ -1628,9 +1684,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-        'es-ES',
-        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-      )
+      'es-ES',
+      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+    )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

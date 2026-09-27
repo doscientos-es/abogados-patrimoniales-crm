@@ -218,6 +218,25 @@ export type Database = {
         }
         Returns: CaseRow
       }
+      crm_update_case_workstream: {
+        Args: {
+          target_workstream_id: string
+          target_expected_version: number
+          new_parent_id: string | null
+          new_title: string
+          new_work_type: string
+          new_description: string
+          new_status: string
+          new_priority: OpportunityPriority
+          new_assigned_to: string | null
+          new_starts_on: string | null
+          new_target_on: string | null
+          new_resolved_on: string | null
+          new_closed_on: string | null
+          new_details: Json
+        }
+        Returns: CaseWorkstreamRow
+      }
       crm_register_client_report: {
         Args: {
           target_case_id: string
@@ -309,6 +328,32 @@ export type Database = {
           target_expected_version: number
           result_text: string
           continuity_decision?: string | null
+        }
+        Returns: TaskRow
+      }
+      crm_complete_task_as_activity: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          result_text: string
+          continuity_decision?: string | null
+        }
+        Returns: CaseActivityRow
+      }
+      crm_add_task_subtask: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          subtask_text: string
+        }
+        Returns: TaskRow
+      }
+      crm_set_task_subtask_done: {
+        Args: {
+          target_task_id: string
+          target_expected_version: number
+          target_subtask_id: string
+          target_done: boolean
         }
         Returns: TaskRow
       }

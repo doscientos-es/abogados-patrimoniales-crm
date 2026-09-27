@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type {
   ActualizarExpedienteInput,
+  ActualizarLineaInput,
   CrearActuacionInput,
   CrearExpedienteInput,
   CrearLineaInput,
@@ -17,7 +18,7 @@ import {
   type OpportunityPriority,
 } from '@/shared/infrastructure/supabase'
 
-import { expedienteFromRow } from './supabase-expedientes'
+import { expedienteFromRow, lineaFromRow } from './supabase-expedientes'
 
 const priorityToDatabase: Record<PrioridadExpediente, OpportunityPriority> = {
   Baja: 'low',
@@ -130,6 +131,43 @@ export function useCrearLinea(firmId: string | undefined) {
     },
     onSuccess: (_, input) =>
       void queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, input.expedienteId] }),
+  })
+}
+
+export function useActualizarLinea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: ActualizarLineaInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_case_workstream', {
+        target_workstream_id: input.id,
+        target_expected_version: input.versionEsperada,
+        new_parent_id: input.parentId,
+        new_title: required(input.titulo, 'El título'),
+        new_work_type: input.tipo,
+        new_description: input.descripcion,
+        new_status: input.estado,
+        new_priority: priorityToDatabase[input.prioridad],
+        new_assigned_to: input.asignadoId,
+        new_starts_on: input.fechaInicio,
+        new_target_on: input.fechaObjetivo,
+        new_resolved_on: input.fechaResolucion,
+        new_closed_on: input.fechaCierre,
+        new_details: input.details,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la línea. Recarga antes de guardar.')
+      if (error) throw error
+      return lineaFromRow(data)
+    },
+    onSuccess: (_, input) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, input.expedienteId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['expedientes', firmId, input.expedienteId, 'eventos'],
+        }),
+      ]).then(() => undefined),
   })
 }
 

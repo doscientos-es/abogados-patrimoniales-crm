@@ -241,7 +241,7 @@ export function ContactPersonalFilesTab({
         <CardContent className="flex flex-wrap items-center gap-3 pt-5">
           <div className="relative min-w-[220px] flex-1">
             <Search
-              className="text-muted-foreground absolute top-2.5 left-3 size-4"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
@@ -249,7 +249,7 @@ export function ContactPersonalFilesTab({
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Buscar por nombre, tipo o etiqueta"
               aria-label="Buscar documentos personales"
-              className="pl-9"
+              className="!pl-10"
             />
           </div>
           <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>

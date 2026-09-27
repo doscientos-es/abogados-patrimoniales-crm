@@ -41,6 +41,9 @@ describe('ContactAIIntake', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dar de alta con IA' }))
     const dialog = screen.getByRole('dialog', { name: 'Leer documentos para el contacto' })
     expect(dialog.className).toMatch(/max-h-/)
+    expect(dialog.className).toContain('w-[calc(100vw-2rem)]')
+    expect(dialog.className).toContain('max-w-lg')
+    expect(dialog.className).not.toContain('max-w-2xl')
     expect(dialog.className).toContain('overflow-y-auto')
     expect(
       screen

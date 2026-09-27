@@ -40,6 +40,7 @@ export type LineaPersistida = {
   fechaResolucion: string | null;
   fechaCierre: string | null;
   orden: number;
+  details: Json;
   version: number;
 };
 
@@ -74,6 +75,7 @@ export type ParticipantePersistido = {
 export type EventoExpediente = {
   id: string;
   entidad: "case" | "workstream" | "activity" | "participant";
+  entidadId: string;
   accion: "created" | "updated" | "deleted";
   campos: string[];
   actorId: string | null;
@@ -114,6 +116,24 @@ export type CrearLineaInput = {
   prioridad: PrioridadExpediente;
   asignadoId: string | null;
   fechaObjetivo: string | null;
+};
+
+export type ActualizarLineaInput = {
+  id: string;
+  expedienteId: string;
+  versionEsperada: number;
+  parentId: string | null;
+  titulo: string;
+  tipo: string;
+  descripcion: string;
+  estado: string;
+  prioridad: PrioridadExpediente;
+  asignadoId: string | null;
+  fechaInicio: string | null;
+  fechaObjetivo: string | null;
+  fechaResolucion: string | null;
+  fechaCierre: string | null;
+  details: Json;
 };
 
 export type CrearActuacionInput = {

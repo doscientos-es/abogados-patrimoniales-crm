@@ -51,7 +51,7 @@ export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   actualizadoEn: row.updated_at,
 });
 
-const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
+export const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
   id: row.id,
   expedienteId: row.case_id,
   parentId: row.parent_id,
@@ -66,6 +66,7 @@ const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
   fechaResolucion: row.resolved_on,
   fechaCierre: row.closed_on,
   orden: row.sort_order,
+  details: row.details,
   version: row.version,
 });
 
@@ -105,6 +106,7 @@ const participanteFromRow = (row: CaseParticipantRow): ParticipantePersistido =>
 const eventoFromRow = (row: CaseEventRow): EventoExpediente => ({
   id: row.id,
   entidad: row.entity_type,
+  entidadId: row.entity_id,
   accion: row.action,
   campos: row.changed_fields,
   actorId: row.actor_id,

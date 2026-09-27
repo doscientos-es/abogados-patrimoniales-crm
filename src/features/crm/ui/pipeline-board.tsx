@@ -20,7 +20,7 @@ import {
 } from '@/features/crm/application'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
-const STAGE_COLOR_CLASS: Record<OpportunityStage, string> = {
+export const STAGE_COLOR_CLASS: Record<OpportunityStage, string> = {
   entry: 'fase-azul',
   qualification: 'fase-cian',
   first_meeting: 'fase-indigo',

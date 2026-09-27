@@ -67,8 +67,47 @@ describe('NuevoContactoPage', () => {
     expect(
       screen.getByRole('form', { name: 'Formulario de nuevo contacto' }).getAttribute('aria-busy'),
     ).toBe('false')
-    expect((screen.getByLabelText('País') as HTMLInputElement).value).toBe('España')
-    expect((screen.getByLabelText(/^Origen/) as HTMLInputElement).value).toBe('Web')
+    expect(screen.getByText('Identificación')).toBeTruthy()
+    expect(screen.getByText('Datos de contacto')).toBeTruthy()
+    expect(screen.getAllByText('Origen del contacto').length).toBe(2)
+    expect(screen.getByText('Notas internas')).toBeTruthy()
+    expect((screen.getByLabelText(/^Nombre/) as HTMLInputElement).placeholder).toBe('Ej. Ana')
+    expect((screen.getByLabelText('Correo') as HTMLInputElement).placeholder).toBe(
+      'Ej. nombre@dominio.es',
+    )
+    expect((screen.getByLabelText('Teléfono') as HTMLInputElement).placeholder).toBe(
+      'Ej. 600 000 000',
+    )
+    expect((screen.getByLabelText('Dirección') as HTMLInputElement).placeholder).toBe(
+      'Ej. Calle, número, piso',
+    )
+    const country = screen.getByLabelText('País') as HTMLSelectElement
+    expect(country.value).toBe('España')
+    expect(Array.from(country.options).map((option) => option.value)).toEqual([
+      'España',
+      'Francia',
+      'Portugal',
+      'Reino Unido',
+      'Andorra',
+    ])
+    const origin = screen.getByLabelText(/^Origen/) as HTMLSelectElement
+    expect(origin.value).toBe('')
+    expect(Array.from(origin.options).map((option) => option.value)).toEqual([
+      '',
+      'Recomendación de cliente',
+      'Recomendación profesional',
+      'Página web',
+      'Redes sociales',
+      'Publicidad',
+      'Contacto directo',
+      'Cliente anterior',
+      'Colaborador',
+      'Otro',
+    ])
+    fireEvent.change(origin, { target: { value: 'Recomendación de cliente' } })
+    expect(screen.getByLabelText('Contacto que ha recomendado a esta persona')).toBeTruthy()
+    fireEvent.change(origin, { target: { value: 'Página web' } })
+    expect(screen.queryByLabelText('Contacto que ha recomendado a esta persona')).toBeNull()
 
     const postalCode = screen.getByLabelText('Código postal')
     expect(postalCode.getAttribute('inputmode')).toBe('numeric')
@@ -85,6 +124,7 @@ describe('NuevoContactoPage', () => {
     render(<NuevoContactoPage />)
 
     fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: ' Ana ' } })
+    fireEvent.change(screen.getByLabelText(/^Origen/), { target: { value: 'Página web' } })
     fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
 
     await waitFor(() =>
@@ -92,7 +132,7 @@ describe('NuevoContactoPage', () => {
         expect.objectContaining({
           tipoPersona: 'Persona física',
           relacion: 'Lead',
-          valores: expect.objectContaining({ nombre: 'Ana', pais: 'España', origen: 'Web' }),
+          valores: expect.objectContaining({ nombre: 'Ana', pais: 'España', origen: 'Página web' }),
         }),
       ),
     )
@@ -111,6 +151,8 @@ describe('NuevoContactoPage', () => {
       codigoPostal: '28013',
       municipio: 'Madrid',
       fechaNacimiento: '1990-01-02',
+      pais: 'Francia',
+      origen: 'Redes sociales',
     }
     render(<NuevoContactoPage />)
 
@@ -126,6 +168,8 @@ describe('NuevoContactoPage', () => {
     expect((screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement).value).toBe(
       '1990-01-02',
     )
+    expect((screen.getByLabelText('País') as HTMLSelectElement).value).toBe('Francia')
+    expect((screen.getByLabelText(/^Origen/) as HTMLSelectElement).value).toBe('Redes sociales')
     expect(mocks.createContact).not.toHaveBeenCalled()
 
     fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
@@ -157,14 +201,44 @@ describe('NuevoContactoPage', () => {
     expect(mocks.createContact).not.toHaveBeenCalled()
   })
 
+  it('guarda la nota interna con sus marcas junto al contacto', async () => {
+    render(<NuevoContactoPage />)
+
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(
+      (screen.getByRole('button', { name: 'Añadir nota' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    fireEvent.change(screen.getByLabelText('Título de nota interna'), {
+      target: { value: 'Preferencia de contacto' },
+    })
+    fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
+      target: { value: 'Prefiere recibir llamadas por la tarde.' },
+    })
+    fireEvent.click(screen.getByLabelText('Destacada'))
+    fireEvent.click(screen.getByLabelText('Advertencia crítica'))
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+
+    await waitFor(() =>
+      expect(mocks.createNote).toHaveBeenCalledWith({
+        contactoId: 'contact-1',
+        etiquetaOrigen: 'Ana',
+        titulo: 'Preferencia de contacto',
+        contenido: 'Prefiere recibir llamadas por la tarde.',
+        destacada: true,
+        critica: true,
+      }),
+    )
+  })
+
   it('abre la ficha creada si falla el guardado de una nota para evitar duplicar el contacto', async () => {
     mocks.createContact.mockResolvedValue({ id: 'contact-2' })
     mocks.createNote.mockRejectedValueOnce(new Error('Fallo de persistencia'))
     render(<NuevoContactoPage />)
 
     fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
-    expect(screen.queryByLabelText('Contenido de nota interna')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear nota interna' }))
+    expect(screen.getByLabelText('Contenido de nota interna')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
       target: { value: 'Información relevante' },
     })

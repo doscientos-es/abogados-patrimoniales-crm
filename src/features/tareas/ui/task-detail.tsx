@@ -25,9 +25,11 @@ import {
   useActualizarReunionEspecial,
   useAnadirEvidenciaTarea,
   useAnadirMensajeTarea,
+  useAnadirSubtareaTarea,
   useCambiarEstadoTarea,
   useCancelarTarea,
   useCompletarTarea,
+  useCompletarTareaComoActuacion,
   useCrearDependenciaTarea,
   useDependenciasTarea,
   useDesvincularDocumentoTarea,
@@ -37,6 +39,7 @@ import {
   useEventosTarea,
   useEvidenciasTarea,
   useMarcarSiguienteAccion,
+  useMarcarSubtareaTarea,
   useMensajesTarea,
   usePonerTareaEnEspera,
   useRechazarTarea,
@@ -150,6 +153,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const change = useCambiarEstadoTarea(firmId)
   const hold = usePonerTareaEnEspera(firmId)
   const complete = useCompletarTarea(firmId)
+  const completeAsActivity = useCompletarTareaComoActuacion(firmId)
   const cancel = useCancelarTarea(firmId)
   const reject = useRechazarTarea(firmId)
   const updateMeeting = useActualizarReunionTarea(firmId)
@@ -157,6 +161,8 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const nextAction = useMarcarSiguienteAccion(firmId)
   const addMessage = useAnadirMensajeTarea(firmId, taskId)
   const addEvidence = useAnadirEvidenciaTarea(firmId, taskId)
+  const addSubtask = useAnadirSubtareaTarea(firmId)
+  const setSubtaskDone = useMarcarSubtareaTarea(firmId)
   const addDependency = useCrearDependenciaTarea(firmId)
   const removeDependency = useEliminarDependenciaTarea(firmId)
   const linkDocument = useVincularDocumentoTarea(firmId, taskId)
@@ -240,6 +246,16 @@ export function TaskDetail({ taskId }: { taskId: string }) {
       await addMessage.mutateAsync(body)
       form.reset()
     }, 'Mensaje añadido.')
+  }
+  const submitSubtask = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const text = formText(new FormData(form), 'subtask')
+    if (!text.trim()) return
+    void run(async () => {
+      await addSubtask.mutateAsync({ task, texto: text })
+      form.reset()
+    }, 'Subtarea añadida.')
   }
   const submitEvidence = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -476,6 +492,60 @@ export function TaskDetail({ taskId }: { taskId: string }) {
               }
             />
           ) : null}
+          <Card>
+            <CardContent className="space-y-3 pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-semibold">Subtareas</h2>
+                <span className="text-muted-foreground text-sm">
+                  {task.subtareas.filter((subtask) => subtask.hecha).length}/{task.subtareas.length}{' '}
+                  completadas
+                </span>
+              </div>
+              {task.subtareas.map((subtask) => (
+                <label key={subtask.id} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    aria-label={subtask.texto}
+                    checked={subtask.hecha}
+                    disabled={!canWork || !isOpen || setSubtaskDone.isPending}
+                    className="accent-primary mt-0.5 size-4 shrink-0"
+                    onChange={(event) =>
+                      void run(
+                        () =>
+                          setSubtaskDone.mutateAsync({
+                            task,
+                            subtaskId: subtask.id,
+                            completed: event.currentTarget.checked,
+                          }),
+                        'Subtarea actualizada.',
+                      )
+                    }
+                  />
+                  <span className={subtask.hecha ? 'text-muted-foreground line-through' : ''}>
+                    {subtask.texto}
+                  </span>
+                </label>
+              ))}
+              {!task.subtareas.length ? (
+                <p className="text-muted-foreground text-sm">Aún no hay subtareas.</p>
+              ) : null}
+              {isOpen ? (
+                <form className="flex gap-2 border-t pt-3" onSubmit={submitSubtask}>
+                  <Input
+                    name="subtask"
+                    aria-label="Nueva subtarea"
+                    required
+                    maxLength={300}
+                    disabled={!canWork || addSubtask.isPending}
+                    placeholder="Añadir subtarea…"
+                  />
+                  <Button type="submit" variant="outline" disabled={!canWork || addSubtask.isPending}>
+                    Añadir
+                  </Button>
+                </form>
+              ) : null}
+            </CardContent>
+          </Card>
           <Card>
             <CardContent className="space-y-4 pt-6">
               <h2 className="font-semibold">Conversación</h2>
@@ -732,15 +802,16 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         open={completeOpen}
         onOpenChange={setCompleteOpen}
         nextAction={task.esSiguienteAccion}
+        canRegisterAsActivity={Boolean(task.expedienteId)}
         documents={caseDocuments.data ?? []}
-        pending={complete.isPending || addEvidence.isPending}
-        onSubmit={(resultado, continuidad, evidencia, documentoId) => {
+        pending={complete.isPending || completeAsActivity.isPending || addEvidence.isPending}
+        onSubmit={(resultado, continuidad, evidencia, documentoId, registerAsActivity) => {
           void run(async () => {
             if (evidencia.trim() || documentoId)
               await addEvidence.mutateAsync({ body: evidencia, documentId: documentoId || null })
-            await complete.mutateAsync(
-              continuidad ? { task, resultado, continuidad } : { task, resultado },
-            )
+            const input = continuidad ? { task, resultado, continuidad } : { task, resultado }
+            if (registerAsActivity) await completeAsActivity.mutateAsync(input)
+            else await complete.mutateAsync(input)
             setCompleteOpen(false)
           }, 'Tarea completada.')
         }}
@@ -829,6 +900,7 @@ function TaskCompleteDialog({
   open,
   onOpenChange,
   nextAction,
+  canRegisterAsActivity,
   documents,
   pending,
   onSubmit,
@@ -836,6 +908,7 @@ function TaskCompleteDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   nextAction: boolean
+  canRegisterAsActivity: boolean
   documents: Array<{ id: string; original_name: string }>
   pending: boolean
   onSubmit: (
@@ -843,6 +916,7 @@ function TaskCompleteDialog({
     continuity: 'create_next_task' | 'close_without_continuity' | undefined,
     evidence: string,
     documentId: string,
+    registerAsActivity: boolean,
   ) => void
 }) {
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -855,6 +929,7 @@ function TaskCompleteDialog({
         : undefined,
       formText(data, 'evidence'),
       formText(data, 'document'),
+      canRegisterAsActivity && formText(data, 'completion-mode') === 'activity',
     )
   }
   return (
@@ -868,6 +943,19 @@ function TaskCompleteDialog({
             Resultado
             <Textarea name="result" required />
           </Label>
+          {canRegisterAsActivity ? (
+            <Label>
+              Al completar
+              <select
+                name="completion-mode"
+                defaultValue="task"
+                className="border-input bg-background h-10 w-full rounded-md border px-3"
+              >
+                <option value="task">Completar solo la tarea</option>
+                <option value="activity">Completar y registrar como actuación</option>
+              </select>
+            </Label>
+          ) : null}
           <Label>
             Evidencia opcional
             <Textarea name="evidence" />

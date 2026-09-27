@@ -92,6 +92,7 @@ describe('useContactosPaginados', () => {
           nature: 'Persona física',
           status: 'all',
           source: 'Web',
+          satisfaction: 'all',
           sortBy: 'modified',
           page: 2,
           pageSize: 10,
@@ -111,5 +112,84 @@ describe('useContactosPaginados', () => {
     expect(mocks.order).toHaveBeenCalledWith('updated_at', { ascending: false })
     expect(mocks.range).toHaveBeenCalledWith(10, 19)
     expect(result.current.data).toMatchObject({ count: 21, contacts: [{ id: 'contact-1' }] })
+  })
+
+  it.each([
+    {
+      satisfaction: 'Alto',
+      filter: ['details->profile->>satisfaction', 'Alto'],
+      method: 'eq',
+    },
+    {
+      satisfaction: 'Sin valorar',
+      filter: [
+        'details->profile->>satisfaction.is.null,details->profile->>satisfaction.eq."Sin valorar"',
+      ],
+      method: 'or',
+    },
+  ] as const)(
+    'filters the paginated contacts by satisfaction: $satisfaction',
+    async ({ satisfaction, filter, method }) => {
+      mocks.range.mockResolvedValue({ data: [row], count: 1, error: null })
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client: queryClient }, children)
+
+      const { result } = renderHook(
+        () =>
+          useContactosPaginados('firm-1', {
+            query: '',
+            archived: false,
+            relationship: 'all',
+            nature: 'all',
+            status: 'all',
+            source: 'all',
+            satisfaction,
+            sortBy: 'name',
+            page: 1,
+            pageSize: 10,
+          }),
+        { wrapper },
+      )
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(mocks[method]).toHaveBeenCalledWith(...filter)
+    },
+  )
+
+  it('combines text search and unrated satisfaction in one PostgREST OR expression', async () => {
+    mocks.range.mockResolvedValue({ data: [row], count: 1, error: null })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children)
+
+    const { result } = renderHook(
+      () =>
+        useContactosPaginados('firm-1', {
+          query: 'Ana',
+          archived: false,
+          relationship: 'all',
+          nature: 'all',
+          status: 'all',
+          source: 'all',
+          satisfaction: 'Sin valorar',
+          sortBy: 'name',
+          page: 1,
+          pageSize: 10,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mocks.or).toHaveBeenCalledOnce()
+    const [expression] = mocks.or.mock.calls[0] as [string]
+    expect(expression).toContain(
+      'and(display_name.ilike.%Ana%,details->profile->>satisfaction.is.null)',
+    )
+    expect(expression).toContain(
+      'and(source.ilike.%Ana%,details->profile->>satisfaction.eq."Sin valorar")',
+    )
   })
 })

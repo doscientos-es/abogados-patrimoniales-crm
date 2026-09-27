@@ -42,7 +42,7 @@ import {
   type MiembroDespacho,
   type OportunidadResumen,
 } from '@/features/crm'
-import { PipelineBoard } from '@/features/crm-presentation'
+import { PipelineBoard, STAGE_COLOR_CLASS } from '@/features/crm-presentation'
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/')({
@@ -468,8 +468,20 @@ function LeadsPersistidos({
                         {oportunidad.titulo}
                       </Link>
                     </TableCell>
-                    <TableCell>{NOMBRES_FASE[oportunidad.fase] ?? oportunidad.fase}</TableCell>
-                    <TableCell>{oportunidad.subestado}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`fase-chip ${STAGE_COLOR_CLASS[oportunidad.fase]} inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium`}
+                      >
+                        {NOMBRES_FASE[oportunidad.fase] ?? oportunidad.fase}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`fase-chip ${STAGE_COLOR_CLASS[oportunidad.fase]} inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium`}
+                      >
+                        {oportunidad.subestado}
+                      </span>
+                    </TableCell>
                     <TableCell>{oportunidad.origen || '—'}</TableCell>
                     <TableCell>
                       {new Intl.DateTimeFormat('es-ES').format(new Date(oportunidad.actualizada))}

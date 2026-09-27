@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { ContactoPersistido } from "@/features/contactos";
 import type { MiembroDespacho } from "@/features/crm";
 import type {
@@ -134,21 +135,32 @@ export function CaseRelatedForms({
         }
       >
         <div className="sm:col-span-2">
-          <Field name="titulo" label="Título" required />
+          <Field
+            name="titulo"
+            label="Título de la línea *"
+            placeholder="Ej. Revisión de cargas registrales"
+            required
+          />
         </div>
-        <Field name="tipo" label="Tipo" />
+        <Field name="tipo" label="Tipo (opcional)" placeholder="Ej. Análisis jurídico" />
         <NativeSelect name="prioridad" label="Prioridad">
           <option>Media</option>
           <option>Alta</option>
           <option>Baja</option>
         </NativeSelect>
-        <div className="sm:col-span-2">
-          <Field name="descripcion" label="Descripción" />
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="related-descripcion">Descripción (opcional)</Label>
+          <Textarea
+            id="related-descripcion"
+            name="descripcion"
+            rows={3}
+            placeholder="Delimita el trabajo y el resultado que se espera conseguir."
+          />
         </div>
-        <NativeSelect name="asignado" label="Responsable">
+        <NativeSelect name="asignado" label="Responsable (opcional)">
           {assignees}
         </NativeSelect>
-        <Field name="objetivo" label="Fecha objetivo" type="date" />
+        <Field name="objetivo" label="Fecha objetivo (opcional)" type="date" />
         <Button type="submit" className="sm:col-span-2" disabled={pending}>
           Crear línea
         </Button>
@@ -215,7 +227,8 @@ export function CaseRelatedForms({
     },
     workstream: {
       title: "Nueva línea de trabajo",
-      description: "Define un frente autónomo con objetivo, responsable y seguimiento.",
+      description:
+        "El título es obligatorio. Añade el alcance, responsable y fecha objetivo si ya los tienes; podrás completarlos después.",
       trigger: "Nueva línea",
     },
     activity: {
@@ -261,6 +274,7 @@ function Field({
   required?: boolean;
   min?: string;
   step?: string;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-1">

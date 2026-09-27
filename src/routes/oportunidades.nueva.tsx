@@ -8,7 +8,7 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Check } from 'lucide-react'
+import { ArrowLeft, Check, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -62,6 +62,7 @@ export function NuevaOportunidadPage() {
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
   const [hasChangedContact, setHasChangedContact] = useState(false)
+  const [contactCreationOpened, setContactCreationOpened] = useState(false)
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [participantSearch, setParticipantSearch] = useState('')
   const [createdOpportunity, setCreatedOpportunity] = useState<{
@@ -105,6 +106,16 @@ export function NuevaOportunidadPage() {
       return data.map((item) => item.name)
     },
   })
+
+  const refreshContacts = async () => {
+    const result = await contacts.refetch()
+    if (result.isError) {
+      toast.error('No se pudieron actualizar los contactos.')
+      return
+    }
+    setContactCreationOpened(false)
+    toast.success('Contactos actualizados.')
+  }
 
   if (session.status === 'loading' || membership.isPending || contacts.isPending)
     return <PendingPanel title="Cargando alta" description="Consultando contactos del despacho…" />
@@ -225,7 +236,19 @@ export function NuevaOportunidadPage() {
               description="Busca por nombre, documento, teléfono o correo."
             />
             <div className="space-y-1.5">
-              <Label htmlFor="lead-contact">Contacto principal *</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label htmlFor="lead-contact">Contacto principal *</Label>
+                <Link
+                  to="/contactos/nuevo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setContactCreationOpened(true)}
+                  className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
+                >
+                  <UserPlus className="size-3.5" aria-hidden="true" />
+                  Crear contacto en otra pestaña
+                </Link>
+              </div>
               <Combobox
                 aria-label="Contacto principal"
                 inputValue={selectedContactSearch}
@@ -266,6 +289,16 @@ export function NuevaOportunidadPage() {
             <p className="text-muted-foreground text-xs">
               El contacto seleccionado mantiene su relación actual con el despacho.
             </p>
+            {contactCreationOpened ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void refreshContacts()}
+              >
+                Actualizar contactos
+              </Button>
+            ) : null}
             <div className="space-y-2 border-t pt-4">
               <Label htmlFor="lead-participants">Otros intervinientes conocidos</Label>
               <Combobox

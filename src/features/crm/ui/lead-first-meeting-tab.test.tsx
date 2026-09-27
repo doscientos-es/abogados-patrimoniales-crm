@@ -38,7 +38,7 @@ const opportunity = {
   archivadoEn: null,
 } as never
 
-const scheduledTask = () =>
+const scheduledTask = (appointmentChanges: Record<string, unknown> = {}) =>
   ({
     id: 'event-1',
     expedienteId: null,
@@ -77,6 +77,7 @@ const scheduledTask = () =>
         observaciones: '',
         autorizadaPresupuesto: false,
         tipoServicioPreliminar: '',
+        ...appointmentChanges,
       },
     },
     bloqueada: false,
@@ -100,6 +101,16 @@ function renderTab() {
 }
 
 describe('LeadFirstMeetingTab', () => {
+  it('shows indicators derived from the saved appointment status and result', () => {
+    mocks.appointments = [scheduledTask({ resultado: 'Solicitar documentación' })]
+
+    renderTab()
+
+    const indicators = screen.getByLabelText('Indicadores de la cita').textContent
+    expect(indicators).toContain('CITA PROGRAMADA')
+    expect(indicators).toContain('DOCUMENTACIÓN SOLICITADA')
+  })
+
   it('creates a persistent appointment event with its meeting details and calendar date', async () => {
     renderTab()
     fireEvent.change(screen.getByLabelText('Inicio'), {
@@ -153,7 +164,9 @@ describe('LeadFirstMeetingTab', () => {
     )
     await waitFor(() => expect(mocks.complete).toHaveBeenCalledOnce())
     expect(mocks.complete).toHaveBeenCalledWith(
-      expect.objectContaining({ resultado: 'Solicitar presupuesto · Se revisó el asunto con el contacto.' }),
+      expect.objectContaining({
+        resultado: 'Solicitar presupuesto · Se revisó el asunto con el contacto.',
+      }),
     )
   })
 })

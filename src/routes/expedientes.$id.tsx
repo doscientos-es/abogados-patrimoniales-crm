@@ -12,6 +12,7 @@ import {
   CaseDetail,
   useComunicacionesExpediente,
   useActualizarVisibilidadActuacion,
+  useActualizarLinea,
   useRegistrarReporteCliente,
   useActuacionesPersistentes,
   useActualizarExpediente,
@@ -77,6 +78,7 @@ function CaseRoute() {
   const updateCase = useActualizarExpediente(firmId);
   const createParticipant = useCrearParticipante(firmId);
   const createWorkstream = useCrearLinea(firmId);
+  const updateWorkstream = useActualizarLinea(firmId);
   const createActivity = useCrearActuacion(firmId);
   const createCommunication = useCrearComunicacionExpediente(firmId, id);
   const updateActivityVisibility = useActualizarVisibilidadActuacion(firmId, id);
@@ -145,6 +147,8 @@ function CaseRoute() {
       taskPending={createTask.isPending}
       onCreateTask={(input) => createTask.mutateAsync(input)}
       onSetNextAction={(task, enabled) => setNextAction.mutateAsync({ task, enabled })}
+      onUpdateWorkstream={(input) => updateWorkstream.mutateAsync(input)}
+      workstreamPending={updateWorkstream.isPending}
       canManageNextAction={(task) => Boolean(
         task.creadaPorId === session.user?.id ||
         ["owner", "admin", "lawyer"].includes(membership.data?.role ?? ""),

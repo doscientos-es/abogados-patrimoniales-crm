@@ -78,6 +78,14 @@ export type EtiquetaTarea = {
   color: string
 }
 
+export type SubtareaPersistida = {
+  id: string
+  texto: string
+  hecha: boolean
+  creadaPorId: string | null
+  creadaEn: string
+}
+
 export type TareaPersistida = {
   id: string
   expedienteId: string | null
@@ -111,6 +119,7 @@ export type TareaPersistida = {
   rechazadaEn: string | null
   tareaPadreId: string | null
   reunion: Record<string, unknown>
+  subtareas: SubtareaPersistida[]
   bloqueada: boolean
   etiquetas: EtiquetaTarea[]
   boardPosition: number | null

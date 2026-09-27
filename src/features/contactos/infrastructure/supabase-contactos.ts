@@ -11,7 +11,11 @@ import {
   type Json,
 } from '@/shared/infrastructure/supabase'
 
-import { contactProfileFromJson, type ContactProfile } from '../application/contact-profile'
+import {
+  contactProfileFromJson,
+  type ContactProfile,
+  type SatisfactionLevel,
+} from '../application/contact-profile'
 
 export type Naturaleza = 'Persona física' | 'Persona jurídica' | 'Órgano judicial' | 'Público'
 export type RelacionDespacho =
@@ -68,6 +72,7 @@ export type ContactListFilters = {
   nature: string
   status: string
   source: string
+  satisfaction: 'all' | SatisfactionLevel
   sortBy: string
   page: number
   pageSize: number
@@ -405,14 +410,30 @@ export function useContactosPaginados(firmId: string | undefined, filters: Conta
         request = request.eq('nature', natureToDatabase[filters.nature as Naturaleza])
       }
       if (filters.source !== 'all') request = request.eq('source', filters.source)
-      if (text) {
-        const escapedText = escapePostgrestOrValue(text)
+      const textFilters = text
+        ? ['display_name', 'tax_id', 'email', 'phone', 'source'].map(
+            (column) => `${column}.ilike.%${escapePostgrestOrValue(text)}%`,
+          )
+        : []
+      if (filters.satisfaction === 'Sin valorar') {
+        const unratedFilters = [
+          'details->profile->>satisfaction.is.null',
+          'details->profile->>satisfaction.eq."Sin valorar"',
+        ]
         request = request.or(
-          ['display_name', 'tax_id', 'email', 'phone', 'source']
-            .map((column) => `${column}.ilike.%${escapedText}%`)
-            .join(','),
+          textFilters.length
+            ? textFilters
+                .flatMap((textFilter) =>
+                  unratedFilters.map((unratedFilter) => `and(${textFilter},${unratedFilter})`),
+                )
+                .join(',')
+            : unratedFilters.join(','),
         )
+      } else if (filters.satisfaction !== 'all') {
+        request = request.eq('details->profile->>satisfaction', filters.satisfaction)
       }
+      if (textFilters.length && filters.satisfaction !== 'Sin valorar')
+        request = request.or(textFilters.join(','))
 
       if (filters.sortBy === 'relationship') {
         request = request.order('relationship').order('display_name').order('id')

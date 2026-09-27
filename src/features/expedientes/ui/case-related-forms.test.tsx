@@ -19,7 +19,7 @@ describe('CaseRelatedForms', () => {
 
   it.each([
     ['participant', 'Añadir interviniente', 'Nombre'],
-    ['workstream', 'Nueva línea', 'Título'],
+    ['workstream', 'Nueva línea', 'Título de la línea *'],
     ['activity', 'Registrar actuación', 'Tipo'],
   ] as const)('opens the %s form in a dialog', (section, trigger, field) => {
     render(<CaseRelatedForms {...props} section={section} />)
@@ -28,5 +28,20 @@ describe('CaseRelatedForms', () => {
 
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.getByLabelText(field)).toBeTruthy()
+  })
+
+  it('guides the new workstream form with concrete placeholders', () => {
+    render(<CaseRelatedForms {...props} section="workstream" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva línea' }))
+
+    expect((screen.getByLabelText('Título de la línea *') as HTMLInputElement).placeholder).toBe(
+      'Ej. Revisión de cargas registrales',
+    )
+    expect((screen.getByLabelText('Tipo (opcional)') as HTMLInputElement).placeholder).toBe(
+      'Ej. Análisis jurídico',
+    )
+    expect(
+      (screen.getByLabelText('Descripción (opcional)') as HTMLTextAreaElement).placeholder,
+    ).toBe('Delimita el trabajo y el resultado que se espera conseguir.')
   })
 })

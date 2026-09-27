@@ -61,6 +61,30 @@ const validationFromDb = {
   rejected: 'Rechazado',
 } as const
 
+function subtareasFromDetails(details: Json): TareaPersistida['subtareas'] {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return []
+  const subtasks = (details as Record<string, Json>)['subtasks']
+  if (!Array.isArray(subtasks)) return []
+  return subtasks.flatMap((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const value = item as Record<string, Json>
+    const id = value['id']
+    const text = value['text']
+    const done = value['done']
+    const createdBy = value['created_by']
+    const createdAt = value['created_at']
+    if (
+      typeof id !== 'string' ||
+      typeof text !== 'string' ||
+      typeof done !== 'boolean' ||
+      (createdBy !== null && typeof createdBy !== 'string') ||
+      typeof createdAt !== 'string'
+    )
+      return []
+    return [{ id, texto: text, hecha: done, creadaPorId: createdBy, creadaEn: createdAt }]
+  })
+}
+
 const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   id: row.id,
   expedienteId: row.case_id,
@@ -104,6 +128,7 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
     !Array.isArray(row.meeting_details)
       ? (row.meeting_details as Record<string, unknown>)
       : {},
+  subtareas: subtareasFromDetails(row.details),
   bloqueada,
   version: row.version,
   etiquetas: [],
@@ -429,6 +454,87 @@ export function useCompletarTarea(firmId: string | undefined) {
         target_expected_version: task.version,
         result_text: resultado.trim(),
         continuity_decision: continuidad ?? null,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useCompletarTareaComoActuacion(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ task, resultado, continuidad }: CompletarTareaInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!task.expedienteId) throw new Error('La tarea no está vinculada a un expediente.')
+      if (!resultado.trim()) throw new Error('El resultado es obligatorio.')
+      const { data, error } = await client.rpc('crm_complete_task_as_activity', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        result_text: resultado.trim(),
+        continuity_decision: continuidad ?? null,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, { task }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, task.expedienteId] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'actuaciones'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
+        }),
+      ]).then(() => undefined),
+  })
+}
+
+export function useAnadirSubtareaTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ task, texto }: { task: TareaPersistida; texto: string }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!texto.trim()) throw new Error('Escribe el texto de la subtarea.')
+      const { data, error } = await client.rpc('crm_add_task_subtask', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        subtask_text: texto.trim(),
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useMarcarSubtareaTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      task,
+      subtaskId,
+      completed,
+    }: {
+      task: TareaPersistida
+      subtaskId: string
+      completed: boolean
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_set_task_subtask_done', {
+        target_task_id: task.id,
+        target_expected_version: task.version,
+        target_subtask_id: subtaskId,
+        target_done: completed,
       })
       if (error?.code === '40001')
         throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')

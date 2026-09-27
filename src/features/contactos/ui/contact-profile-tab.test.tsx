@@ -57,6 +57,20 @@ describe('ContactProfileTab', () => {
     expect(mocks.toastSuccess).not.toHaveBeenCalled()
   })
 
+  it('muestra el medidor de satisfacción en el resumen y el historial', async () => {
+    mocks.mutateAsync.mockResolvedValueOnce(undefined)
+    renderProfile()
+
+    fireEvent.change(screen.getByLabelText('Nuevo nivel de satisfacción'), {
+      target: { value: 'Alto' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar valoración' }))
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('img', { name: 'Nivel de satisfacción: Alto' })).toHaveLength(2),
+    )
+  })
+
   it('preserva la descripción de incidencia si falla el guardado', async () => {
     mocks.mutateAsync.mockRejectedValueOnce(new Error('Fallo de persistencia'))
     renderProfile()

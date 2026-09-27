@@ -55,12 +55,15 @@ import {
 } from '@/components/ui/table'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
+  SATISFACTION_LEVELS,
   useActualizarEstadoContacto,
   useContactosPaginados,
   useEliminarContacto,
   useOrígenesContacto,
   type ContactoPersistido,
+  type SatisfactionLevel,
 } from '@/features/contactos'
+import { SatisfactionMeter } from '@/features/contactos/ui/satisfaction-meter'
 
 export const Route = createFileRoute('/contactos/')({
   head: () => ({
@@ -91,6 +94,7 @@ function ContactosPage() {
   const [nature, setNature] = useState('all')
   const [status, setStatus] = useState('all')
   const [source, setSource] = useState('all')
+  const [satisfaction, setSatisfaction] = useState<'all' | SatisfactionLevel>('all')
   const [sortBy, setSortBy] = useState('name')
   const [page, setPage] = useState(1)
   const [contactToDelete, setContactToDelete] = useState<ContactoPersistido | null>(null)
@@ -102,6 +106,7 @@ function ContactosPage() {
     nature,
     status,
     source,
+    satisfaction,
     sortBy,
     page,
     pageSize,
@@ -153,6 +158,14 @@ function ContactosPage() {
         setPage(1)
       },
     },
+    satisfaction !== 'all' && {
+      label: 'Satisfacción',
+      value: satisfaction,
+      onRemove: () => {
+        setSatisfaction('all')
+        setPage(1)
+      },
+    },
   ].filter((filter): filter is ActiveFilter => Boolean(filter))
   const activeFilterCount = activeFilters.length
   const clearFilters = () => {
@@ -160,6 +173,7 @@ function ContactosPage() {
     setNature('all')
     setStatus('all')
     setSource('all')
+    setSatisfaction('all')
     setPage(1)
   }
   const changeSort = (value: string) => {
@@ -362,6 +376,24 @@ function ContactosPage() {
                         ))}
                       </ContactFilter>
                     </FilterField>
+                    <FilterField label="Satisfacción">
+                      <ContactFilter
+                        label="Filtrar por satisfacción"
+                        value={satisfaction}
+                        onValueChange={(value) => {
+                          setSatisfaction(value as SatisfactionLevel | 'all')
+                          setPage(1)
+                        }}
+                        triggerClassName="h-9 w-full border-border/80 bg-muted/20 shadow-none"
+                      >
+                        <SelectItem id="all">Todos los niveles</SelectItem>
+                        {SATISFACTION_LEVELS.map((level) => (
+                          <SelectItem key={level} id={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </ContactFilter>
+                    </FilterField>
                   </div>
                   {activeFilterCount ? (
                     <div className="border-border border-t px-4 py-2.5">
@@ -517,7 +549,7 @@ function ContactosPage() {
                     {contact.origen || '—'}
                   </TableCell>
                   <TableCell>
-                    <MissingData label="Sin datos" />
+                    <SatisfactionMeter value={contact.profile.satisfaction} showLabel={false} />
                   </TableCell>
                   <TableCell>
                     <MissingData label="Sin datos" />

@@ -82,9 +82,9 @@ export function LeadFirstMeetingTab({
     null
   const canManage = Boolean(
     canEdit &&
-      (!selectedTask ||
-        selectedTask.creadaPorId === currentUserId ||
-        ['owner', 'admin', 'lawyer'].includes(memberRole)),
+    (!selectedTask ||
+      selectedTask.creadaPorId === currentUserId ||
+      ['owner', 'admin', 'lawyer'].includes(memberRole)),
   )
   const pending =
     createTask.isPending || editTask.isPending || updateMeeting.isPending || completeTask.isPending
@@ -170,7 +170,11 @@ export function LeadFirstMeetingTab({
         }
       }
       setSelectedTaskId(saved.id)
-      toast.success(status === 'Celebrada' ? 'Resultado de la primera cita registrado.' : 'Primera cita actualizada.')
+      toast.success(
+        status === 'Celebrada'
+          ? 'Resultado de la primera cita registrado.'
+          : 'Primera cita actualizada.',
+      )
     } catch (error) {
       toast.error(errorMessage(error))
     }
@@ -185,6 +189,15 @@ export function LeadFirstMeetingTab({
 
   return (
     <div className="space-y-4">
+      {selectedTask ? (
+        <div aria-label="Indicadores de la cita" className="flex flex-wrap gap-1.5">
+          {appointmentSignals(selectedTask).map((signal) => (
+            <Badge key={signal} variant="outline">
+              {signal}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
       {appointments.length > 1 ? (
         <nav aria-label="Citas del Lead" className="flex flex-wrap gap-2">
           {appointments.map((appointment, index) => (
@@ -302,11 +315,12 @@ function AppointmentForm({
     }
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
     const requestedStatus = submitter?.value
-    const status = requestedStatus && isAppointmentStatus(requestedStatus)
-      ? requestedStatus
-      : task
-        ? appointment.estado
-        : 'Programada'
+    const status =
+      requestedStatus && isAppointmentStatus(requestedStatus)
+        ? requestedStatus
+        : task
+          ? appointment.estado
+          : 'Programada'
     void onSave(
       {
         startsAt: start.toISOString(),
@@ -461,8 +475,8 @@ function AppointmentForm({
         <div className="border-t pt-4">
           <h3 className="text-sm font-medium">Resultado y siguientes pasos</h3>
           <p className="text-muted-foreground mt-1 text-xs">
-            Registrar el resultado como celebrada completa el evento. Los pasos posteriores se
-            crean como tareas ordinarias.
+            Registrar el resultado como celebrada completa el evento. Los pasos posteriores se crean
+            como tareas ordinarias.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -534,7 +548,12 @@ function AppointmentForm({
       </fieldset>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" name="appointmentStatus" value={task ? appointment.estado : 'Programada'} disabled={disabled}>
+        <Button
+          type="submit"
+          name="appointmentStatus"
+          value={task ? appointment.estado : 'Programada'}
+          disabled={disabled}
+        >
           {pending ? 'Guardando…' : task ? 'Guardar cambios' : 'Guardar programación'}
         </Button>
         {task && task.estado !== 'Completada' ? (
@@ -542,7 +561,13 @@ function AppointmentForm({
             <Button type="submit" name="appointmentStatus" value="Celebrada" disabled={disabled}>
               Registrar resultado
             </Button>
-            <Button type="submit" name="appointmentStatus" value="No comparece" variant="outline" disabled={disabled}>
+            <Button
+              type="submit"
+              name="appointmentStatus"
+              value="No comparece"
+              variant="outline"
+              disabled={disabled}
+            >
               No comparece
             </Button>
             <Button
@@ -558,7 +583,9 @@ function AppointmentForm({
         ) : null}
       </div>
       {task?.estado === 'Cancelada' ? (
-        <p className="text-muted-foreground text-xs">Este evento fue cancelado y ya no se puede editar.</p>
+        <p className="text-muted-foreground text-xs">
+          Este evento fue cancelado y ya no se puede editar.
+        </p>
       ) : null}
     </form>
   )
@@ -595,6 +622,27 @@ function appointmentData(task: TareaPersistida): DetallesPrimeraCita {
     autorizadaPresupuesto: details['autorizadaPresupuesto'] === true,
     tipoServicioPreliminar: stringValue(details['tipoServicioPreliminar']),
   }
+}
+
+function appointmentSignals(task: TareaPersistida) {
+  const appointment = appointmentData(task)
+  const statusSignals: Record<EstadoPrimeraCita, string> = {
+    Programada: 'CITA PROGRAMADA',
+    Celebrada: 'CITA CELEBRADA',
+    'No comparece': 'NO COMPARECE',
+    'Reprogramación pendiente': 'NUEVA CITA',
+  }
+  const resultSignals: Record<string, string> = {
+    'Solicitar documentación': 'DOCUMENTACIÓN SOLICITADA',
+    'Requiere análisis adicional': 'REQUIERE ANÁLISIS',
+    'Nueva cita': 'NUEVA CITA',
+    'Seguimiento futuro': 'SEGUIMIENTO',
+  }
+  return [
+    ...new Set(
+      [statusSignals[appointment.estado], resultSignals[appointment.resultado]].filter(Boolean),
+    ),
+  ]
 }
 
 function emptyAppointment(): DetallesPrimeraCita {
@@ -637,7 +685,9 @@ function stringValue(value: unknown) {
 }
 
 function stringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
 }
 
 function field(data: FormData, name: string) {

@@ -18,6 +18,7 @@ import {
   type IncidentStatus,
   type SatisfactionLevel,
 } from '@/features/contactos/application/contact-profile'
+import { SatisfactionMeter } from '@/features/contactos/ui/satisfaction-meter'
 import type { MemberRole } from '@/shared/infrastructure/supabase'
 
 const INCIDENT_STATUSES: IncidentStatus[] = ['Abierta', 'En revisión', 'Resuelta', 'Cerrada']
@@ -219,8 +220,9 @@ export function ContactProfileTab({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
-            <Badge variant="outline">Última valoración: {profile.satisfaction}</Badge>
+            <SatisfactionMeter value={profile.satisfaction} />
             <span className="text-muted-foreground text-xs">
+              Última valoración:{' '}
               {profile.satisfactionHistory[0]
                 ? formatDate(profile.satisfactionHistory[0].createdAt)
                 : 'Sin valoraciones registradas'}
@@ -258,7 +260,7 @@ export function ContactProfileTab({
                   key={record.id}
                   className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
                 >
-                  <Badge variant="outline">{record.level}</Badge>
+                  <SatisfactionMeter value={record.level} />
                   <span className="text-muted-foreground">{formatDate(record.createdAt)}</span>
                   <span className="flex-1">{record.notes || '—'}</span>
                   <span className="text-muted-foreground text-xs">
@@ -363,13 +365,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                  ...item,
-                                  resolution: (
-                                    document.getElementById(
-                                      `incident-resolution-${incident.id}`,
-                                    ) as HTMLTextAreaElement
-                                  ).value,
-                                }
+                                    ...item,
+                                    resolution: (
+                                      document.getElementById(
+                                        `incident-resolution-${incident.id}`,
+                                      ) as HTMLTextAreaElement
+                                    ).value,
+                                  }
                                 : item,
                             ),
                           }
@@ -402,13 +404,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                  ...item,
-                                  observations: (
-                                    document.getElementById(
-                                      `incident-notes-${incident.id}`,
-                                    ) as HTMLTextAreaElement
-                                  ).value,
-                                }
+                                    ...item,
+                                    observations: (
+                                      document.getElementById(
+                                        `incident-notes-${incident.id}`,
+                                      ) as HTMLTextAreaElement
+                                    ).value,
+                                  }
                                 : item,
                             ),
                           }
@@ -468,9 +470,9 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : new Intl.DateTimeFormat('es-ES', {
-      dateStyle: 'medium',
-      ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
-    }).format(date)
+        dateStyle: 'medium',
+        ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
+      }).format(date)
 }
 
 function profileErrorMessage(error: unknown) {

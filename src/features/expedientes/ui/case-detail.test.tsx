@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -51,12 +51,30 @@ function renderDetail(
   eventos = [] as never[],
   onSetNextAction = vi.fn().mockResolvedValue(undefined),
   canManageNextAction = () => true,
+  onUpdateWorkstream = vi.fn().mockResolvedValue(undefined),
 ) {
   return render(
     <CaseDetail
       expediente={expediente}
       lineas={
-        [{ id: 'line-1', titulo: 'Due diligence', estado: 'En curso', prioridad: 'Alta' }] as never
+        [{
+          id: 'line-1',
+          expedienteId: 'case-1',
+          parentId: null,
+          titulo: 'Due diligence',
+          tipo: 'Análisis jurídico',
+          descripcion: 'Revisión de la operación',
+          estado: 'En curso',
+          prioridad: 'Alta',
+          asignadoId: 'member-1',
+          fechaInicio: '2026-08-05',
+          fechaObjetivo: '2026-09-05',
+          fechaResolucion: null,
+          fechaCierre: null,
+          orden: 0,
+          details: { colaboradores: [], customField: 'conservar' },
+          version: 2,
+        }] as never
       }
       actuaciones={
         [
@@ -116,6 +134,7 @@ function renderDetail(
       taskPending={false}
       onCreateTask={onCreateTask}
       onSetNextAction={onSetNextAction}
+      onUpdateWorkstream={onUpdateWorkstream}
       canManageNextAction={canManageNextAction}
       nextActionPending={false}
       editor={<div>Editor del expediente</div>}
@@ -252,6 +271,37 @@ describe('CaseDetail', () => {
         titulo: 'Revisar cargas registrales',
       }),
     )
+  })
+
+  it('opens the expanded workstream file and saves strategy details with the line', async () => {
+    const onUpdateWorkstream = vi.fn().mockResolvedValue(undefined)
+    renderDetail(undefined, [], [], undefined, undefined, onUpdateWorkstream)
+    fireEvent.click(screen.getByRole('tab', { name: /líneas de trabajo\s*1/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir línea: Due diligence' }))
+
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Estrategia' })).toBeTruthy()
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Due diligence legal' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Estrategia' }))
+    fireEvent.change(screen.getByLabelText('Tesis o enfoque jurídico'), {
+      target: { value: 'Priorizar el análisis de cargas.' },
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    })
+
+    await expect.poll(() => onUpdateWorkstream.mock.calls.length).toBe(1)
+    expect(onUpdateWorkstream).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'line-1',
+      expedienteId: 'case-1',
+      versionEsperada: 2,
+      titulo: 'Due diligence legal',
+      estado: 'in_progress',
+      details: expect.objectContaining({
+        tesis: 'Priorizar el análisis de cargas.',
+        customField: 'conservar',
+      }),
+    }))
   })
 
   it('marks and unmarks the next action from its workstream', async () => {
