@@ -370,9 +370,7 @@ export function useConfirmarLectura(firmId: string | undefined) {
       const client = getSupabaseBrowserClient()
       const user = (await client?.auth.getUser())?.data.user
       if (!client || !firmId || !user) throw new Error('Necesitas una sesión activa.')
-      const { error } = await client
-        .from('crm_note_acknowledgements')
-        .upsert({ note_id: noteId, user_id: user.id })
+      const { error } = await client.rpc('crm_acknowledge_note', { target_note_id: noteId })
       if (error) throw error
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] }),
@@ -455,51 +453,40 @@ export function useConvertirNotaEnTarea(firmId: string | undefined) {
       title: string
       description: string
       dueAt: string | null
-      assignedTo: string | null
-      caseId: string | null
-      opportunityId: string | null
       priority: 'low' | 'medium' | 'high'
       critical: boolean
     }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
-      if (!input.caseId && !input.opportunityId)
-        throw new Error('La nota debe estar vinculada a un expediente o lead para crear una tarea.')
-      const { data: task, error } = await client.rpc('crm_create_task', {
-        target_firm_id: firmId,
-        target_case_id: input.caseId,
-        target_opportunity_id: input.opportunityId,
-        new_kind: 'task',
+      const { data: task, error } = await client.rpc('crm_convert_note_to_task', {
+        target_note_id: input.noteId,
         new_title: input.title.trim(),
         new_description: input.description.trim(),
-        new_priority: input.priority,
         new_due_at: input.dueAt,
-        new_reminder_at: null,
-        new_assigned_to: input.assignedTo,
-        new_deadline_class: null,
-        initial_message: `Creada desde la nota interna ${input.noteId}.`,
+        new_priority: input.priority,
         new_critical: input.critical,
       })
       if (error) throw error
-      const conversion: ConversionNota = {
-        tipo: 'tarea',
-        referenciaId: task.id,
-        etiqueta: input.title.trim(),
-        fecha: new Date().toISOString(),
-        usuario: 'Usuario activo',
-      }
-      const { error: auditError } = await client.rpc('crm_update_note_state', {
-        target_note_id: input.noteId,
-        conversion: conversion as unknown as Json,
-        event_type: 'converted_to_task',
-        event_detail: `Tarea persistente creada: ${input.title.trim()} (${task.id}).`,
-      })
-      if (auditError) throw auditError
       return task
     },
-    onSuccess: () => {
+    onSuccess: async (_, input) => {
       void queryClient.invalidateQueries({ queryKey: ['crm', 'notes', firmId] })
       void queryClient.invalidateQueries({ queryKey: ['tareas', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['task-inbox', firmId] })
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return
+      const { data } = await client
+        .from('crm_notes')
+        .select('case_id, opportunity_id')
+        .eq('id', input.noteId)
+        .eq('firm_id', firmId)
+        .maybeSingle()
+      if (data?.case_id)
+        void queryClient.invalidateQueries({ queryKey: ['expediente', firmId, data.case_id] })
+      if (data?.opportunity_id)
+        void queryClient.invalidateQueries({
+          queryKey: ['oportunidad', firmId, data.opportunity_id],
+        })
     },
   })
 }
@@ -533,7 +520,12 @@ export function useActualizarEstadoNota(firmId: string | undefined) {
         new_review_on: input.reviewOn ?? null,
         new_expires_on: input.expiresOn ?? null,
         new_snoozed_until: input.snoozedUntil ?? null,
-        conversion: input.conversion ? (input.conversion as unknown as Json) : null,
+        conversion: input.conversion
+          ? ({
+              ...input.conversion,
+              usuario: (await client.auth.getUser()).data.user?.id ?? '',
+            } as unknown as Json)
+          : null,
         event_type: input.eventType,
         event_detail: input.eventDetail ?? null,
       })

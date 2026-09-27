@@ -166,8 +166,8 @@ export function LeadWorkspace({
   const requestedDocuments = ensureRequiredLeadDocumentRequests(
     Array.isArray(details['documentacionSolicitada'])
       ? details['documentacionSolicitada'].filter(
-        (value): value is string => typeof value === 'string',
-      )
+          (value): value is string => typeof value === 'string',
+        )
       : [],
   )
   const reconciledDocuments = reconcileRequestedLeadDocuments(
@@ -287,19 +287,19 @@ export function LeadWorkspace({
             condiciones: formText(form, 'quoteConditions'),
             ...(status === 'Validado' && canReviewQuote
               ? {
-                validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
-                fechaValidacion: new Date().toISOString(),
-                validadoVersion: version,
-              }
+                  validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
+                  fechaValidacion: new Date().toISOString(),
+                  validadoVersion: version,
+                }
               : {}),
             ...(version !== previousVersion
               ? { validadoVersion: null, validadoPor: null, fechaValidacion: null }
               : {}),
             historial: historyChanged
               ? [
-                ...history,
-                { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
-              ]
+                  ...history,
+                  { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+                ]
               : history,
           },
         },
@@ -334,11 +334,11 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'validation'
           ? {
-            transicionContratacion: {
-              fase: 'engagement' as const,
-              subestado: 'Pendiente de aceptación',
-            },
-          }
+              transicionContratacion: {
+                fase: 'engagement' as const,
+                subestado: 'Pendiente de aceptación',
+              },
+            }
           : {}),
         detalles: {
           ...details,
@@ -395,7 +395,7 @@ export function LeadWorkspace({
         )
         return
       }
-      toast.success('Aceptación registrada en el histórico del Lead.')
+      toast.success('Aceptación registrada y tarea de inicio de onboarding creada.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo registrar la aceptación.')
     }
@@ -497,12 +497,12 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'engagement'
           ? {
-            transicionContratacion: {
-              fase: 'validation' as const,
-              subestado: 'Rectificación solicitada',
-              motivo: revisionRequest,
-            },
-          }
+              transicionContratacion: {
+                fase: 'validation' as const,
+                subestado: 'Rectificación solicitada',
+                motivo: revisionRequest,
+              },
+            }
           : {}),
         detalles: {
           ...details,
@@ -1379,7 +1379,7 @@ export function LeadWorkspace({
               </div>
             </form>
             {text(quote['estado']) !== 'Validado' ||
-              quote['validadoVersion'] !== quote['version'] ? (
+            quote['validadoVersion'] !== quote['version'] ? (
               <p className="text-destructive text-xs">
                 La versión actual del presupuesto debe estar validada antes de registrar el envío.
               </p>
@@ -2243,16 +2243,16 @@ function qualificationQuestions(value: Json | undefined): QualificationQuestion[
     const questionText = text(record['texto']) || text(record['text']) || text(question)
     return questionText
       ? [
-        {
-          id: text(record['id']) || `question-${index}`,
-          text: questionText,
-          response:
-            record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
-              ? record['respuesta']
-              : 'Pendiente',
-          observation: text(record['observacion']),
-        },
-      ]
+          {
+            id: text(record['id']) || `question-${index}`,
+            text: questionText,
+            response:
+              record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
+                ? record['respuesta']
+                : 'Pendiente',
+            observation: text(record['observacion']),
+          },
+        ]
       : []
   })
 }

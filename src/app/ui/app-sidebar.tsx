@@ -5,6 +5,7 @@ import {
   CheckSquare,
   Contact,
   FileText,
+  ClipboardList,
   Activity,
   BellRing,
   Scale,
@@ -54,6 +55,7 @@ const operativa = [
 const gestion = [
   { title: 'Documentos', url: '/documentos', icon: FileText },
   { title: 'Comunicaciones', url: '/comunicaciones', icon: MessageSquareText },
+  { title: 'Procedimientos (SOPs)', url: '/procedimientos', icon: ClipboardList },
   { title: 'Facturación y cobros', url: '/facturacion', icon: Receipt },
 ] as const
 

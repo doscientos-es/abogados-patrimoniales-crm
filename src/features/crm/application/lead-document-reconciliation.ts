@@ -25,7 +25,9 @@ function normalizeDocumentLabel(value: string) {
     .trim()
 }
 
-function categoriesForRequirement(requirement: string): ContactDocumentRow['document_type'][] {
+export function categoriesForRequirement(
+  requirement: string,
+): ContactDocumentRow['document_type'][] {
   const normalized = normalizeDocumentLabel(requirement)
   const words = new Set(normalized.split(' '))
   const categories: ContactDocumentRow['document_type'][] = []

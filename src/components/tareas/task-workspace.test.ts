@@ -4,6 +4,7 @@ import {
   calendarSlotHour,
   canMoveTaskInBoard,
   layoutCalendarEvents,
+  reorderTasksWithFilteredItems,
   specialMeetingCreationIssue,
   sortTasksForAgenda,
   taskBoardColumn,
@@ -37,6 +38,17 @@ describe('taskBoardColumn', () => {
     expect(taskStatusForBoardColumn('waiting')).toBeNull()
     expect(canMoveTaskInBoard(task(), 'in-progress')).toBe(true)
     expect(canMoveTaskInBoard(task({ estado: 'En espera' }), 'pending')).toBe(false)
+  })
+})
+
+describe('reorderTasksWithFilteredItems', () => {
+  it('reorders visible tasks and preserves filtered tasks in their existing slots', () => {
+    expect(
+      reorderTasksWithFilteredItems(
+        ['visible-a', 'hidden-a', 'visible-b', 'hidden-b', 'visible-c'],
+        ['visible-c', 'visible-a', 'visible-b'],
+      ),
+    ).toEqual(['visible-c', 'hidden-a', 'visible-a', 'hidden-b', 'visible-b'])
   })
 })
 

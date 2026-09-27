@@ -16,6 +16,10 @@ La fuente de verdad del alcance P0/P1/P2, flujos, permisos, aceptación y Defini
 
 Los datos de demostración deben identificarse de forma inequívoca y mantenerse separados de los datos reales del despacho.
 
+## Novedades del producto
+
+`CHANGELOG.md` es la fuente editorial; `src/features/configuracion/changelog.json` es el artefacto que consume la pestaña **Novedades** de Configuración. Para revisar el siguiente intervalo de commits, ejecutar `pnpm run changelog:plan`; tras redactar y añadir una entrada con `node scripts/changelog.mjs add <sha-destino> <fecha-UTC> <título> <borrador.json>`, regenerar el JSON con `pnpm run changelog:sync` y verificarlo con `pnpm run changelog:check`. Las entradas describen cambios del repositorio y no implican por sí mismas que estén desplegados.
+
 ## Modelo funcional
 
 El ciclo de vida de cada asunto se divide en seis fases:

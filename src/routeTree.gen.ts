@@ -36,6 +36,8 @@ import { Route as OportunidadesIndexRouteImport } from './routes/oportunidades.i
 import { Route as OportunidadesIdRouteImport } from './routes/oportunidades.$id'
 import { Route as OportunidadesNuevaRouteImport } from './routes/oportunidades.nueva'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
+import { Route as ProcedimientosIndexRouteImport } from './routes/procedimientos.index'
+import { Route as ProcedimientosIdRouteImport } from './routes/procedimientos.$id'
 import { Route as TareasTaskIdRouteImport } from './routes/tareas.$taskId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -173,6 +175,16 @@ const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
   path: '/presupuestos/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProcedimientosIndexRoute = ProcedimientosIndexRouteImport.update({
+  id: '/procedimientos/',
+  path: '/procedimientos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProcedimientosIdRoute = ProcedimientosIdRouteImport.update({
+  id: '/procedimientos/$id',
+  path: '/procedimientos/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TareasTaskIdRoute = TareasTaskIdRouteImport.update({
   id: '/$taskId',
   path: '/$taskId',
@@ -203,11 +215,13 @@ export interface FileRoutesByFullPath {
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/procedimientos/$id': typeof ProcedimientosIdRoute
   '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
+  '/procedimientos/': typeof ProcedimientosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -233,11 +247,13 @@ export interface FileRoutesByTo {
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/procedimientos/$id': typeof ProcedimientosIdRoute
   '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos': typeof ContactosIndexRoute
   '/expedientes': typeof ExpedientesIndexRoute
   '/oportunidades': typeof OportunidadesIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
+  '/procedimientos': typeof ProcedimientosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -264,11 +280,13 @@ export interface FileRoutesById {
   '/expedientes/$id': typeof ExpedientesIdRoute
   '/oportunidades/$id': typeof OportunidadesIdRoute
   '/oportunidades/nueva': typeof OportunidadesNuevaRoute
+  '/procedimientos/$id': typeof ProcedimientosIdRoute
   '/tareas/$taskId': typeof TareasTaskIdRoute
   '/contactos/': typeof ContactosIndexRoute
   '/expedientes/': typeof ExpedientesIndexRoute
   '/oportunidades/': typeof OportunidadesIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
+  '/procedimientos/': typeof ProcedimientosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -296,11 +314,13 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/procedimientos/$id'
     | '/tareas/$taskId'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
     | '/presupuestos/'
+    | '/procedimientos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -326,11 +346,13 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/procedimientos/$id'
     | '/tareas/$taskId'
     | '/contactos'
     | '/expedientes'
     | '/oportunidades'
     | '/presupuestos'
+    | '/procedimientos'
   id:
     | '__root__'
     | '/'
@@ -356,11 +378,13 @@ export interface FileRouteTypes {
     | '/expedientes/$id'
     | '/oportunidades/$id'
     | '/oportunidades/nueva'
+    | '/procedimientos/$id'
     | '/tareas/$taskId'
     | '/contactos/'
     | '/expedientes/'
     | '/oportunidades/'
     | '/presupuestos/'
+    | '/procedimientos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -387,10 +411,12 @@ export interface RootRouteChildren {
   ExpedientesIdRoute: typeof ExpedientesIdRoute
   OportunidadesIdRoute: typeof OportunidadesIdRoute
   OportunidadesNuevaRoute: typeof OportunidadesNuevaRoute
+  ProcedimientosIdRoute: typeof ProcedimientosIdRoute
   ContactosIndexRoute: typeof ContactosIndexRoute
   ExpedientesIndexRoute: typeof ExpedientesIndexRoute
   OportunidadesIndexRoute: typeof OportunidadesIndexRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
+  ProcedimientosIndexRoute: typeof ProcedimientosIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -584,6 +610,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/procedimientos/': {
+      id: '/procedimientos/'
+      path: '/procedimientos'
+      fullPath: '/procedimientos/'
+      preLoaderRoute: typeof ProcedimientosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/procedimientos/$id': {
+      id: '/procedimientos/$id'
+      path: '/procedimientos/$id'
+      fullPath: '/procedimientos/$id'
+      preLoaderRoute: typeof ProcedimientosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tareas/$taskId': {
       id: '/tareas/$taskId'
       path: '/$taskId'
@@ -629,10 +669,12 @@ const rootRouteChildren: RootRouteChildren = {
   ExpedientesIdRoute: ExpedientesIdRoute,
   OportunidadesIdRoute: OportunidadesIdRoute,
   OportunidadesNuevaRoute: OportunidadesNuevaRoute,
+  ProcedimientosIdRoute: ProcedimientosIdRoute,
   ContactosIndexRoute: ContactosIndexRoute,
   ExpedientesIndexRoute: ExpedientesIndexRoute,
   OportunidadesIndexRoute: OportunidadesIndexRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
+  ProcedimientosIndexRoute: ProcedimientosIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

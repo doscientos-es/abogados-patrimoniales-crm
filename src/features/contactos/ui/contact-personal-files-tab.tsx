@@ -20,6 +20,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { RelacionDespacho } from '@/features/contactos'
 import {
+  categoriesForRequirement,
+  ensureRequiredLeadDocumentRequests,
+  reconcileRequestedLeadDocuments,
+} from '@/features/crm/application/lead-document-reconciliation'
+import {
   getSupabaseBrowserClient,
   type ContactDocumentRow,
   type ContactDocumentType,
@@ -54,11 +59,13 @@ export function ContactPersonalFilesTab({
   firmId,
   contactId,
   relationship,
+  requiredDocumentRequests = [],
   role,
 }: {
   firmId: string
   contactId: string
   relationship: RelacionDespacho
+  requiredDocumentRequests?: string[]
   role: MemberRole | undefined
 }) {
   const canManage = role === 'owner' || role === 'admin' || role === 'lawyer'
@@ -85,11 +92,10 @@ export function ContactPersonalFilesTab({
     },
   })
   const rows = documents.data ?? []
-  const requiredTypes: ContactDocumentType[] =
-    relationship === 'Lead' ? ['identification', 'privacy'] : []
-  const missing = requiredTypes.filter(
-    (type) => !rows.some((row) => row.document_type === type && row.document_status === 'current'),
-  )
+  const requiredDocuments =
+    relationship === 'Lead' ? ensureRequiredLeadDocumentRequests(requiredDocumentRequests) : []
+  const reconciledRequirements = reconcileRequestedLeadDocuments(requiredDocuments, rows)
+  const missing = reconciledRequirements.filter((item) => !item.receivedDocument)
   const normalizedSearch = search.trim().toLocaleLowerCase('es')
   const visibleRows = rows.filter(
     (row) =>
@@ -251,7 +257,7 @@ export function ContactPersonalFilesTab({
             Subir documento
           </Button>
           <Badge variant={missing.length ? 'secondary' : 'outline'}>
-            {requiredTypes.length
+            {requiredDocuments.length
               ? missing.length
                 ? `${missing.length} requisito${missing.length === 1 ? '' : 's'} pendiente${missing.length === 1 ? '' : 's'}`
                 : 'Documentación completa'
@@ -275,9 +281,36 @@ export function ContactPersonalFilesTab({
       ) : null}
       {missing.length ? (
         <p className="border-warning/40 bg-warning/5 text-warning-foreground rounded-md border px-3 py-2 text-sm">
-          Falta incorporar:{' '}
-          {missing.map((type) => CATEGORIES.find((item) => item.type === type)?.label).join(', ')}.
+          Falta incorporar: {missing.map((item) => item.requirement).join(', ')}.
         </p>
+      ) : null}
+
+      {requiredDocuments.length ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base">Requisitos documentales del Lead</CardTitle>
+              <Badge variant={missing.length ? 'secondary' : 'outline'}>
+                {missing.length ? `${missing.length} pendiente(s)` : 'Completa'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {reconciledRequirements.map((item) => (
+              <div
+                key={item.requirement}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+              >
+                <span>{item.requirement}</span>
+                {item.receivedDocument ? (
+                  <Badge variant="outline">Recibido · {item.receivedDocument.name}</Badge>
+                ) : (
+                  <Badge variant="secondary">Pendiente</Badge>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
 
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
@@ -364,9 +397,12 @@ export function ContactPersonalFilesTab({
 
       {sections.map((section) => {
         const sectionRows = visibleRows.filter((row) => section.types.includes(row.document_type))
-        const sectionMissing = requiredTypes.some(
-          (type) => section.types.includes(type) && missing.includes(type),
-        )
+        const sectionMissing = missing.some((item) => {
+          const categories = categoriesForRequirement(item.requirement)
+          return categories.length
+            ? categories.some((type) => section.types.includes(type))
+            : section.id === 'other'
+        })
         return (
           <Card key={section.id}>
             <CardHeader className="pb-2">

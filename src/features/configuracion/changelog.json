@@ -1,0 +1,25 @@
+{
+  "releases": [
+    {
+      "date": "2026-09-25",
+      "title": "Mejoras recientes del CRM",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "El alta de contactos permite extraer información de documentos y gestionar cuentas bancarias desde su ficha.",
+            "Las reuniones especiales admiten preparación, reprogramación con motivo y registro del motivo de cancelación o incomparecencia.",
+            "El flujo comercial permite conciliar documentación asociada a los leads durante la contratación."
+          ]
+        },
+        {
+          "title": "Mejoras",
+          "items": [
+            "La bandeja de tareas organiza el trabajo pendiente y en espera, y facilita reactivar tareas de forma controlada.",
+            "Las tareas y actuaciones pueden seguirse vinculadas al flujo de trabajo correspondiente."
+          ]
+        }
+      ]
+    }
+  ]
+}

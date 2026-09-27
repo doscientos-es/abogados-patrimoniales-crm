@@ -17,8 +17,9 @@ declare
   actor uuid := auth.uid();
   expected_status text;
   target_id uuid;
+  position integer := 0;
 begin
-  if cardinality(ordered_task_ids) <> (select count(distinct value) from unnest(ordered_task_ids) as value) then
+  if coalesce(cardinality(ordered_task_ids), 0) <> (select count(distinct submitted.task_id) from unnest(coalesce(ordered_task_ids, '{}'::uuid[])) as submitted(task_id)) then
     raise exception 'Task ordering cannot contain duplicate IDs';
   end if;
   if actor is null or not public.crm_is_firm_member(target_firm_id) then
@@ -27,21 +28,36 @@ begin
   if target_status not in ('pending', 'in_progress') then
     raise exception 'Unsupported task board status';
   end if;
+  if cardinality(ordered_task_ids) = 0 then
+    return;
+  end if;
   expected_status := target_status;
+  update public.crm_tasks task set board_position = null
+    where task.firm_id = target_firm_id and task.status = expected_status;
+  for target_id in
+    select current_task.id
+    from public.crm_tasks current_task
+    where current_task.firm_id = target_firm_id
+      and current_task.status = expected_status
+      and not (current_task.id = any(ordered_task_ids))
+    order by current_task.board_position nulls last, current_task.due_at nulls last, current_task.title, current_task.id
+    for update
+  loop
+    position := position + 1;
+    update public.crm_tasks set board_position = position where id = target_id;
+  end loop;
   if exists (
-    select 1 from unnest(ordered_task_ids) as submitted(id)
-    left join public.crm_tasks task on task.id = submitted.id and task.firm_id = target_firm_id
+    select 1 from unnest(ordered_task_ids) as submitted(task_id)
+    left join public.crm_tasks task on task.id = submitted.task_id and task.firm_id = target_firm_id
     where task.id is null or task.status <> expected_status
       or not (task.created_by = actor or task.assigned_to = actor or public.crm_has_firm_role(target_firm_id, array['owner','admin','lawyer']::public.crm_member_role[]))
   ) then
     raise exception 'A task is unavailable or cannot be reordered';
   end if;
-  update public.crm_tasks task set board_position = null
-    where task.firm_id = target_firm_id and task.status = expected_status
-      and task.id = any(ordered_task_ids);
-  for target_id in select value from unnest(ordered_task_ids) as value loop
+  for target_id in select submitted.task_id from unnest(ordered_task_ids) with ordinality as submitted(task_id, ordinal) order by submitted.ordinal loop
+    position := position + 1;
     update public.crm_tasks
-      set board_position = array_position(ordered_task_ids, target_id)
+      set board_position = position
       where firm_id = target_firm_id
         and id = target_id
         and status = expected_status
@@ -133,6 +149,87 @@ $$;
 
 revoke all on function public.crm_update_note_state(uuid, text, boolean, boolean, boolean, boolean, date, date, date, jsonb, text, text) from public, anon;
 grant execute on function public.crm_update_note_state(uuid, text, boolean, boolean, boolean, boolean, date, date, date, jsonb, text, text) to authenticated;
+
+create or replace function public.crm_convert_note_to_task(
+  target_note_id uuid,
+  new_title text,
+  new_description text,
+  new_due_at timestamptz,
+  new_priority public.crm_priority,
+  new_critical boolean
+)
+returns public.crm_tasks
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  note public.crm_notes;
+  task public.crm_tasks;
+  actor uuid := auth.uid();
+begin
+  select * into note from public.crm_notes where id = target_note_id for update;
+  if not found or actor is null or not public.crm_is_firm_member(note.firm_id) then
+    raise exception 'Note not found or access denied';
+  end if;
+  if note.visibility = 'restricted' and note.created_by <> actor
+    and not exists (select 1 from public.crm_note_permissions p where p.note_id = note.id and p.user_id = actor) then
+    raise exception 'You are not authorized to access this note';
+  end if;
+  if note.case_id is null and note.opportunity_id is null then
+    raise exception 'The note must be linked to a case or opportunity to create a task';
+  end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(note.details->'conversions', '[]'::jsonb)) item where item->>'tipo' = 'tarea') then
+    raise exception 'This note already has a task conversion';
+  end if;
+  task := public.crm_create_task(
+    note.firm_id, note.case_id, note.opportunity_id, 'task', new_title, new_description,
+    coalesce(new_priority, 'medium'), new_due_at, null, actor, null,
+    'Creada desde la nota interna ' || note.id::text, null, '{}'::jsonb, null, new_critical
+  );
+  update public.crm_notes set
+    details = jsonb_set(
+      details,
+      '{conversions}',
+      coalesce(details->'conversions', '[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+        'tipo', 'tarea', 'referenciaId', task.id, 'etiqueta', task.title,
+        'fecha', now(), 'usuario', actor
+      )),
+      true
+    ),
+    updated_by = actor
+  where id = note.id;
+  insert into public.crm_note_events(note_id, firm_id, event_type, detail)
+    values (note.id, note.firm_id, 'converted_to_task', 'Tarea persistente creada: ' || task.title || ' (' || task.id::text || ').');
+  return task;
+end;
+$$;
+revoke all on function public.crm_convert_note_to_task(uuid, text, text, timestamptz, public.crm_priority, boolean) from public, anon;
+grant execute on function public.crm_convert_note_to_task(uuid, text, text, timestamptz, public.crm_priority, boolean) to authenticated;
+
+drop policy if exists crm_note_permissions_read on public.crm_note_permissions;
+create policy crm_note_permissions_read on public.crm_note_permissions
+for select to authenticated using (
+  user_id = (select auth.uid())
+  or exists (
+    select 1 from public.crm_notes note
+    where note.id = note_id and public.crm_is_firm_member(note.firm_id)
+      and (note.created_by = (select auth.uid())
+        or public.crm_has_firm_role(note.firm_id, array['owner','admin']::public.crm_member_role[]))
+  )
+);
+
+drop policy if exists crm_note_acknowledgements_read on public.crm_note_acknowledgements;
+create policy crm_note_acknowledgements_read on public.crm_note_acknowledgements
+for select to authenticated using (
+  exists (
+    select 1 from public.crm_notes note
+    where note.id = note_id and public.crm_is_firm_member(note.firm_id)
+      and (note.visibility = 'team' or note.created_by = (select auth.uid())
+        or exists (select 1 from public.crm_note_permissions permission
+          where permission.note_id = note.id and permission.user_id = (select auth.uid())))
+  )
+);
 
 create or replace function public.crm_acknowledge_note(target_note_id uuid)
 returns void

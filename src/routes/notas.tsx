@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Check,
   CheckCheck,
+  ClipboardList,
   Clock3,
   History,
   LockKeyhole,
@@ -46,6 +47,7 @@ import {
   notaDesdeRemota,
   useActualizarEstadoNota,
   useConfirmarLectura,
+  useConvertirNotaEnTarea,
   useGuardarNota,
   useNotasRemotas,
   type NotaRemota,
@@ -107,6 +109,7 @@ function NotesPage() {
   const save = useGuardarNota(firmId)
   const update = useActualizarEstadoNota(firmId)
   const acknowledge = useConfirmarLectura(firmId)
+  const convertTask = useConvertirNotaEnTarea(firmId)
   const [view, setView] = useState<ViewId>('all')
   const [query, setQuery] = useState('')
   const [author, setAuthor] = useState('all')
@@ -240,16 +243,19 @@ function NotesPage() {
         ))}
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="relative">
-          <span className="sr-only">Buscar notas internas</span>
+        <div className="relative">
+          <Label htmlFor="notes-search" className="sr-only">
+            Buscar notas internas
+          </Label>
           <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
           <Input
+            id="notes-search"
             className="pl-9"
             placeholder="Buscar en las notas…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-        </label>
+        </div>
         <select
           aria-label="Filtrar por autor"
           className={selectClass}
@@ -306,6 +312,16 @@ function NotesPage() {
                   toast.error(
                     error instanceof Error ? error.message : 'No se pudo confirmar la lectura.',
                   )
+                }
+              }}
+              onConvertTask={async (input) => {
+                try {
+                  const task = await convertTask.mutateAsync(input)
+                  toast.success('Tarea creada y vinculada a la nota.')
+                  return task.id
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
+                  return null
                 }
               }}
             />
@@ -384,6 +400,7 @@ function NoteCard({
   onExtend,
   onAction,
   onAcknowledge,
+  onConvertTask,
 }: {
   remote: NotaRemota
   note: NotaInterna
@@ -396,8 +413,17 @@ function NoteCard({
     success: string,
   ) => Promise<void>
   onAcknowledge: () => Promise<void>
+  onConvertTask: (input: {
+    noteId: string
+    title: string
+    description: string
+    dueAt: string | null
+    priority: 'low' | 'medium' | 'high'
+    critical: boolean
+  }) => Promise<string | null>
 }) {
   const [actionsOpen, setActionsOpen] = useState(false)
+  const [convertOpen, setConvertOpen] = useState(false)
   const acknowledged = remote.acknowledgedUserIds.includes(currentUserId)
   const inactive = note.estado !== 'activa'
   const tint = note.critica
@@ -523,6 +549,18 @@ function NoteCard({
             <History className="mr-1 h-3.5 w-3.5" />
             Historial
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={
+              (!note.expedienteId && !note.oportunidadId) ||
+              note.conversiones.some((item) => item.tipo === 'tarea')
+            }
+            onClick={() => setConvertOpen(true)}
+          >
+            <ClipboardList className="mr-1 h-3.5 w-3.5" />
+            Convertir en tarea
+          </Button>
         </div>
       ) : null}
       {note.titulo ? (
@@ -564,11 +602,30 @@ function NoteCard({
         <ul className="mt-2 space-y-1 text-xs">
           {note.conversiones.map((conversion) => (
             <li key={`${conversion.tipo}-${conversion.referenciaId}`}>
-              Convertida en {conversion.tipo} · {conversion.etiqueta}
+              {conversion.tipo === 'tarea' ? (
+                <Link
+                  to="/tareas/$taskId"
+                  params={{ taskId: conversion.referenciaId }}
+                  className="underline underline-offset-2"
+                >
+                  Convertida en tarea · {conversion.etiqueta}
+                </Link>
+              ) : (
+                <>
+                  Convertida en {conversion.tipo} · {conversion.etiqueta}
+                </>
+              )}
             </li>
           ))}
         </ul>
       ) : null}
+      <ConvertTaskDialog
+        key={note.id}
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+        note={remote}
+        onConvert={onConvertTask}
+      />
       {note.requiereConfirmacion ? (
         <div className="mt-3">
           {acknowledged ? (
@@ -577,11 +634,7 @@ function NoteCard({
               Lectura confirmada
             </p>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void onAcknowledge()}
-            >
+            <Button size="sm" variant="outline" onClick={() => void onAcknowledge()}>
               Confirmar lectura
             </Button>
           )}
@@ -613,8 +666,13 @@ function NoteCard({
               <ArrowUpRight className="ml-1 inline h-3 w-3" />
             </Link>
           ) : note.ambito === 'persona' ? (
-            <Link to="/contactos/$id" params={{ id: note.origen.id }} className="underline underline-offset-2">
-              {note.origen.etiqueta}<ArrowUpRight className="ml-1 inline h-3 w-3" />
+            <Link
+              to="/contactos/$id"
+              params={{ id: note.origen.id }}
+              className="underline underline-offset-2"
+            >
+              {note.origen.etiqueta}
+              <ArrowUpRight className="ml-1 inline h-3 w-3" />
             </Link>
           ) : (
             note.origen.etiqueta
@@ -659,6 +717,21 @@ function NoteForm({
   onSave: (input: Parameters<ReturnType<typeof useGuardarNota>['mutateAsync']>[0]) => Promise<void>
 }) {
   const [advanced, setAdvanced] = useState(false)
+  const [scope, setScope] = useState<'person' | 'case' | 'opportunity'>('person')
+  const [originId, setOriginId] = useState('')
+  const [content, setContent] = useState('')
+  const [title, setTitle] = useState('')
+  const [highlighted, setHighlighted] = useState(false)
+  const [critical, setCritical] = useState(false)
+  const [requiresAck, setRequiresAck] = useState(false)
+  const [validity, setValidity] = useState<'permanent' | 'temporary'>('permanent')
+  const [reviewOn, setReviewOn] = useState('')
+  const [expiresOn, setExpiresOn] = useState('')
+  const [expiryAction, setExpiryAction] = useState<'archive' | 'confirm'>('archive')
+  const [visibility, setVisibility] = useState<'team' | 'restricted'>('team')
+  const [triggersSelected, setTriggersSelected] = useState<DisparadorNota[]>([])
+  const [contactIds, setContactIds] = useState<string[]>([])
+  const [permitted, setPermitted] = useState<string[]>([])
   const options =
     scope === 'person'
       ? contacts.map((item) => ({ id: item.id, label: contactName(item), contactIds: [item.id] }))
@@ -674,10 +747,10 @@ function NoteForm({
             contactIds: [item.contactoId],
           }))
   const selected = options.find((item) => item.id === originId)
-  const [contactsOpen, setContactsOpen] = useState(false)
-  const [usersOpen, setUsersOpen] = useState(false)
   useEffect(() => {
-    setScope(note?.scope === 'case' || note?.scope === 'opportunity' ? note.scope : 'person')
+    setScope(
+      note?.scope === 'case' ? 'case' : note?.scope === 'opportunity' ? 'opportunity' : 'person',
+    )
     setOriginId(note?.origin_id ?? '')
     setContent(note?.content ?? '')
     setTitle(note?.title ?? '')
@@ -1015,6 +1088,123 @@ function ExtendDialog({
             Guardar fecha
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ConvertTaskDialog({
+  open,
+  onOpenChange,
+  note,
+  onConvert,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  note: NotaRemota
+  onConvert: (input: {
+    noteId: string
+    title: string
+    description: string
+    dueAt: string | null
+    priority: 'low' | 'medium' | 'high'
+    critical: boolean
+  }) => Promise<string | null>
+}) {
+  const [title, setTitle] = useState(note.title || note.content.slice(0, 80))
+  const [description, setDescription] = useState(note.content)
+  const [dueAt, setDueAt] = useState('')
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(
+    note.critical ? 'high' : 'medium',
+  )
+  const [critical, setCritical] = useState(note.critical)
+  const [pending, setPending] = useState(false)
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!title.trim()) return
+    setPending(true)
+    try {
+      const id = await onConvert({
+        noteId: note.id,
+        title: title.trim(),
+        description,
+        dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+        priority,
+        critical,
+      })
+      if (id) onOpenChange(false)
+    } finally {
+      setPending(false)
+    }
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Convertir la nota en tarea</DialogTitle>
+          <DialogDescription>
+            Se creará una tarea vinculada al mismo expediente o lead. La nota original se conserva y
+            quedará enlazada.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+          <div className="space-y-1.5">
+            <Label>Título</Label>
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+              maxLength={300}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descripción</Label>
+            <Textarea
+              rows={4}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              maxLength={20000}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Fecha límite (opcional)</Label>
+              <Input
+                type="datetime-local"
+                value={dueAt}
+                onChange={(event) => setDueAt(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Prioridad</Label>
+              <select
+                className={selectClass}
+                value={priority}
+                onChange={(event) => setPriority(event.target.value as typeof priority)}
+              >
+                <option value="low">Baja</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 self-end text-sm">
+              <input
+                type="checkbox"
+                checked={critical}
+                onChange={(event) => setCritical(event.target.checked)}
+              />
+              Tarea crítica
+            </label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Creando…' : 'Crear tarea'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

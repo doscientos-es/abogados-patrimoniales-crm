@@ -277,6 +277,12 @@ export function canMoveTaskInBoard(task: TareaPersistida, target: TaskBoardColum
   )
 }
 
+export function reorderTasksWithFilteredItems(completeOrder: string[], visibleOrder: string[]) {
+  const visible = new Set(visibleOrder)
+  let nextVisibleIndex = 0
+  return completeOrder.map((id) => (visible.has(id) ? visibleOrder[nextVisibleIndex++] : id))
+}
+
 export function TaskWorkspace() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -370,7 +376,7 @@ export function TaskWorkspace() {
           (a, b) =>
             (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
               (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
-            sortTasksForAgenda([a, b])[0]?.id.localeCompare(a.id)!,
+            a.titulo.localeCompare(b.titulo, 'es'),
         )
       : sortTasksForAgenda(visible)
   const activeFilterCount = [
@@ -693,6 +699,7 @@ export function TaskWorkspace() {
       ) : view === 'kanban' ? (
         <TaskKanban
           tasks={orderedVisible}
+          allTasks={allTasks}
           canValidate={canValidate}
           pending={change.isPending || validate.isPending}
           caseNames={caseNames}
@@ -712,7 +719,21 @@ export function TaskWorkspace() {
           }
           onReorder={async (status, taskIds) => {
             try {
-              await reorderBoard.mutateAsync({ status, taskIds })
+              const completeOrder = [...allTasks]
+                .filter((task) =>
+                  status === 'pending' ? task.estado === 'Pendiente' : task.estado === 'En curso',
+                )
+                .sort(
+                  (a, b) =>
+                    (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
+                      (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+                    a.titulo.localeCompare(b.titulo, 'es'),
+                )
+              const taskIdsWithHidden = reorderTasksWithFilteredItems(
+                completeOrder.map((task) => task.id),
+                taskIds,
+              ).filter((id): id is string => Boolean(id))
+              await reorderBoard.mutateAsync({ status, taskIds: taskIdsWithHidden })
             } catch (error) {
               toast.error(
                 error instanceof Error ? error.message : 'No se pudo guardar el orden del tablero.',
@@ -1133,6 +1154,7 @@ function CalendarDayColumn({
 
 function TaskKanban({
   tasks,
+  allTasks,
   canValidate,
   pending,
   caseNames,
@@ -1147,6 +1169,7 @@ function TaskKanban({
   onReorder,
 }: {
   tasks: TareaPersistida[]
+  allTasks: TareaPersistida[]
   canValidate: boolean
   pending: boolean
   caseNames: ReadonlyMap<string, string>
@@ -1169,13 +1192,13 @@ function TaskKanban({
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
   const [draggedForOrder, setDraggedForOrder] = useState<TareaPersistida | null>(null)
   const [orderDropId, setOrderDropId] = useState<string | null>(null)
+  const orderedAllTasks = [...allTasks].sort(
+    (a, b) =>
+      (a.boardPosition ?? Number.MAX_SAFE_INTEGER) - (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+      a.titulo.localeCompare(b.titulo, 'es'),
+  )
   const canDropIn = (column: TaskBoardColumnId) =>
     Boolean(dragged && canMoveTaskInBoard(dragged, column))
-  const startDrag = (event: DragEvent<HTMLButtonElement>, task: TareaPersistida) => {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', task.id)
-    setDragged(task)
-  }
   const dropInColumn = (event: DragEvent<HTMLElement>, column: TaskBoardColumnId) => {
     event.preventDefault()
     const status = taskStatusForBoardColumn(column)
@@ -1200,7 +1223,12 @@ function TaskKanban({
               onDragOver={(event) => {
                 if (canDropIn(column.id)) event.preventDefault()
               }}
-              onDrop={(event) => dropInColumn(event, column.id)}
+              onDrop={(event) => {
+                if (event.dataTransfer.getData('application/x-lex-task-order')) return
+                const taskId = event.dataTransfer.getData('application/x-lex-task-id')
+                const task = tasks.find((item) => item.id === taskId)
+                if (task && taskBoardColumn(task) !== column.id) dropInColumn(event, column.id)
+              }}
             >
               <header className="border-border mb-3 flex items-start justify-between gap-3 border-b px-1 pt-1 pb-2.5">
                 <div className="min-w-0">
@@ -1221,8 +1249,8 @@ function TaskKanban({
                   <div
                     key={task.id}
                     className={`relative ${orderDropId === task.id ? 'before:bg-primary before:absolute before:-top-1 before:left-0 before:h-1 before:w-full before:rounded' : ''}`}
-                    draggable={false}
                     onDragOver={(event) => {
+                      if (dragged && canMoveTaskInBoard(dragged, column.id)) event.preventDefault()
                       if (
                         !draggedForOrder ||
                         taskBoardColumn(draggedForOrder) !== column.id ||
@@ -1237,10 +1265,17 @@ function TaskKanban({
                     }
                     onDrop={(event) => {
                       const draggedId = event.dataTransfer.getData('application/x-lex-task-order')
-                      const source = draggedId && items.find((item) => item.id === draggedId)
-                      if (!source || source.id === task.id) return
+                      const source = draggedId && allTasks.find((item) => item.id === draggedId)
+                      if (!source || source.id === task.id) {
+                        if (dragged && canMoveTaskInBoard(dragged, column.id))
+                          dropInColumn(event, column.id)
+                        return
+                      }
                       event.preventDefault()
-                      const next = items.filter((item) => item.id !== source.id)
+                      const fullColumn = orderedAllTasks.filter(
+                        (item) => taskBoardColumn(item) === column.id,
+                      )
+                      const next = fullColumn.filter((item) => item.id !== source.id)
                       const index = next.findIndex((item) => item.id === task.id)
                       next.splice(index < 0 ? next.length : index, 0, source)
                       void onReorder(
@@ -1251,17 +1286,14 @@ function TaskKanban({
                       setOrderDropId(null)
                     }}
                   >
-                    <label
-                      className="bg-background/90 absolute top-2 right-2 z-10 rounded p-1"
-                      onClick={(event) => event.stopPropagation()}
-                    >
+                    <div className="bg-background/90 absolute top-2 right-2 z-10 rounded p-1">
                       <input
                         type="checkbox"
                         aria-label={`Seleccionar ${task.titulo}`}
                         checked={selectedTaskIds.includes(task.id)}
                         onChange={() => onSelectTask(task.id)}
                       />
-                    </label>
+                    </div>
                     <TaskCard
                       task={task}
                       canValidate={canValidate}

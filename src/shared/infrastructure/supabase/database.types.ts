@@ -106,6 +106,8 @@ export type Database = {
         ProcedureInsert,
         Partial<ProcedureInsert> & { id?: string }
       >
+      crm_procedure_runs: Table<ProcedureRunRow, never, never>
+      crm_procedure_events: Table<ProcedureEventRow, never, never>
       crm_opportunities: Table<
         OpportunityRow,
         OpportunityInsert,
@@ -148,6 +150,40 @@ export type Database = {
       crm_update_contact_profile: {
         Args: { target_contact_id: string; target_expected_version: number; new_profile: Json }
         Returns: ContactRow
+      }
+      crm_save_procedure: {
+        Args: {
+          target_firm_id: string
+          target_procedure_id: string | null
+          target_expected_version: number | null
+          new_slug: string
+          new_title: string
+          new_phase: string
+          new_description: string
+          new_sections: Json
+          new_status: string
+        }
+        Returns: ProcedureRow
+      }
+      crm_start_procedure_run: {
+        Args: {
+          target_firm_id: string
+          target_procedure_id: string
+          target_case_id: string | null
+          target_opportunity_id: string | null
+        }
+        Returns: ProcedureRunRow
+      }
+      crm_update_procedure_run: {
+        Args: {
+          target_firm_id: string
+          target_run_id: string
+          target_expected_version: number
+          new_checklist: Json
+          new_notes: string
+          new_status: string
+        }
+        Returns: ProcedureRunRow
       }
       crm_bootstrap_firm: { Args: { firm_name: string }; Returns: string }
       crm_queue_drive_sync: {
@@ -528,6 +564,17 @@ export type Database = {
           event_detail?: string | null
         }
         Returns: NoteRow
+      }
+      crm_convert_note_to_task: {
+        Args: {
+          target_note_id: string
+          new_title: string
+          new_description: string
+          new_due_at: string | null
+          new_priority: OpportunityPriority
+          new_critical: boolean
+        }
+        Returns: TaskRow
       }
       crm_create_onboarding: {
         Args: {
@@ -1466,6 +1513,35 @@ export type ProcedureInsert = Omit<
   description?: string
   sections?: Json
   status?: ProcedureRow['status']
+}
+
+export type ProcedureRunRow = {
+  id: string
+  firm_id: string
+  procedure_id: string
+  procedure_version: number
+  version: number
+  procedure_snapshot: Json
+  case_id: string | null
+  opportunity_id: string | null
+  status: 'in_progress' | 'completed' | 'cancelled'
+  checklist: Json
+  notes: string
+  started_by: string
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ProcedureEventRow = {
+  id: string
+  firm_id: string
+  procedure_id: string
+  run_id: string | null
+  actor_id: string | null
+  event_type: string
+  payload: Json
+  created_at: string
 }
 
 export type OpportunityRow = {

@@ -37,7 +37,7 @@ import {
   type ContactoPersistido,
   type RelacionDespacho,
 } from '@/features/contactos'
-import { useMiembrosDespacho, useOportunidades } from '@/features/crm'
+import { useMiembrosDespacho, useOportunidadesCompletas } from '@/features/crm'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import { formatCurrency, useFacturas } from '@/features/facturacion'
 import {
@@ -49,6 +49,7 @@ import {
 import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
 
+import { requiredDocumentsForContact } from '../application/lead-document-requirements'
 import { ContactBankingTab } from './contact-banking-tab'
 import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 import { ContactProfileTab } from './contact-profile-tab'
@@ -66,7 +67,7 @@ export function ContactDetail({ contactId }: { contactId: string }) {
   const contactQuery = useContacto(firmId, contactId)
   const contactsQuery = useContactos(firmId)
   const casesQuery = useExpedientesPersistentes(firmId)
-  const opportunitiesQuery = useOportunidades(firmId)
+  const opportunitiesQuery = useOportunidadesCompletas(firmId)
   const membersQuery = useMiembrosDespacho(firmId)
   const onboardingsQuery = useOnboardings(firmId)
   const tasksQuery = useTareasPersistentes(firmId)
@@ -106,6 +107,10 @@ export function ContactDetail({ contactId }: { contactId: string }) {
   const cases = (casesQuery.data ?? []).filter((item) => item.contactoPrincipalId === contactId)
   const opportunities = (opportunitiesQuery.data ?? []).filter(
     (item) => item.contactoId === contactId,
+  )
+  const requiredDocumentRequests = requiredDocumentsForContact(
+    opportunities.map((opportunity) => ({ detalles: opportunity.detalles })),
+    contactQuery.data.relacion === 'Lead',
   )
   const leadToView =
     opportunities.find((item) => item.fase !== 'won' && item.fase !== 'lost') ?? opportunities[0]
@@ -754,6 +759,7 @@ export function ContactDetail({ contactId }: { contactId: string }) {
             firmId={firmId}
             contactId={contact.id}
             relationship={contact.relacion}
+            requiredDocumentRequests={requiredDocumentRequests}
             role={membership.data?.role}
           />
         </section>

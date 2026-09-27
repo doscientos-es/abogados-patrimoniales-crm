@@ -9,6 +9,7 @@ import {
   History,
   Layers3,
   MessageSquareText,
+  Receipt,
   Pencil,
   Plus,
   ShieldAlert,
@@ -30,6 +31,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import type { MiembroDespacho } from '@/features/crm'
 import {
   caseAlerts,
@@ -44,10 +46,16 @@ import type {
   ExpedientePersistido,
   LineaPersistida,
   ParticipantePersistido,
+  ActualizarVisibilidadActuacionInput,
 } from '@/features/expedientes/application/case-types'
+import type {
+  RegistrarComunicacionExpedienteInput,
+  RegistrarReporteClienteInput,
+} from '@/features/expedientes/infrastructure/supabase-expedientes'
+import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
-import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import type { CaseCommunicationRow, CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
 type CaseDetailTab =
   | 'summary'
@@ -55,6 +63,7 @@ type CaseDetailTab =
   | 'participants'
   | 'activities'
   | 'documents'
+  | 'economic'
   | 'communications'
   | 'tasks'
   | 'deadlines'
@@ -66,6 +75,7 @@ const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activ
   { id: 'participants', label: 'Intervinientes', Icon: UsersRound },
   { id: 'activities', label: 'Actuaciones', Icon: Activity },
   { id: 'documents', label: 'Documentos', Icon: FileText },
+  { id: 'economic', label: 'Económico', Icon: Receipt },
   { id: 'communications', label: 'Comunicaciones', Icon: MessageSquareText },
   { id: 'tasks', label: 'Tareas', Icon: CheckSquare2 },
   { id: 'deadlines', label: 'Fechas y plazos', Icon: CalendarClock },
@@ -78,7 +88,9 @@ export function CaseDetail({
   actuaciones,
   participantes,
   eventos,
+  comunicaciones,
   documentos,
+  facturas = [],
   tareas,
   miembros,
   clienteNombre,
@@ -87,6 +99,12 @@ export function CaseDetail({
   onSetNextAction,
   canManageNextAction,
   nextActionPending,
+  communicationPending = false,
+  onCreateCommunication = async () => undefined,
+  activityVisibilityPending = false,
+  onUpdateActivityVisibility = async () => undefined,
+  reportPending = false,
+  onRegisterClientReport = async () => undefined,
   editor,
   relatedForms,
   notas = [],
@@ -97,7 +115,9 @@ export function CaseDetail({
   actuaciones: ActuacionPersistida[]
   participantes: ParticipantePersistido[]
   eventos: EventoExpediente[]
+  comunicaciones?: CaseCommunicationRow[]
   documentos: CaseDocumentRow[]
+  facturas?: FacturaPersistida[]
   tareas: TareaPersistida[]
   miembros: MiembroDespacho[]
   clienteNombre: string
@@ -106,12 +126,19 @@ export function CaseDetail({
   onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
   canManageNextAction: (task: TareaPersistida) => boolean
   nextActionPending: boolean
+  communicationPending?: boolean
+  onCreateCommunication?: (input: RegistrarComunicacionExpedienteInput) => Promise<unknown>
+  activityVisibilityPending?: boolean
+  onUpdateActivityVisibility?: (input: ActualizarVisibilidadActuacionInput) => Promise<unknown>
+  reportPending?: boolean
+  onRegisterClientReport?: (input: RegistrarReporteClienteInput) => Promise<unknown>
   editor: ReactNode
   relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode }
   notas?: NotaRemota[]
   taskTitleTemplates?: string[]
 }) {
   const [activeTab, setActiveTab] = useState<CaseDetailTab>('summary')
+  comunicaciones = comunicaciones ?? []
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
   const caseTasks = tareas.filter((task) => task.expedienteId === item.id)
   const openTasks = caseTasks.filter((task) => !['Completada', 'Cancelada'].includes(task.estado))
@@ -123,8 +150,10 @@ export function CaseDetail({
     participants: participantes.length,
     activities: actuaciones.length,
     documents: documentos.length,
-    communications: notas.filter((note) => note.scope === 'case' && note.case_id === item.id)
-      .length,
+    economic: facturas.length,
+    communications:
+      comunicaciones.length +
+      notas.filter((note) => note.scope === 'case' && note.case_id === item.id).length,
     tasks: openTasks.length,
     deadlines: deadlines.length,
   }
@@ -229,6 +258,15 @@ export function CaseDetail({
                   key={activity.id}
                   activity={activity}
                   memberName={memberNames.get(activity.asignadoId ?? '')}
+                  visibilityPending={activityVisibilityPending}
+                  onToggleVisibility={() =>
+                    onUpdateActivityVisibility({
+                      actuacionId: activity.id,
+                      expedienteId: item.id,
+                      versionEsperada: activity.version,
+                      visibleCliente: !activity.visibleCliente,
+                    })
+                  }
                 />
               ))}
             </div>
@@ -238,9 +276,18 @@ export function CaseDetail({
         {activeTab === 'documents' ? (
           <DocumentsSection documents={documentos} expedienteId={item.id} />
         ) : null}
+        {activeTab === 'economic' ? <EconomicSection invoices={facturas} /> : null}
         {activeTab === 'communications' ? (
           <CaseCommunications
+            expedienteId={item.id}
+            contactId={item.contactoPrincipalId}
+            comunicaciones={comunicaciones}
+            actuaciones={actuaciones.filter((activity) => activity.expedienteId === item.id)}
             notes={notas.filter((note) => note.scope === 'case' && note.case_id === item.id)}
+            pending={communicationPending}
+            onCreateCommunication={onCreateCommunication}
+            reportPending={reportPending}
+            onRegisterClientReport={onRegisterClientReport}
           />
         ) : null}
         {activeTab === 'tasks' ? (
@@ -377,18 +424,221 @@ function CaseNotes({ notes }: { notes: NotaRemota[] }) {
   )
 }
 
-function CaseCommunications({ notes }: { notes: NotaRemota[] }) {
+function CaseCommunications({
+  expedienteId,
+  contactId,
+  comunicaciones,
+  actuaciones,
+  notes,
+  pending,
+  onCreateCommunication,
+  reportPending,
+  onRegisterClientReport,
+}: {
+  expedienteId: string
+  contactId: string
+  comunicaciones: CaseCommunicationRow[]
+  actuaciones: ActuacionPersistida[]
+  notes: NotaRemota[]
+  pending: boolean
+  onCreateCommunication: (input: RegistrarComunicacionExpedienteInput) => Promise<unknown>
+  reportPending: boolean
+  onRegisterClientReport: (input: RegistrarReporteClienteInput) => Promise<unknown>
+}) {
+  const submitCommunication = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    try {
+      await onCreateCommunication({
+        contact_id: contactId,
+        direction: String(form.get('direction')) === 'inbound' ? 'inbound' : 'outbound',
+        communication_type: String(form.get('communicationType') || 'message'),
+        channel: String(form.get('channel') || 'email'),
+        subject: String(form.get('subject') || ''),
+        content: String(form.get('content') || ''),
+        occurred_at: new Date(
+          String(form.get('occurredAt') || new Date().toISOString()),
+        ).toISOString(),
+      })
+      formElement.reset()
+      toast.success('Comunicación guardada en el expediente.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar la comunicación.')
+    }
+  }
+  const submitClientReport = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const activityIds = form
+      .getAll('reportedActivity')
+      .map((value) => {
+        const activity = actuaciones.find((item) => item.id === value)
+        return activity ? { id: activity.id, version: activity.version } : null
+      })
+      .filter((item): item is { id: string; version: number } => item !== null)
+    try {
+      await onRegisterClientReport({
+        contactId,
+        subject: String(form.get('reportSubject') || ''),
+        content: String(form.get('reportContent') || ''),
+        channel: String(form.get('reportChannel') || 'email'),
+        activityIds,
+      })
+      formElement.reset()
+      toast.success('Actualización al cliente registrada junto con las actuaciones seleccionadas.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo registrar la actualización.')
+    }
+  }
+
   return (
     <DetailSection
       title="Comunicaciones"
-      subtitle="Conversaciones y notas internas vinculadas a este expediente."
+      subtitle="Registra comunicaciones y actualizaciones al cliente junto con las actuaciones que cubren."
     >
-      <div className="flex justify-end">
-        <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          Abrir bandeja de conversaciones
-        </Link>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Registrar comunicación</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-3" onSubmit={(event) => void submitCommunication(event)}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5 text-xs">
+                  <span>Dirección</span>
+                  <select
+                    name="direction"
+                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                  >
+                    <option value="outbound">Enviada</option>
+                    <option value="inbound">Recibida</option>
+                  </select>
+                </label>
+                <label className="space-y-1.5 text-xs">
+                  <span>Canal</span>
+                  <select
+                    name="channel"
+                    className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                  >
+                    <option value="email">Email</option>
+                    <option value="phone">Teléfono</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="meeting">Reunión</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </label>
+              </div>
+              <Input name="subject" placeholder="Asunto" maxLength={300} />
+              <Textarea
+                name="content"
+                required
+                rows={3}
+                maxLength={20000}
+                placeholder="Resumen o contenido de la comunicación"
+              />
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={pending}>
+                  {pending ? 'Guardando…' : 'Guardar comunicación'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Registrar actualización al cliente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-3" onSubmit={(event) => void submitClientReport(event)}>
+              <Input
+                name="reportSubject"
+                required
+                maxLength={300}
+                placeholder="Asunto de la actualización"
+              />
+              <Textarea
+                name="reportContent"
+                required
+                rows={3}
+                maxLength={20000}
+                placeholder="Resumen que se ha comunicado al cliente"
+              />
+              <label className="space-y-1.5 text-xs">
+                <span>Canal de envío</span>
+                <select
+                  name="reportChannel"
+                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                >
+                  <option value="email">Email</option>
+                  <option value="phone">Teléfono</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="in_person">Presencial</option>
+                  <option value="video">Videollamada</option>
+                </select>
+              </label>
+              {actuaciones.some(
+                (activity) => activity.visibleCliente && !activity.clienteInformado,
+              ) ? (
+                <fieldset className="space-y-1.5">
+                  <legend className="text-muted-foreground text-xs">
+                    Actuaciones visibles aún no comunicadas
+                  </legend>
+                  <div className="max-h-28 space-y-1 overflow-y-auto">
+                    {actuaciones
+                      .filter((activity) => activity.visibleCliente && !activity.clienteInformado)
+                      .map((activity) => (
+                        <label key={activity.id} className="flex items-center gap-2 text-xs">
+                          <input type="checkbox" name="reportedActivity" value={activity.id} />
+                          {activity.titulo}
+                        </label>
+                      ))}
+                  </div>
+                </fieldset>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Marca actuaciones como visibles al cliente para poder vincularlas a la
+                  actualización.
+                </p>
+              )}
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" variant="outline" disabled={reportPending}>
+                  {reportPending ? 'Guardando…' : 'Registrar actualización'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
       <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Historial de comunicaciones</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {comunicaciones.map((communication) => (
+            <article key={communication.id} className="border-border rounded-lg border p-3">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="text-sm font-medium">
+                  {communication.subject || 'Comunicación'} ·{' '}
+                  {communication.direction === 'outbound' ? 'Enviada' : 'Recibida'}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {formatDate(communication.occurred_at, true)} · {communication.channel}
+                </span>
+              </div>
+              <p className="mt-2 text-sm whitespace-pre-wrap">{communication.content}</p>
+            </article>
+          ))}
+          {!comunicaciones.length ? (
+            <EmptyState message="Todavía no hay comunicaciones registradas." />
+          ) : null}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Notas internas del expediente</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3 pt-5">
           {notes.map((note) => (
             <article key={note.id} className="bg-muted/30 rounded-xl border p-3">
@@ -413,6 +663,9 @@ function CaseCommunications({ notes }: { notes: NotaRemota[] }) {
           ) : null}
         </CardContent>
       </Card>
+      <Link to="/comunicaciones" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        Abrir bandeja de comunicaciones
+      </Link>
     </DetailSection>
   )
 }
@@ -466,8 +719,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-      .filter((item): item is string => typeof item === 'string' && item.length > 0)
+        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
@@ -851,7 +1104,10 @@ function WorkstreamCard({
         <div className="space-y-2 border-t pt-3">
           <p className="text-sm font-medium">Tareas de esta línea · {tasks.length}</p>
           {tasks.map((task) => (
-            <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div
+              key={task.id}
+              className="flex flex-wrap items-center justify-between gap-2 text-sm"
+            >
               <div className="min-w-0 flex-1">
                 <Link
                   to="/tareas/$taskId"
@@ -918,9 +1174,13 @@ function ParticipantCard({ participant }: { participant: ParticipantePersistido 
 function ActivityCard({
   activity,
   memberName,
+  visibilityPending,
+  onToggleVisibility,
 }: {
   activity: ActuacionPersistida
   memberName: string | undefined
+  visibilityPending: boolean
+  onToggleVisibility: () => void
 }) {
   return (
     <Card>
@@ -955,6 +1215,17 @@ function ActivityCard({
             Siguiente paso: <span className="font-medium">{activity.proximaAccion}</span>
           </p>
         ) : null}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={visibilityPending}
+            onClick={onToggleVisibility}
+          >
+            {activity.visibleCliente ? 'Dejar como interna' : 'Marcar visible al cliente'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -998,6 +1269,90 @@ function DocumentsSection({
       </Card>
     </DetailSection>
   )
+}
+
+function EconomicSection({ invoices }: { invoices: FacturaPersistida[] }) {
+  const issuedInvoices = invoices.filter((invoice) => invoice.estado !== 'draft')
+  const total = issuedInvoices.reduce((sum, invoice) => sum + invoice.importeTotal, 0)
+  const collected = issuedInvoices.reduce((sum, invoice) => sum + invoice.importeCobrado, 0)
+  const pending = issuedInvoices.reduce((sum, invoice) => sum + invoice.importePendiente, 0)
+  const money = (amount: number, currency: string) =>
+    new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(amount)
+  return (
+    <DetailSection
+      title="Situación económica"
+      subtitle="Facturas y cobros vinculados a este expediente."
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric label="Facturado" amount={money(total, invoices[0]?.moneda ?? 'EUR')} />
+        <Metric label="Cobrado" amount={money(collected, invoices[0]?.moneda ?? 'EUR')} />
+        <Metric label="Pendiente" amount={money(pending, invoices[0]?.moneda ?? 'EUR')} />
+      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="text-base">Facturas del expediente</CardTitle>
+          <Link to="/facturacion" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Abrir facturación
+          </Link>
+        </CardHeader>
+        <CardContent className="divide-border divide-y pt-0">
+          {invoices.map((invoice) => (
+            <div
+              key={invoice.id}
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {invoice.referencia} · {invoice.concepto}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {invoice.cliente} · Emitida {invoice.emision}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant={invoice.estado === 'paid' ? 'default' : 'secondary'}>
+                  {invoiceStatus(invoice.estado)}
+                </Badge>
+                <span className="text-right text-sm font-medium tabular-nums">
+                  {money(invoice.importeTotal, invoice.moneda)}
+                  <span className="text-muted-foreground block text-xs font-normal">
+                    Pendiente {money(invoice.importePendiente, invoice.moneda)}
+                  </span>
+                </span>
+              </div>
+            </div>
+          ))}
+          {!invoices.length ? (
+            <EmptyState message="Todavía no hay facturas vinculadas a este expediente." />
+          ) : null}
+        </CardContent>
+      </Card>
+    </DetailSection>
+  )
+}
+
+function Metric({ label, amount }: { label: string; amount: string }) {
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="mt-1 text-xl font-semibold tabular-nums">{amount}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function invoiceStatus(status: FacturaPersistida['estado']) {
+  const labels: Record<FacturaPersistida['estado'], string> = {
+    draft: 'Borrador',
+    issued: 'Emitida',
+    partially_paid: 'Pago parcial',
+    paid: 'Pagada',
+    overdue: 'Vencida',
+    cancelled: 'Anulada',
+    written_off: 'Incobrable',
+  }
+  return labels[status]
 }
 
 function TasksSection({
@@ -1093,7 +1448,9 @@ function CaseTaskCreateDialog({
       })
       form.reset()
       setOpen(false)
-      toast.success(lineaId ? 'Tarea vinculada a la línea de trabajo.' : 'Tarea vinculada al expediente.')
+      toast.success(
+        lineaId ? 'Tarea vinculada a la línea de trabajo.' : 'Tarea vinculada al expediente.',
+      )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
     }
@@ -1137,15 +1494,15 @@ function CaseTaskCreateDialog({
             <label htmlFor="case-quick-task-due" className="text-sm font-medium">
               Fecha prevista (opcional)
             </label>
-            <Input
-              id="case-quick-task-due"
-              name="due"
-              aria-label={dueAriaLabel}
-              type="date"
-            />
+            <Input id="case-quick-task-due" name="due" aria-label={dueAriaLabel} type="date" />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={pending}>
@@ -1271,9 +1628,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-      'es-ES',
-      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-    )
+        'es-ES',
+        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+      )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
