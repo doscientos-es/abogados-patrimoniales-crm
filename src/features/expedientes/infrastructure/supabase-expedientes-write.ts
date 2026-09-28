@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type {
   ActualizarExpedienteInput,
   ActualizarLineaInput,
-  CrearActuacionInput,
   CrearExpedienteInput,
   CrearLineaInput,
   CrearParticipanteInput,
@@ -12,7 +11,6 @@ import type {
 } from '@/features/expedientes/application/case-types'
 import {
   getSupabaseBrowserClient,
-  type CaseActivityInsert,
   type CaseParticipantInsert,
   type CaseWorkstreamInsert,
   type OpportunityPriority,
@@ -168,34 +166,6 @@ export function useActualizarLinea(firmId: string | undefined) {
           queryKey: ['expedientes', firmId, input.expedienteId, 'eventos'],
         }),
       ]).then(() => undefined),
-  })
-}
-
-export function useCrearActuacion(firmId: string | undefined) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (input: CrearActuacionInput) => {
-      const client = getSupabaseBrowserClient()
-      if (!client || !firmId) throw new Error('No hay un despacho activo.')
-      const payload: CaseActivityInsert = {
-        firm_id: firmId,
-        case_id: input.expedienteId,
-        workstream_id: input.lineaId,
-        activity_type: required(input.tipo, 'El tipo'),
-        title: required(input.titulo, 'El título'),
-        description: input.descripcion,
-        assigned_to: input.asignadoId,
-        result: input.resultado,
-        next_action: input.proximaAccion,
-        time_spent_hours: input.horas,
-        billable: input.facturable,
-        client_visible: input.visibleCliente ?? false,
-      }
-      const { error } = await client.from('crm_case_activities').insert(payload)
-      if (error) throw error
-    },
-    onSuccess: (_, input) =>
-      void queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, input.expedienteId] }),
   })
 }
 

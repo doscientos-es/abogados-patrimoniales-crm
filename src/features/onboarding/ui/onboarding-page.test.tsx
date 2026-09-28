@@ -28,6 +28,19 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
 }))
 
+vi.mock('@/features/auth', () => ({
+  useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
+  useActiveMembership: () => ({ data: { firmId: 'firm-1' } }),
+}))
+
+vi.mock('@/components/tareas/task-create-dialog', () => ({
+  PresetPicker: ({ onPick }: { onPick: (title: string) => void }) => (
+    <button type="button" onClick={() => onPick('Llamar al contacto')}>
+      Presets
+    </button>
+  ),
+}))
+
 afterEach(cleanup)
 
 describe('CreateOnboardingDialog', () => {
@@ -187,8 +200,7 @@ describe('CreateOnboardingDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /registrar proforma/i }))
 
-    expect(screen.getByRole('dialog').className).toContain('sm:max-w-3xl')
-    expect(screen.getByRole('dialog').className).toContain('lg:max-w-4xl')
+    expect(screen.getByRole('dialog').className).toContain('sm:max-w-2xl')
     expect(screen.getByText('Los campos marcados con * son obligatorios.')).toBeTruthy()
     expect(screen.getByLabelText('Lead *')).toBeTruthy()
     expect(screen.getByLabelText('Importe acordado (Opcional)')).toBeTruthy()

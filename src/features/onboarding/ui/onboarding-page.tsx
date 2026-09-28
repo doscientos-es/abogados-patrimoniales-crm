@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
+import { PresetPicker } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -89,9 +90,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-          typeof error === 'object' &&
-          'message' in error &&
-          typeof error.message === 'string'
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -672,7 +673,7 @@ export function CreateOnboardingDialog({
           Registrar proforma
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-3xl lg:max-w-4xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-2xl">
         <DialogHeader>
           <div className="bg-muted/45 border-b px-6 py-5">
             <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
@@ -1001,6 +1002,9 @@ function TaskDialog({
   onSave: (type: 'Tarea' | 'Recordatorio', title: string, due: string | null) => Promise<unknown>
 }) {
   const label = type === 'Tarea' ? 'Crear tarea' : 'Crear recordatorio'
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const [titleValue, setTitleValue] = useState(`${PROXIMO_PASO[item.fase]} · ${item.asunto}`)
   return (
     <SmallDialog
       trigger={
@@ -1023,12 +1027,17 @@ function TaskDialog({
         )
       }
     >
-      <Field
-        label="Título"
-        name="titulo"
-        defaultValue={`${PROXIMO_PASO[item.fase]} · ${item.asunto}`}
-        required
-      />
+      <div className="flex items-end gap-1.5">
+        <Field
+          label="Título"
+          name="titulo"
+          className="flex-1"
+          value={titleValue}
+          onChange={(event) => setTitleValue(event.target.value)}
+          required
+        />
+        <PresetPicker firmId={membership.data?.firmId} onPick={setTitleValue} />
+      </div>
       <Field label="Fecha prevista" name="vence" type="date" />
       <p className="text-muted-foreground text-xs">La tarea quedará vinculada al Lead asociado.</p>
     </SmallDialog>

@@ -17,6 +17,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
 import { GlobalSearch } from '@/features/search'
+import { TaskNotificationsBell } from '@/features/tareas/ui/task-notifications-bell'
 
 import appCss from '../styles.css?url'
 
@@ -59,9 +60,8 @@ function NavigationProgress() {
     <>
       <div
         aria-hidden="true"
-        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
-          isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-        }`}
+        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
+          }`}
       />
       <output aria-atomic="true" aria-live="polite" className="sr-only">
         {isNavigating ? 'Cargando la nueva página' : ''}
@@ -251,6 +251,7 @@ function AuthenticatedRoot() {
               <Link to="/calendario" className={buttonVariants({ size: 'sm' })}>
                 Abrir calendario
               </Link>
+              <TaskNotificationsBell />
               <AccountMenu />
             </div>
             <NavigationProgress />

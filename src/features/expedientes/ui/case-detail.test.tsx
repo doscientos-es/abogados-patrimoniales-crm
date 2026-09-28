@@ -84,8 +84,7 @@ function renderDetail(
             titulo: 'Revisión inicial',
             tipo: 'Análisis',
             ocurridaEn: '2026-08-07T09:15:00Z',
-            horas: 2,
-            facturable: true,
+            relevancia: 'activity',
           },
         ] as never
       }
@@ -142,7 +141,6 @@ function renderDetail(
       relatedForms={{
         participant: <div>Alta de interviniente</div>,
         workstream: <div>Nueva línea</div>,
-        activity: <div>Registrar actuación</div>,
       }}
     />,
   )

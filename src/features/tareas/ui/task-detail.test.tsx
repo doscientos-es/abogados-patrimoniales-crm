@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   openTask: vi.fn().mockResolvedValue(undefined),
   changeStatus: vi.fn().mockResolvedValue(undefined),
   completeTask: vi.fn().mockResolvedValue(undefined),
-  completeTaskAsActivity: vi.fn().mockResolvedValue(undefined),
   addSubtask: vi.fn().mockResolvedValue(undefined),
   setSubtaskDone: vi.fn().mockResolvedValue(undefined),
   subtasks: [] as Array<{
@@ -15,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     hecha: boolean
     creadaPorId: string | null
     creadaEn: string
+    convertidaEnId: string | null
   }>,
   cancelTask: vi.fn().mockResolvedValue(undefined),
   rejectTask: vi.fn().mockResolvedValue(undefined),
@@ -22,6 +22,36 @@ const mocks = vi.hoisted(() => ({
   updateSpecialMeeting: vi.fn().mockResolvedValue(undefined),
   meetingDetails: {} as Record<string, unknown>,
   role: 'paralegal',
+  createTask: vi.fn().mockResolvedValue({ id: 'task-new' }),
+  convertSubtask: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/features/notas/infrastructure/supabase-notas', () => ({
+  useNotasRemotas: () => ({ data: [] }),
+  useGuardarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+
+vi.mock('@/components/tareas/task-create-dialog', () => ({
+  TaskCreateDialog: ({
+    title,
+    defaultTitle,
+    onCreate,
+  }: {
+    title: string
+    defaultTitle: string
+    onCreate: (input: Record<string, unknown>) => Promise<unknown>
+  }) => (
+    <div role="dialog" aria-label={title}>
+      <span>{defaultTitle}</span>
+      <button
+        type="button"
+        onClick={() => void onCreate({ titulo: defaultTitle, expedienteId: 'case-1' })}
+      >
+        Crear tarea convertida
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -66,7 +96,15 @@ vi.mock('@/features/expedientes', () => ({
     isError: false,
   }),
 }))
+vi.mock('@/features/contactos', () => ({
+  useContactos: () => ({ data: [], isPending: false, isError: false }),
+}))
 vi.mock('@/features/tareas', () => ({
+  RELEVANCIA_TAREA_LABELS: {
+    normal: 'Tarea normal',
+    activity: 'Actuación',
+    milestone: 'Hito histórico',
+  },
   useTareasPersistentes: () => ({
     data: [
       {
@@ -93,6 +131,7 @@ vi.mock('@/features/tareas', () => ({
         motivoRechazo: '',
         rechazadaEn: null,
         tareaPadreId: null,
+        origenSubtareaDeId: null,
         reunion: mocks.meetingDetails,
         subtareas: mocks.subtasks,
         bloqueada: false,
@@ -113,8 +152,6 @@ vi.mock('@/features/tareas', () => ({
       },
     ],
   }),
-  useEvidenciasTarea: () => ({ data: [] }),
-  useEventosTarea: () => ({ data: [] }),
   useDependenciasTarea: () => ({ data: [] }),
   useDocumentosTarea: () => ({ data: [] }),
   useDocumentosExpedienteTarea: () => ({ data: [] }),
@@ -129,18 +166,21 @@ vi.mock('@/features/tareas', () => ({
   }),
   usePonerTareaEnEspera: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCompletarTarea: () => ({ mutateAsync: mocks.completeTask, isPending: false }),
-  useCompletarTareaComoActuacion: () => ({
-    mutateAsync: mocks.completeTaskAsActivity,
-    isPending: false,
-  }),
   useAnadirSubtareaTarea: () => ({ mutateAsync: mocks.addSubtask, isPending: false }),
   useMarcarSubtareaTarea: () => ({ mutateAsync: mocks.setSubtaskDone, isPending: false }),
   useMarcarSiguienteAccion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useAnadirMensajeTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useAnadirEvidenciaTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useComunicacionesTarea: () => ({ data: [] }),
+  useRegistrarComunicacionTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCrearDependenciaTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDependenciasDespacho: () => ({ data: [] }),
+  useAnadirSiguienteTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useConvertirSubtareaTarea: () => ({ mutateAsync: mocks.convertSubtask, isPending: false }),
   useEliminarDependenciaTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useVincularDocumentoTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useEditarTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCrearTarea: () => ({ mutateAsync: mocks.createTask, isPending: false }),
+  useMarcarNotificacionesLeidas: () => ({ mutate: vi.fn(), isPending: false }),
   useDesvincularDocumentoTarea: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
@@ -178,6 +218,7 @@ describe('TaskDetail', () => {
         hecha: false,
         creadaPorId: 'user-1',
         creadaEn: '2026-09-27T09:00:00Z',
+        convertidaEnId: null,
       },
     ]
     render(<TaskDetail taskId="task-1" />)
@@ -190,6 +231,54 @@ describe('TaskDetail', () => {
       subtaskId: 'subtask-1',
       completed: true,
     })
+  })
+
+  it('converts a checklist item into a linked task', async () => {
+    mocks.subtasks = [
+      {
+        id: 'subtask-1',
+        texto: 'Pedir nota simple',
+        hecha: false,
+        creadaPorId: 'user-1',
+        creadaEn: '2026-09-27T09:00:00Z',
+        convertidaEnId: null,
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Convertir en tarea: Pedir nota simple' }))
+    const dialog = screen.getByRole('dialog', { name: 'Convertir subtarea en tarea' })
+    expect(within(dialog).getByText('Pedir nota simple')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Crear tarea convertida' }))
+
+    await expect.poll(() => mocks.convertSubtask.mock.calls.length).toBe(1)
+    expect(mocks.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ titulo: 'Pedir nota simple' }),
+    )
+    expect(mocks.convertSubtask).toHaveBeenCalledWith({
+      task: expect.objectContaining({ id: 'task-1' }),
+      subtaskId: 'subtask-1',
+      convertedTaskId: 'task-new',
+    })
+  })
+
+  it('marks converted checklist items instead of offering conversion again', () => {
+    mocks.subtasks = [
+      {
+        id: 'subtask-1',
+        texto: 'Pedir nota simple',
+        hecha: false,
+        creadaPorId: 'user-1',
+        creadaEn: '2026-09-27T09:00:00Z',
+        convertidaEnId: 'task-1',
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(screen.getByText('Convertida en')).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Convertir en tarea: Pedir nota simple' }),
+    ).toBeNull()
   })
 
   it('shows task traceability and lets the responsible user work without managing protected fields', async () => {
@@ -220,7 +309,7 @@ describe('TaskDetail', () => {
     )
   })
 
-  it('completes a case task and records it as an activity when selected', async () => {
+  it('completes a task marked as a milestone when selected', async () => {
     render(<TaskDetail taskId="task-1" />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Completar' }))
@@ -228,20 +317,20 @@ describe('TaskDetail', () => {
     fireEvent.change(within(dialog).getByLabelText('Resultado'), {
       target: { value: 'Escritura revisada.' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Al completar'), {
-      target: { value: 'activity' },
+    fireEvent.change(within(dialog).getByLabelText('Relevancia'), {
+      target: { value: 'milestone' },
     })
     const form = dialog.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario para completar la tarea.')
     fireEvent.submit(form)
 
-    await expect.poll(() => mocks.completeTaskAsActivity.mock.calls.length).toBe(1)
-    expect(mocks.completeTaskAsActivity).toHaveBeenCalledWith({
+    await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
+    expect(mocks.completeTask).toHaveBeenCalledWith({
       task: expect.objectContaining({ id: 'task-1', expedienteId: 'case-1' }),
       resultado: 'Escritura revisada.',
       continuidad: 'create_next_task',
+      relevancia: 'milestone',
     })
-    expect(mocks.completeTask).not.toHaveBeenCalled()
   })
 
   it('keeps ordinary task completion as the default', async () => {
@@ -261,8 +350,8 @@ describe('TaskDetail', () => {
       task: expect.objectContaining({ id: 'task-1' }),
       resultado: 'Revisión terminada.',
       continuidad: 'create_next_task',
+      relevancia: 'normal',
     })
-    expect(mocks.completeTaskAsActivity).not.toHaveBeenCalled()
   })
 
   it('preselects case contacts and saves enriched meeting details for a manager', async () => {

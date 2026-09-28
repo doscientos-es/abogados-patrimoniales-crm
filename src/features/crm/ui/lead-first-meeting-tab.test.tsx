@@ -63,6 +63,7 @@ const scheduledTask = (appointmentChanges: Record<string, unknown> = {}) =>
     motivoRechazo: '',
     rechazadaEn: null,
     tareaPadreId: null,
+    origenSubtareaDeId: null,
     reunion: {
       startsAt: '2026-10-20T09:00:00.000Z',
       endsAt: '2026-10-20T10:00:00.000Z',

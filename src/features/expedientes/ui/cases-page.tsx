@@ -37,6 +37,8 @@ const CASE_NATURE_TABS = [
 ] as const
 
 export function CasesPage({
+  nature: natureProp,
+  onNatureChange,
   expedientes,
   contactos,
   miembros,
@@ -47,6 +49,8 @@ export function CasesPage({
   actions,
 }: {
   expedientes: ExpedientePersistido[]
+  nature?: CaseNature
+  onNatureChange?: (nature: CaseNature) => void
   contactos: ContactoPersistido[]
   miembros: MiembroDespacho[]
   tareas: TareaPersistida[]
@@ -56,7 +60,8 @@ export function CasesPage({
   actions?: ReactNode
 }) {
   const [query, setQuery] = useState('')
-  const [nature, setNature] = useState<CaseNature>('all')
+  const [localNature, setLocalNature] = useState<CaseNature>('all')
+  const nature = natureProp ?? localNature
   const [assignee, setAssignee] = useState('all')
   const [status, setStatus] = useState('all')
   const [dependency, setDependency] = useState('all')
@@ -155,7 +160,10 @@ export function CasesPage({
               aria-controls="case-control-board"
               aria-selected={nature === value}
               tabIndex={nature === value ? 0 : -1}
-              onClick={() => setNature(value)}
+              onClick={() => {
+                setLocalNature(value)
+                onNatureChange?.(value)
+              }}
               className={caseNatureTabClass(nature === value)}
             >
               {label}
@@ -579,9 +587,8 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
 }
 
 function caseNatureTabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${
-    active
+  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
       ? 'border-primary text-primary'
       : 'border-transparent text-muted-foreground hover:text-foreground'
-  }`
+    }`
 }

@@ -13,6 +13,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
+import { PresetPicker } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -59,6 +60,7 @@ export function NuevaOportunidadPage() {
   const createOpportunity = useCrearOportunidad(firmId)
   const createTask = useCrearTarea(firmId)
   const createNote = useCrearNotaOportunidad(firmId)
+  const [initialTask, setInitialTask] = useState('')
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
   const [hasChangedContact, setHasChangedContact] = useState(false)
@@ -454,12 +456,19 @@ export function NuevaOportunidadPage() {
               description="Puedes dejar preparada la primera acción y una nota interna."
             />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                name="initialTask"
-                label="Primera tarea (opcional)"
-                maxLength={240}
-                placeholder="Llamar al contacto"
-              />
+              <div className="flex items-end gap-1.5">
+                <div className="flex-1">
+                  <Field
+                    name="initialTask"
+                    label="Primera tarea (opcional)"
+                    maxLength={240}
+                    placeholder="Llamar al contacto"
+                    value={initialTask}
+                    onChange={setInitialTask}
+                  />
+                </div>
+                <PresetPicker firmId={firmId} onPick={setInitialTask} />
+              </div>
               <Field name="initialTaskDate" label="Fecha prevista" type="date" maxLength={10} />
               <Field name="initialNoteTitle" label="Título de la nota" maxLength={300} />
               <div className="space-y-1.5 sm:col-span-2">
@@ -525,11 +534,19 @@ function Field({
   required?: boolean
   type?: string
   placeholder?: string
+  value?: string
+  onChange?: (value: string) => void
 }) {
+  const { onChange, ...rest } = inputProps
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`lead-${name}`}>{label}</Label>
-      <Input id={`lead-${name}`} name={name} {...inputProps} />
+      <Input
+        id={`lead-${name}`}
+        name={name}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+        {...rest}
+      />
     </div>
   )
 }

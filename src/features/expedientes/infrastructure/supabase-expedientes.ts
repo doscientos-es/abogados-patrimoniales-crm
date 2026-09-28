@@ -11,7 +11,6 @@ import type {
 } from "@/features/expedientes/application/case-types";
 import {
   getSupabaseBrowserClient,
-  type CaseActivityRow,
   type CaseCommunicationInsert,
   type CaseCommunicationRow,
   type CaseDocumentRow,
@@ -20,6 +19,7 @@ import {
   type CaseRow,
   type CaseWorkstreamRow,
   type OpportunityPriority,
+  type TaskRow,
 } from "@/shared/infrastructure/supabase";
 
 const priorityFromDatabase: Record<OpportunityPriority, PrioridadExpediente> = {
@@ -70,24 +70,56 @@ export const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
   version: row.version,
 });
 
-const actuacionFromRow = (row: CaseActivityRow): ActuacionPersistida => ({
-  id: row.id,
-  expedienteId: row.case_id,
-  lineaId: row.workstream_id,
-  tipo: row.activity_type,
-  titulo: row.title,
-  descripcion: row.description,
-  ocurridaEn: row.occurred_at,
-  asignadoId: row.assigned_to,
-  estado: row.status,
-  resultado: row.result,
-  proximaAccion: row.next_action,
-  horas: row.time_spent_hours,
-  facturable: row.billable,
-  visibleCliente: row.client_visible,
-  clienteInformado: row.client_informed,
-  version: row.version,
-});
+type ActuacionRow = Pick<
+  TaskRow,
+  | "id"
+  | "case_id"
+  | "workstream_id"
+  | "relevance"
+  | "title"
+  | "description"
+  | "completed_at"
+  | "updated_at"
+  | "assigned_to"
+  | "completion_result"
+  | "client_visible"
+  | "client_informed"
+  | "version"
+>;
+
+const actuacionFromRow = (row: ActuacionRow): ActuacionPersistida => {
+  const relevancia = row.relevance === "milestone" ? "milestone" : "activity";
+  return {
+    id: row.id,
+    expedienteId: row.case_id ?? "",
+    lineaId: row.workstream_id,
+    relevancia,
+    tipo: relevancia === "milestone" ? "Hito histórico" : "Actuación",
+    titulo: row.title,
+    descripcion: row.description,
+    ocurridaEn: row.completed_at ?? row.updated_at,
+    asignadoId: row.assigned_to,
+    resultado: row.completion_result,
+    visibleCliente: row.client_visible,
+    clienteInformado: row.client_informed,
+    version: row.version,
+  };
+};
+
+const ACTUACION_COLUMNS =
+  "id, case_id, workstream_id, relevance, title, description, completed_at, updated_at, assigned_to, completion_result, client_visible, client_informed, version";
+
+function actuacionesQuery(firmId: string) {
+  const client = getSupabaseBrowserClient();
+  if (!client) return null;
+  return client
+    .from("crm_tasks")
+    .select(ACTUACION_COLUMNS)
+    .eq("firm_id", firmId)
+    .eq("status", "completed")
+    .in("relevance", ["activity", "milestone"])
+    .not("case_id", "is", null);
+}
 
 const participanteFromRow = (row: CaseParticipantRow): ParticipantePersistido => ({
   id: row.id,
@@ -174,16 +206,13 @@ export function useActuacionesPersistentes(firmId: string | undefined, caseId: s
     queryKey: ["expedientes", firmId, caseId, "actuaciones"],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
-      const { data, error } = await client
-        .from("crm_case_activities")
-        .select("*")
-        .eq("firm_id", firmId)
+      const query = firmId ? actuacionesQuery(firmId) : null;
+      if (!query) return [];
+      const { data, error } = await query
         .eq("case_id", caseId)
-        .order("occurred_at", { ascending: false });
+        .order("completed_at", { ascending: false });
       if (error) throw error;
-      return data.map(actuacionFromRow);
+      return (data as ActuacionRow[]).map(actuacionFromRow);
     },
   });
 }
@@ -216,16 +245,11 @@ export function useActuacionesRecientes(firmId: string | undefined) {
     queryKey: ["expedientes", firmId, "actuaciones-recientes"],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
-      const { data, error } = await client
-        .from("crm_case_activities")
-        .select("*")
-        .eq("firm_id", firmId)
-        .order("occurred_at", { ascending: false })
-        .limit(8);
+      const query = firmId ? actuacionesQuery(firmId) : null;
+      if (!query) return [];
+      const { data, error } = await query.order("completed_at", { ascending: false }).limit(8);
       if (error) throw error;
-      return data.map(actuacionFromRow);
+      return (data as ActuacionRow[]).map(actuacionFromRow);
     },
   });
 }
@@ -236,15 +260,11 @@ export function useActuacionesDespacho(firmId: string | undefined) {
     queryKey: ["expedientes", firmId, "actuaciones"],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
-      const { data, error } = await client
-        .from("crm_case_activities")
-        .select("*")
-        .eq("firm_id", firmId)
-        .order("occurred_at", { ascending: false });
+      const query = firmId ? actuacionesQuery(firmId) : null;
+      if (!query) return [];
+      const { data, error } = await query.order("completed_at", { ascending: false });
       if (error) throw error;
-      return data.map(actuacionFromRow);
+      return (data as ActuacionRow[]).map(actuacionFromRow);
     },
   });
 }
@@ -389,20 +409,21 @@ export function useActualizarVisibilidadActuacion(firmId: string | undefined, ca
     mutationFn: async (input: ActualizarVisibilidadActuacionInput) => {
       const client = getSupabaseBrowserClient();
       if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client
-        .from("crm_case_activities")
-        .update({ client_visible: input.visibleCliente })
-        .eq("firm_id", firmId)
-        .eq("case_id", input.expedienteId)
-        .eq("id", input.actuacionId)
-        .eq("version", input.versionEsperada)
-        .select()
-        .maybeSingle();
+      const { data, error } = await client.rpc("crm_set_task_client_visible", {
+        target_task_id: input.actuacionId,
+        target_expected_version: input.versionEsperada,
+        target_visible: input.visibleCliente,
+      });
+      if (error?.code === "40001")
+        throw new Error("La actuación cambió en otra sesión. Recarga antes de guardar.");
       if (error) throw error;
-      if (!data) throw new Error("La actuación cambió en otra sesión. Recarga antes de guardar.");
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, caseId] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, caseId] }),
+        queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
+      ]).then(() => undefined),
   });
 }
 

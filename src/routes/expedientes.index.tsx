@@ -18,6 +18,14 @@ import { useTareasPersistentes } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/expedientes/')({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { naturaleza?: 'Judicial' | 'Extrajudicial' | undefined } => ({
+    naturaleza:
+      search['naturaleza'] === 'Judicial' || search['naturaleza'] === 'Extrajudicial'
+        ? search['naturaleza']
+        : undefined,
+  }),
   head: () => ({
     meta: [
       { title: 'Control de expedientes — LEX' },
@@ -30,6 +38,7 @@ export const Route = createFileRoute('/expedientes/')({
 
 function CasesRoute() {
   const navigate = useNavigate()
+  const { naturaleza } = Route.useSearch()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -87,6 +96,13 @@ function CasesRoute() {
 
   return (
     <CasesPage
+      nature={naturaleza ?? 'all'}
+      onNatureChange={(value) =>
+        void navigate({
+          to: '/expedientes',
+          search: { naturaleza: value === 'all' ? undefined : value },
+        })
+      }
       expedientes={cases.data ?? []}
       contactos={contacts.data ?? []}
       miembros={members.data ?? []}

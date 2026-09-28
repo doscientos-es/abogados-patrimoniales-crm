@@ -7,11 +7,9 @@ const props = {
   expedienteId: 'case-1',
   contactos: [{ id: 'contact-1', nombre: 'Inversiones Torrelodones' }] as never,
   miembros: [{ id: 'member-1', nombre: 'Luis Ferrán' }] as never,
-  lineas: [{ id: 'line-1', titulo: 'Due diligence' }] as never,
   pending: false,
   onParticipant: vi.fn().mockResolvedValue(undefined),
   onWorkstream: vi.fn().mockResolvedValue(undefined),
-  onActivity: vi.fn().mockResolvedValue(undefined),
 }
 
 describe('CaseRelatedForms', () => {
@@ -20,7 +18,6 @@ describe('CaseRelatedForms', () => {
   it.each([
     ['participant', 'Añadir interviniente', 'Nombre'],
     ['workstream', 'Nueva línea', 'Título de la línea *'],
-    ['activity', 'Registrar actuación', 'Tipo'],
   ] as const)('opens the %s form in a dialog', (section, trigger, field) => {
     render(<CaseRelatedForms {...props} section={section} />)
 

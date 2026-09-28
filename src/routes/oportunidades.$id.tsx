@@ -61,6 +61,11 @@ export type LeadDetailTab =
   | "acceptance"
   | "history";
 
+function isLeadTab(tab: unknown): tab is LeadDetailTab {
+  if (typeof tab !== 'string') return false
+  return LEAD_DETAIL_TABS.some((candidate) => candidate.id === tab);
+}
+
 const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: "summary", label: "Resumen" },
   { id: "contact", label: "Contacto" },
@@ -78,6 +83,9 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
 ];
 
 export const Route = createFileRoute("/oportunidades/$id")({
+  validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => ({
+    ...(isLeadTab(search['tab']) ? { tab: search['tab'] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Ficha de Lead — LEX" },
@@ -100,6 +108,8 @@ export const Route = createFileRoute("/oportunidades/$id")({
 
 function FichaOportunidadPage() {
   const { id } = Route.useParams();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const session = useAuthSession();
   const membership = useActiveMembership(
     session.status === "signed-in" ? session.user.id : undefined,
@@ -110,7 +120,10 @@ function FichaOportunidadPage() {
   const miembros = useMiembrosDespacho(firmId);
   const tareas = useTareasPersistentes(firmId);
   const actualizar = useActualizarOportunidad(firmId);
-  const [activeTab, setActiveTab] = useState<LeadDetailTab>("summary");
+  const activeTab: LeadDetailTab = isLeadTab(tab) ? tab : "summary";
+  const setActiveTab = (nextTab: LeadDetailTab) => {
+    void navigate({ search: { tab: nextTab === "summary" ? undefined : nextTab } });
+  };
 
   if (session.status === "loading") {
     return (

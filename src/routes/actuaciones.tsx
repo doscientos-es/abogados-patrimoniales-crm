@@ -67,8 +67,11 @@ function ActuacionesPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="font-medium">{activity.titulo}</h2>
-                        <Badge variant="outline">{activity.estado}</Badge>
-                        <Badge variant="secondary">{activity.tipo}</Badge>
+                        <Badge
+                          variant={activity.relevancia === 'milestone' ? 'default' : 'secondary'}
+                        >
+                          {activity.tipo}
+                        </Badge>
                       </div>
                       {activity.descripcion ? (
                         <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
@@ -78,11 +81,6 @@ function ActuacionesPage() {
                       {activity.resultado ? (
                         <p className="mt-2 text-sm">
                           <strong>Resultado:</strong> {activity.resultado}
-                        </p>
-                      ) : null}
-                      {activity.proximaAccion ? (
-                        <p className="mt-1 text-sm">
-                          <strong>Siguiente acción:</strong> {activity.proximaAccion}
                         </p>
                       ) : null}
                       <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -95,8 +93,6 @@ function ActuacionesPage() {
                         <span>
                           {memberNames.get(activity.asignadoId ?? '') ?? 'Sin responsable'}
                         </span>
-                        {activity.horas > 0 ? <span>{activity.horas} h</span> : null}
-                        {activity.facturable ? <span>Facturable</span> : null}
                       </div>
                     </div>
                     {caseItem ? (

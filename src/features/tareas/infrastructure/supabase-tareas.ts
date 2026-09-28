@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 
 import type {
   CompletarTareaInput,
@@ -10,10 +11,13 @@ import type {
   ValidarPlazoInput,
 } from '@/features/tareas/application/task-types'
 import {
+  type CaseCommunicationInsert,
+  type CaseCommunicationRow,
   type CaseDocumentRow,
   type DocumentTaskLinkRow,
   getSupabaseBrowserClient,
   type Json,
+  type NotificationRow,
   type TaskEvidenceRow,
   type TaskEventRow,
   type TaskInboxItemRow,
@@ -24,7 +28,7 @@ import {
   type TaskStatus,
 } from '@/shared/infrastructure/supabase'
 
-export type { TaskInboxItemRow } from '@/shared/infrastructure/supabase'
+export type { NotificationRow, TaskInboxItemRow } from '@/shared/infrastructure/supabase'
 
 const typeFromDb = {
   task: 'Tarea',
@@ -73,6 +77,7 @@ function subtareasFromDetails(details: Json): TareaPersistida['subtareas'] {
     const done = value['done']
     const createdBy = value['created_by']
     const createdAt = value['created_at']
+    const convertedTo = value['converted_to']
     if (
       typeof id !== 'string' ||
       typeof text !== 'string' ||
@@ -81,8 +86,25 @@ function subtareasFromDetails(details: Json): TareaPersistida['subtareas'] {
       typeof createdAt !== 'string'
     )
       return []
-    return [{ id, texto: text, hecha: done, creadaPorId: createdBy, creadaEn: createdAt }]
+    return [
+      {
+        id,
+        texto: text,
+        hecha: done,
+        creadaPorId: createdBy,
+        creadaEn: createdAt,
+        convertidaEnId: typeof convertedTo === 'string' ? convertedTo : null,
+      },
+    ]
   })
+}
+
+function origenSubtareaFromDetails(details: Json): string | null {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return null
+  const origin = (details as Record<string, Json>)['origin_subtask']
+  if (!origin || typeof origin !== 'object' || Array.isArray(origin)) return null
+  const taskId = origin['task_id']
+  return typeof taskId === 'string' ? taskId : null
 }
 
 const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
@@ -116,12 +138,14 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   revisarEn: row.waiting_until,
   detalleEspera: row.waiting_detail,
   resultadoCierre: row.completion_result,
+  relevancia: row.relevance ?? 'normal',
   motivoCancelacion: row.cancellation_reason,
   abiertaEn: row.opened_at,
   abiertaPorId: row.opened_by,
   motivoRechazo: row.rejection_reason,
   rechazadaEn: row.rejected_at,
   tareaPadreId: row.parent_task_id,
+  origenSubtareaDeId: origenSubtareaFromDetails(row.details),
   reunion:
     row.meeting_details &&
     typeof row.meeting_details === 'object' &&
@@ -326,11 +350,15 @@ export function useCrearTarea(firmId: string | undefined) {
         })),
       }
     },
-    onSuccess: (task) =>
+    onSuccess: (task) => {
       queryClient.setQueryData<TareaPersistida[]>(['tareas', firmId], (items) => [
         task,
         ...(items ?? []),
-      ]),
+      ])
+      if (task.asignadoId && task.asignadoId === task.creadaPorId) {
+        void queryClient.invalidateQueries({ queryKey: ['tareas', firmId, task.asignadoId, 'inbox'] })
+      }
+    },
   })
 }
 
@@ -445,7 +473,7 @@ export function usePonerTareaEnEspera(firmId: string | undefined) {
 export function useCompletarTarea(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ task, resultado, continuidad }: CompletarTareaInput) => {
+    mutationFn: async ({ task, resultado, continuidad, relevancia }: CompletarTareaInput) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       if (!resultado.trim()) throw new Error('El resultado es obligatorio.')
@@ -454,43 +482,27 @@ export function useCompletarTarea(firmId: string | undefined) {
         target_expected_version: task.version,
         result_text: resultado.trim(),
         continuity_decision: continuidad ?? null,
+        task_relevance: relevancia ?? 'normal',
       })
       if (error?.code === '40001')
         throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
       if (error) throw error
       return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
-  })
-}
-
-export function useCompletarTareaComoActuacion(firmId: string | undefined) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ task, resultado, continuidad }: CompletarTareaInput) => {
-      const client = getSupabaseBrowserClient()
-      if (!client || !firmId) throw new Error('No hay un despacho activo.')
-      if (!task.expedienteId) throw new Error('La tarea no está vinculada a un expediente.')
-      if (!resultado.trim()) throw new Error('El resultado es obligatorio.')
-      const { data, error } = await client.rpc('crm_complete_task_as_activity', {
-        target_task_id: task.id,
-        target_expected_version: task.version,
-        result_text: resultado.trim(),
-        continuity_decision: continuidad ?? null,
-      })
-      if (error?.code === '40001')
-        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
-      if (error) throw error
-      return data
-    },
-    onSuccess: (_, { task }) =>
+    onSuccess: (_, { task, relevancia }) =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
-        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, task.expedienteId] }),
-        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'actuaciones'] }),
-        queryClient.invalidateQueries({
-          queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
-        }),
+        ...(relevancia && relevancia !== 'normal'
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: ['expedientes', firmId, task.expedienteId],
+              }),
+              queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'actuaciones'] }),
+              queryClient.invalidateQueries({
+                queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
+              }),
+            ]
+          : []),
       ]).then(() => undefined),
   })
 }
@@ -538,6 +550,32 @@ export function useMarcarSubtareaTarea(firmId: string | undefined) {
       })
       if (error?.code === '40001')
         throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useConvertirSubtareaTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      task,
+      subtaskId,
+      convertedTaskId,
+    }: {
+      task: TareaPersistida
+      subtaskId: string
+      convertedTaskId: string
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_mark_task_subtask_converted', {
+        target_task_id: task.id,
+        target_subtask_id: subtaskId,
+        converted_task_id: convertedTaskId,
+      })
       if (error) throw error
       return fromRow(data)
     },
@@ -657,6 +695,58 @@ export function useCrearDependenciaTarea(firmId: string | undefined) {
       })
       if (error) throw error
       return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useDependenciasDespacho(firmId: string | undefined) {
+  return useQuery({
+    queryKey: ['tareas', firmId, 'dependencias'],
+    enabled: Boolean(firmId),
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
+      const { data, error } = await client
+        .from('crm_task_dependencies')
+        .select('*')
+        .eq('firm_id', firmId)
+      if (error) throw error
+      return (data ?? []) as TaskDependencyRow[]
+    },
+  })
+}
+
+export type SiguienteTareaInput = {
+  task: TareaPersistida
+  titulo: string
+  descripcion: string
+  prioridad: TareaPersistida['prioridad']
+  asignadoId: string | null
+  venceEn: string | null
+  diasTrasAnterior: number | null
+  horaLimite: string | null
+}
+
+export function useAnadirSiguienteTarea(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: SiguienteTareaInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.titulo.trim()) throw new Error('Indica el título de la siguiente tarea.')
+      const { data, error } = await client.rpc('crm_add_next_task', {
+        target_task_id: input.task.id,
+        new_title: input.titulo.trim(),
+        new_description: input.descripcion,
+        new_priority: priorityToDb[input.prioridad],
+        new_assigned_to: input.asignadoId,
+        new_due_at: input.venceEn,
+        new_due_days: input.diasTrasAnterior,
+        new_due_time: input.horaLimite,
+      })
+      if (error) throw error
+      return fromRow(data, true)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
   })
@@ -979,5 +1069,72 @@ export function useValidarPlazo(firmId: string | undefined) {
       return fromRow(data)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
+}
+
+export function useNotificacionesTareas(
+  userId: string | undefined,
+  onNueva?: (notificacion: NotificationRow) => void,
+) {
+  const queryClient = useQueryClient()
+  const queryKey = ['notificaciones', userId]
+
+  useEffect(() => {
+    const client = getSupabaseBrowserClient()
+    if (!client || !userId) return
+    const channel = client
+      .channel(`notificaciones:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'crm_notifications',
+          filter: `recipient_id=eq.${userId}`,
+        },
+        (payload) => {
+          void queryClient.invalidateQueries({ queryKey: ['notificaciones', userId] })
+          void queryClient.invalidateQueries({ queryKey: ['tareas'] })
+          onNueva?.(payload.new as NotificationRow)
+        },
+      )
+      .subscribe()
+    return () => {
+      void client.removeChannel(channel)
+    }
+  }, [queryClient, userId, onNueva])
+
+  return useQuery({
+    queryKey,
+    enabled: Boolean(userId),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) return []
+      const { data, error } = await client
+        .from('crm_notifications')
+        .select('*')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return (data ?? []) as NotificationRow[]
+    },
+  })
+}
+
+export function useMarcarNotificacionesLeidas() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (taskId?: string | null) => {
+      const client = getSupabaseBrowserClient()
+      if (!client) throw new Error('No hay conexión con el servidor.')
+      const { error } = await client.rpc('crm_mark_notifications_read', {
+        target_task_id: taskId ?? null,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notificaciones'] }),
   })
 }

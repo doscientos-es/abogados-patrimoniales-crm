@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { PendingPanel } from "@/components/common";
+import { TaskWorkspace } from "@/components/tareas/task-workspace";
 import { useActiveMembership, useAuthSession } from "@/features/auth";
 import { useContactos } from "@/features/contactos";
 import { useMiembrosDespacho } from "@/features/crm";
@@ -10,13 +12,13 @@ import {
   CaseEditForm,
   CaseRelatedForms,
   CaseDetail,
+  type CaseDetailTab,
   useComunicacionesExpediente,
   useActualizarVisibilidadActuacion,
   useActualizarLinea,
   useRegistrarReporteCliente,
   useActuacionesPersistentes,
   useActualizarExpediente,
-  useCrearActuacion,
   useCrearComunicacionExpediente,
   useCrearLinea,
   useCrearParticipante,
@@ -27,10 +29,19 @@ import {
   useParticipantesPersistentes,
 } from "@/features/expedientes";
 import { useNotasRemotas } from "@/features/notas";
-import { useCrearTarea, useMarcarSiguienteAccion, useTareasPersistentes } from "@/features/tareas";
+import {
+  useCrearTarea,
+  useEtiquetasTarea,
+  useMarcarSiguienteAccion,
+  useTareasPersistentes,
+} from "@/features/tareas";
+import { TaskDetailDialog } from "@/features/tareas/ui/task-detail-dialog";
 import { getSupabaseBrowserClient } from "@/shared/infrastructure/supabase";
 
 export const Route = createFileRoute("/expedientes/$id")({
+  validateSearch: (search: Record<string, unknown>): { tab?: CaseDetailTab | undefined } => ({
+    ...(isCaseTab(search['tab']) ? { tab: search['tab'] } : {}),
+  }),
   head: ({ params }) => ({
     meta: [
       { title: `Expediente ${params.id} — LEX` },
@@ -43,6 +54,13 @@ export const Route = createFileRoute("/expedientes/$id")({
 
 function CaseRoute() {
   const { id } = Route.useParams();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const selectedTab = isCaseTab(tab) ? tab : "summary";
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const selectTab = (nextTab: string) => {
+    void navigate({ search: { tab: nextTab === "summary" ? undefined : (nextTab as CaseDetailTab) } });
+  };
   const session = useAuthSession();
   const membership = useActiveMembership(session.user?.id);
   const firmId = membership.data?.firmId;
@@ -58,6 +76,7 @@ function CaseRoute() {
   const notes = useNotasRemotas(firmId);
   const contacts = useContactos(firmId);
   const members = useMiembrosDespacho(firmId);
+  const taskLabels = useEtiquetasTarea(firmId);
   const titleTemplates = useQuery({
     queryKey: ["task-title-templates", firmId],
     enabled: Boolean(firmId),
@@ -79,7 +98,6 @@ function CaseRoute() {
   const createParticipant = useCrearParticipante(firmId);
   const createWorkstream = useCrearLinea(firmId);
   const updateWorkstream = useActualizarLinea(firmId);
-  const createActivity = useCrearActuacion(firmId);
   const createCommunication = useCrearComunicacionExpediente(firmId, id);
   const updateActivityVisibility = useActualizarVisibilidadActuacion(firmId, id);
   const registerReport = useRegistrarReporteCliente(firmId, id);
@@ -127,90 +145,100 @@ function CaseRoute() {
   const expediente = caseQuery.data;
 
   return (
-    <CaseDetail
-      expediente={expediente}
-      lineas={workstreams.data ?? []}
-      actuaciones={activities.data ?? []}
-      participantes={participants.data ?? []}
-      eventos={events.data ?? []}
-      comunicaciones={communications.data ?? []}
-      documentos={documents.data ?? []}
-      facturas={(invoices.data ?? []).filter((invoice) => invoice.asuntoId === id)}
-      tareas={tasks.data ?? []}
-      notas={notes.data ?? []}
-      taskTitleTemplates={titleTemplates.data ?? []}
-      miembros={members.data ?? []}
-      clienteNombre={
-        contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
-        "Contacto principal"
-      }
-      taskPending={createTask.isPending}
-      onCreateTask={(input) => createTask.mutateAsync(input)}
-      onSetNextAction={(task, enabled) => setNextAction.mutateAsync({ task, enabled })}
-      onUpdateWorkstream={(input) => updateWorkstream.mutateAsync(input)}
-      workstreamPending={updateWorkstream.isPending}
-      canManageNextAction={(task) => Boolean(
-        task.creadaPorId === session.user?.id ||
-        ["owner", "admin", "lawyer"].includes(membership.data?.role ?? ""),
-      )}
-      nextActionPending={setNextAction.isPending}
-      communicationPending={createCommunication.isPending}
-      onCreateCommunication={(input) => createCommunication.mutateAsync(input)}
-      activityVisibilityPending={updateActivityVisibility.isPending}
-      onUpdateActivityVisibility={(input) => updateActivityVisibility.mutateAsync(input)}
-      reportPending={registerReport.isPending}
-      onRegisterClientReport={(input) => registerReport.mutateAsync(input)}
-      editor={
-        <CaseEditForm
-          expediente={expediente}
-          miembros={members.data ?? []}
-          pending={updateCase.isPending}
-          onSave={async (input) => {
-            await updateCase.mutateAsync(input);
-          }}
-        />
-      }
-      relatedForms={{
-        participant: (
-          <CaseRelatedForms
+    <>
+      <CaseDetail
+        activeTab={selectedTab}
+        onSelectTab={selectTab}
+        onOpenTask={setOpenTaskId}
+        expediente={expediente}
+        lineas={workstreams.data ?? []}
+        actuaciones={activities.data ?? []}
+        participantes={participants.data ?? []}
+        eventos={events.data ?? []}
+        comunicaciones={communications.data ?? []}
+        documentos={documents.data ?? []}
+        facturas={(invoices.data ?? []).filter((invoice) => invoice.asuntoId === id)}
+        tareas={tasks.data ?? []}
+        notas={notes.data ?? []}
+        taskTitleTemplates={titleTemplates.data ?? []}
+        miembros={members.data ?? []}
+        firmId={firmId}
+        taskLabels={taskLabels.data ?? []}
+        tasksPanel={
+          <TaskWorkspace
             expedienteId={expediente.id}
-            contactos={contacts.data ?? []}
-            miembros={members.data ?? []}
-            lineas={workstreams.data ?? []}
-            pending={createParticipant.isPending}
-            section="participant"
-            onParticipant={(input) => createParticipant.mutateAsync(input)}
-            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
-            onActivity={(input) => createActivity.mutateAsync(input)}
+            expedienteLabel={expediente.referencia}
+            defaultAssigneeId={expediente.asignadoId}
+            titleTemplates={titleTemplates.data ?? []}
           />
-        ),
-        workstream: (
-          <CaseRelatedForms
-            expedienteId={expediente.id}
-            contactos={contacts.data ?? []}
+        }
+        clienteNombre={
+          contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
+          "Contacto principal"
+        }
+        taskPending={createTask.isPending}
+        onCreateTask={(input) => createTask.mutateAsync(input)}
+        onSetNextAction={(task, enabled) => setNextAction.mutateAsync({ task, enabled })}
+        onUpdateWorkstream={(input) => updateWorkstream.mutateAsync(input)}
+        workstreamPending={updateWorkstream.isPending}
+        canManageNextAction={(task) => Boolean(
+          task.creadaPorId === session.user?.id ||
+          ["owner", "admin", "lawyer"].includes(membership.data?.role ?? ""),
+        )}
+        nextActionPending={setNextAction.isPending}
+        communicationPending={createCommunication.isPending}
+        onCreateCommunication={(input) => createCommunication.mutateAsync(input)}
+        activityVisibilityPending={updateActivityVisibility.isPending}
+        onUpdateActivityVisibility={(input) => updateActivityVisibility.mutateAsync(input)}
+        reportPending={registerReport.isPending}
+        onRegisterClientReport={(input) => registerReport.mutateAsync(input)}
+        editor={
+          <CaseEditForm
+            expediente={expediente}
             miembros={members.data ?? []}
-            lineas={workstreams.data ?? []}
-            pending={createWorkstream.isPending}
-            section="workstream"
-            onParticipant={(input) => createParticipant.mutateAsync(input)}
-            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
-            onActivity={(input) => createActivity.mutateAsync(input)}
+            pending={updateCase.isPending}
+            onSave={async (input) => {
+              await updateCase.mutateAsync(input);
+            }}
           />
-        ),
-        activity: (
-          <CaseRelatedForms
-            expedienteId={expediente.id}
-            contactos={contacts.data ?? []}
-            miembros={members.data ?? []}
-            lineas={workstreams.data ?? []}
-            pending={createActivity.isPending}
-            section="activity"
-            onParticipant={(input) => createParticipant.mutateAsync(input)}
-            onWorkstream={(input) => createWorkstream.mutateAsync(input)}
-            onActivity={(input) => createActivity.mutateAsync(input)}
-          />
-        ),
-      }}
-    />
+        }
+        relatedForms={{
+          participant: (
+            <CaseRelatedForms
+              expedienteId={expediente.id}
+              contactos={contacts.data ?? []}
+              miembros={members.data ?? []}
+              pending={createParticipant.isPending}
+              section="participant"
+              onParticipant={(input) => createParticipant.mutateAsync(input)}
+              onWorkstream={(input) => createWorkstream.mutateAsync(input)}
+            />
+          ),
+          workstream: (
+            <CaseRelatedForms
+              expedienteId={expediente.id}
+              contactos={contacts.data ?? []}
+              miembros={members.data ?? []}
+              pending={createWorkstream.isPending}
+              section="workstream"
+              onParticipant={(input) => createParticipant.mutateAsync(input)}
+              onWorkstream={(input) => createWorkstream.mutateAsync(input)}
+            />
+          ),
+        }}
+      />
+      <TaskDetailDialog
+        taskId={openTaskId}
+        onOpenChange={(open) => {
+          if (!open) setOpenTaskId(null);
+        }}
+        onOpenTask={setOpenTaskId}
+      />
+    </>
   );
+}
+
+function isCaseTab(tab: unknown): tab is CaseDetailTab {
+  if (typeof tab !== "string") return false;
+  return ["summary", "workstreams", "participants", "activities", "documents", "economic", "communications", "tasks", "deadlines", "history"].includes(tab);
 }

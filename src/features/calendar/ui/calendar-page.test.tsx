@@ -28,6 +28,7 @@ vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: mocks.tasks, isPending: false, isError: false }),
   useCrearTarea: () => ({ mutateAsync: mocks.createTask, isPending: false }),
   useEditarTarea: () => ({ mutateAsync: mocks.editTask, isPending: false }),
+  useEtiquetasTarea: () => ({ data: [], isPending: false, isError: false }),
 }))
 vi.mock('@/features/expedientes', () => ({
   useExpedientesPersistentes: () => ({
@@ -65,9 +66,9 @@ describe('CalendarPage', () => {
     )
 
     expect(screen.getByRole('dialog', { name: 'Crear evento' })).toBeTruthy()
-    expect((screen.getByLabelText(/Fecha y hora/) as HTMLInputElement).value).toBe(
-      '2026-09-14T09:00',
-    )
+    expect((screen.getByLabelText('Vencimiento') as HTMLInputElement).value).toBe('2026-09-14')
+    expect((screen.getByLabelText('Hora límite') as HTMLInputElement).value).toBe('09:00')
+    expect((screen.getByLabelText('Tipo') as HTMLSelectElement).value).toBe('Evento')
   })
 
   it('opens event details, updates the shared task date, and links to its task detail', async () => {

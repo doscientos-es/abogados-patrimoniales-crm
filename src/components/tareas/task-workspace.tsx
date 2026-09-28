@@ -1,25 +1,44 @@
 import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import {
   BellRing,
+  BriefcaseBusiness,
   CalendarDays,
   CalendarClock,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Flag,
   GripVertical,
-  LayoutDashboard,
   Link2,
-  Plus,
+  PanelRightOpen,
+  Play,
   Search,
+  ShieldAlert,
+  Milestone,
   SlidersHorizontal,
-  UserRound,
+  Tag,
+  X,
 } from 'lucide-react'
-import { useMemo, useState, type DragEvent, type FormEvent } from 'react'
+import {
+  useMemo,
+  useState,
+  type DragEvent,
+  type FormEvent,
+  type MouseEventHandler,
+  type ReactNode,
+} from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader, ViewSwitch } from '@/components/common'
+import {
+  specialMeetingCreationIssue,
+  TaskCreateDialog,
+  taskLabelClass,
+} from '@/components/tareas/task-create-dialog'
+import { TaskHoldDialog } from '@/components/tareas/task-hold-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -28,31 +47,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
-import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
+import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
+  RELEVANCIA_TAREA_LABELS,
   useCambiarEstadoTarea,
   useCapturarInboxTarea,
   useCrearTarea,
   useEditarTarea,
-  useEtiquetarTareasEnBloque,
   useEtiquetasTarea,
   useInboxTareas,
   useMoverInboxTarea,
+  usePonerTareaEnEspera,
   useReordenarTableroTareas,
   useTareasPersistentes,
   useValidarPlazo,
   type CrearTareaInput,
-  type DetallesReunion,
+  type RelevanciaTarea,
   type TaskInboxItemRow,
   type TareaPersistida,
 } from '@/features/tareas'
+import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 
 type TaskView = 'calendar' | 'kanban' | 'list'
 type TaskFilterStatus = 'all' | TareaPersistida['estado']
@@ -92,15 +113,62 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   title: string
   description: string
 }> = [
-  { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
-  { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
-  { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
-]
+    { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
+    { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
+    { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
+  ]
 
 const TASK_PRIORITY_CLASS: Record<TareaPersistida['prioridad'], string> = {
   Alta: 'border-destructive/30 bg-destructive/10 text-destructive',
   Media: 'border-warning/30 bg-warning/10 text-warning-foreground',
   Baja: 'border-border bg-secondary text-secondary-foreground',
+}
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+
+function TaskIconHint({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
+function TaskIconAction({
+  label,
+  icon,
+  onClick,
+  disabled,
+}: {
+  label: string
+  icon: ReactNode
+  onClick: MouseEventHandler<HTMLButtonElement>
+  disabled?: boolean
+}) {
+  return (
+    <TaskIconHint label={label}>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-label={label}
+        disabled={disabled}
+        onClick={onClick}
+        className="text-muted-foreground hover:text-foreground size-8 p-0"
+      >
+        {icon}
+      </Button>
+    </TaskIconHint>
+  )
 }
 
 const formatTaskDate = (value: string | null) => {
@@ -121,17 +189,7 @@ function taskDateValue(value: string | null) {
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
 }
 
-export function specialMeetingCreationIssue(details: DetallesReunion): string | null {
-  if (!details.subject?.trim()) return 'Indica el objeto de la reunión.'
-  if (
-    !details.attendeeContactIds.length &&
-    !details.attendeeUserIds.length &&
-    !details.attendeeNames?.some((name) => name.trim())
-  ) {
-    return 'Añade al menos una persona asistente.'
-  }
-  return null
-}
+export { specialMeetingCreationIssue }
 
 /** Orden cronológico estable para que las acciones más próximas nunca queden ocultas. */
 export function sortTasksForAgenda(tasks: TareaPersistida[]) {
@@ -187,9 +245,9 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
       const meetingEndsAt = reunion['endsAt']
       const actualMeetingDuration =
         task.tipo === 'Evento' &&
-        reunion['specialType'] === 'meeting' &&
-        typeof meetingStartsAt === 'string' &&
-        typeof meetingEndsAt === 'string'
+          reunion['specialType'] === 'meeting' &&
+          typeof meetingStartsAt === 'string' &&
+          typeof meetingEndsAt === 'string'
           ? (Date.parse(meetingEndsAt) - Date.parse(meetingStartsAt)) / 60_000
           : Number.NaN
       const displayDuration =
@@ -268,13 +326,7 @@ export function taskStatusForBoardColumn(
 
 export function canMoveTaskInBoard(task: TareaPersistida, target: TaskBoardColumnId) {
   const current = taskBoardColumn(task)
-  return Boolean(
-    current &&
-    current !== 'waiting' &&
-    target !== 'waiting' &&
-    current !== target &&
-    taskStatusForBoardColumn(target),
-  )
+  return Boolean(current && current !== target)
 }
 
 export function reorderTasksWithFilteredItems(completeOrder: string[], visibleOrder: string[]) {
@@ -283,7 +335,19 @@ export function reorderTasksWithFilteredItems(completeOrder: string[], visibleOr
   return completeOrder.map((id) => (visible.has(id) ? visibleOrder[nextVisibleIndex++] : id))
 }
 
-export function TaskWorkspace() {
+export type TaskWorkspaceProps = {
+  expedienteId?: string | undefined
+  expedienteLabel?: string | undefined
+  defaultAssigneeId?: string | null
+  titleTemplates?: string[]
+}
+
+export function TaskWorkspace({
+  expedienteId,
+  expedienteLabel,
+  defaultAssigneeId = null,
+  titleTemplates = [],
+}: TaskWorkspaceProps = {}) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -293,26 +357,28 @@ export function TaskWorkspace() {
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
   const change = useCambiarEstadoTarea(firmId)
+  const hold = usePonerTareaEnEspera(firmId)
   const edit = useEditarTarea(firmId)
   const validate = useValidarPlazo(firmId)
   const inbox = useInboxTareas(firmId, session.user?.id)
   const captureInbox = useCapturarInboxTarea(firmId, session.user?.id)
   const moveInbox = useMoverInboxTarea(firmId, session.user?.id)
-  const bulkLabels = useEtiquetarTareasEnBloque(firmId)
   const reorderBoard = useReordenarTableroTareas(firmId)
-  const navigate = useNavigate()
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CrearTareaInput['tipo']>('all')
   const [priorityFilter, setPriorityFilter] = useState<'all' | TareaPersistida['prioridad']>('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all')
   const [labelFilter, setLabelFilter] = useState('all')
-  const [scope, setScope] = useState<TaskScope>('mine')
+  const [relevanceFilter, setRelevanceFilter] = useState<
+    'all' | Exclude<RelevanciaTarea, 'normal'>
+  >('all')
+  const [scope, setScope] = useState<TaskScope>(expedienteId ? 'all' : 'mine')
   const [onlyNextActions, setOnlyNextActions] = useState(false)
   const [view, setView] = useState<TaskView>('kanban')
   const [calendarWeek, setCalendarWeek] = useState(() => weekStart(new Date()))
   const [calendarEditTask, setCalendarEditTask] = useState<TareaPersistida | null>(null)
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
   const caseNames = useMemo(
     () =>
       new Map((cases.data ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`])),
@@ -348,7 +414,10 @@ export function TaskWorkspace() {
   const canValidate = membership.data?.role !== 'paralegal'
   const canEditTasks = membership.data?.role !== 'paralegal'
   const allTasks = tasks.data ?? []
-  const visible = allTasks.filter((task) => {
+  const scopedTasks = expedienteId
+    ? allTasks.filter((task) => task.expedienteId === expedienteId)
+    : allTasks
+  const visible = scopedTasks.filter((task) => {
     const searchable =
       `${task.titulo} ${task.descripcion} ${task.tipo} ${task.etiquetas.map((label) => label.nombre).join(' ')} ${caseNames.get(task.expedienteId ?? '') ?? ''}`.toLowerCase()
     const matchesStatus = statusFilter === 'all' || task.estado === statusFilter
@@ -366,6 +435,7 @@ export function TaskWorkspace() {
       (assigneeFilter === 'all' ||
         (assigneeFilter === '' ? !task.asignadoId : task.asignadoId === assigneeFilter)) &&
       (labelFilter === 'all' || task.etiquetas.some((label) => label.id === labelFilter)) &&
+      (relevanceFilter === 'all' || task.relevancia === relevanceFilter) &&
       (!onlyNextActions || task.esSiguienteAccion) &&
       matchesStatus
     )
@@ -373,11 +443,11 @@ export function TaskWorkspace() {
   const orderedVisible =
     view === 'kanban'
       ? [...visible].sort(
-          (a, b) =>
-            (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-              (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
-            a.titulo.localeCompare(b.titulo, 'es'),
-        )
+        (a, b) =>
+          (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
+          (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+          a.titulo.localeCompare(b.titulo, 'es'),
+      )
       : sortTasksForAgenda(visible)
   const activeFilterCount = [
     typeFilter,
@@ -385,6 +455,7 @@ export function TaskWorkspace() {
     assigneeFilter,
     statusFilter,
     labelFilter,
+    relevanceFilter,
     onlyNextActions,
   ].filter((value) => value !== 'all' && value !== false).length
   const clearFilters = () => {
@@ -393,6 +464,7 @@ export function TaskWorkspace() {
     setAssigneeFilter('all')
     setStatusFilter('all')
     setLabelFilter('all')
+    setRelevanceFilter('all')
     setOnlyNextActions(false)
   }
   const changeStatus = async (task: TareaPersistida, estado: TareaPersistida['estado']) => {
@@ -401,6 +473,20 @@ export function TaskWorkspace() {
       toast.success(estado === 'Completada' ? 'Tarea completada.' : 'Estado actualizado.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo actualizar la tarea.')
+    }
+  }
+  const holdTask = async (
+    task: TareaPersistida,
+    motivo: string,
+    revisarEn: string,
+    detalle: string,
+  ) => {
+    try {
+      await hold.mutateAsync({ task, motivo, revisarEn, detalle })
+      toast.success('Tarea en espera', { description: motivo })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo poner en espera.')
+      throw error
     }
   }
   const validateTask = async (
@@ -450,25 +536,55 @@ export function TaskWorkspace() {
     }
   }
 
+  const Root = expedienteId ? 'section' : 'main'
+
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-6">
-      <SectionHeader
-        title="Tareas y plazos"
-        subtitle="Fechas compartidas con zona horaria, responsable y trazabilidad."
-        actions={
+    <Root
+      className={expedienteId ? 'space-y-4' : 'mx-auto max-w-6xl space-y-4 p-6'}
+      aria-label={expedienteId ? 'Tareas del expediente' : undefined}
+    >
+      {expedienteId ? (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Tareas</h2>
+            <p className="text-muted-foreground text-sm">
+              Trabajo pendiente y completado vinculado a este expediente.
+            </p>
+          </div>
           <TaskCreateDialog
             firmId={firmId}
-            cases={cases.data ?? []}
+            expedienteId={expedienteId}
+            title="Nueva tarea para el expediente"
+            contextLabel={expedienteLabel ? `el expediente ${expedienteLabel}` : 'este expediente'}
+            defaultAssigneeId={defaultAssigneeId}
             members={members.data ?? []}
             labels={labels.data ?? []}
+            titleTemplates={titleTemplates}
+            titleAriaLabel="Título de tarea"
             pending={createTask.isPending}
-            onCreate={async (input) => {
-              const task = await createTask.mutateAsync(input)
-              await navigate({ to: '/tareas/$taskId', params: { taskId: task.id } })
-            }}
+            successMessage="Tarea vinculada al expediente."
+            onCreate={(input) => createTask.mutateAsync(input)}
           />
-        }
-      />
+        </div>
+      ) : (
+        <SectionHeader
+          title="Tareas y plazos"
+          subtitle="Fechas compartidas con zona horaria, responsable y trazabilidad."
+          actions={
+            <TaskCreateDialog
+              firmId={firmId}
+              cases={cases.data ?? []}
+              members={members.data ?? []}
+              labels={labels.data ?? []}
+              pending={createTask.isPending}
+              onCreate={async (input) => {
+                const task = await createTask.mutateAsync(input)
+                setOpenTaskId(task.id)
+              }}
+            />
+          }
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2" aria-label="Ámbitos de tareas">
         {(
           [
@@ -497,74 +613,36 @@ export function TaskWorkspace() {
           Siguientes acciones
         </Button>
         <Badge variant="secondary">
-          En espera: {allTasks.filter((task) => task.estado === 'En espera').length}
+          En espera: {scopedTasks.filter((task) => task.estado === 'En espera').length}
         </Badge>
         <Badge variant="secondary">
-          Sin abrir: {allTasks.filter((task) => task.asignadoId && !task.abiertaEn).length}
+          Sin abrir: {scopedTasks.filter((task) => task.asignadoId && !task.abiertaEn).length}
         </Badge>
-        <Badge variant="secondary">
-          Sin siguiente acción:{' '}
-          {cases.data?.filter(
-            (item) =>
-              !allTasks.some(
-                (task) =>
-                  task.expedienteId === item.id &&
-                  task.esSiguienteAccion &&
-                  !['Completada', 'Cancelada'].includes(task.estado),
-              ),
-          ).length ?? 0}
-        </Badge>
+        {expedienteId ? null : (
+          <Badge variant="secondary">
+            Sin siguiente acción:{' '}
+            {cases.data?.filter(
+              (item) =>
+                !allTasks.some(
+                  (task) =>
+                    task.expedienteId === item.id &&
+                    task.esSiguienteAccion &&
+                    !['Completada', 'Cancelada'].includes(task.estado),
+                ),
+            ).length ?? 0}
+          </Badge>
+        )}
       </div>
-      <TaskInbox
-        items={inbox.data ?? []}
-        tasks={allTasks}
-        pending={captureInbox.isPending || moveInbox.isPending}
-        onCapture={addInboxItem}
-        onMove={changeInboxStage}
-      />
-      {selectedTaskIds.length ? (
-        <Card>
-          <CardContent className="flex flex-wrap items-center gap-3 py-3">
-            <span className="text-sm font-medium">
-              {selectedTaskIds.length} tareas seleccionadas
-            </span>
-            <select
-              aria-label="Etiqueta para tareas seleccionadas"
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              defaultValue=""
-              disabled={bulkLabels.isPending}
-              onChange={(event) => {
-                const labelId = event.target.value
-                if (!labelId) return
-                const target = event.currentTarget
-                void bulkLabels.mutateAsync({ taskIds: selectedTaskIds, labelId }).then(
-                  (count) => {
-                    toast.success(`Etiqueta aplicada a ${count} tarea(s).`)
-                    setSelectedTaskIds([])
-                    target.value = ''
-                  },
-                  (error: unknown) =>
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : 'No se pudieron etiquetar las tareas.',
-                    ),
-                )
-              }}
-            >
-              <option value="">Etiquetar selección…</option>
-              {(labels.data ?? []).map((label) => (
-                <option key={label.id} value={label.id}>
-                  {label.nombre}
-                </option>
-              ))}
-            </select>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedTaskIds([])}>
-              Deseleccionar
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+      {expedienteId ? null : (
+        <TaskInbox
+          items={inbox.data ?? []}
+          tasks={allTasks}
+          pending={captureInbox.isPending || moveInbox.isPending}
+          onCapture={addInboxItem}
+          onMove={changeInboxStage}
+          onOpenTask={setOpenTaskId}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="task-search" className="relative min-w-56 flex-1">
           <span className="sr-only">Buscar tareas y plazos</span>
@@ -614,7 +692,7 @@ export function TaskWorkspace() {
                 ]}
               />
               <FilterSelect
-                label="Etiqueta"
+                label="Etiquetas"
                 value={labelFilter}
                 onChange={setLabelFilter}
                 options={[
@@ -654,6 +732,16 @@ export function TaskWorkspace() {
                   ['En espera', 'En espera'],
                   ['Completada', 'Completada'],
                   ['Cancelada', 'Cancelada'],
+                ]}
+              />
+              <FilterSelect
+                label="Relevancia"
+                value={relevanceFilter}
+                onChange={(value) => setRelevanceFilter(value as typeof relevanceFilter)}
+                options={[
+                  ['all', 'Cualquier relevancia'],
+                  ['activity', RELEVANCIA_TAREA_LABELS.activity],
+                  ['milestone', RELEVANCIA_TAREA_LABELS.milestone],
                 ]}
               />
             </div>
@@ -709,14 +797,9 @@ export function TaskWorkspace() {
           onEdit={editTask}
           canEdit={canEditTasks}
           memberOptions={members.data ?? []}
-          selectedTaskIds={selectedTaskIds}
-          onSelectTask={(taskId) =>
-            setSelectedTaskIds((current) =>
-              current.includes(taskId)
-                ? current.filter((id) => id !== taskId)
-                : [...current, taskId],
-            )
-          }
+          onHold={holdTask}
+          holdPending={hold.isPending}
+          onOpenTask={(task) => setOpenTaskId(task.id)}
           onReorder={async (status, taskIds) => {
             try {
               const completeOrder = [...allTasks]
@@ -726,7 +809,7 @@ export function TaskWorkspace() {
                 .sort(
                   (a, b) =>
                     (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-                      (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+                    (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
                     a.titulo.localeCompare(b.titulo, 'es'),
                 )
               const taskIdsWithHidden = reorderTasksWithFilteredItems(
@@ -756,6 +839,7 @@ export function TaskWorkspace() {
               onEdit={editTask}
               canEdit={canEditTasks}
               memberOptions={members.data ?? []}
+              onOpen={(item) => setOpenTaskId(item.id)}
             />
           ))}
           {!orderedVisible.length ? <EmptyTasks /> : null}
@@ -779,7 +863,14 @@ export function TaskWorkspace() {
           />
         </div>
       ) : null}
-    </main>
+      <TaskDetailDialog
+        taskId={openTaskId}
+        onOpenChange={(open) => {
+          if (!open) setOpenTaskId(null)
+        }}
+        onOpenTask={setOpenTaskId}
+      />
+    </Root>
   )
 }
 
@@ -789,12 +880,14 @@ export function TaskInbox({
   pending,
   onCapture,
   onMove,
+  onOpenTask,
 }: {
   items: TaskInboxItemRow[]
   tasks: TareaPersistida[]
   pending: boolean
   onCapture: (captureText: string, taskId: string | null) => Promise<void>
   onMove: (itemId: string, stage: TaskInboxItemRow['stage']) => Promise<void>
+  onOpenTask?: (taskId: string) => void
 }) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const [dropStage, setDropStage] = useState<TaskInboxItemRow['stage'] | null>(null)
@@ -913,7 +1006,15 @@ export function TaskInbox({
                         {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
                       </p>
                     </div>
-                    {item.task_id ? (
+                    {item.task_id && onOpenTask ? (
+                      <button
+                        type="button"
+                        onClick={() => item.task_id && onOpenTask(item.task_id)}
+                        className="text-primary block max-w-full truncate text-left text-xs underline underline-offset-4"
+                      >
+                        {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
+                      </button>
+                    ) : item.task_id ? (
                       <Link
                         to="/tareas/$taskId"
                         params={{ taskId: item.task_id }}
@@ -1164,12 +1265,16 @@ function TaskKanban({
   onEdit,
   canEdit,
   memberOptions,
-  selectedTaskIds,
-  onSelectTask,
   onReorder,
+  onHold,
+  holdPending,
+  onOpenTask,
 }: {
   tasks: TareaPersistida[]
   allTasks: TareaPersistida[]
+  onHold: (task: TareaPersistida, reason: string, reviewAt: string, detail: string) => Promise<void>
+  holdPending: boolean
+  onOpenTask: (task: TareaPersistida) => void
   canValidate: boolean
   pending: boolean
   caseNames: ReadonlyMap<string, string>
@@ -1184,14 +1289,12 @@ function TaskKanban({
   onEdit: (input: Parameters<ReturnType<typeof useEditarTarea>['mutateAsync']>[0]) => Promise<void>
   canEdit: boolean
   memberOptions: Array<{ id: string; nombre: string }>
-  selectedTaskIds: string[]
-  onSelectTask: (taskId: string) => void
   onReorder: (status: 'pending' | 'in_progress', taskIds: string[]) => Promise<void>
 }) {
   const hasActiveTasks = tasks.some((task) => taskBoardColumn(task))
   const [dragged, setDragged] = useState<TareaPersistida | null>(null)
-  const [draggedForOrder, setDraggedForOrder] = useState<TareaPersistida | null>(null)
   const [orderDropId, setOrderDropId] = useState<string | null>(null)
+  const [holdTask, setHoldTask] = useState<TareaPersistida | null>(null)
   const orderedAllTasks = [...allTasks].sort(
     (a, b) =>
       (a.boardPosition ?? Number.MAX_SAFE_INTEGER) - (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
@@ -1199,19 +1302,29 @@ function TaskKanban({
   )
   const canDropIn = (column: TaskBoardColumnId) =>
     Boolean(dragged && canMoveTaskInBoard(dragged, column))
+  const resetDrag = () => {
+    setDragged(null)
+    setOrderDropId(null)
+  }
+  const moveToColumn = (task: TareaPersistida, column: TaskBoardColumnId) => {
+    if (!canMoveTaskInBoard(task, column)) return
+    if (column === 'waiting') {
+      setHoldTask(task)
+      return
+    }
+    const status = taskStatusForBoardColumn(column)
+    if (status) void onChangeStatus(task, status)
+  }
   const dropInColumn = (event: DragEvent<HTMLElement>, column: TaskBoardColumnId) => {
     event.preventDefault()
-    const status = taskStatusForBoardColumn(column)
-    if (dragged && status && canMoveTaskInBoard(dragged, column)) {
-      void onChangeStatus(dragged, status)
-    }
-    setDragged(null)
+    if (dragged) moveToColumn(dragged, column)
+    resetDrag()
   }
   return (
     <section aria-label="Tablero Kanban de tareas" className="overflow-x-auto pb-2">
       <p id="task-drag-help" className="sr-only">
-        Arrastra una tarea entre Pendiente y En curso para actualizar su estado. Las tareas en
-        espera se gestionan desde su detalle.
+        Arrastra una tarea entre columnas para actualizar su estado. Al soltarla en En espera se
+        pedirá el motivo y la fecha de revisión.
       </p>
       <div className="grid min-w-[960px] grid-cols-3 gap-3">
         {TASK_BOARD_COLUMNS.map((column) => {
@@ -1224,10 +1337,8 @@ function TaskKanban({
                 if (canDropIn(column.id)) event.preventDefault()
               }}
               onDrop={(event) => {
-                if (event.dataTransfer.getData('application/x-lex-task-order')) return
-                const taskId = event.dataTransfer.getData('application/x-lex-task-id')
-                const task = tasks.find((item) => item.id === taskId)
-                if (task && taskBoardColumn(task) !== column.id) dropInColumn(event, column.id)
+                if (canDropIn(column.id)) dropInColumn(event, column.id)
+                else resetDrag()
               }}
             >
               <header className="border-border mb-3 flex items-start justify-between gap-3 border-b px-1 pt-1 pb-2.5">
@@ -1250,28 +1361,28 @@ function TaskKanban({
                     key={task.id}
                     className={`relative ${orderDropId === task.id ? 'before:bg-primary before:absolute before:-top-1 before:left-0 before:h-1 before:w-full before:rounded' : ''}`}
                     onDragOver={(event) => {
-                      if (dragged && canMoveTaskInBoard(dragged, column.id)) event.preventDefault()
-                      if (
-                        !draggedForOrder ||
-                        taskBoardColumn(draggedForOrder) !== column.id ||
-                        draggedForOrder.id === task.id
-                      )
-                        return
+                      if (!dragged || dragged.id === task.id) return
+                      const sameColumn = taskBoardColumn(dragged) === column.id
+                      if (sameColumn && column.id === 'waiting') return
+                      if (!sameColumn && !canMoveTaskInBoard(dragged, column.id)) return
                       event.preventDefault()
-                      setOrderDropId(task.id)
+                      event.stopPropagation()
+                      if (sameColumn) setOrderDropId(task.id)
                     }}
                     onDragLeave={() =>
                       setOrderDropId((current) => (current === task.id ? null : current))
                     }
                     onDrop={(event) => {
-                      const draggedId = event.dataTransfer.getData('application/x-lex-task-order')
-                      const source = draggedId && allTasks.find((item) => item.id === draggedId)
-                      if (!source || source.id === task.id) {
-                        if (dragged && canMoveTaskInBoard(dragged, column.id))
-                          dropInColumn(event, column.id)
+                      const source = dragged
+                      if (!source || source.id === task.id) return
+                      event.preventDefault()
+                      event.stopPropagation()
+                      resetDrag()
+                      if (taskBoardColumn(source) !== column.id) {
+                        moveToColumn(source, column.id)
                         return
                       }
-                      event.preventDefault()
+                      if (column.id === 'waiting') return
                       const fullColumn = orderedAllTasks.filter(
                         (item) => taskBoardColumn(item) === column.id,
                       )
@@ -1282,18 +1393,8 @@ function TaskKanban({
                         column.id === 'pending' ? 'pending' : 'in_progress',
                         next.map((item) => item.id),
                       )
-                      setDraggedForOrder(null)
-                      setOrderDropId(null)
                     }}
                   >
-                    <div className="bg-background/90 absolute top-2 right-2 z-10 rounded p-1">
-                      <input
-                        type="checkbox"
-                        aria-label={`Seleccionar ${task.titulo}`}
-                        checked={selectedTaskIds.includes(task.id)}
-                        onChange={() => onSelectTask(task.id)}
-                      />
-                    </div>
                     <TaskCard
                       task={task}
                       canValidate={canValidate}
@@ -1306,17 +1407,15 @@ function TaskKanban({
                       onEdit={onEdit}
                       canEdit={canEdit}
                       memberOptions={memberOptions}
+                      onOpen={onOpenTask}
                       drag={{
                         onStart: (event) => {
-                          event.dataTransfer.setData('application/x-lex-task-order', task.id)
+                          event.dataTransfer.setData('application/x-lex-task-id', task.id)
                           event.dataTransfer.effectAllowed = 'move'
-                          setDraggedForOrder(task)
+                          setDragged(task)
                         },
-                        onEnd: () => {
-                          setDraggedForOrder(null)
-                          setOrderDropId(null)
-                        },
-                        isDragged: draggedForOrder?.id === task.id || dragged?.id === task.id,
+                        onEnd: resetDrag,
+                        isDragged: dragged?.id === task.id,
                       }}
                     />
                   </div>
@@ -1334,6 +1433,18 @@ function TaskKanban({
         })}
       </div>
       {!hasActiveTasks ? <EmptyTasks /> : null}
+      <TaskHoldDialog
+        open={Boolean(holdTask)}
+        onOpenChange={(open) => {
+          if (!open) setHoldTask(null)
+        }}
+        pending={holdPending}
+        taskTitle={holdTask?.titulo}
+        onSubmit={(reason, reviewAt, detail) => {
+          if (!holdTask) return
+          void onHold(holdTask, reason, reviewAt, detail).then(() => setHoldTask(null))
+        }}
+      />
     </section>
   )
 }
@@ -1353,6 +1464,7 @@ function TaskCard({
   drag,
   initialEditOpen = false,
   onEditClose,
+  onOpen,
 }: {
   task: TareaPersistida
   canValidate: boolean
@@ -1377,6 +1489,7 @@ function TaskCard({
   }
   initialEditOpen?: boolean
   onEditClose?: () => void
+  onOpen?: (task: TareaPersistida) => void
 }) {
   const [source, setSource] = useState('')
   const [note, setNote] = useState('')
@@ -1407,13 +1520,16 @@ function TaskCard({
       setEditBusy(false)
     }
   }
+  const closed = task.estado === 'Completada' || task.estado === 'Cancelada'
+  const overdue = !closed && Boolean(task.venceEn) && new Date(task.venceEn ?? '') < new Date()
+  const actionable = task.validacion !== 'Propuesto' && !closed
   return (
     <Card
       className={`${compact ? 'group/task border-border bg-card hover:border-primary/35 rounded-xl shadow-sm transition-all hover:shadow-md' : ''} ${drag?.isDragged ? 'opacity-50' : ''}`}
     >
-      <CardContent className={`space-y-3 ${compact ? 'p-3.5' : 'pt-6'}`}>
+      <CardContent className={`space-y-2.5 ${compact ? 'p-3' : 'pt-6'}`}>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-start gap-2">
+          <div className="flex min-w-0 items-start gap-1.5">
             {drag ? (
               <button
                 type="button"
@@ -1429,13 +1545,23 @@ function TaskCard({
               </button>
             ) : null}
             <div className="min-w-0">
-              <Link
-                to="/tareas/$taskId"
-                params={{ taskId: task.id }}
-                className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
-              >
-                {task.titulo}
-              </Link>
+              {onOpen ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(task)}
+                  className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
+                >
+                  {task.titulo}
+                </button>
+              ) : (
+                <Link
+                  to="/tareas/$taskId"
+                  params={{ taskId: task.id }}
+                  className="hover:text-primary line-clamp-2 text-left text-[15px] leading-5 font-semibold transition-colors hover:underline"
+                >
+                  {task.titulo}
+                </Link>
+              )}
               {!compact && task.descripcion ? (
                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                   {task.descripcion}
@@ -1444,8 +1570,9 @@ function TaskCard({
             </div>
           </div>
           <Badge
-            className={`h-6 shrink-0 rounded-full px-2 text-xs ${TASK_PRIORITY_CLASS[task.prioridad]}`}
+            className={`h-6 shrink-0 gap-1 rounded-full px-2 text-[11px] ${TASK_PRIORITY_CLASS[task.prioridad]}`}
           >
+            <Flag className="h-3 w-3" aria-hidden="true" />
             {task.critico ? 'Crítica' : task.prioridad}
           </Badge>
         </div>
@@ -1455,7 +1582,7 @@ function TaskCard({
             params={{ id: task.expedienteId }}
             className="text-muted-foreground hover:text-primary flex min-w-0 items-center gap-1.5 text-xs transition-colors"
           >
-            <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <BriefcaseBusiness className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="truncate">{caseName ?? 'Expediente vinculado'}</span>
           </Link>
         ) : null}
@@ -1469,44 +1596,108 @@ function TaskCard({
             <span className="truncate">Lead vinculado</span>
           </Link>
         ) : null}
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-          <span className="bg-muted text-foreground flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 font-medium">
-            <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{assigneeName ?? 'Sin responsable'}</span>
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-foreground flex min-w-0 items-center gap-1.5">
+            <span
+              className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${assigneeName ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+              aria-hidden="true"
+            >
+              {assigneeName ? initialsOf(assigneeName) : '?'}
+            </span>
+            <span className={`truncate ${assigneeName ? '' : 'text-muted-foreground'}`}>
+              {assigneeName ?? 'Sin responsable'}
+            </span>
           </span>
-          <span className="flex items-center gap-1.5 whitespace-nowrap">
+          <span
+            className={`flex shrink-0 items-center gap-1 whitespace-nowrap ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}
+          >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
             {formatTaskDate(task.venceEn)}
           </span>
         </div>
-        <div className="border-border flex flex-wrap gap-1.5 border-t pt-2.5">
-          <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
-            {task.tipo}
-          </Badge>
-          {task.etiquetas.map((label) => (
-            <Badge
-              key={label.id}
-              variant="outline"
-              className={`h-6 gap-1 px-2 text-[11px] ${taskLabelClass(label.color)}`}
-            >
-              <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-              {label.nombre}
-            </Badge>
-          ))}
-          {task.recordarEn ? (
+        <div className="border-border flex items-center justify-between gap-2 border-t pt-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
             <Badge variant="secondary" className="h-6 gap-1 px-2 text-[11px]">
-              <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
-              Recordatorio activo
+              <Tag className="h-3 w-3" aria-hidden="true" />
+              {task.tipo}
             </Badge>
-          ) : null}
-          {task.validacion === 'Propuesto' ? (
-            <Badge variant="secondary" className="h-6 px-2 text-[11px]">
-              Pendiente de validar
-            </Badge>
+            {task.relevancia !== 'normal' ? (
+              <Badge
+                variant={task.relevancia === 'milestone' ? 'default' : 'outline'}
+                className="h-6 gap-1 px-2 text-[11px]"
+              >
+                <Milestone className="h-3 w-3" aria-hidden="true" />
+                {RELEVANCIA_TAREA_LABELS[task.relevancia]}
+              </Badge>
+            ) : null}
+            {task.etiquetas.map((label) => (
+              <Badge
+                key={label.id}
+                variant="outline"
+                className={`h-6 gap-1 px-2 text-[11px] ${taskLabelClass(label.color)}`}
+              >
+                <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                {label.nombre}
+              </Badge>
+            ))}
+            {task.recordarEn ? (
+              <TaskIconHint label="Recordatorio activo">
+                <span
+                  role="img"
+                  aria-label="Recordatorio activo"
+                  className="bg-secondary text-secondary-foreground flex size-6 items-center justify-center rounded-md"
+                >
+                  <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+              </TaskIconHint>
+            ) : null}
+            {task.validacion === 'Propuesto' ? (
+              <Badge
+                variant="outline"
+                className="border-warning/30 bg-warning/10 text-warning-foreground h-6 gap-1 px-2 text-[11px]"
+              >
+                <ShieldAlert className="h-3 w-3" aria-hidden="true" />
+                Pendiente de validar
+              </Badge>
+            ) : null}
+          </div>
+          {actionable ? (
+            <div className="flex shrink-0 items-center gap-0.5">
+              {task.estado === 'Pendiente' ? (
+                <TaskIconAction
+                  label="Empezar"
+                  icon={<Play className="h-4 w-4" aria-hidden="true" />}
+                  disabled={pending}
+                  onClick={() => void onChangeStatus(task, 'En curso')}
+                />
+              ) : null}
+              {onOpen ? (
+                <TaskIconAction
+                  label="Abrir detalle"
+                  icon={<PanelRightOpen className="h-4 w-4" aria-hidden="true" />}
+                  onClick={() => onOpen(task)}
+                />
+              ) : (
+                <TaskIconHint label="Abrir detalle">
+                  <Link
+                    to="/tareas/$taskId"
+                    params={{ taskId: task.id }}
+                    aria-label="Abrir detalle"
+                    className={buttonVariants({
+                      variant: 'ghost',
+                      size: 'sm',
+                      className: 'text-muted-foreground hover:text-foreground size-8 p-0',
+                    })}
+                  >
+                    <PanelRightOpen className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </TaskIconHint>
+              )}
+            </div>
           ) : null}
         </div>
         {task.validacion === 'Propuesto' && canValidate ? (
-          <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+          <div className={`grid gap-2 ${compact ? '' : 'md:grid-cols-[1fr_1fr_auto]'}`}>
             <Input
               value={source}
               onChange={(event) => setSource(event.target.value)}
@@ -1520,43 +1711,24 @@ function TaskCard({
             <div className="flex gap-1">
               <Button
                 size="sm"
+                className="gap-1"
                 disabled={pending || !source.trim()}
                 onClick={() => void onValidate(task, 'Validado', source, note)}
               >
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 Validar
               </Button>
               <Button
                 size="sm"
                 variant="outline"
+                className="gap-1"
                 disabled={pending}
                 onClick={() => void onValidate(task, 'Rechazado', source, note)}
               >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
                 Rechazar
               </Button>
             </div>
-          </div>
-        ) : null}
-        {task.validacion !== 'Propuesto' &&
-        task.estado !== 'Completada' &&
-        task.estado !== 'Cancelada' ? (
-          <div className="flex flex-wrap gap-2">
-            {task.estado === 'Pendiente' ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => void onChangeStatus(task, 'En curso')}
-              >
-                Empezar
-              </Button>
-            ) : null}
-            <Link
-              to="/tareas/$taskId"
-              params={{ taskId: task.id }}
-              className="border-input hover:bg-muted inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium"
-            >
-              Abrir detalle
-            </Link>
           </div>
         ) : null}
         <Dialog
@@ -1649,371 +1821,6 @@ function TaskCard({
   )
 }
 
-function TaskCreateDialog({
-  firmId,
-  cases,
-  members,
-  labels,
-  pending,
-  onCreate,
-}: {
-  firmId: string
-  cases: { id: string; referencia: string; titulo: string }[]
-  members: { id: string; nombre: string }[]
-  labels: { id: string; nombre: string; color: string }[]
-  pending: boolean
-  onCreate: (input: CrearTareaInput) => Promise<unknown>
-}) {
-  const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<CrearTareaInput['tipo']>('Tarea')
-  const [isSpecialMeeting, setIsSpecialMeeting] = useState(false)
-  const [isSpecialCommunication, setIsSpecialCommunication] = useState(false)
-  const [caseId, setCaseId] = useState('')
-  const participants = useParticipantesPersistentes(firmId, caseId)
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    try {
-      const meeting: DetallesReunion | undefined = isSpecialMeeting
-        ? {
-            startsAt: '',
-            endsAt: '',
-            mode: text(data, 'meetingMode') as DetallesReunion['mode'],
-            location: text(data, 'meetingPreferredLocation'),
-            meetingUrl: '',
-            preparation: text(data, 'meetingPreparation'),
-            attendeeContactIds: data
-              .getAll('meetingContacts')
-              .filter((value): value is string => typeof value === 'string'),
-            attendeeUserIds: data
-              .getAll('meetingUsers')
-              .filter((value): value is string => typeof value === 'string'),
-            specialType: 'meeting',
-            status: 'preparation',
-            meetingType: text(data, 'meetingType'),
-            subject: text(data, 'meetingSubject'),
-            attendeeNames: text(data, 'meetingOtherAttendees')
-              .split(',')
-              .map((name) => name.trim())
-              .filter(Boolean),
-            durationMinutes: Number(text(data, 'meetingDuration')) || 60,
-            preferredDate: text(data, 'meetingPreferredDate'),
-            preferredTimeSlot: text(data, 'meetingTimeSlot'),
-            preferredLocation: text(data, 'meetingPreferredLocation'),
-            internalInstructions: text(data, 'meetingInstructions'),
-          }
-        : isSpecialCommunication
-          ? {
-              startsAt: '',
-              endsAt: '',
-              mode: 'office_bilbao',
-              location: '',
-              meetingUrl: '',
-              preparation: '',
-              attendeeContactIds: [],
-              attendeeUserIds: [],
-              specialType: 'communication',
-              communicationChannel: text(data, 'communicationChannel') as NonNullable<
-                DetallesReunion['communicationChannel']
-              >,
-              communicationDirection: text(data, 'communicationDirection') as NonNullable<
-                DetallesReunion['communicationDirection']
-              >,
-              communicationContact: text(data, 'communicationContact'),
-              communicationPhone: text(data, 'communicationPhone'),
-              communicationSubject: text(data, 'communicationSubject'),
-              communicationOriginalContent: text(data, 'communicationOriginalContent'),
-            }
-          : undefined
-      if (meeting?.specialType === 'meeting') {
-        const issue = specialMeetingCreationIssue(meeting)
-        if (issue) {
-          toast.error(issue)
-          return
-        }
-      }
-      await onCreate({
-        expedienteId: text(data, 'case'),
-        oportunidadId: null,
-        tipo: kind,
-        titulo: text(data, 'title'),
-        descripcion: text(data, 'description'),
-        prioridad: text(data, 'priority') as CrearTareaInput['prioridad'],
-        venceEn: iso(text(data, 'due')),
-        recordarEn: iso(text(data, 'reminder')),
-        clasePlazo:
-          kind === 'Plazo' ? (text(data, 'deadlineClass') as CrearTareaInput['clasePlazo']) : null,
-        critico: data.get('critical') === 'on',
-        asignadoId: text(data, 'assignee') || null,
-        mensajeInicial: text(data, 'initialMessage'),
-        etiquetaIds: data.get('label') ? [text(data, 'label')] : [],
-        ...(meeting ? { detallesReunion: meeting } : {}),
-      })
-      toast.success(kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.')
-      form.reset()
-      setKind('Tarea')
-      setIsSpecialMeeting(false)
-      setIsSpecialCommunication(false)
-      setCaseId('')
-      setOpen(false)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
-    }
-  }
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button type="button">
-          <Plus className="h-4 w-4" aria-hidden="true" /> Crear tarea
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-3xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
-        <DialogHeader>
-          <div className="bg-muted/45 border-b px-6 py-5">
-            <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
-              <LayoutDashboard className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <DialogTitle>Crear tarea</DialogTitle>
-            <DialogDescription className="mt-1.5">
-              Registra el trabajo pendiente y vincúlalo al expediente correspondiente.
-            </DialogDescription>
-          </div>
-        </DialogHeader>
-        {!cases.length ? (
-          <div className="px-6 py-8 text-sm">
-            Primero necesitas un expediente para poder crear y trazar una tarea.
-          </div>
-        ) : (
-          <form
-            className="space-y-5 px-6 py-6"
-            aria-busy={pending}
-            onSubmit={(event) => void submit(event)}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field name="title" label="Título *" required className="sm:col-span-2" />
-              <Field name="description" label="Descripción" className="sm:col-span-2" />
-              <Field name="initialMessage" label="Mensaje inicial" className="sm:col-span-2" />
-              <Select
-                name="case"
-                label="Expediente *"
-                required
-                onValueChange={setCaseId}
-                options={[
-                  ['', 'Selecciona expediente'],
-                  ...cases.map((item) => [item.id, `${item.referencia} · ${item.titulo}`]),
-                ]}
-              />
-              <div className="space-y-1.5">
-                <Label htmlFor="task-kind">Tipo</Label>
-                <select
-                  id="task-kind"
-                  value={kind}
-                  onChange={(event) => setKind(event.target.value as CrearTareaInput['tipo'])}
-                  className={selectClassName}
-                >
-                  <option>Tarea</option>
-                  <option>Recordatorio</option>
-                  <option>Evento</option>
-                  <option>Plazo</option>
-                </select>
-              </div>
-              <Select
-                name="priority"
-                label="Prioridad"
-                options={['Media', 'Alta', 'Baja'].map((value) => [value, value])}
-              />
-              <Select
-                name="assignee"
-                label="Responsable"
-                options={[
-                  ['', 'Sin asignar'],
-                  ...members.map((member) => [member.id, member.nombre]),
-                ]}
-              />
-              <Select
-                name="label"
-                label="Etiqueta"
-                options={[['', 'Sin etiqueta'], ...labels.map((label) => [label.id, label.nombre])]}
-              />
-              <Field
-                name="due"
-                label="Fecha y hora"
-                type="datetime-local"
-                required={kind === 'Plazo'}
-              />
-              <Field name="reminder" label="Recordatorio" type="datetime-local" />
-              {kind === 'Plazo' ? (
-                <Select
-                  name="deadlineClass"
-                  label="Clase *"
-                  options={[
-                    ['Judicial', 'Judicial'],
-                    ['Extrajudicial', 'Extrajudicial'],
-                  ]}
-                />
-              ) : null}
-              <label className="flex items-center gap-2 text-sm">
-                <input name="critical" type="checkbox" /> Marcar como crítica
-              </label>
-              {kind === 'Evento' ? (
-                <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={isSpecialMeeting}
-                    onChange={(event) => {
-                      setIsSpecialMeeting(event.target.checked)
-                      if (event.target.checked) setIsSpecialCommunication(false)
-                    }}
-                  />
-                  Crear como tarea especial · Reunión
-                </label>
-              ) : null}
-              <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={isSpecialCommunication}
-                  onChange={(event) => {
-                    setIsSpecialCommunication(event.target.checked)
-                    if (event.target.checked) setIsSpecialMeeting(false)
-                  }}
-                />
-                Crear como tarea especial · Comunicación
-              </label>
-              {isSpecialCommunication ? (
-                <div className="bg-muted/30 grid gap-4 rounded-md border p-4 sm:col-span-2 sm:grid-cols-2">
-                  <Select
-                    name="communicationChannel"
-                    label="Canal"
-                    options={['Email', 'WhatsApp', 'Llamada'].map((value) => [value, value])}
-                  />
-                  <Select
-                    name="communicationDirection"
-                    label="Sentido"
-                    options={['Entrada', 'Salida'].map((value) => [value, value])}
-                  />
-                  <Field name="communicationContact" label="Contacto" />
-                  <Field name="communicationPhone" label="Teléfono" />
-                  <Field
-                    name="communicationSubject"
-                    label="Asunto original"
-                    className="sm:col-span-2"
-                  />
-                  <Field
-                    name="communicationOriginalContent"
-                    label="Resumen de la comunicación original"
-                    className="sm:col-span-2"
-                  />
-                  <p className="text-muted-foreground text-xs sm:col-span-2">
-                    La tarea se cerrará al marcarla como contestada. Si aparece trabajo jurídico
-                    adicional, crea otra tarea.
-                  </p>
-                </div>
-              ) : null}
-              {isSpecialMeeting ? (
-                <div className="bg-muted/30 space-y-4 rounded-md border p-4 sm:col-span-2">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Select
-                      name="meetingType"
-                      label="Tipo de reunión"
-                      required
-                      options={[
-                        'Primera cita',
-                        'Seguimiento',
-                        'Firma / formalización',
-                        'Económica',
-                        'Interna',
-                        'Externa',
-                      ].map((value) => [value, value])}
-                    />
-                    <Field name="meetingSubject" label="Objeto de la reunión" required />
-                    <Label>
-                      Contactos asistentes
-                      <select name="meetingContacts" multiple size={3} className={selectClassName}>
-                        {(participants.data ?? [])
-                          .filter((person) => person.contactoId)
-                          .map((person) => (
-                            <option key={person.id} value={person.contactoId ?? ''}>
-                              {person.nombre}
-                            </option>
-                          ))}
-                      </select>
-                    </Label>
-                    <Label>
-                      Equipo asistente
-                      <select name="meetingUsers" multiple size={3} className={selectClassName}>
-                        {members.map((member) => (
-                          <option key={member.id} value={member.id}>
-                            {member.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </Label>
-                    <Field name="meetingOtherAttendees" label="Otros asistentes" />
-                    <Select
-                      name="meetingDuration"
-                      label="Duración estimada"
-                      options={['15', '30', '45', '60', '90'].map((value) => [
-                        value,
-                        `${value} minutos`,
-                      ])}
-                    />
-                    <Field name="meetingPreferredDate" label="Preferencia de fecha" type="date" />
-                    <Select
-                      name="meetingTimeSlot"
-                      label="Franja preferida"
-                      options={['Indiferente', 'Mañana', 'Tarde'].map((value) => [value, value])}
-                    />
-                    <Select
-                      name="meetingMode"
-                      label="Modalidad / lugar"
-                      options={[
-                        ['office_bilbao', 'Despacho Bilbao'],
-                        ['office_recalde', 'Despacho Rekalde'],
-                        ['phone', 'Teléfono'],
-                        ['outside_office', 'Fuera del despacho / videollamada'],
-                      ]}
-                    />
-                    <Field name="meetingPreferredLocation" label="Lugar / dirección" />
-                    <Field
-                      name="meetingPreparation"
-                      label="Preparación previa"
-                      className="sm:col-span-2"
-                    />
-                    <Field
-                      name="meetingInstructions"
-                      label="Indicaciones internas"
-                      className="sm:col-span-2"
-                    />
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    La reunión se crea en preparación. Las fechas definitivas se guardan al
-                    agendarla.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-            <DialogFooter className="gap-2 border-t pt-5 sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending}
-                onClick={() => setOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={pending}>
-                <Plus className="h-4 w-4" aria-hidden="true" />{' '}
-                {pending ? 'Creando…' : 'Crear tarea'}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 function FilterSelect({
   label,
   value,
@@ -2049,82 +1856,5 @@ function EmptyTasks() {
   )
 }
 
-function Field({
-  name,
-  label,
-  className,
-  defaultValue,
-  ...props
-}: {
-  name: string
-  label: string
-  type?: string
-  required?: boolean
-  className?: string
-  defaultValue?: string
-}) {
-  return (
-    <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label htmlFor={`task-${name}`}>{label}</Label>
-      <Input id={`task-${name}`} name={name} defaultValue={defaultValue} {...props} />
-    </div>
-  )
-}
-
-function Select({
-  name,
-  label,
-  options,
-  required,
-  onValueChange,
-}: {
-  name: string
-  label: string
-  options: string[][]
-  required?: boolean
-  onValueChange?: (value: string) => void
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={`task-${name}`}>{label}</Label>
-      <select
-        id={`task-${name}`}
-        name={name}
-        required={required}
-        onChange={(event) => onValueChange?.(event.target.value)}
-        className={selectClassName}
-      >
-        {options.map(([value, labelValue]) => (
-          <option key={`${name}-${value}`} value={value}>
-            {labelValue}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
 const selectClassName =
   'border-input bg-background h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
-
-function taskLabelClass(color: string) {
-  const classes: Record<string, string> = {
-    gray: 'border-border text-muted-foreground',
-    blue: 'border-blue-500/30 text-blue-700 dark:text-blue-300',
-    amber: 'border-amber-500/30 text-amber-700 dark:text-amber-300',
-    rose: 'border-rose-500/30 text-rose-700 dark:text-rose-300',
-    green: 'border-green-500/30 text-green-700 dark:text-green-300',
-    purple: 'border-purple-500/30 text-purple-700 dark:text-purple-300',
-    teal: 'border-teal-500/30 text-teal-700 dark:text-teal-300',
-  }
-  return classes[color] ?? classes['gray']
-}
-
-function text(data: FormData, name: string) {
-  const value = data.get(name)
-  return typeof value === 'string' ? value : ''
-}
-
-function iso(value: string) {
-  return value ? new Date(value).toISOString() : null
-}

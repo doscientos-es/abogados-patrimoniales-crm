@@ -54,13 +54,32 @@ import { ContactBankingTab } from './contact-banking-tab'
 import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 import { ContactProfileTab } from './contact-profile-tab'
 
+export const CONTACT_TABS = ['summary', 'general', 'banking', 'profile', 'files', 'notes'] as const
+
+export type ContactTab = (typeof CONTACT_TABS)[number]
+
+export function isContactTab(tab: unknown): tab is ContactTab {
+  return typeof tab === 'string' && (CONTACT_TABS as readonly string[]).includes(tab)
+}
+
 const CONTACT_STATUS_CHIP_CLASSES: Record<ContactoPersistido['estado'], string> = {
   Activo: 'border-success/30 bg-success/10 text-success',
   Inactivo: 'border-warning/30 bg-warning/10 text-warning-foreground',
   Archivado: 'border-border bg-secondary text-secondary-foreground',
 }
 
-export function ContactDetail({ contactId }: { contactId: string }) {
+export function ContactDetail({
+  contactId,
+  activeTab: activeTabProp,
+  onSelectTab,
+}: {
+  contactId: string
+  activeTab?: ContactTab | undefined
+  onSelectTab?: ((tab: ContactTab) => void) | undefined
+}) {
+  const [localTab, setLocalTab] = useState<ContactTab>('summary')
+  const activeTab = activeTabProp ?? localTab
+  const setActiveTab = onSelectTab ?? setLocalTab
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -75,9 +94,6 @@ export function ContactDetail({ contactId }: { contactId: string }) {
   const notesQuery = useNotasRemotas(firmId)
   const update = useActualizarContacto(firmId)
   const updateStatus = useActualizarEstadoContacto(firmId)
-  const [activeTab, setActiveTab] = useState<
-    'summary' | 'general' | 'banking' | 'profile' | 'files' | 'notes'
-  >('summary')
   const createNote = useCrearNotaPersona(firmId)
 
   if (session.status === 'loading' || membership.isPending)

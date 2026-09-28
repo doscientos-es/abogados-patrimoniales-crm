@@ -77,6 +77,9 @@ const task: TaskRow = {
   waiting_until: null,
   waiting_detail: '',
   completion_result: '',
+  relevance: 'normal',
+  client_visible: false,
+  client_informed: false,
   cancellation_reason: '',
   opened_at: null,
   opened_by: null,
@@ -153,27 +156,27 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
             order: async () => ({
               data: hasFolders
                 ? [
-                    {
-                      id: 'folder-1',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Escritos',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                    {
-                      id: 'folder-2',
-                      firm_id: 'firm-1',
-                      case_id: 'case-1',
-                      parent_id: null,
-                      name: 'Pruebas',
-                      created_by: 'user-1',
-                      created_at: '2026-01-01',
-                      updated_at: '2026-01-01',
-                    },
-                  ]
+                  {
+                    id: 'folder-1',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Escritos',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                  {
+                    id: 'folder-2',
+                    firm_id: 'firm-1',
+                    case_id: 'case-1',
+                    parent_id: null,
+                    name: 'Pruebas',
+                    created_by: 'user-1',
+                    created_at: '2026-01-01',
+                    updated_at: '2026-01-01',
+                  },
+                ]
                 : [],
               error: null,
             }),

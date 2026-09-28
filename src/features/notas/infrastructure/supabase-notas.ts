@@ -398,6 +398,8 @@ export type GuardarNotaInput = {
   permittedUserIds: string[]
   caseId?: string | null
   opportunityId?: string | null
+  /** Extra keys merged into `details`, e.g. `{ taskId }` to link the note to a task. */
+  extraDetails?: Record<string, string>
 }
 
 export function useGuardarNota(firmId: string | undefined) {
@@ -434,7 +436,7 @@ export function useGuardarNota(firmId: string | undefined) {
           review_pending: Boolean(input.reviewOn),
           snoozed_until: '',
           visibility: input.visibility,
-          details: { triggers: input.triggers },
+          details: { ...input.extraDetails, triggers: input.triggers },
           contact_ids: input.contactIds,
           permitted_user_ids: input.visibility === 'restricted' ? input.permittedUserIds : [],
         },

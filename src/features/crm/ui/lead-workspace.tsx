@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Check, ClipboardCheck, NotebookPen, Plus, Trash2 } 
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
+import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -166,8 +167,8 @@ export function LeadWorkspace({
   const requestedDocuments = ensureRequiredLeadDocumentRequests(
     Array.isArray(details['documentacionSolicitada'])
       ? details['documentacionSolicitada'].filter(
-          (value): value is string => typeof value === 'string',
-        )
+        (value): value is string => typeof value === 'string',
+      )
       : [],
   )
   const reconciledDocuments = reconcileRequestedLeadDocuments(
@@ -287,19 +288,19 @@ export function LeadWorkspace({
             condiciones: formText(form, 'quoteConditions'),
             ...(status === 'Validado' && canReviewQuote
               ? {
-                  validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
-                  fechaValidacion: new Date().toISOString(),
-                  validadoVersion: version,
-                }
+                validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
+                fechaValidacion: new Date().toISOString(),
+                validadoVersion: version,
+              }
               : {}),
             ...(version !== previousVersion
               ? { validadoVersion: null, validadoPor: null, fechaValidacion: null }
               : {}),
             historial: historyChanged
               ? [
-                  ...history,
-                  { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
-                ]
+                ...history,
+                { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+              ]
               : history,
           },
         },
@@ -334,11 +335,11 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'validation'
           ? {
-              transicionContratacion: {
-                fase: 'engagement' as const,
-                subestado: 'Pendiente de aceptación',
-              },
-            }
+            transicionContratacion: {
+              fase: 'engagement' as const,
+              subestado: 'Pendiente de aceptación',
+            },
+          }
           : {}),
         detalles: {
           ...details,
@@ -497,12 +498,12 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'engagement'
           ? {
-              transicionContratacion: {
-                fase: 'validation' as const,
-                subestado: 'Rectificación solicitada',
-                motivo: revisionRequest,
-              },
-            }
+            transicionContratacion: {
+              fase: 'validation' as const,
+              subestado: 'Rectificación solicitada',
+              motivo: revisionRequest,
+            },
+          }
           : {}),
         detalles: {
           ...details,
@@ -526,24 +527,6 @@ export function LeadWorkspace({
       toast.success('Solicitud de modificación registrada; la nueva versión requiere validación.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo registrar la modificación.')
-    }
-  }
-
-  const addTask = async (
-    input: Omit<CrearTareaInput, 'expedienteId' | 'oportunidadId' | 'clasePlazo' | 'critico'>,
-  ) => {
-    try {
-      await createTask.mutateAsync({
-        expedienteId: null,
-        oportunidadId: opportunity.id,
-        ...input,
-        clasePlazo: null,
-        critico: false,
-      })
-      toast.success('Tarea creada.')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
-      throw error
     }
   }
 
@@ -845,13 +828,15 @@ export function LeadWorkspace({
           }
           createDialog={
             <LeadTaskCreateDialog
+              firmId={firmId}
+              oportunidadId={opportunity.id}
               reference={opportunity.referencia}
               defaultAssigneeId={opportunity.asignadoId}
               members={members.data ?? []}
               labels={taskLabels.data ?? []}
               titleTemplates={taskTitles.data ?? []}
               pending={createTask.isPending}
-              onCreate={addTask}
+              onCreate={(input) => createTask.mutateAsync(input)}
             />
           }
           loading={tasks.isPending}
@@ -1379,7 +1364,7 @@ export function LeadWorkspace({
               </div>
             </form>
             {text(quote['estado']) !== 'Validado' ||
-            quote['validadoVersion'] !== quote['version'] ? (
+              quote['validadoVersion'] !== quote['version'] ? (
               <p className="text-destructive text-xs">
                 La versión actual del presupuesto debe estar validada antes de registrar el envío.
               </p>
@@ -1972,6 +1957,8 @@ export function LeadHistoryTimeline({
 }
 
 export function LeadTaskCreateDialog({
+  firmId,
+  oportunidadId,
   reference,
   defaultAssigneeId,
   members,
@@ -1980,205 +1967,33 @@ export function LeadTaskCreateDialog({
   pending,
   onCreate,
 }: {
+  firmId?: string | undefined
+  oportunidadId?: string
   reference: string
   defaultAssigneeId: string | null
   members: Array<{ id: string; nombre: string }>
   labels: Array<{ id: string; name: string; color: string }>
   titleTemplates: string[]
   pending: boolean
-  onCreate: (
-    input: Omit<CrearTareaInput, 'expedienteId' | 'oportunidadId' | 'clasePlazo' | 'critico'>,
-  ) => Promise<void>
+  onCreate: (input: CrearTareaInput) => Promise<unknown>
 }) {
-  const [open, setOpen] = useState(false)
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    const dueDate = formText(data, 'dueDate')
-    const dueTime = formText(data, 'dueTime')
-    try {
-      await onCreate({
-        tipo: 'Tarea',
-        titulo: formText(data, 'title'),
-        descripcion: formText(data, 'description'),
-        prioridad: formText(data, 'priority') as CrearTareaInput['prioridad'],
-        venceEn: dueDate ? `${dueDate}T${dueTime || '09:00'}:00` : null,
-        recordarEn: null,
-        asignadoId: formText(data, 'assignee') || null,
-        etiquetaIds: formText(data, 'label') ? [formText(data, 'label')] : [],
-      })
-      form.reset()
-      setOpen(false)
-    } catch {
-      // The mutation reports the specific error through the parent action.
-    }
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <TaskCreateDialog
+      firmId={firmId}
+      oportunidadId={oportunidadId ?? null}
+      contextLabel={reference}
+      defaultAssigneeId={defaultAssigneeId}
+      members={members}
+      labels={labels.map((label) => ({ id: label.id, nombre: label.name, color: label.color }))}
+      titleTemplates={titleTemplates}
+      pending={pending}
+      onCreate={onCreate}
+      trigger={
         <Button id="lead-new-task" type="button">
           <Plus className="h-4 w-4" aria-hidden="true" /> Nueva tarea
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[calc(100svh-2rem)] max-w-2xl overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)]">
-        <DialogHeader>
-          <div className="bg-muted/45 border-b px-6 py-5">
-            <DialogTitle>Nueva tarea</DialogTitle>
-            <DialogDescription className="mt-1.5">
-              Quedará vinculada a {reference}.
-            </DialogDescription>
-          </div>
-        </DialogHeader>
-        <form
-          className="space-y-4 px-6 py-6"
-          aria-busy={pending}
-          onSubmit={(event) => void submit(event)}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TaskFormField
-              name="title"
-              label="Título *"
-              required
-              className="sm:col-span-2"
-              list="lead-task-title-suggestions"
-              placeholder="Qué hay que hacer"
-            />
-            <datalist id="lead-task-title-suggestions">
-              {titleTemplates.map((title) => (
-                <option key={title} value={title}>
-                  {title}
-                </option>
-              ))}
-            </datalist>
-            <TaskSelect
-              name="assignee"
-              label="Asignada a"
-              defaultValue={defaultAssigneeId ?? ''}
-              options={[
-                ['', 'Sin asignar'],
-                ...members.map((member) => [member.id, member.nombre]),
-              ]}
-            />
-            <TaskFormField name="dueDate" label="Vencimiento" type="date" />
-            <TaskFormField name="dueTime" label="Hora límite" type="time" />
-            <TaskSelect
-              name="priority"
-              label="Prioridad"
-              defaultValue="Media"
-              options={[
-                ['Alta', 'Alta'],
-                ['Media', 'Media'],
-                ['Baja', 'Baja'],
-              ]}
-            />
-            <TaskSelect
-              name="label"
-              label="Etiquetas"
-              className="sm:col-span-2"
-              options={[['', 'Sin etiquetas'], ...labels.map((label) => [label.id, label.name])]}
-            />
-            <TaskFormField
-              name="description"
-              label="Mensaje inicial"
-              helper="Contexto e indicaciones para quien recibe el encargo."
-              multiline
-              className="sm:col-span-2"
-              placeholder="Indicaciones para quien recibe el encargo"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={pending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Creando…' : 'Crear tarea'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function TaskFormField({
-  name,
-  label,
-  helper,
-  multiline,
-  className,
-  ...props
-}: {
-  name: string
-  label: string
-  helper?: string
-  multiline?: boolean
-  className?: string
-  type?: string
-  required?: boolean
-  list?: string
-  placeholder?: string
-}) {
-  const helpId = helper ? `lead-task-${name}-help` : undefined
-  return (
-    <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label htmlFor={`lead-task-${name}`}>{label}</Label>
-      {multiline ? (
-        <Textarea
-          id={`lead-task-${name}`}
-          name={name}
-          rows={4}
-          aria-describedby={helpId}
-          {...props}
-        />
-      ) : (
-        <Input id={`lead-task-${name}`} name={name} aria-describedby={helpId} {...props} />
-      )}
-      {helper ? (
-        <p id={helpId} className="text-muted-foreground text-xs">
-          {helper}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
-function TaskSelect({
-  name,
-  label,
-  options,
-  defaultValue,
-  className,
-}: {
-  name: string
-  label: string
-  options: string[][]
-  defaultValue?: string
-  className?: string
-}) {
-  return (
-    <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label htmlFor={`lead-task-${name}`}>{label}</Label>
-      <select
-        id={`lead-task-${name}`}
-        name={name}
-        defaultValue={defaultValue}
-        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-      >
-        {options.map(([value, optionLabel]) => (
-          <option key={`${name}-${value}`} value={value}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
-    </div>
+      }
+    />
   )
 }
 
@@ -2243,16 +2058,16 @@ function qualificationQuestions(value: Json | undefined): QualificationQuestion[
     const questionText = text(record['texto']) || text(record['text']) || text(question)
     return questionText
       ? [
-          {
-            id: text(record['id']) || `question-${index}`,
-            text: questionText,
-            response:
-              record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
-                ? record['respuesta']
-                : 'Pendiente',
-            observation: text(record['observacion']),
-          },
-        ]
+        {
+          id: text(record['id']) || `question-${index}`,
+          text: questionText,
+          response:
+            record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
+              ? record['respuesta']
+              : 'Pendiente',
+          observation: text(record['observacion']),
+        },
+      ]
       : []
   })
 }

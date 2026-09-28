@@ -32,12 +32,15 @@ describe('taskBoardColumn', () => {
     expect(taskBoardColumn(task({ estado: 'Cancelada' }))).toBeNull()
   })
 
-  it('only permits drag-and-drop between persisted active states', () => {
+  it('permits drag-and-drop between different active columns', () => {
     expect(taskStatusForBoardColumn('pending')).toBe('Pendiente')
     expect(taskStatusForBoardColumn('in-progress')).toBe('En curso')
     expect(taskStatusForBoardColumn('waiting')).toBeNull()
     expect(canMoveTaskInBoard(task(), 'in-progress')).toBe(true)
-    expect(canMoveTaskInBoard(task({ estado: 'En espera' }), 'pending')).toBe(false)
+    expect(canMoveTaskInBoard(task(), 'waiting')).toBe(true)
+    expect(canMoveTaskInBoard(task({ estado: 'En espera' }), 'pending')).toBe(true)
+    expect(canMoveTaskInBoard(task(), 'pending')).toBe(false)
+    expect(canMoveTaskInBoard(task({ estado: 'Completada' }), 'pending')).toBe(false)
   })
 })
 

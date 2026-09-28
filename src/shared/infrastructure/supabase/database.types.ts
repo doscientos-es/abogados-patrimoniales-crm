@@ -62,11 +62,6 @@ export type Database = {
       >
       crm_cases: Table<CaseRow, CaseInsert, Partial<CaseInsert> & { id?: string; version?: number }>
       crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
-      crm_case_activities: Table<
-        CaseActivityRow,
-        CaseActivityInsert,
-        Partial<CaseActivityInsert> & { id?: string; version?: number }
-      >
       crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
       crm_case_communications: Table<CaseCommunicationRow, CaseCommunicationInsert>
       crm_case_events: Table<CaseEventRow, never, never>
@@ -89,6 +84,7 @@ export type Database = {
       crm_task_evidences: Table<TaskEvidenceRow, never, never>
       crm_task_dependencies: Table<TaskDependencyRow, never, never>
       crm_task_inbox_items: Table<TaskInboxItemRow, TaskInboxItemInsert>
+      crm_notifications: Table<NotificationRow, never, never>
       crm_notes: Table<NoteRow, NoteInsert, Partial<NoteInsert> & { id?: string }>
       crm_note_contacts: Table<NoteContactRow, never, never>
       crm_note_permissions: Table<NotePermissionRow, never, never>
@@ -328,17 +324,17 @@ export type Database = {
           target_expected_version: number
           result_text: string
           continuity_decision?: string | null
+          task_relevance?: TaskRelevance
         }
         Returns: TaskRow
       }
-      crm_complete_task_as_activity: {
+      crm_set_task_client_visible: {
         Args: {
           target_task_id: string
           target_expected_version: number
-          result_text: string
-          continuity_decision?: string | null
+          target_visible: boolean
         }
-        Returns: CaseActivityRow
+        Returns: TaskRow
       }
       crm_add_task_subtask: {
         Args: {
@@ -357,6 +353,14 @@ export type Database = {
         }
         Returns: TaskRow
       }
+      crm_mark_task_subtask_converted: {
+        Args: {
+          target_task_id: string
+          target_subtask_id: string
+          converted_task_id: string
+        }
+        Returns: TaskRow
+      }
       crm_set_next_action: {
         Args: { target_task_id: string; target_expected_version: number; enabled: boolean }
         Returns: TaskRow
@@ -368,6 +372,10 @@ export type Database = {
       crm_add_task_message: {
         Args: { target_task_id: string; message_body: string }
         Returns: TaskMessageRow
+      }
+      crm_mark_notifications_read: {
+        Args: { target_task_id?: string | null }
+        Returns: number
       }
       crm_add_task_evidence: {
         Args: {
@@ -382,6 +390,20 @@ export type Database = {
         Returns: TaskDependencyRow
       }
       crm_remove_task_dependency: { Args: { target_dependency_id: string }; Returns: undefined }
+      crm_add_next_task: {
+        Args: {
+          target_task_id: string
+          new_title: string
+          new_description?: string
+          new_priority?: OpportunityPriority
+          new_assigned_to?: string | null
+          new_due_at?: string | null
+          new_due_days?: number | null
+          new_due_time?: string | null
+          initial_message?: string | null
+        }
+        Returns: TaskRow
+      }
       crm_update_task_meeting: {
         Args: {
           target_task_id: string
@@ -1072,51 +1094,6 @@ export type CaseWorkstreamInsert = {
   details?: Json
 }
 
-export type CaseActivityRow = {
-  id: string
-  firm_id: string
-  case_id: string
-  workstream_id: string | null
-  activity_type: string
-  title: string
-  description: string
-  occurred_at: string
-  assigned_to: string | null
-  status: string
-  result: string
-  next_action: string
-  time_spent_hours: number
-  billable: boolean
-  client_visible: boolean
-  client_informed: boolean
-  details: Json
-  version: number
-  created_by: string | null
-  updated_by: string | null
-  created_at: string
-  updated_at: string
-}
-
-export type CaseActivityInsert = {
-  id?: string
-  firm_id: string
-  case_id: string
-  workstream_id?: string | null
-  activity_type: string
-  title: string
-  description?: string
-  occurred_at?: string
-  assigned_to?: string | null
-  status?: string
-  result?: string
-  next_action?: string
-  time_spent_hours?: number
-  billable?: boolean
-  client_visible?: boolean
-  client_informed?: boolean
-  details?: Json
-}
-
 export type CaseParticipantRow = {
   id: string
   firm_id: string
@@ -1277,6 +1254,8 @@ export type DocumentTaskLinkRow = {
   created_at: string
 }
 
+export type TaskRelevance = 'normal' | 'activity' | 'milestone'
+
 export type TaskRow = {
   id: string
   firm_id: string
@@ -1306,6 +1285,9 @@ export type TaskRow = {
   waiting_until: string | null
   waiting_detail: string
   completion_result: string
+  relevance: TaskRelevance
+  client_visible: boolean
+  client_informed: boolean
   cancellation_reason: string
   opened_at: string | null
   opened_by: string | null
@@ -1373,6 +1355,21 @@ export type TaskMessageRow = {
   author_id: string | null
   body: string
   message_type: 'initial_assignment' | 'comment' | 'system'
+  created_at: string
+}
+
+export type NotificationRow = {
+  id: string
+  firm_id: string
+  recipient_id: string
+  actor_id: string | null
+  actor_name: string
+  task_id: string | null
+  task_title: string
+  message_id: string | null
+  kind: 'task_message' | 'task_assignment' | 'task_reminder' | 'task_unblocked'
+  body: string
+  read_at: string | null
   created_at: string
 }
 

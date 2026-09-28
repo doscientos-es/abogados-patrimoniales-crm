@@ -252,7 +252,7 @@ describe("LeadHeroActions", () => {
     expect(screen.getByText("Quedará vinculada a OP-2026-0008.")).toBeTruthy();
     expect(screen.getByLabelText("Título *")).toBeTruthy();
     expect(screen.getByLabelText("Mensaje inicial").getAttribute("aria-describedby")).toBe(
-      "lead-task-description-help",
+      "task-create-initialMessage-help",
     );
 
     fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "Llamar al cliente" } });

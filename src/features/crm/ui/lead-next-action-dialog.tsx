@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
+import { PresetPicker } from '@/components/tareas/task-create-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
 import { useCrearTarea, useMarcarSiguienteAccion, type TareaPersistida } from '@/features/tareas'
 
@@ -58,6 +60,8 @@ export function LeadNextActionDialog({
   reference: string
   onFinish: () => void
 }) {
+  const session = useAuthSession()
+  const currentUserId = session.user?.id
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
   const markNextAction = useMarcarSiguienteAccion(firmId)
@@ -66,7 +70,8 @@ export function LeadNextActionDialog({
   const [description, setDescription] = useState(
     'Contactar telefónicamente para ampliar la información inicial recibida.',
   )
-  const [assigneeId, setAssigneeId] = useState('')
+  const [assigneeId, setAssigneeId] = useState<string | null>(null)
+  const selectedAssigneeId = assigneeId ?? currentUserId ?? ''
   const [priority, setPriority] = useState<TareaPersistida['prioridad']>('Media')
   const [dueDate, setDueDate] = useState('')
   const [createdTask, setCreatedTask] = useState<TareaPersistida | null>(null)
@@ -105,7 +110,7 @@ export function LeadNextActionDialog({
           recordarEn: null,
           clasePlazo: null,
           critico: false,
-          asignadoId: assigneeId || null,
+          asignadoId: selectedAssigneeId || null,
         }))
       if (!createdTask) setCreatedTask(task)
       await markNextAction.mutateAsync({ task, enabled: true })
@@ -120,7 +125,7 @@ export function LeadNextActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && finish()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>¿Cuál es la siguiente acción?</DialogTitle>
           <DialogDescription>
@@ -147,14 +152,17 @@ export function LeadNextActionDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lead-next-action-title">En qué consiste</Label>
-            <Input
-              id="lead-next-action-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              maxLength={240}
-              required
-              disabled={locked}
-            />
+            <div className="flex gap-1.5">
+              <Input
+                id="lead-next-action-title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={240}
+                required
+                disabled={locked}
+              />
+              {locked ? null : <PresetPicker firmId={firmId} onPick={setTitle} />}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lead-next-action-description">Indicaciones</Label>
@@ -173,16 +181,19 @@ export function LeadNextActionDialog({
               <select
                 id="lead-next-action-assignee"
                 className={selectClassName}
-                value={assigneeId}
+                value={selectedAssigneeId}
                 onChange={(event) => setAssigneeId(event.target.value)}
                 disabled={locked}
               >
-                <option value="">Sin asignar</option>
-                {(members.data ?? []).map((member) => (
+                {currentUserId ? (
+                  <option value={currentUserId}>Asignarme a mí mismo</option>
+                ) : null}
+                {(members.data ?? []).filter((member) => member.id !== currentUserId).map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.nombre}
                   </option>
                 ))}
+                <option value="">Sin asignar</option>
               </select>
             </div>
             <div className="space-y-1.5">

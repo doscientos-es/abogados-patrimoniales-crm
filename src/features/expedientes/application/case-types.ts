@@ -44,20 +44,20 @@ export type LineaPersistida = {
   version: number;
 };
 
+export type RelevanciaActuacion = "activity" | "milestone";
+
+/** Tarea completada del expediente marcada como actuación o hito histórico. */
 export type ActuacionPersistida = {
   id: string;
   expedienteId: string;
   lineaId: string | null;
-  tipo: string;
+  relevancia: RelevanciaActuacion;
+  tipo: "Actuación" | "Hito histórico";
   titulo: string;
   descripcion: string;
   ocurridaEn: string;
   asignadoId: string | null;
-  estado: string;
   resultado: string;
-  proximaAccion: string;
-  horas: number;
-  facturable: boolean;
   visibleCliente: boolean;
   clienteInformado: boolean;
   version: number;
@@ -134,20 +134,6 @@ export type ActualizarLineaInput = {
   fechaResolucion: string | null;
   fechaCierre: string | null;
   details: Json;
-};
-
-export type CrearActuacionInput = {
-  expedienteId: string;
-  lineaId: string | null;
-  tipo: string;
-  titulo: string;
-  descripcion: string;
-  asignadoId: string | null;
-  resultado: string;
-  proximaAccion: string;
-  horas: number;
-  facturable: boolean;
-  visibleCliente?: boolean;
 };
 
 export type ActualizarVisibilidadActuacionInput = {

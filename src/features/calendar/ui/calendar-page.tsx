@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   buildMonthGrid,
@@ -37,8 +37,8 @@ import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   useCrearTarea,
   useEditarTarea,
+  useEtiquetasTarea,
   useTareasPersistentes,
-  type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
 import { cn } from '@/lib/utils'
@@ -46,7 +46,11 @@ import { cn } from '@/lib/utils'
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const EVENT_LIMIT_PER_DAY = 3
 
-type CalendarView = 'month' | 'agenda'
+export type CalendarView = 'month' | 'agenda'
+
+export function isCalendarView(value: unknown): value is CalendarView {
+  return value === 'month' || value === 'agenda'
+}
 
 const eventStyle: Record<TareaPersistida['tipo'], string> = {
   Tarea: 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -67,6 +71,10 @@ function dateTimeLocalValue(value: Date) {
   return offsetDate.toISOString().slice(0, 16)
 }
 
+function dateInputValue(value: Date) {
+  return dateTimeLocalValue(value).slice(0, 10)
+}
+
 function formatEventDate(value: Date) {
   return new Intl.DateTimeFormat('es-ES', {
     weekday: 'long',
@@ -80,16 +88,25 @@ function formatEventDate(value: Date) {
     .replace(',', ' ·')
 }
 
-export function CalendarPage() {
+export function CalendarPage({
+  view: viewProp,
+  onViewChange,
+}: {
+  view?: CalendarView | undefined
+  onViewChange?: ((view: CalendarView) => void) | undefined
+} = {}) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const tasks = useTareasPersistentes(firmId)
   const cases = useExpedientesPersistentes(firmId)
   const members = useMiembrosDespacho(firmId)
+  const taskLabels = useEtiquetasTarea(firmId)
   const createTask = useCrearTarea(firmId)
   const editTask = useEditarTarea(firmId)
-  const [view, setView] = useState<CalendarView>('month')
+  const [localView, setLocalView] = useState<CalendarView>('month')
+  const view = viewProp ?? localView
+  const setView = onViewChange ?? setLocalView
   const [filters, setFilters] = useState<CalendarEntryFilters>(EMPTY_CALENDAR_FILTERS)
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const [createDay, setCreateDay] = useState<Date | null>(null)
@@ -327,15 +344,25 @@ export function CalendarPage() {
           )}
         </CardContent>
       </Card>
-      <CreateEventDialog
+      <TaskCreateDialog
         key={createDay?.toISOString()}
-        day={createDay}
-        cases={cases.data ?? []}
-        members={members.data ?? []}
-        pending={createTask.isPending}
+        open={Boolean(createDay)}
         onOpenChange={(open) => {
           if (!open) setCreateDay(null)
         }}
+        firmId={firmId}
+        title="Crear evento"
+        description={
+          createDay ? `Programa un evento para el ${formatEventDate(createDay)}.` : undefined
+        }
+        defaultKind="Evento"
+        defaultDueDate={createDay ? dateInputValue(createDay) : undefined}
+        defaultDueTime="09:00"
+        cases={cases.data ?? []}
+        members={members.data ?? []}
+        labels={taskLabels.data ?? []}
+        pending={createTask.isPending}
+        successMessage="Evento creado."
         onCreate={(input) => createTask.mutateAsync(input)}
       />
       <EventDetailDialog
@@ -618,161 +645,6 @@ function CalendarEvent({
         </span>
       )}
     </button>
-  )
-}
-
-function CreateEventDialog({
-  day,
-  cases,
-  members,
-  pending,
-  onOpenChange,
-  onCreate,
-}: {
-  day: Date | null
-  cases: { id: string; referencia: string; titulo: string }[]
-  members: { id: string; nombre: string }[]
-  pending: boolean
-  onOpenChange: (open: boolean) => void
-  onCreate: (input: CrearTareaInput) => Promise<unknown>
-}) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [caseId, setCaseId] = useState('')
-  const [assigneeId, setAssigneeId] = useState('')
-  const [dueAt, setDueAt] = useState(() =>
-    day ? dateTimeLocalValue(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9)) : '',
-  )
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setTitle('')
-      setDescription('')
-      setCaseId('')
-      setAssigneeId('')
-      setDueAt('')
-    }
-    onOpenChange(open)
-  }
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      await onCreate({
-        expedienteId: caseId,
-        oportunidadId: null,
-        tipo: 'Evento',
-        titulo: title,
-        descripcion: description,
-        prioridad: 'Media',
-        venceEn: dueAt ? new Date(dueAt).toISOString() : null,
-        recordarEn: null,
-        clasePlazo: null,
-        critico: false,
-        asignadoId: assigneeId || null,
-      })
-      toast.success('Evento creado.')
-      handleOpenChange(false)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear el evento.')
-    }
-  }
-
-  return (
-    <Dialog open={Boolean(day)} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Crear evento</DialogTitle>
-          <DialogDescription>
-            {day
-              ? `Programa un evento para el ${formatEventDate(new Date(day.getFullYear(), day.getMonth(), day.getDate()))}.`
-              : ''}
-          </DialogDescription>
-        </DialogHeader>
-        {!cases.length ? (
-          <p className="text-sm">Primero necesitas un expediente para poder vincular el evento.</p>
-        ) : (
-          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-            <div className="space-y-1.5">
-              <Label htmlFor="calendar-event-title">Título *</Label>
-              <Input
-                id="calendar-event-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                required
-                maxLength={240}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="calendar-event-description">Descripción</Label>
-              <Textarea
-                id="calendar-event-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={3}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="calendar-event-case">Expediente *</Label>
-                <select
-                  id="calendar-event-case"
-                  value={caseId}
-                  onChange={(event) => setCaseId(event.target.value)}
-                  required
-                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-                >
-                  <option value="">Selecciona un expediente</option>
-                  {cases.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.referencia} · {item.titulo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="calendar-event-assignee">Responsable</Label>
-                <select
-                  id="calendar-event-assignee"
-                  value={assigneeId}
-                  onChange={(event) => setAssigneeId(event.target.value)}
-                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-                >
-                  <option value="">Sin asignar</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="calendar-event-due">Fecha y hora *</Label>
-                <Input
-                  id="calendar-event-due"
-                  type="datetime-local"
-                  value={dueAt}
-                  onChange={(event) => setDueAt(event.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending}
-                onClick={() => handleOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={pending}>
-                {pending ? 'Creando…' : 'Crear evento'}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
   )
 }
 

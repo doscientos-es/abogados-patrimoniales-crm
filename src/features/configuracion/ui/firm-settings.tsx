@@ -94,7 +94,21 @@ function useConfigurationData(firmId: string | undefined, userId: string | undef
   })
 }
 
-export function FirmSettings() {
+export const SETTINGS_TABS = ['firm', 'profile', 'team', 'catalogs', 'drive', 'changelog'] as const
+
+export type SettingsTab = (typeof SETTINGS_TABS)[number]
+
+export function isSettingsTab(tab: unknown): tab is SettingsTab {
+  return typeof tab === 'string' && (SETTINGS_TABS as readonly string[]).includes(tab)
+}
+
+export function FirmSettings({
+  activeTab,
+  onSelectTab,
+}: {
+  activeTab?: SettingsTab | undefined
+  onSelectTab?: ((tab: SettingsTab) => void) | undefined
+} = {}) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -103,9 +117,9 @@ export function FirmSettings() {
   const queryClient = useQueryClient()
   const [firmDraft, setFirmDraft] = useState<FirmForm | null>(null)
   const [profileDraft, setProfileDraft] = useState<string | null>(null)
-  const [tab, setTab] = useState<'firm' | 'profile' | 'team' | 'catalogs' | 'drive' | 'changelog'>(
-    'firm',
-  )
+  const [localTab, setLocalTab] = useState<SettingsTab>('firm')
+  const tab = activeTab ?? localTab
+  const setTab = onSelectTab ?? setLocalTab
 
   const invalidate = () => {
     return queryClient.invalidateQueries({

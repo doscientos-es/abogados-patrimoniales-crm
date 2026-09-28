@@ -24,14 +24,28 @@ export {
   DialogTrigger,
 }
 
+const DIALOG_SIZES = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-xl',
+  '2xl': 'sm:max-w-2xl',
+  '3xl': 'sm:max-w-3xl',
+  '4xl': 'sm:max-w-3xl lg:max-w-4xl',
+  '5xl': 'sm:max-w-3xl lg:max-w-5xl',
+} as const
+
+export type DialogSize = keyof typeof DIALOG_SIZES
+
 export function DialogContent({
   className,
+  size = 'lg',
   ...props
-}: ComponentProps<typeof DoscientosDialogContent>) {
+}: ComponentProps<typeof DoscientosDialogContent> & { size?: DialogSize }) {
   return (
     <DoscientosDialogContent
       {...props}
-      className={cn('max-h-[calc(100dvh-2rem)] overflow-y-auto', className)}
+      className={cn('max-h-[calc(100dvh-2rem)] overflow-y-auto', DIALOG_SIZES[size], className)}
     />
   )
 }

@@ -1,6 +1,12 @@
 export type TipoTarea = 'Tarea' | 'Recordatorio' | 'Evento' | 'Plazo'
 export type EstadoTarea = 'Pendiente' | 'En curso' | 'En espera' | 'Completada' | 'Cancelada'
 export type ValidacionPlazo = 'No aplica' | 'Propuesto' | 'Validado' | 'Rechazado'
+export type RelevanciaTarea = 'normal' | 'activity' | 'milestone'
+export const RELEVANCIA_TAREA_LABELS: Record<RelevanciaTarea, string> = {
+  normal: 'Tarea normal',
+  activity: 'Actuación',
+  milestone: 'Hito histórico',
+}
 
 export type EstadoPrimeraCita =
   | 'Programada'
@@ -33,6 +39,7 @@ export type DetallesReunion = {
   subject?: string
   attendeeNames?: string[]
   durationMinutes?: number
+  preferredDateType?: string
   preferredDate?: string
   preferredTimeSlot?: string
   preferredLocation?: string
@@ -84,6 +91,7 @@ export type SubtareaPersistida = {
   hecha: boolean
   creadaPorId: string | null
   creadaEn: string
+  convertidaEnId: string | null
 }
 
 export type TareaPersistida = {
@@ -112,12 +120,14 @@ export type TareaPersistida = {
   revisarEn: string | null
   detalleEspera: string
   resultadoCierre: string
+  relevancia: RelevanciaTarea
   motivoCancelacion: string
   abiertaEn: string | null
   abiertaPorId: string | null
   motivoRechazo: string
   rechazadaEn: string | null
   tareaPadreId: string | null
+  origenSubtareaDeId: string | null
   reunion: Record<string, unknown>
   subtareas: SubtareaPersistida[]
   bloqueada: boolean
@@ -155,6 +165,7 @@ export type CompletarTareaInput = {
   task: TareaPersistida
   resultado: string
   continuidad?: 'create_next_task' | 'close_without_continuity'
+  relevancia?: RelevanciaTarea
 }
 
 export type ValidarPlazoInput = {

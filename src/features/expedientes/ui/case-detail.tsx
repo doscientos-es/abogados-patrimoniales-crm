@@ -25,13 +25,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { TaskCreateDialog, type TaskLabelOption } from '@/components/tareas/task-create-dialog'
 import type { MiembroDespacho } from '@/features/crm'
 import {
   caseAlerts,
@@ -57,9 +57,10 @@ import type { FacturaPersistida } from '@/features/facturacion/application/factu
 import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
 import type { CaseCommunicationRow, CaseDocumentRow } from '@/shared/infrastructure/supabase'
+
 import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
 
-type CaseDetailTab =
+export type CaseDetailTab =
   | 'summary'
   | 'workstreams'
   | 'participants'
@@ -85,6 +86,8 @@ const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activ
 ]
 
 export function CaseDetail({
+  activeTab: activeTabProp,
+  onSelectTab,
   expediente: item,
   lineas,
   actuaciones,
@@ -113,8 +116,18 @@ export function CaseDetail({
   relatedForms,
   notas = [],
   taskTitleTemplates = [],
+  firmId,
+  taskLabels = [],
+  tasksPanel,
+  onOpenTask,
 }: {
+  onOpenTask?: ((taskId: string) => void) | undefined
+  firmId?: string | undefined
+  taskLabels?: TaskLabelOption[]
+  tasksPanel?: ReactNode
   expediente: ExpedientePersistido
+  activeTab?: CaseDetailTab
+  onSelectTab?: (tab: CaseDetailTab) => void
   lineas: LineaPersistida[]
   actuaciones: ActuacionPersistida[]
   participantes: ParticipantePersistido[]
@@ -139,11 +152,12 @@ export function CaseDetail({
   reportPending?: boolean
   onRegisterClientReport?: (input: RegistrarReporteClienteInput) => Promise<unknown>
   editor: ReactNode
-  relatedForms: { participant: ReactNode; workstream: ReactNode; activity: ReactNode }
+  relatedForms: { participant: ReactNode; workstream: ReactNode }
   notas?: NotaRemota[]
   taskTitleTemplates?: string[]
 }) {
-  const [activeTab, setActiveTab] = useState<CaseDetailTab>('summary')
+  const [localTab, setLocalTab] = useState<CaseDetailTab>('summary')
+  const activeTab = activeTabProp ?? localTab
   comunicaciones = comunicaciones ?? []
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
   const caseTasks = tareas.filter((task) => task.expedienteId === item.id)
@@ -174,7 +188,6 @@ export function CaseDetail({
         lastMovement={lastMovement}
         alerts={alerts}
         editor={editor}
-        activityForm={relatedForms.activity}
         notas={notas}
         hasActivities={actuaciones.some((activity) => activity.expedienteId === item.id)}
       />
@@ -195,7 +208,10 @@ export function CaseDetail({
               aria-controls={`case-detail-panel-${id}`}
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                setLocalTab(id)
+                onSelectTab?.(id)
+              }}
               className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent'}`}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
@@ -220,6 +236,7 @@ export function CaseDetail({
             tareas={openTasks}
             actuaciones={actuaciones}
             documentos={documentos}
+            onOpenTask={onOpenTask}
           />
         ) : null}
         {activeTab === 'workstreams' ? (
@@ -240,6 +257,9 @@ export function CaseDetail({
             canManageNextAction={canManageNextAction}
             nextActionPending={nextActionPending}
             createForm={relatedForms.workstream}
+            firmId={firmId}
+            taskLabels={taskLabels}
+            onOpenTask={onOpenTask}
           />
         ) : null}
         {activeTab === 'participants' ? (
@@ -261,7 +281,7 @@ export function CaseDetail({
         {activeTab === 'activities' ? (
           <DetailSection
             title="Actuaciones"
-            subtitle="Registro cronológico de la actividad profesional realizada."
+            subtitle="Tareas completadas marcadas como actuación o hito histórico."
           >
             <div className="space-y-3">
               {actuaciones.map((activity) => (
@@ -302,9 +322,12 @@ export function CaseDetail({
           />
         ) : null}
         {activeTab === 'tasks' ? (
-          <TasksSection
+          tasksPanel ?? <TasksSection
+            firmId={firmId}
             tasks={caseTasks}
             expediente={item}
+            miembros={miembros}
+            labels={taskLabels}
             pending={taskPending}
             onCreate={onCreateTask}
             titleTemplates={taskTitleTemplates}
@@ -324,7 +347,6 @@ function CaseHeader({
   lastMovement,
   alerts,
   editor,
-  activityForm,
   notas,
   hasActivities,
 }: {
@@ -332,7 +354,6 @@ function CaseHeader({
   lastMovement: string
   alerts: string[]
   editor: ReactNode
-  activityForm: ReactNode
   notas: NotaRemota[]
   hasActivities: boolean
 }) {
@@ -366,7 +387,6 @@ function CaseHeader({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <CaseEditDialog editor={editor} />
-            {activityForm}
           </div>
         </div>
         {alerts.length ? (
@@ -718,6 +738,7 @@ function CaseSummary({
   tareas,
   actuaciones,
   documentos,
+  onOpenTask,
 }: {
   expediente: ExpedientePersistido
   lastMovement: string
@@ -726,6 +747,7 @@ function CaseSummary({
   tareas: TareaPersistida[]
   actuaciones: ActuacionPersistida[]
   documentos: CaseDocumentRow[]
+  onOpenTask?: ((taskId: string) => void) | undefined
 }) {
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
@@ -752,13 +774,11 @@ function CaseSummary({
           </CardHeader>
           <CardContent className="text-sm font-medium">
             {nextAction ? (
-              <Link
-                to="/tareas/$taskId"
-                params={{ taskId: nextAction.id }}
+              <TaskOpenLink
+                task={nextAction}
+                onOpenTask={onOpenTask}
                 className="hover:text-primary underline-offset-4 hover:underline"
-              >
-                {nextAction.titulo}
-              </Link>
+              />
             ) : (
               <span className="text-muted-foreground">Sin siguiente acción</span>
             )}
@@ -874,7 +894,13 @@ function WorkstreamsSection({
   canManageNextAction,
   nextActionPending,
   createForm,
+  firmId,
+  taskLabels,
+  onOpenTask,
 }: {
+  firmId?: string | undefined
+  taskLabels: TaskLabelOption[]
+  onOpenTask?: ((taskId: string) => void) | undefined
   lineas: LineaPersistida[]
   actuaciones: ActuacionPersistida[]
   documentos: CaseDocumentRow[]
@@ -941,7 +967,9 @@ function WorkstreamsSection({
         <WorkstreamSelect ariaLabel="Estado de línea" value={status} onChange={setStatus}>
           <option value="all">Todos los estados</option>
           {statuses.map((option) => (
-            <option key={option} value={option}>{workstreamStatusLabel(option)}</option>
+            <option key={option} value={option}>
+              {workstreamStatusLabel(option)}
+            </option>
           ))}
         </WorkstreamSelect>
         <WorkstreamSelect
@@ -1012,6 +1040,9 @@ function WorkstreamsSection({
             canManageNextAction={canManageNextAction}
             nextActionPending={nextActionPending}
             memberName={memberNames.get(line.asignadoId ?? '')}
+            firmId={firmId}
+            taskLabels={taskLabels}
+            onOpenTask={onOpenTask}
           />
         ))}
       </div>
@@ -1077,7 +1108,13 @@ function WorkstreamCard({
   canManageNextAction,
   nextActionPending,
   memberName,
+  firmId,
+  taskLabels,
+  onOpenTask,
 }: {
+  firmId?: string | undefined
+  taskLabels: TaskLabelOption[]
+  onOpenTask?: ((taskId: string) => void) | undefined
   line: LineaPersistida
   lineas: LineaPersistida[]
   actuaciones: ActuacionPersistida[]
@@ -1143,14 +1180,12 @@ function WorkstreamCard({
         <div className="border-primary/20 bg-primary/5 rounded-md border px-3 py-2">
           <p className="text-primary text-xs font-semibold">Siguiente acción</p>
           {nextAction ? (
-            <Link
-              to="/tareas/$taskId"
-              params={{ taskId: nextAction.id }}
-              aria-label={`Abrir siguiente acción: ${nextAction.titulo}`}
-              className="mt-1 inline-block text-sm font-medium underline-offset-4 hover:underline"
-            >
-              {nextAction.titulo}
-            </Link>
+            <TaskOpenLink
+              task={nextAction}
+              onOpenTask={onOpenTask}
+              ariaLabel={`Abrir siguiente acción: ${nextAction.titulo}`}
+              className="mt-1 inline-block text-left text-sm font-medium underline-offset-4 hover:underline"
+            />
           ) : (
             <p className="text-muted-foreground mt-1 text-sm">
               Sin siguiente acción definida para esta línea.
@@ -1165,13 +1200,11 @@ function WorkstreamCard({
               className="flex flex-wrap items-center justify-between gap-2 text-sm"
             >
               <div className="min-w-0 flex-1">
-                <Link
-                  to="/tareas/$taskId"
-                  params={{ taskId: task.id }}
-                  className="truncate underline-offset-4 hover:underline"
-                >
-                  {task.titulo}
-                </Link>
+                <TaskOpenLink
+                  task={task}
+                  onOpenTask={onOpenTask}
+                  className="truncate text-left underline-offset-4 hover:underline"
+                />
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   {task.estado} · {task.prioridad}
                   {task.venceEn ? ` · ${formatDate(task.venceEn)}` : ''}
@@ -1196,20 +1229,57 @@ function WorkstreamCard({
             <p className="text-muted-foreground text-xs">Todavía no hay tareas en esta línea.</p>
           ) : null}
           <CaseTaskCreateDialog
+            firmId={firmId}
             expedienteId={expedienteId}
             lineaId={line.id}
             asignadoId={line.asignadoId}
+            members={miembros.map((member) => ({ id: member.id, nombre: member.nombre }))}
+            labels={taskLabels}
             pending={pending}
             onCreate={onCreateTask}
             triggerLabel="Añadir tarea"
             dialogTitle="Nueva tarea para la línea"
-            description={`Quedará vinculada a «${line.titulo}».`}
+            contextLabel={`«${line.titulo}»`}
             titleAriaLabel={`Nueva tarea para ${line.titulo}`}
-            dueAriaLabel={`Fecha de tarea para ${line.titulo}`}
           />
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function TaskOpenLink({
+  task,
+  onOpenTask,
+  ariaLabel,
+  className,
+}: {
+  task: TareaPersistida
+  onOpenTask?: ((taskId: string) => void) | undefined
+  ariaLabel?: string
+  className: string
+}) {
+  if (onOpenTask) {
+    return (
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        onClick={() => onOpenTask(task.id)}
+        className={className}
+      >
+        {task.titulo}
+      </button>
+    )
+  }
+  return (
+    <Link
+      to="/tareas/$taskId"
+      params={{ taskId: task.id }}
+      aria-label={ariaLabel}
+      className={className}
+    >
+      {task.titulo}
+    </Link>
   )
 }
 
@@ -1244,31 +1314,23 @@ function ActivityCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="font-medium">{activity.titulo}</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {activity.descripcion || activity.tipo}
-            </p>
+            {activity.descripcion ? (
+              <p className="text-muted-foreground mt-1 text-sm">{activity.descripcion}</p>
+            ) : null}
           </div>
           <span className="text-muted-foreground text-xs">
             {formatDate(activity.ocurridaEn, true)}
           </span>
         </div>
-        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <span>{activity.tipo}</span>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <Badge variant={activity.relevancia === 'milestone' ? 'default' : 'secondary'}>
+            {activity.tipo}
+          </Badge>
           <span>Responsable: {memberName ?? 'Sin asignar'}</span>
-          {activity.horas ? (
-            <span>
-              {activity.horas} h{activity.facturable ? ' facturables' : ''}
-            </span>
-          ) : null}
         </div>
         {activity.resultado ? (
           <p className="border-primary/15 bg-muted/30 rounded-md border px-3 py-2 text-sm">
             Resultado: {activity.resultado}
-          </p>
-        ) : null}
-        {activity.proximaAccion ? (
-          <p className="text-sm">
-            Siguiente paso: <span className="font-medium">{activity.proximaAccion}</span>
           </p>
         ) : null}
         <div className="flex justify-end">
@@ -1412,14 +1474,20 @@ function invoiceStatus(status: FacturaPersistida['estado']) {
 }
 
 function TasksSection({
+  firmId,
   tasks,
   expediente,
+  miembros,
+  labels,
   pending,
   onCreate,
   titleTemplates,
 }: {
+  firmId?: string | undefined
   tasks: TareaPersistida[]
   expediente: ExpedientePersistido
+  miembros: MiembroDespacho[]
+  labels: TaskLabelOption[]
   pending: boolean
   onCreate: (input: CrearTareaInput) => Promise<unknown>
   titleTemplates: string[]
@@ -1430,16 +1498,18 @@ function TasksSection({
       subtitle="Trabajo pendiente y completado vinculado a este expediente."
       actions={
         <CaseTaskCreateDialog
+          firmId={firmId}
           expedienteId={expediente.id}
           asignadoId={expediente.asignadoId}
           pending={pending}
           onCreate={onCreate}
           titleTemplates={titleTemplates}
+          labels={labels}
           triggerLabel="Añadir tarea"
           dialogTitle="Nueva tarea para el expediente"
-          description={`Quedará vinculada al expediente ${expediente.referencia}.`}
+          contextLabel={`el expediente ${expediente.referencia}`}
           titleAriaLabel="Título de tarea"
-          dueAriaLabel="Fecha prevista"
+          members={miembros.map((member) => ({ id: member.id, nombre: member.nombre }))}
         />
       }
     >
@@ -1456,118 +1526,57 @@ function TasksSection({
 }
 
 function CaseTaskCreateDialog({
+  firmId,
   expedienteId,
   lineaId,
   asignadoId,
   pending,
   onCreate,
   titleTemplates = [],
+  labels = [],
   triggerLabel,
   dialogTitle,
-  description,
+  contextLabel,
   titleAriaLabel,
-  dueAriaLabel,
+  members,
 }: {
+  firmId?: string | undefined
   expedienteId: string
   lineaId?: string
   asignadoId: string | null
   pending: boolean
   onCreate: (input: CrearTareaInput) => Promise<unknown>
   titleTemplates?: string[]
+  labels?: TaskLabelOption[]
   triggerLabel: string
   dialogTitle: string
-  description: string
+  contextLabel: string
   titleAriaLabel: string
-  dueAriaLabel: string
+  members: Array<{ id: string; nombre: string }>
 }) {
-  const [open, setOpen] = useState(false)
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    const titulo = text(data, 'title').trim()
-    if (!titulo) return
-    try {
-      await onCreate({
-        expedienteId,
-        oportunidadId: null,
-        ...(lineaId ? { lineaId } : {}),
-        tipo: 'Tarea',
-        titulo,
-        descripcion: '',
-        prioridad: 'Media',
-        venceEn: dateTime(text(data, 'due')),
-        recordarEn: null,
-        clasePlazo: null,
-        critico: false,
-        asignadoId,
-      })
-      form.reset()
-      setOpen(false)
-      toast.success(
-        lineaId ? 'Tarea vinculada a la línea de trabajo.' : 'Tarea vinculada al expediente.',
-      )
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear la tarea.')
-    }
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <TaskCreateDialog
+      firmId={firmId}
+      expedienteId={expedienteId}
+      lineaId={lineaId ?? null}
+      title={dialogTitle}
+      contextLabel={contextLabel}
+      defaultAssigneeId={asignadoId}
+      members={members}
+      labels={labels}
+      titleTemplates={titleTemplates}
+      titleAriaLabel={titleAriaLabel}
+      pending={pending}
+      successMessage={
+        lineaId ? 'Tarea vinculada a la línea de trabajo.' : 'Tarea vinculada al expediente.'
+      }
+      onCreate={onCreate}
+      trigger={
         <Button type="button" size="sm">
           <Plus className="size-4" aria-hidden="true" /> {triggerLabel}
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-          <div className="space-y-1.5">
-            <label htmlFor="case-quick-task-title" className="text-sm font-medium">
-              Título de tarea
-            </label>
-            <Input
-              id="case-quick-task-title"
-              name="title"
-              aria-label={titleAriaLabel}
-              placeholder="Qué hay que hacer"
-              required
-              maxLength={240}
-              list={titleTemplates.length ? 'case-task-title-templates' : undefined}
-            />
-            {titleTemplates.length ? (
-              <datalist id="case-task-title-templates">
-                {titleTemplates.map((title) => (
-                  <option key={title} value={title} />
-                ))}
-              </datalist>
-            ) : null}
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="case-quick-task-due" className="text-sm font-medium">
-              Fecha prevista (opcional)
-            </label>
-            <Input id="case-quick-task-due" name="due" aria-label={dueAriaLabel} type="date" />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={pending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Guardando…' : triggerLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      }
+    />
   )
 }
 
@@ -1697,11 +1706,4 @@ function nextDueLabel(tasks: TareaPersistida[]) {
     .filter((item) => item.venceEn)
     .sort((first, second) => dateValue(first.venceEn) - dateValue(second.venceEn))[0]
   return task?.venceEn ? formatDate(task.venceEn, true) : 'Sin fecha'
-}
-function dateTime(value: string) {
-  return value ? `${value}T09:00:00` : null
-}
-function text(data: FormData, name: string) {
-  const value = data.get(name)
-  return typeof value === 'string' ? value : ''
 }
