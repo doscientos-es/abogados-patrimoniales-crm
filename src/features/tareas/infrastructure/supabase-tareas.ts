@@ -1004,6 +1004,76 @@ export function useAnadirMensajeTarea(firmId: string | undefined, taskId: string
   })
 }
 
+export type RegistrarComunicacionTareaInput = {
+  channel: 'email' | 'whatsapp' | 'phone'
+  direction: 'inbound' | 'outbound'
+  subject: string
+  content: string
+  recipients: string
+  cc: string
+  occurredAt?: string
+}
+
+export function useComunicacionesTarea(firmId: string | undefined, taskId: string | undefined) {
+  return useQuery({
+    queryKey: ['tareas', firmId, taskId, 'comunicaciones'],
+    enabled: Boolean(firmId && taskId),
+    queryFn: async (): Promise<CaseCommunicationRow[]> => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
+      const { data, error } = await client
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('details->>taskId', taskId)
+        .order('occurred_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useRegistrarComunicacionTarea(firmId: string | undefined, task: TareaPersistida) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: RegistrarComunicacionTareaInput) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const content = input.content.trim()
+      if (!content) throw new Error('Escribe el contenido de la comunicación.')
+      const isCall = input.channel === 'phone'
+      const payload: CaseCommunicationInsert = {
+        firm_id: firmId,
+        case_id: task.expedienteId,
+        direction: input.direction,
+        communication_type: isCall ? 'call' : input.channel,
+        channel: input.channel,
+        subject: input.subject.trim(),
+        content,
+        occurred_at: input.occurredAt || new Date().toISOString(),
+        sent_status: isCall ? 'sent' : 'draft',
+        details: {
+          taskId: task.id,
+          recipients: input.recipients.trim(),
+          cc: input.cc.trim(),
+        },
+      }
+      const { data, error } = await client
+        .from('crm_case_communications')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId, task.id, 'comunicaciones'] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'comunicaciones'] }),
+      ]).then(() => undefined),
+  })
+}
+
 export function useEditarTarea(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
