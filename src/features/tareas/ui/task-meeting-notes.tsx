@@ -158,6 +158,9 @@ export function MeetingInternalNotes({
               <label className="flex items-center gap-2">
                 <input type="checkbox" name="noteCritical" /> Advertencia crítica
               </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="noteAcknowledge" /> Requiere confirmación de lectura
+              </label>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -170,3 +173,6 @@ export function MeetingInternalNotes({
           </form>
         </DialogContent>
       </Dialog>
+    </section>
+  )
+}

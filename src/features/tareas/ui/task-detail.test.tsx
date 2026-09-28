@@ -24,13 +24,14 @@ const mocks = vi.hoisted(() => ({
   role: 'paralegal',
   createTask: vi.fn().mockResolvedValue({ id: 'task-new' }),
   convertSubtask: vi.fn().mockResolvedValue(undefined),
+  saveNote: vi.fn().mockResolvedValue(undefined),
+  notes: [] as Array<Record<string, unknown>>,
 }))
 
 vi.mock('@/features/notas/infrastructure/supabase-notas', () => ({
-  useNotasRemotas: () => ({ data: [] }),
-  useGuardarNota: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useNotasRemotas: () => ({ data: mocks.notes }),
+  useGuardarNota: () => ({ mutateAsync: mocks.saveNote, isPending: false }),
 }))
-
 
 vi.mock('@/components/tareas/task-create-dialog', () => ({
   TaskCreateDialog: ({
@@ -191,6 +192,7 @@ afterEach(() => {
   vi.clearAllMocks()
   mocks.meetingDetails = {}
   mocks.subtasks = []
+  mocks.notes = []
   mocks.role = 'paralegal'
 })
 
@@ -595,5 +597,75 @@ describe('TaskDetail', () => {
     expect(
       screen.getByRole('timer', { name: 'Tiempo transcurrido de la reunión' }).textContent,
     ).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+  })
+
+  it('saves a meeting internal note linked to the task and lists linked notes', async () => {
+    mocks.role = 'owner'
+    mocks.meetingDetails = {
+      specialType: 'meeting',
+      status: 'preparation',
+      attendeeContactIds: ['contact-1'],
+      attendeeUserIds: [],
+    }
+    mocks.notes = [
+      {
+        id: 'note-a',
+        title: 'Normal',
+        content: 'Nota normal',
+        highlighted: false,
+        critical: false,
+        details: { taskId: 'task-1' },
+        created_by: null,
+        created_at: '2026-09-20T10:00:00Z',
+        actorNames: {},
+      },
+      {
+        id: 'note-b',
+        title: 'Destacada',
+        content: 'Nota destacada',
+        highlighted: true,
+        critical: false,
+        details: { taskId: 'task-1' },
+        created_by: null,
+        created_at: '2026-09-20T09:00:00Z',
+        actorNames: {},
+      },
+      {
+        id: 'note-c',
+        title: 'Otra tarea',
+        content: 'Nota ajena',
+        highlighted: false,
+        critical: false,
+        details: { taskId: 'other-task' },
+        created_by: null,
+        created_at: '2026-09-20T09:00:00Z',
+        actorNames: {},
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(screen.queryByText('Nota ajena')).toBeNull()
+    const cards = screen.getAllByRole('article').map((card) => card.textContent ?? '')
+    expect(cards[0]).toContain('Nota destacada')
+
+    fireEvent.click(screen.getByRole('button', { name: /Nueva nota interna/ }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Contenido' }), {
+      target: { value: 'Acordamos revisar la escritura.' },
+    })
+    fireEvent.click(within(dialog).getByLabelText('Requiere confirmación de lectura'))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar nota' }))
+
+    await vi.waitFor(() =>
+      expect(mocks.saveNote).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'case',
+          caseId: 'case-1',
+          content: 'Acordamos revisar la escritura.',
+          requiresAcknowledgement: true,
+          extraDetails: { taskId: 'task-1' },
+        }),
+      ),
+    )
   })
 })
