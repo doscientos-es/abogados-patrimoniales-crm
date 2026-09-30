@@ -11,6 +11,7 @@ import {
   History,
   Layers3,
   MessageSquareText,
+  MoreHorizontal,
   Receipt,
   Pencil,
   Plus,
@@ -58,7 +59,7 @@ import type {
 import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
 import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
-import type { CaseCommunicationRow, CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infrastructure/supabase'
 
 import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
 
@@ -114,6 +115,8 @@ export function CaseDetail({
   reportPending = false,
   onRegisterClientReport = async () => undefined,
   workstreamPending = false,
+  onReorderWorkstreams = async () => undefined,
+  reorderPending = false,
   editor,
   relatedForms,
   notas = [],
@@ -149,6 +152,8 @@ export function CaseDetail({
   onSetNextAction: (task: TareaPersistida, enabled: boolean) => Promise<unknown>
   onUpdateWorkstream: (input: ActualizarLineaInput) => Promise<unknown>
   workstreamPending?: boolean
+  onReorderWorkstreams?: (ids: string[]) => Promise<unknown>
+  reorderPending?: boolean
   canManageNextAction: (task: TareaPersistida) => boolean
   nextActionPending: boolean
   communicationPending?: boolean
@@ -171,9 +176,12 @@ export function CaseDetail({
   const deadlines = caseTasks.filter((task) => task.tipo === 'Plazo' || task.venceEn)
   const alerts = caseAlerts(item, tareas, actuaciones)
   const lastMovement = caseLastMovement(item, actuaciones)
+  const principalRegistrado = participantes.some(
+    (participant) => participant.contactoId === item.contactoPrincipalId,
+  )
   const countForTab: Partial<Record<CaseDetailTab, number>> = {
     workstreams: lineas.length,
-    participants: participantes.length,
+    participants: participantes.length + (principalRegistrado ? 0 : 1),
     activities: actuaciones.length,
     documents: documentos.length,
     economic: facturas.length,
@@ -268,6 +276,8 @@ export function CaseDetail({
             onCreateTask={onCreateTask}
             onSetNextAction={onSetNextAction}
             onUpdateWorkstream={onUpdateWorkstream}
+            onReorder={onReorderWorkstreams}
+            reorderPending={reorderPending}
             canManageNextAction={canManageNextAction}
             nextActionPending={nextActionPending}
             createForm={relatedForms.workstream}
@@ -282,13 +292,33 @@ export function CaseDetail({
             subtitle="Personas y entidades vinculadas a este expediente."
           >
             <div className="grid gap-3 lg:grid-cols-2">
-              {participantes.map((participant) => (
-                <ParticipantCard key={participant.id} participant={participant} />
-              ))}
+              {!principalRegistrado ? (
+                <ParticipantCard
+                  isPrincipal
+                  participant={{
+                    id: `principal-${item.contactoPrincipalId}`,
+                    expedienteId: item.id,
+                    contactoId: item.contactoPrincipalId,
+                    nombre: clienteNombre,
+                    rol: 'Contacto principal',
+                    confidencialidad: 'Normal',
+                  }}
+                />
+              ) : null}
+              {[...participantes]
+                .sort(
+                  (a, b) =>
+                    Number(b.contactoId === item.contactoPrincipalId) -
+                    Number(a.contactoId === item.contactoPrincipalId),
+                )
+                .map((participant) => (
+                  <ParticipantCard
+                    key={participant.id}
+                    participant={participant}
+                    isPrincipal={participant.contactoId === item.contactoPrincipalId}
+                  />
+                ))}
             </div>
-            {!participantes.length ? (
-              <EmptyState message="No hay intervinientes registrados." />
-            ) : null}
             {relatedForms.participant}
           </DetailSection>
         ) : null}
@@ -939,6 +969,82 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {}
 }
 
+function lineDetails(line: LineaPersistida): Record<string, Json> {
+  const value = line.details
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, Json>)
+    : {}
+}
+
+function isLineArchived(line: LineaPersistida) {
+  return lineDetails(line)['archivada'] === true
+}
+
+function detailString(details: Record<string, Json>, key: string) {
+  const value = details[key]
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function LineDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-0.5 sm:grid-cols-[11rem_1fr]">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="whitespace-pre-wrap">{value || '—'}</dd>
+    </div>
+  )
+}
+
+type LineAction = { label: string; disabled?: boolean; onSelect: () => void }
+
+function LineActionsMenu({ label, actions }: { label: string; actions: LineAction[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div
+      className="relative"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setOpen(false)
+      }}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`Acciones de la línea ${label}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+      </Button>
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-40" aria-hidden="true" onClick={() => setOpen(false)} />
+          <div
+            role="menu"
+            className="bg-popover text-popover-foreground absolute right-0 z-50 mt-1 w-52 rounded-md border p-1 shadow-md"
+          >
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                role="menuitem"
+                disabled={action.disabled}
+                className="hover:bg-accent focus-visible:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm outline-none disabled:pointer-events-none disabled:opacity-50"
+                onClick={() => {
+                  setOpen(false)
+                  action.onSelect()
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 function DetailSection({
   title,
   subtitle,
@@ -964,9 +1070,7 @@ function DetailSection({
   )
 }
 
-type WorkstreamSituation = 'all' | 'with-target' | 'without-target'
 type WorkstreamOrder = 'manual' | 'title' | 'target'
-type WorkstreamAdditionalFilter = 'all' | 'root' | 'nested'
 
 function WorkstreamsSection({
   lineas,
@@ -982,6 +1086,8 @@ function WorkstreamsSection({
   onCreateTask,
   onSetNextAction,
   onUpdateWorkstream,
+  onReorder,
+  reorderPending,
   canManageNextAction,
   nextActionPending,
   createForm,
@@ -989,6 +1095,8 @@ function WorkstreamsSection({
   taskLabels,
   onOpenTask,
 }: {
+  onReorder: (ids: string[]) => Promise<unknown>
+  reorderPending: boolean
   firmId?: string | undefined
   taskLabels: TaskLabelOption[]
   onOpenTask?: ((taskId: string) => void) | undefined
@@ -1010,25 +1118,18 @@ function WorkstreamsSection({
   createForm: ReactNode
 }) {
   const [status, setStatus] = useState('all')
-  const [situation, setSituation] = useState<WorkstreamSituation>('all')
   const [assignee, setAssignee] = useState('all')
   const [priority, setPriority] = useState('all')
-  const [additionalFilter, setAdditionalFilter] = useState<WorkstreamAdditionalFilter>('all')
   const [order, setOrder] = useState<WorkstreamOrder>('manual')
+  const [showArchived, setShowArchived] = useState(false)
+  const archivedCount = lineas.filter(isLineArchived).length
   const statuses = [...new Set(lineas.map((line) => line.estado).filter(Boolean))]
-  const visible = lineas
+  const manualOrder = [...lineas].sort((first, second) => first.orden - second.orden)
+  const visible = manualOrder
+    .filter((line) => showArchived || !isLineArchived(line))
     .filter((line) => status === 'all' || line.estado === status)
-    .filter(
-      (line) =>
-        situation === 'all' || (situation === 'with-target') === Boolean(line.fechaObjetivo),
-    )
     .filter((line) => assignee === 'all' || line.asignadoId === assignee)
     .filter((line) => priority === 'all' || line.prioridad === priority)
-    .filter(
-      (line) =>
-        additionalFilter === 'all' ||
-        (additionalFilter === 'root' ? !line.parentId : Boolean(line.parentId)),
-    )
     .sort((first, second) => {
       if (order === 'title') return first.titulo.localeCompare(second.titulo, 'es')
       if (order === 'target')
@@ -1036,15 +1137,28 @@ function WorkstreamsSection({
       return first.orden - second.orden
     })
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
-  const hasActiveFilters = [status, situation, assignee, priority, additionalFilter].some(
+  const hasActiveFilters = [status, assignee, priority].some(
     (value) => value !== 'all',
   )
   const resetFilters = () => {
     setStatus('all')
-    setSituation('all')
     setAssignee('all')
     setPriority('all')
-    setAdditionalFilter('all')
+  }
+  const canReorder = order === 'manual' && !reorderPending
+  const moveLine = async (line: LineaPersistida, direction: -1 | 1) => {
+    const position = visible.findIndex((candidate) => candidate.id === line.id)
+    const neighbour = visible[position + direction]
+    if (!neighbour) return
+    const ids = manualOrder.map((candidate) => candidate.id)
+    const from = ids.indexOf(line.id)
+    const to = ids.indexOf(neighbour.id)
+      ;[ids[from], ids[to]] = [ids[to]!, ids[from]!]
+    try {
+      await onReorder(ids)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el orden.')
+    }
   }
 
   return (
@@ -1053,8 +1167,8 @@ function WorkstreamsSection({
       subtitle="Frentes autónomos con objetivo, responsable y resultado propios."
       actions={<>{createForm}</>}
     >
-      <div className="border-border/80 bg-muted/20 flex flex-wrap items-center gap-2 rounded-lg border p-3">
-        <span className="text-muted-foreground px-1 text-xs font-medium">Filtros</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-muted-foreground text-xs font-medium">Filtros</span>
         <WorkstreamSelect ariaLabel="Estado de línea" value={status} onChange={setStatus}>
           <option value="all">Todos los estados</option>
           {statuses.map((option) => (
@@ -1062,15 +1176,6 @@ function WorkstreamsSection({
               {workstreamStatusLabel(option)}
             </option>
           ))}
-        </WorkstreamSelect>
-        <WorkstreamSelect
-          ariaLabel="Situación de línea"
-          value={situation}
-          onChange={(value) => setSituation(value as WorkstreamSituation)}
-        >
-          <option value="all">Toda situación</option>
-          <option value="with-target">Con fecha objetivo</option>
-          <option value="without-target">Sin fecha objetivo</option>
         </WorkstreamSelect>
         <WorkstreamSelect ariaLabel="Responsable de línea" value={assignee} onChange={setAssignee}>
           <option value="all">Todos los responsables</option>
@@ -1088,15 +1193,6 @@ function WorkstreamsSection({
           <option>Baja</option>
         </WorkstreamSelect>
         <WorkstreamSelect
-          ariaLabel="Filtro adicional de línea"
-          value={additionalFilter}
-          onChange={(value) => setAdditionalFilter(value as WorkstreamAdditionalFilter)}
-        >
-          <option value="all">Sin filtro adicional</option>
-          <option value="root">Líneas principales</option>
-          <option value="nested">Sublíneas</option>
-        </WorkstreamSelect>
-        <WorkstreamSelect
           ariaLabel="Orden de líneas"
           value={order}
           onChange={(value) => setOrder(value as WorkstreamOrder)}
@@ -1105,6 +1201,16 @@ function WorkstreamsSection({
           <option value="title">Título</option>
           <option value="target">Fecha objetivo</option>
         </WorkstreamSelect>
+        {archivedCount ? (
+          <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(event) => setShowArchived(event.target.checked)}
+            />
+            Mostrar archivadas ({archivedCount})
+          </label>
+        ) : null}
         {hasActiveFilters ? (
           <Button type="button" variant="ghost" size="sm" onClick={resetFilters}>
             Restablecer filtros
@@ -1112,10 +1218,13 @@ function WorkstreamsSection({
         ) : null}
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
-        {visible.map((line) => (
+        {visible.map((line, index) => (
           <WorkstreamCard
             key={line.id}
             line={line}
+            canMoveUp={canReorder && index > 0}
+            canMoveDown={canReorder && index < visible.length - 1}
+            onMove={(direction) => moveLine(line, direction)}
             lineas={lineas}
             actuaciones={actuaciones}
             documentos={documentos}
@@ -1169,12 +1278,12 @@ function WorkstreamSelect({
   children: ReactNode
 }) {
   return (
-    <label className="min-w-40 flex-1 sm:flex-none">
+    <label className="sm:flex-none">
       <select
         aria-label={ariaLabel}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm sm:w-auto"
+        className="border-input bg-background h-8 w-full rounded-md border px-2 text-xs sm:w-auto"
       >
         {children}
       </select>
@@ -1202,7 +1311,13 @@ function WorkstreamCard({
   firmId,
   taskLabels,
   onOpenTask,
+  canMoveUp,
+  canMoveDown,
+  onMove,
 }: {
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMove: (direction: -1 | 1) => Promise<unknown>
   firmId?: string | undefined
   taskLabels: TaskLabelOption[]
   onOpenTask?: ((taskId: string) => void) | undefined
@@ -1224,6 +1339,63 @@ function WorkstreamCard({
   memberName: string | undefined
 }) {
   const nextAction = tasks.find((task) => task.esSiguienteAccion) ?? null
+  const [expanded, setExpanded] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [taskOpen, setTaskOpen] = useState(false)
+  const archived = isLineArchived(line)
+  const closedStatus = ['resolved', 'closed', 'discarded'].includes(line.estado)
+  const details = lineDetails(line)
+  const collaborators = Array.isArray(details['colaboradores'])
+    ? details['colaboradores']
+      .map((id) => miembros.find((member) => member.id === id)?.nombre)
+      .filter(Boolean)
+      .join(', ')
+    : ''
+
+  const patchLine = async (
+    patch: Partial<ActualizarLineaInput>,
+    detailsPatch: Record<string, Json> | null,
+    message: string,
+  ) => {
+    try {
+      await onUpdateWorkstream({
+        id: line.id,
+        expedienteId: line.expedienteId,
+        versionEsperada: line.version,
+        parentId: line.parentId,
+        titulo: line.titulo,
+        tipo: line.tipo,
+        descripcion: line.descripcion,
+        estado: line.estado,
+        prioridad: line.prioridad,
+        asignadoId: line.asignadoId,
+        fechaInicio: line.fechaInicio,
+        fechaObjetivo: line.fechaObjetivo,
+        fechaResolucion: line.fechaResolucion,
+        fechaCierre: line.fechaCierre,
+        ...patch,
+        details: { ...details, ...detailsPatch },
+      })
+      toast.success(message)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar la línea.')
+    }
+  }
+  const markResolved = () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const resolvedOn = line.fechaResolucion ?? (line.fechaInicio && line.fechaInicio > today ? line.fechaInicio : today)
+    return patchLine(
+      { estado: 'resolved', fechaResolucion: resolvedOn },
+      null,
+      'Línea marcada como resuelta.',
+    )
+  }
+  const toggleArchived = () =>
+    patchLine(
+      {},
+      { archivada: !archived },
+      archived ? 'Línea restaurada.' : 'Línea archivada.',
+    )
 
   const updateNextAction = async (task: TareaPersistida) => {
     const enabled = !task.esSiguienteAccion
@@ -1238,7 +1410,7 @@ function WorkstreamCard({
   }
 
   return (
-    <Card>
+    <Card className={archived ? 'opacity-60' : undefined}>
       <CardContent className="space-y-3 pt-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1249,7 +1421,53 @@ function WorkstreamCard({
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <Badge variant="outline">{workstreamStatusLabel(line.estado)}</Badge>
+            {archived ? <Badge variant="secondary">Archivada</Badge> : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? 'Contraer' : 'Ver detalles'}
+            </Button>
+            <LineActionsMenu
+              label={line.titulo}
+              actions={[
+                { label: 'Abrir y editar', onSelect: () => setDetailOpen(true) },
+                { label: 'Subir orden', disabled: !canMoveUp, onSelect: () => void onMove(-1) },
+                { label: 'Bajar orden', disabled: !canMoveDown, onSelect: () => void onMove(1) },
+                { label: 'Crear tarea vinculada', onSelect: () => setTaskOpen(true) },
+                {
+                  label: 'Marcar resuelta',
+                  disabled: closedStatus || updatePending,
+                  onSelect: () => void markResolved(),
+                },
+                {
+                  label: archived ? 'Restaurar' : 'Archivar',
+                  disabled: updatePending,
+                  onSelect: () => void toggleArchived(),
+                },
+              ]}
+            />
+            <TaskCreateDialog
+              firmId={firmId}
+              expedienteId={expedienteId}
+              lineaId={line.id}
+              title="Nueva tarea para la línea"
+              contextLabel={`«${line.titulo}»`}
+              defaultAssigneeId={line.asignadoId}
+              members={miembros.map((member) => ({ id: member.id, nombre: member.nombre }))}
+              labels={taskLabels}
+              pending={pending}
+              successMessage="Tarea vinculada a la línea de trabajo."
+              onCreate={onCreateTask}
+              open={taskOpen}
+              onOpenChange={setTaskOpen}
+            />
             <WorkstreamDetailDialog
+              open={detailOpen}
+              onOpenChange={setDetailOpen}
               line={line}
               lineas={lineas}
               miembros={miembros}
@@ -1268,6 +1486,22 @@ function WorkstreamCard({
           <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
           <span>Prioridad: {line.prioridad}</span>
         </div>
+        {expanded ? (
+          <dl className="bg-muted/30 space-y-1.5 rounded-md border border-dashed p-3 text-xs">
+            <LineDetail label="Objetivo" value={detailString(details, 'objetivo')} />
+            <LineDetail
+              label="Se dará por cumplida cuando"
+              value={detailString(details, 'criterioFinalizacion') || detailString(details, 'indicador')}
+            />
+            <LineDetail label="Último avance" value={detailString(details, 'ultimoAvance')} />
+            <LineDetail label="Bloqueo" value={detailString(details, 'bloqueo')} />
+            <LineDetail label="Colaboradores" value={collaborators} />
+            <LineDetail
+              label="Fechas"
+              value={`Apertura ${formatDate(line.fechaInicio)} · Objetivo ${formatDate(line.fechaObjetivo)}`}
+            />
+          </dl>
+        ) : null}
         <div className="border-primary/20 bg-primary/5 rounded-md border px-3 py-2">
           <p className="text-primary text-xs font-semibold">Siguiente acción</p>
           {nextAction ? (
@@ -1374,7 +1608,13 @@ function TaskOpenLink({
   )
 }
 
-function ParticipantCard({ participant }: { participant: ParticipantePersistido }) {
+function ParticipantCard({
+  participant,
+  isPrincipal = false,
+}: {
+  participant: ParticipantePersistido
+  isPrincipal?: boolean
+}) {
   return (
     <Card>
       <CardContent className="flex items-start justify-between gap-3 pt-5">
@@ -1382,7 +1622,10 @@ function ParticipantCard({ participant }: { participant: ParticipantePersistido 
           <p className="font-medium">{participant.nombre}</p>
           <p className="text-muted-foreground mt-1 text-sm">{participant.rol}</p>
         </div>
-        <Badge variant="outline">{participant.confidencialidad}</Badge>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {isPrincipal ? <Badge>Contacto principal</Badge> : null}
+          <Badge variant="outline">{participant.confidencialidad}</Badge>
+        </div>
       </CardContent>
     </Card>
   )

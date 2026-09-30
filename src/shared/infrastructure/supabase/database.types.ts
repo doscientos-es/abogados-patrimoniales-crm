@@ -214,6 +214,13 @@ export type Database = {
         }
         Returns: CaseRow
       }
+      crm_reorder_case_workstreams: {
+        Args: {
+          target_case_id: string
+          ordered_ids: string[]
+        }
+        Returns: undefined
+      }
       crm_update_case_workstream: {
         Args: {
           target_workstream_id: string

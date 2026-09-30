@@ -16,6 +16,7 @@ import {
   useComunicacionesExpediente,
   useActualizarVisibilidadActuacion,
   useActualizarLinea,
+  useReordenarLineas,
   useRegistrarReporteCliente,
   useActuacionesPersistentes,
   useActualizarExpediente,
@@ -99,6 +100,7 @@ function CaseRoute() {
   const createParticipant = useCrearParticipante(firmId);
   const createWorkstream = useCrearLinea(firmId);
   const updateWorkstream = useActualizarLinea(firmId);
+  const reorderWorkstreams = useReordenarLineas(firmId);
   const createCommunication = useCrearComunicacionExpediente(firmId, id);
   const updateActivityVisibility = useActualizarVisibilidadActuacion(firmId, id);
   const registerReport = useRegistrarReporteCliente(firmId, id);
@@ -184,6 +186,10 @@ function CaseRoute() {
         onSetNextAction={(task, enabled) => setNextAction.mutateAsync({ task, enabled })}
         onUpdateWorkstream={(input) => updateWorkstream.mutateAsync(input)}
         workstreamPending={updateWorkstream.isPending}
+        onReorderWorkstreams={(ids) =>
+          reorderWorkstreams.mutateAsync({ expedienteId: id, ids })
+        }
+        reorderPending={reorderWorkstreams.isPending}
         canManageNextAction={(task) => Boolean(
           task.creadaPorId === session.user?.id ||
           ["owner", "admin", "lawyer"].includes(membership.data?.role ?? ""),

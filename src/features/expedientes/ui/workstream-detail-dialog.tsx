@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Children, useState, type FormEvent, type ReactNode } from 'react'
+import { Children, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -187,7 +187,11 @@ export function WorkstreamDetailDialog({
   memberNames,
   pending,
   onSave,
+  open: openProp,
+  onOpenChange,
 }: {
+  open?: boolean | undefined
+  onOpenChange?: ((open: boolean) => void) | undefined
   line: LineaPersistida
   lineas: LineaPersistida[]
   miembros: MiembroDespacho[]
@@ -199,7 +203,13 @@ export function WorkstreamDetailDialog({
   pending: boolean
   onSave: (input: ActualizarLineaInput) => Promise<unknown>
 }) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const controlled = openProp !== undefined
+  const open = controlled ? openProp : internalOpen
+  const setOpen = (next: boolean) => {
+    if (!controlled) setInternalOpen(next)
+    onOpenChange?.(next)
+  }
   const [section, setSection] = useState<Section>('ficha')
   const [draft, setDraft] = useState(() => draftFromLine(line))
   const nextAction = tareas.find((task) => task.lineaId === line.id && task.esSiguienteAccion) ?? null
@@ -214,13 +224,16 @@ export function WorkstreamDetailDialog({
     (event) => event.entidad === 'workstream' && event.entidadId === line.id,
   )
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
+  useEffect(() => {
+    if (open) {
       setDraft(draftFromLine(line))
       setSection('ficha')
     }
-    setOpen(nextOpen)
-  }
+    // Solo al abrir: no pisar lo que se está editando si la línea se recarga.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const handleOpenChange = (nextOpen: boolean) => setOpen(nextOpen)
 
   const setText = (key: DetailTextKey, value: string) =>
     setDraft((current) => ({ ...current, texto: { ...current.texto, [key]: value } }))

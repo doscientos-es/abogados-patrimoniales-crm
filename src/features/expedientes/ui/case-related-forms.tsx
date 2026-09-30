@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -37,22 +37,26 @@ export function CaseRelatedForms({
   miembros: MiembroDespacho[];
   pending: boolean;
   section: RelatedFormSection;
-  onParticipant: (input: CrearParticipanteInput) => Promise<void>;
-  onWorkstream: (input: CrearLineaInput) => Promise<void>;
+  onParticipant: (input: CrearParticipanteInput) => Promise<unknown>;
+  onWorkstream: (input: CrearLineaInput) => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
+  const addAnother = useRef(false);
   const execute = async (
     event: FormEvent<HTMLFormElement>,
-    action: (data: FormData) => Promise<void>,
+    action: (data: FormData) => Promise<unknown>,
     success: string,
   ) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const keepOpen = addAnother.current;
+    addAnother.current = false;
     try {
       await action(new FormData(form));
       toast.success(success);
       form.reset();
-      setOpen(false);
+      if (keepOpen) form.querySelector<HTMLInputElement>("input[name=titulo]")?.focus();
+      else setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar.");
     }
@@ -156,9 +160,26 @@ export function CaseRelatedForms({
           {assignees}
         </NativeSelect>
         <Field name="objetivo" label="Fecha objetivo (opcional)" type="date" />
-        <Button type="submit" className="sm:col-span-2" disabled={pending}>
-          Crear línea
-        </Button>
+        <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="submit"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => {
+              addAnother.current = true;
+            }}
+          >
+            Crear y añadir otra
+          </Button>
+          <div className="flex gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending}>
+              Crear línea
+            </Button>
+          </div>
+        </div>
       </form>
     );
   const config = {

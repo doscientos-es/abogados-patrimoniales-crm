@@ -169,6 +169,23 @@ export function useActualizarLinea(firmId: string | undefined) {
   })
 }
 
+export function useReordenarLineas(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { expedienteId: string; ids: string[] }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_reorder_case_workstreams', {
+        target_case_id: input.expedienteId,
+        ordered_ids: input.ids,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_, input) =>
+      queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, input.expedienteId] }),
+  })
+}
+
 export function useCrearParticipante(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
