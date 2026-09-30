@@ -36,7 +36,6 @@ const SECTION_LABELS = [
   ['/documentos', 'Documentos'],
   ['/notas', 'Notas internas'],
   ['/comunicaciones', 'Comunicaciones'],
-  ['/procedimientos', 'Procedimientos (SOPs)'],
   ['/facturacion', 'Facturación y cobros'],
   ['/configuracion', 'Configuración'],
   ['/crm', 'CRM'],

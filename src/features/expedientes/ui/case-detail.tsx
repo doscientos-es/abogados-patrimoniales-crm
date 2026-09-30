@@ -12,6 +12,7 @@ import {
   History,
   ListChecks,
   Layers3,
+  Megaphone,
   MessageSquareText,
   MoreHorizontal,
   Receipt,
@@ -62,7 +63,8 @@ import type {
 } from '@/features/expedientes/infrastructure/supabase-expedientes'
 import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
-import type { CrearTareaInput, TareaPersistida } from '@/features/tareas'
+import { useAnadirMensajeTarea, type CrearTareaInput, type TareaPersistida } from '@/features/tareas'
+import { REMINDER_PREFIX, RemindAssigneeDialog } from '@/features/tareas/ui/task-detail'
 import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infrastructure/supabase'
 
 import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
@@ -356,7 +358,7 @@ export function CaseDetail({
             titleTemplates={taskTitleTemplates}
           />
         ) : null}
-        {activeTab === 'deadlines' ? <DeadlinesSection tasks={deadlines} /> : null}
+        {activeTab === 'deadlines' ? <DeadlinesSection tasks={deadlines} firmId={firmId} miembros={miembros} /> : null}
         {activeTab === 'history' ? (
           <HistorySection events={eventos} memberNames={memberNames} />
         ) : null}
@@ -1644,16 +1646,19 @@ function WorkstreamCard({
                 </p>
               </div>
               {!['Completada', 'Cancelada'].includes(task.estado) ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={nextActionPending || !canManageNextAction(task)}
-                  aria-label={`${task.esSiguienteAccion ? 'Quitar' : 'Marcar'} siguiente acción: ${task.titulo}`}
-                  onClick={() => void updateNextAction(task)}
-                >
-                  {task.esSiguienteAccion ? 'Quitar siguiente acción' : 'Marcar siguiente acción'}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <RemindTaskButton firmId={firmId} task={task} miembros={miembros} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={nextActionPending || !canManageNextAction(task)}
+                    aria-label={`${task.esSiguienteAccion ? 'Quitar' : 'Marcar'} siguiente acción: ${task.titulo}`}
+                    onClick={() => void updateNextAction(task)}
+                  >
+                    {task.esSiguienteAccion ? 'Quitar siguiente acción' : 'Marcar siguiente acción'}
+                  </Button>
+                </div>
               ) : null}
             </div>
           ))}
@@ -2021,7 +2026,62 @@ function CaseTaskCreateDialog({
   )
 }
 
-function DeadlinesSection({ tasks }: { tasks: TareaPersistida[] }) {
+function RemindTaskButton({
+  firmId,
+  task,
+  miembros,
+}: {
+  firmId?: string | undefined
+  task: TareaPersistida
+  miembros: MiembroDespacho[]
+}) {
+  const [open, setOpen] = useState(false)
+  const addMessage = useAnadirMensajeTarea(firmId, task.id)
+  if (['Completada', 'Cancelada'].includes(task.estado)) return null
+  const assigneeName =
+    miembros.find((member) => member.id === task.asignadoId)?.nombre ?? 'el responsable'
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-label={`Recordar: ${task.titulo}`}
+        disabled={!firmId || !task.asignadoId}
+        onClick={() => setOpen(true)}
+      >
+        <Megaphone className="size-4" aria-hidden="true" /> Recordar
+      </Button>
+      <RemindAssigneeDialog
+        open={open}
+        onOpenChange={setOpen}
+        pending={addMessage.isPending}
+        assigneeName={assigneeName}
+        onSubmit={(message) => {
+          addMessage
+            .mutateAsync(`${REMINDER_PREFIX}${message}`)
+            .then(() => {
+              setOpen(false)
+              toast.success('Recordatorio enviado al responsable.')
+            })
+            .catch((error: unknown) =>
+              toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recordatorio.'),
+            )
+        }}
+      />
+    </>
+  )
+}
+
+function DeadlinesSection({
+  tasks,
+  firmId,
+  miembros,
+}: {
+  tasks: TareaPersistida[]
+  firmId?: string | undefined
+  miembros: MiembroDespacho[]
+}) {
   const ordered = [...tasks].sort(
     (first, second) => dateValue(first.venceEn) - dateValue(second.venceEn),
   )
@@ -2033,7 +2093,12 @@ function DeadlinesSection({ tasks }: { tasks: TareaPersistida[] }) {
       <Card>
         <CardContent className="divide-y pt-2">
           {ordered.map((task) => (
-            <TaskRow key={task.id} task={task} showValidation />
+            <TaskRow
+              key={task.id}
+              task={task}
+              showValidation
+              action={<RemindTaskButton firmId={firmId} task={task} miembros={miembros} />}
+            />
           ))}
           {!ordered.length ? <EmptyState message="No hay fechas ni plazos registrados." /> : null}
         </CardContent>
@@ -2045,9 +2110,11 @@ function DeadlinesSection({ tasks }: { tasks: TareaPersistida[] }) {
 function TaskRow({
   task,
   showValidation = false,
+  action = null,
 }: {
   task: TareaPersistida
   showValidation?: boolean
+  action?: ReactNode
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 py-3">
@@ -2063,6 +2130,7 @@ function TaskRow({
       {showValidation && task.tipo === 'Plazo' ? (
         <Badge variant="secondary">{task.validacion}</Badge>
       ) : null}
+      {action}
     </div>
   )
 }

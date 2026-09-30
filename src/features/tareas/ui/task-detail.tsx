@@ -105,7 +105,7 @@ import {
   RELEVANCIA_TAREA_LABELS,
 } from '@/features/tareas'
 
-const REMINDER_PREFIX = 'Recordatorio al responsable: '
+export const REMINDER_PREFIX = 'Recordatorio al responsable: '
 const TASK_STATES: EstadoTarea[] = ['Pendiente', 'En curso', 'En espera', 'Completada', 'Cancelada']
 const selectClass = 'border-input bg-background h-9 w-full rounded-md border px-2 text-sm'
 const inlineFieldClass =
@@ -1839,7 +1839,7 @@ function NextTaskDialog({
   )
 }
 
-function RemindAssigneeDialog({
+export function RemindAssigneeDialog({
   open,
   onOpenChange,
   pending,

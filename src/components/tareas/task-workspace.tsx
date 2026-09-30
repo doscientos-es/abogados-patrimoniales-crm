@@ -907,46 +907,47 @@ export function TaskInbox({
   }
   return (
     <Card>
-      <CardContent className="space-y-3 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="font-semibold">INBOX personal</h2>
-            <p className="text-muted-foreground text-sm">
-              Organiza tus capturas sin modificar el estado compartido de las tareas.
-            </p>
-          </div>
+      <CardContent className="space-y-2 p-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h2
+            className="text-sm font-semibold"
+            title="Organiza tus capturas sin modificar el estado compartido de las tareas."
+          >
+            INBOX personal
+          </h2>
           <Badge variant="secondary">{items.length}</Badge>
+          <form
+            className="flex min-w-64 flex-1 flex-wrap items-center gap-2"
+            onSubmit={(event) => void submit(event)}
+          >
+            <Input
+              name="capture"
+              aria-label="Captura rápida"
+              placeholder="Anota algo para revisar…"
+              className="h-8 min-w-40 flex-1 text-sm"
+            />
+            <select
+              name="task"
+              aria-label="Tarea opcional para INBOX"
+              defaultValue=""
+              className="border-input bg-background h-8 w-44 rounded-md border px-2 text-xs"
+            >
+              <option value="">Sin tarea vinculada</option>
+              {tasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.titulo}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" size="sm" className="h-8" disabled={pending}>
+              Capturar
+            </Button>
+          </form>
         </div>
         <p id="task-inbox-drag-help" className="text-muted-foreground sr-only">
           Arrastra una entrada a otra etapa o utiliza su selector para cambiarla.
         </p>
-        <form
-          className="grid gap-2 sm:grid-cols-[1fr_14rem_auto]"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Input
-            name="capture"
-            aria-label="Captura rápida"
-            placeholder="Anota algo para revisar…"
-          />
-          <select
-            name="task"
-            aria-label="Tarea opcional para INBOX"
-            defaultValue=""
-            className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-          >
-            <option value="">Sin tarea vinculada</option>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.titulo}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" size="sm" disabled={pending}>
-            Capturar
-          </Button>
-        </form>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map((stage) => {
             const stageItems = items.filter((item) => item.stage === stage)
             return (
@@ -972,17 +973,17 @@ export function TaskInbox({
                   if (itemId && items.some((item) => item.id === itemId && item.stage !== stage))
                     void onMove(itemId, stage)
                 }}
-                className={`bg-muted/30 space-y-2 rounded-md border p-3 transition-colors ${dropStage === stage ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
+                className={`bg-muted/30 min-w-36 space-y-1.5 rounded-md border p-2 transition-colors ${stageItems.length ? 'w-56 shrink-0' : 'w-36 shrink-0'} ${dropStage === stage ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
               >
-                <h3 className="text-xs font-semibold tracking-wide uppercase">
+                <h3 className="text-[11px] font-semibold tracking-wide uppercase">
                   {INBOX_STAGE_LABELS[stage]} · {stageItems.length}
                 </h3>
                 {stageItems.map((item) => (
                   <article
                     key={item.id}
-                    className={`bg-background space-y-2 rounded border p-2 text-sm ${draggedItemId === item.id ? 'opacity-50' : ''}`}
+                    className={`bg-background space-y-1 rounded border p-1.5 text-xs ${draggedItemId === item.id ? 'opacity-50' : ''}`}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-1">
                       <button
                         type="button"
                         draggable={!pending}
@@ -998,11 +999,11 @@ export function TaskInbox({
                           setDraggedItemId(null)
                           setDropStage(null)
                         }}
-                        className="text-muted-foreground hover:bg-muted mt-0.5 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-not-allowed"
+                        className="text-muted-foreground hover:bg-muted flex h-5 w-4 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-not-allowed"
                       >
                         <GripVertical className="h-4 w-4" aria-hidden="true" />
                       </button>
-                      <p>
+                      <p className="line-clamp-2 min-w-0 flex-1 leading-snug">
                         {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
                       </p>
                     </div>
@@ -1030,7 +1031,7 @@ export function TaskInbox({
                       onChange={(event) =>
                         void onMove(item.id, event.target.value as TaskInboxItemRow['stage'])
                       }
-                      className="border-input bg-background h-8 w-full rounded border px-2 text-xs"
+                      className="border-input bg-background text-muted-foreground h-6 w-full rounded border px-1 text-[11px]"
                     >
                       {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map(
                         (option) => (
@@ -1043,7 +1044,7 @@ export function TaskInbox({
                   </article>
                 ))}
                 {!stageItems.length ? (
-                  <p className="text-muted-foreground text-xs">Sin elementos.</p>
+                  <p className="text-muted-foreground text-[11px]">Vacío</p>
                 ) : null}
               </section>
             )
