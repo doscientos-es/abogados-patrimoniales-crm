@@ -20,10 +20,14 @@ import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 export const Route = createFileRoute('/expedientes/')({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { naturaleza?: 'Judicial' | 'Extrajudicial' | undefined } => ({
+  ): { naturaleza?: 'Judicial' | 'Extrajudicial' | undefined; contacto?: string | undefined } => ({
     naturaleza:
       search['naturaleza'] === 'Judicial' || search['naturaleza'] === 'Extrajudicial'
         ? search['naturaleza']
+        : undefined,
+    contacto:
+      typeof search['contacto'] === 'string' && search['contacto'].trim()
+        ? search['contacto'].trim()
         : undefined,
   }),
   head: () => ({
@@ -38,7 +42,7 @@ export const Route = createFileRoute('/expedientes/')({
 
 function CasesRoute() {
   const navigate = useNavigate()
-  const { naturaleza } = Route.useSearch()
+  const { naturaleza, contacto } = Route.useSearch()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -97,10 +101,14 @@ function CasesRoute() {
   return (
     <CasesPage
       nature={naturaleza ?? 'all'}
+      contactId={contacto}
+      onContactClear={() =>
+        void navigate({ to: '/expedientes', search: { naturaleza, contacto: undefined } })
+      }
       onNatureChange={(value) =>
         void navigate({
           to: '/expedientes',
-          search: { naturaleza: value === 'all' ? undefined : value },
+          search: { naturaleza: value === 'all' ? undefined : value, contacto },
         })
       }
       expedientes={cases.data ?? []}

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/shared/infrastructure/supabase', () => ({
@@ -30,5 +30,30 @@ describe('ContactPersonalFilesTab', () => {
 
     expect(input.className).toContain('!pl-10')
     expect(icon?.classList.contains('pointer-events-none')).toBe(true)
+  })
+
+  it('opens the upload dialog prefilled from a pending Lead requirement', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ContactPersonalFilesTab
+          firmId="firm-1"
+          contactId="contact-1"
+          relationship="Lead"
+          requiredDocumentRequests={['Justificante de domicilio']}
+          role="lawyer"
+        />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subir Justificante de domicilio' }))
+
+    expect(
+      (screen.getByLabelText('Nombre o descripción') as HTMLInputElement).value,
+    ).toBe('Justificante de domicilio')
+    expect((screen.getByLabelText('Categoría') as HTMLSelectElement).value).toBe('other')
+    expect((screen.getByLabelText('Observaciones') as HTMLTextAreaElement).value).toContain(
+      'Justificante de domicilio',
+    )
   })
 })

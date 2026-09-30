@@ -331,6 +331,46 @@
   border-color: var(--nota-inactiva-bd);
 }
 
+/* Sticker para notas destacadas / críticas (se aplica sobre el tono base). */
+.nota-sticker {
+  position: relative;
+  padding-top: 1.5rem;
+  transform: rotate(1deg);
+  box-shadow: 0 10px 18px -6px rgb(0 0 0 / 0.35);
+}
+.nota-sticker:hover {
+  transform: rotate(0deg) translateY(-2px);
+}
+.nota-sticker-destacada {
+  background-color: oklch(0.9 0.14 95);
+  color: oklch(0.25 0.05 80);
+  border-color: oklch(0.75 0.15 90);
+}
+.nota-sticker-critica {
+  transform: rotate(-2deg);
+  background-color: oklch(0.87 0.09 25);
+  color: oklch(0.25 0.08 25);
+  border-color: oklch(0.6 0.2 25);
+}
+.nota-sticker::before {
+  content: '';
+  position: absolute;
+  top: -0.4rem;
+  left: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-left: -0.45rem;
+  border-radius: 9999px;
+  background: oklch(0.55 0.2 27);
+  box-shadow:
+    inset -2px -2px 3px rgb(0 0 0 / 0.3),
+    0 2px 3px rgb(0 0 0 / 0.4);
+}
+.nota-sticker-destacada::before {
+  background: oklch(0.6 0.15 80);
+}
+
+
 /* ---------------------------------------------------------------- */
 /* Megafases de LEX: color estable y reutilizable      */
 /* ---------------------------------------------------------------- */

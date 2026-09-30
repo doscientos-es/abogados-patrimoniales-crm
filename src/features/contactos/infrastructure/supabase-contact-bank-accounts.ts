@@ -35,6 +35,7 @@ export function useContactBankAccounts(
         .eq('firm_id', firmId)
         .eq('contact_id', contactId)
         .order('valid_from', { ascending: false })
+        .order('created_at', { ascending: false })
       if (error) throw error
       return data
     },

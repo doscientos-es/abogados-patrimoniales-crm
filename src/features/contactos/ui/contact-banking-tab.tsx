@@ -51,13 +51,18 @@ export function ContactBankingTab({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const iban = form.iban.replace(/\s/g, '').toUpperCase()
-    if (iban.length < 15 || iban.length > 34) {
+    if (iban.length < 15 || iban.length > 34 || !/^[A-Z0-9]+$/.test(iban)) {
       toast.error('El IBAN debe tener entre 15 y 34 caracteres, sin contar espacios.')
+      return
+    }
+    const bic = form.bic.replace(/[\s-]/g, '').toUpperCase()
+    if (bic && !/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic)) {
+      toast.error('El BIC / SWIFT debe tener 8 u 11 letras o números (puedes dejarlo vacío).')
       return
     }
 
     try {
-      await replace.mutateAsync({ ...form, holder: form.holder.trim(), iban })
+      await replace.mutateAsync({ ...form, holder: form.holder.trim(), iban, bic })
       toast.success(
         'Los nuevos datos bancarios se han guardado. La cuenta anterior queda en el histórico.',
       )
@@ -212,8 +217,6 @@ export function ContactBankingTab({
                 autoComplete="off"
                 autoCapitalize="characters"
                 inputMode="text"
-                pattern="[A-Za-z]{2}[0-9]{2}(?: ?[A-Za-z0-9]){11,30}"
-                title="Introduce un IBAN con 2 letras de país, 2 dígitos y entre 11 y 30 caracteres alfanuméricos; se permiten espacios."
                 onChange={(iban) => setForm({ ...form, iban })}
               />
               <Field
@@ -227,12 +230,10 @@ export function ContactBankingTab({
                 label="BIC / SWIFT"
                 name="bank-bic"
                 value={form.bic}
-                maxLength={11}
+                maxLength={20}
                 autoComplete="off"
                 autoCapitalize="characters"
                 inputMode="text"
-                pattern="[A-Za-z]{4}[A-Za-z]{2}[A-Za-z0-9]{2}(?:[A-Za-z0-9]{3})?"
-                title="El BIC / SWIFT debe tener 8 u 11 letras y números."
                 onChange={(bic) => setForm({ ...form, bic })}
               />
               <Field

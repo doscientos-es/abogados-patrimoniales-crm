@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pin, TriangleAlert } from 'lucide-react'
 import { useRef, useState, type FormEvent, type InputHTMLAttributes } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import {
   type RelacionDespacho,
 } from '@/features/contactos'
 import { useCrearNotaPersona } from '@/features/notas'
+import { cn } from '@/lib/utils'
 
 import { ContactAIIntake } from './contact-ai-intake'
 
@@ -426,8 +427,30 @@ export function NuevoContactoPage() {
               {notes.map((note, index) => (
                 <article
                   key={index}
-                  className="w-full max-w-xs rotate-[-1deg] rounded-sm border border-amber-300 bg-amber-100 p-4 text-sm text-amber-950 shadow-md"
+                  className={cn(
+                    'relative w-full max-w-xs rounded-sm border p-4 text-sm shadow-md',
+                    note.critical
+                      ? 'rotate-2 border-red-400 bg-red-100 pt-6 text-red-950 shadow-xl ring-2 ring-red-500/60'
+                      : note.highlighted
+                        ? 'rotate-1 border-yellow-400 bg-yellow-200 pt-6 text-yellow-950 shadow-lg ring-2 ring-yellow-500/50'
+                        : '-rotate-1 border-amber-300 bg-amber-100 text-amber-950',
+                  )}
                 >
+                  {note.critical || note.highlighted ? (
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'absolute -top-2 left-1/2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full text-white shadow',
+                        note.critical ? 'bg-red-600' : 'bg-yellow-600',
+                      )}
+                    >
+                      {note.critical ? (
+                        <TriangleAlert className="size-3" />
+                      ) : (
+                        <Pin className="size-3" />
+                      )}
+                    </span>
+                  ) : null}
                   <strong>{note.title || 'Nota interna'}</strong>
                   <p className="mt-2 whitespace-pre-wrap">{note.content}</p>
                   <div className="mt-2 flex justify-between text-xs">

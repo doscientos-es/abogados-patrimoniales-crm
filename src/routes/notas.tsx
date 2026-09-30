@@ -427,9 +427,9 @@ function NoteCard({
   const acknowledged = remote.acknowledgedUserIds.includes(currentUserId)
   const inactive = note.estado !== 'activa'
   const tint = note.critica
-    ? 'bg-rose-50 dark:bg-rose-950/20'
+    ? 'nota-sticker nota-sticker-critica'
     : note.destacada
-      ? 'bg-amber-50 dark:bg-amber-950/20'
+      ? 'nota-sticker nota-sticker-destacada'
       : 'bg-card'
   const action = (
     eventType: string,
@@ -737,15 +737,15 @@ function NoteForm({
       ? contacts.map((item) => ({ id: item.id, label: contactName(item), contactIds: [item.id] }))
       : scope === 'case'
         ? cases.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-            contactIds: [item.contactoPrincipalId],
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+          contactIds: [item.contactoPrincipalId],
+        }))
         : opportunities.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-            contactIds: [item.contactoId],
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+          contactIds: [item.contactoId],
+        }))
   const selected = options.find((item) => item.id === originId)
   useEffect(() => {
     setScope(

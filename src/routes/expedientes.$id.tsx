@@ -28,7 +28,7 @@ import {
   useLineasPersistentes,
   useParticipantesPersistentes,
 } from "@/features/expedientes";
-import { useNotasRemotas } from "@/features/notas";
+import { useConfirmarLectura, useNotasRemotas } from "@/features/notas";
 import {
   useCrearTarea,
   useEtiquetasTarea,
@@ -74,6 +74,7 @@ function CaseRoute() {
   const invoices = useFacturas(firmId);
   const tasks = useTareasPersistentes(firmId);
   const notes = useNotasRemotas(firmId);
+  const acknowledgeNote = useConfirmarLectura(firmId);
   const contacts = useContactos(firmId);
   const members = useMiembrosDespacho(firmId);
   const taskLabels = useEtiquetasTarea(firmId);
@@ -163,6 +164,8 @@ function CaseRoute() {
         taskTitleTemplates={titleTemplates.data ?? []}
         miembros={members.data ?? []}
         firmId={firmId}
+        currentUserId={session.user?.id}
+        onAcknowledgeNote={(noteId) => acknowledgeNote.mutateAsync(noteId)}
         taskLabels={taskLabels.data ?? []}
         tasksPanel={
           <TaskWorkspace

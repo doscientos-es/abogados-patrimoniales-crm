@@ -4,8 +4,6 @@ import {
 } from '@/features/contactos/application/contact-profile'
 import { cn } from '@/lib/utils'
 
-const RATED_LEVELS = SATISFACTION_LEVELS.filter((level) => level !== 'Sin valorar')
-
 export function SatisfactionMeter({
   value,
   showLabel = true,
@@ -13,6 +11,9 @@ export function SatisfactionMeter({
   value: SatisfactionLevel
   showLabel?: boolean
 }) {
+  // Computed at render time: a module-level .filter breaks SSR when chunk
+  // evaluation order leaves SATISFACTION_LEVELS undefined.
+  const RATED_LEVELS = SATISFACTION_LEVELS.filter((level) => level !== 'Sin valorar')
   const activeIndex = value === 'Sin valorar' ? -1 : RATED_LEVELS.indexOf(value)
 
   return (

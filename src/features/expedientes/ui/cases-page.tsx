@@ -47,7 +47,11 @@ export function CasesPage({
   moving,
   onMove,
   actions,
+  contactId,
+  onContactClear,
 }: {
+  contactId?: string | undefined
+  onContactClear?: (() => void) | undefined
   expedientes: ExpedientePersistido[]
   nature?: CaseNature
   onNatureChange?: (nature: CaseNature) => void
@@ -84,6 +88,11 @@ export function CasesPage({
     [expedientes],
   )
   const activeFilters = [
+    contactId && {
+      label: 'Contacto',
+      value: contactNames.get(contactId) ?? 'Contacto no disponible',
+      onRemove: () => onContactClear?.(),
+    },
     assignee !== 'all' && {
       label: 'Responsable',
       value: memberNames.get(assignee) ?? 'Usuario no disponible',
@@ -105,6 +114,7 @@ export function CasesPage({
       `${item.referencia} ${item.titulo} ${item.area} ${contactNames.get(item.contactoPrincipalId) ?? ''}`.toLowerCase()
     const itemDependency = caseDependency(item.estadoOperativo)
     return (
+      (!contactId || item.contactoPrincipalId === contactId) &&
       (!query.trim() || text.includes(query.trim().toLowerCase())) &&
       (nature === 'all' || item.naturaleza === nature) &&
       (assignee === 'all' || item.asignadoId === assignee) &&
@@ -115,6 +125,7 @@ export function CasesPage({
 
   const clearFilters = () => {
     setQuery('')
+    onContactClear?.()
     setAssignee('all')
     setStatus('all')
     setDependency('all')
@@ -588,7 +599,7 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
 
 function caseNatureTabClass(active: boolean) {
   return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
-      ? 'border-primary text-primary'
-      : 'border-transparent text-muted-foreground hover:text-foreground'
+    ? 'border-primary text-primary'
+    : 'border-transparent text-muted-foreground hover:text-foreground'
     }`
 }

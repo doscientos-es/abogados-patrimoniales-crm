@@ -227,10 +227,28 @@ export function ContactDetail({
                   <Mail className="size-4" aria-hidden="true" /> {contact.email}
                 </span>
               ) : null}
-              <span className="inline-flex items-center gap-1.5">
-                <BriefcaseBusiness className="size-4" aria-hidden="true" />
-                {cases.length} expediente{cases.length === 1 ? '' : 's'}
-              </span>
+              {cases.length === 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <BriefcaseBusiness className="size-4" aria-hidden="true" />0 expedientes
+                </span>
+              ) : cases.length === 1 && cases[0] ? (
+                <Link
+                  to="/expedientes/$id"
+                  params={{ id: cases[0].id }}
+                  className="hover:text-foreground inline-flex items-center gap-1.5 underline-offset-2 hover:underline"
+                >
+                  <BriefcaseBusiness className="size-4" aria-hidden="true" />1 expediente
+                </Link>
+              ) : (
+                <Link
+                  to="/expedientes"
+                  search={{ contacto: contactId }}
+                  className="hover:text-foreground inline-flex items-center gap-1.5 underline-offset-2 hover:underline"
+                >
+                  <BriefcaseBusiness className="size-4" aria-hidden="true" />
+                  {cases.length} expedientes
+                </Link>
+              )}
             </div>
           </div>
           <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 xl:col-span-1 xl:ml-auto">
@@ -855,7 +873,7 @@ function ContactNotePostit({ note }: { note: ReturnType<typeof notaDesdeRemota> 
   }
   return (
     <article
-      className={`nota-tono-${note.ambito} flex min-h-40 w-full flex-col rounded-sm border p-4 shadow-md transition-transform hover:-translate-y-0.5 ${note.critica ? 'ring-destructive/70 ring-2' : ''}`}
+      className={`nota-tono-${note.ambito} flex min-h-40 w-full flex-col rounded-sm border p-4 shadow-md transition-transform hover:-translate-y-0.5 ${note.critica ? 'nota-sticker nota-sticker-critica ring-destructive/70 ring-2' : note.destacada ? 'nota-sticker nota-sticker-destacada' : ''}`}
       aria-label={`${scopeLabels[note.ambito]}${note.titulo ? `: ${note.titulo}` : ''}`}
     >
       <header className="flex items-start justify-between gap-2">

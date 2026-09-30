@@ -74,6 +74,7 @@ export function ContactPersonalFilesTab({
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadRequirement, setUploadRequirement] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const documents = useQuery({
     queryKey: ['contact-documents', firmId, contactId],
@@ -112,6 +113,13 @@ export function ContactPersonalFilesTab({
         .toLocaleLowerCase('es')
         .includes(normalizedSearch),
   )
+
+  const openUpload = (requirement: string | null) => {
+    setUploadRequirement(requirement)
+    setFile(null)
+    if (requirement) setCategory(categoriesForRequirement(requirement)[0] ?? 'other')
+    setUploadOpen(true)
+  }
 
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -170,7 +178,12 @@ export function ContactPersonalFilesTab({
       formElement.reset()
       setFile(null)
       setUploadOpen(false)
-      toast.success('Documento guardado en el archivo personal del contacto.')
+      setUploadRequirement(null)
+      toast.success(
+        uploadRequirement
+          ? `Documento guardado y registrado para el requisito «${uploadRequirement}».`
+          : 'Documento guardado en el archivo personal del contacto.',
+      )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el documento.')
     } finally {
@@ -229,11 +242,11 @@ export function ContactPersonalFilesTab({
     title: string
     types: ContactDocumentType[]
   }> = [
-    { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
-    { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
-    { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
-    { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
-  ]
+      { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
+      { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
+      { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
+      { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
+    ]
 
   return (
     <section className="space-y-4" aria-label="Archivos personales">
@@ -252,7 +265,7 @@ export function ContactPersonalFilesTab({
               className="!pl-10"
             />
           </div>
-          <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
+          <Button type="button" variant="outline" onClick={() => openUpload(null)}>
             <FileUp className="size-4" aria-hidden="true" />
             Subir documento
           </Button>
@@ -305,7 +318,19 @@ export function ContactPersonalFilesTab({
                 {item.receivedDocument ? (
                   <Badge variant="outline">Recibido · {item.receivedDocument.name}</Badge>
                 ) : (
-                  <Badge variant="secondary">Pendiente</Badge>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="secondary">Pendiente</Badge>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Subir ${item.requirement}`}
+                      onClick={() => openUpload(item.requirement)}
+                    >
+                      <FileUp className="size-4" aria-hidden="true" />
+                      Subir
+                    </Button>
+                  </span>
                 )}
               </div>
             ))}
@@ -313,15 +338,28 @@ export function ContactPersonalFilesTab({
         </Card>
       ) : null}
 
-      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open)
+          if (!open) setUploadRequirement(null)
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Subir documento personal</DialogTitle>
             <DialogDescription>
+              {uploadRequirement
+                ? `Requisito: ${uploadRequirement}. `
+                : ''}
               Se guardará en el almacenamiento privado del despacho. PDF, JPG o PNG de hasta 25 MB.
             </DialogDescription>
           </DialogHeader>
-          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void upload(event)}>
+          <form
+            key={uploadRequirement ?? 'free'}
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(event) => void upload(event)}
+          >
             <div className="space-y-1.5">
               <Label htmlFor="personal-file-category">Categoría</Label>
               <select
@@ -341,6 +379,7 @@ export function ContactPersonalFilesTab({
               name="documentName"
               label="Nombre o descripción"
               placeholder="Ej. DNI vigente"
+              defaultValue={uploadRequirement ?? ''}
             />
             <TextField name="number" label="Número de documento" />
             <TextField name="issuedOn" label="Fecha de expedición" type="date" />
@@ -376,7 +415,14 @@ export function ContactPersonalFilesTab({
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="personal-file-observations">Observaciones</Label>
-              <Textarea id="personal-file-observations" name="observations" rows={2} />
+              <Textarea
+                id="personal-file-observations"
+                name="observations"
+                rows={2}
+                defaultValue={
+                  uploadRequirement ? `Requisito documental del Lead: ${uploadRequirement}` : ''
+                }
+              />
             </div>
             <DialogFooter className="sm:col-span-2">
               <Button
@@ -621,11 +667,13 @@ function TextField({
   label,
   type = 'text',
   placeholder,
+  defaultValue,
 }: {
   name: string
   label: string
   type?: string
   placeholder?: string
+  defaultValue?: string
 }) {
   return (
     <div className="space-y-1.5">
@@ -635,6 +683,7 @@ function TextField({
         name={name}
         type={type}
         {...(placeholder ? { placeholder } : {})}
+        {...(defaultValue ? { defaultValue } : {})}
       />
     </div>
   )

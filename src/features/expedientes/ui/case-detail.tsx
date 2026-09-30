@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckSquare2,
+  ChevronDown,
+  ChevronUp,
   FileText,
   History,
   Layers3,
@@ -120,7 +122,11 @@ export function CaseDetail({
   taskLabels = [],
   tasksPanel,
   onOpenTask,
+  currentUserId,
+  onAcknowledgeNote,
 }: {
+  currentUserId?: string | undefined
+  onAcknowledgeNote?: ((noteId: string) => Promise<unknown>) | undefined
   onOpenTask?: ((taskId: string) => void) | undefined
   firmId?: string | undefined
   taskLabels?: TaskLabelOption[]
@@ -189,11 +195,13 @@ export function CaseDetail({
         alerts={alerts}
         editor={editor}
         notas={notas}
+        currentUserId={currentUserId}
+        onAcknowledgeNote={onAcknowledgeNote}
         hasActivities={actuaciones.some((activity) => activity.expedienteId === item.id)}
       />
 
       <div
-        className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2"
+        className="border-border/80 flex max-w-full gap-0.5 overflow-x-auto border-b"
         role="tablist"
       >
         {TABS.map(({ id, label, Icon }) => {
@@ -212,11 +220,17 @@ export function CaseDetail({
                 setLocalTab(id)
                 onSelectTab?.(id)
               }}
-              className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent'}`}
+              className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2 text-[13px] font-medium whitespace-nowrap transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent'}`}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
+              <Icon className="size-3.5" aria-hidden="true" />
               {label}
-              {count !== undefined ? <span className="text-xs tabular-nums">{count}</span> : null}
+              {count !== undefined ? (
+                <span
+                  className={`rounded-full px-1.5 text-[11px] leading-4 tabular-nums ${selected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+                >
+                  {count}
+                </span>
+              ) : null}
             </button>
           )
         })}
@@ -349,6 +363,8 @@ function CaseHeader({
   editor,
   notas,
   hasActivities,
+  currentUserId,
+  onAcknowledgeNote,
 }: {
   expediente: ExpedientePersistido
   lastMovement: string
@@ -356,6 +372,8 @@ function CaseHeader({
   editor: ReactNode
   notas: NotaRemota[]
   hasActivities: boolean
+  currentUserId?: string | undefined
+  onAcknowledgeNote?: ((noteId: string) => Promise<unknown>) | undefined
 }) {
   const caseNotes = notas.filter(
     (note) => note.scope === 'case' && note.case_id === expediente.id && note.status === 'active',
@@ -400,57 +418,123 @@ function CaseHeader({
           </div>
         ) : null}
       </header>
-      <CaseNotes notes={caseNotes} />
+      <CaseNotes
+        notes={caseNotes}
+        currentUserId={currentUserId}
+        onAcknowledge={onAcknowledgeNote}
+      />
     </>
   )
 }
 
-function CaseNotes({ notes }: { notes: NotaRemota[] }) {
+function CaseNotes({
+  notes,
+  currentUserId,
+  onAcknowledge,
+}: {
+  notes: NotaRemota[]
+  currentUserId?: string | undefined
+  onAcknowledge?: ((noteId: string) => Promise<unknown>) | undefined
+}) {
+  const [collapsed, setCollapsed] = useState(false)
   if (!notes.length) return null
+  const hasCritical = notes.some((note) => note.critical)
+  const pendingAck = notes.filter(
+    (note) =>
+      note.requires_acknowledgement &&
+      Boolean(currentUserId) &&
+      !note.acknowledgedUserIds.includes(currentUserId ?? ''),
+  ).length
+  const sorted = [...notes].sort((a, b) => Number(b.critical) - Number(a.critical))
   return (
     <section
       aria-label="Notas internas del expediente"
-      className="border-destructive/35 rounded-lg border p-3"
+      className={`rounded-lg border p-3 ${hasCritical ? 'border-destructive/50' : 'border-border'}`}
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <ShieldAlert className="text-destructive h-4 w-4" aria-hidden="true" />
+          <ShieldAlert
+            className={`h-4 w-4 ${hasCritical ? 'text-destructive' : 'text-muted-foreground'}`}
+            aria-hidden="true"
+          />
           Notas internas del expediente a tener en cuenta ({notes.length})
+          {pendingAck ? (
+            <Badge variant="destructive">
+              {pendingAck} pendiente{pendingAck === 1 ? '' : 's'} de confirmar
+            </Badge>
+          ) : null}
         </h2>
-        <Link to="/notas" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-          Abrir notas
-        </Link>
-      </header>
-      <div className="mt-3 space-y-2">
-        {notes.map((note) => (
-          <article
-            key={note.id}
-            className="border-primary/30 bg-primary/5 rounded-md border px-3 py-2.5"
+        <div className="flex items-center gap-1">
+          <Link to="/notas" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            Abrir notas
+          </Link>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((value) => !value)}
           >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
-                  {note.critical
-                    ? 'Nota del expediente · advertencia crítica'
-                    : 'Nota del expediente'}
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            {collapsed ? 'Mostrar' : 'Minimizar'}
+          </Button>
+        </div>
+      </header>
+      {collapsed ? null : (
+        <div className="mt-4 flex flex-wrap gap-4">
+          {sorted.map((note) => {
+            const needsAck =
+              note.requires_acknowledgement &&
+              Boolean(currentUserId) &&
+              !note.acknowledgedUserIds.includes(currentUserId ?? '')
+            return (
+              <article
+                key={note.id}
+                className={`nota-tono-expediente w-full max-w-sm rounded-sm border px-3 py-2.5 shadow-md ${note.critical
+                  ? 'nota-sticker nota-sticker-critica'
+                  : note.highlighted
+                    ? 'nota-sticker nota-sticker-destacada'
+                    : ''
+                  }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold tracking-wide uppercase">
+                      {note.critical
+                        ? 'Nota del expediente · advertencia crítica'
+                        : 'Nota del expediente'}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
+                  </div>
+                  {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
+                </div>
+                <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
+                <p className="mt-2 text-xs opacity-70">
+                  {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} ·{' '}
+                  {formatDate(note.created_at, true)}
                 </p>
-                <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
-              </div>
-              <div className="flex gap-1.5">
-                {note.requires_acknowledgement ? (
-                  <Badge variant="outline">Requiere confirmación</Badge>
+                {needsAck && onAcknowledge ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-7 border-current/40 bg-white/60 text-xs text-inherit"
+                    onClick={() =>
+                      void onAcknowledge(note.id).catch(() =>
+                        toast.error('No se pudo confirmar la lectura.'),
+                      )
+                    }
+                  >
+                    Confirmar lectura
+                  </Button>
+                ) : note.requires_acknowledgement ? (
+                  <p className="mt-2 text-xs font-medium">Lectura confirmada</p>
                 ) : null}
-                {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
-              </div>
-            </div>
-            <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
-            <p className="text-muted-foreground mt-2 text-xs">
-              {note.actorNames[note.created_by ?? ''] ?? 'Sistema'} ·{' '}
-              {formatDate(note.created_at, true)}
-            </p>
-          </article>
-        ))}
-      </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }
@@ -860,13 +944,13 @@ function DetailSection({
   children: ReactNode
 }) {
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>
+    <div className="space-y-3">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1 basis-64">
+          <h2 className="text-base font-semibold">{title}</h2>
+          <p className="text-muted-foreground text-xs">{subtitle}</p>
         </div>
-        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+        {actions ? <div className="ml-auto flex flex-wrap justify-end gap-2">{actions}</div> : null}
       </header>
       {children}
     </div>
@@ -959,7 +1043,7 @@ function WorkstreamsSection({
   return (
     <DetailSection
       title={`Líneas de trabajo · ${lineas.length} en el expediente`}
-      subtitle="Frentes autónomos del expediente: cada uno con objetivo propio, responsable, seguimiento y resultado verificable. Agrupan y relacionan el trabajo, sin sustituir a fases, actuaciones ni tareas."
+      subtitle="Frentes autónomos con objetivo, responsable y resultado propios."
       actions={<>{createForm}</>}
     >
       <div className="border-border/80 bg-muted/20 flex flex-wrap items-center gap-2 rounded-lg border p-3">

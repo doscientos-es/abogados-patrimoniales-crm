@@ -66,8 +66,6 @@ describe('ContactBankingTab', () => {
     const iban = screen.getByLabelText('IBAN') as HTMLInputElement
     fireEvent.change(iban, { target: { value: 'ES123' } })
 
-    expect(iban.validity.patternMismatch).toBe(true)
-    expect(iban.closest('form')?.checkValidity()).toBe(false)
     fireEvent.submit(iban.closest('form') as HTMLFormElement)
     expect(mocks.mutateAsync).not.toHaveBeenCalled()
     expect(mocks.toastError).toHaveBeenCalledWith(
@@ -75,15 +73,30 @@ describe('ContactBankingTab', () => {
     )
   })
 
-  it('validates BIC / SWIFT using its native 8- or 11-character pattern', () => {
+  it('accepts a lenient BIC (spaces, lowercase) and normalizes it', async () => {
     renderBankingTab()
     fireEvent.click(screen.getByRole('button', { name: 'Nuevos datos bancarios' }))
-    const bic = screen.getByLabelText('BIC / SWIFT') as HTMLInputElement
+    fireEvent.change(screen.getByLabelText('Titular'), { target: { value: 'Lucía Pérez' } })
+    fireEvent.change(screen.getByLabelText('IBAN'), { target: { value: 'ES1234567890123456' } })
+    fireEvent.change(screen.getByLabelText('BIC / SWIFT'), { target: { value: 'caix es bb' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar y archivar la cuenta anterior' }))
 
+    await waitFor(() =>
+      expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ bic: 'CAIXESBB' })),
+    )
+  })
+
+  it('rejects a BIC with an invalid length before calling persistence', () => {
+    renderBankingTab()
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevos datos bancarios' }))
+    fireEvent.change(screen.getByLabelText('Titular'), { target: { value: 'Lucía Pérez' } })
+    fireEvent.change(screen.getByLabelText('IBAN'), { target: { value: 'ES1234567890123456' } })
+    const bic = screen.getByLabelText('BIC / SWIFT')
     fireEvent.change(bic, { target: { value: '1234' } })
-    expect(bic.validity.patternMismatch).toBe(true)
-    fireEvent.change(bic, { target: { value: 'CAIXESBB' } })
-    expect(bic.checkValidity()).toBe(true)
+    fireEvent.submit(bic.closest('form') as HTMLFormElement)
+
+    expect(mocks.mutateAsync).not.toHaveBeenCalled()
+    expect(mocks.toastError).toHaveBeenCalledWith(expect.stringContaining('BIC'))
   })
 
   it('translates the bank RPC invalid-IBAN error', async () => {
