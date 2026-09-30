@@ -1,4 +1,4 @@
-import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
+﻿import { PopoverContent, PopoverTrigger } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
   BellRing,
@@ -10,9 +10,11 @@ import {
   ChevronRight,
   Flag,
   GripVertical,
+  Inbox as InboxIcon,
   Link2,
   PanelRightOpen,
   Play,
+  Plus,
   Search,
   ShieldAlert,
   Milestone,
