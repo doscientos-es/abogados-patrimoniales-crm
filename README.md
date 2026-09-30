@@ -18,7 +18,7 @@ Los datos de demostración deben identificarse de forma inequívoca y mantenerse
 
 ## Novedades del producto
 
-`CHANGELOG.md` es la fuente editorial; `src/features/configuracion/changelog.json` es el artefacto que consume la pestaña **Novedades** de Configuración. Para revisar el siguiente intervalo de commits, ejecutar `pnpm run changelog:plan`; tras redactar y añadir una entrada con `node scripts/changelog.mjs add <sha-destino> <fecha-UTC> <título> <borrador.json>`, regenerar el JSON con `pnpm run changelog:sync` y verificarlo con `pnpm run changelog:check`. Las entradas describen cambios del repositorio y no implican por sí mismas que estén desplegados.
+`CHANGELOG.md` es la fuente editorial; `src/features/configuracion/changelog.json` es el artefacto que consume la pestaña **Novedades** de Configuración. Se regenera automáticamente al ejecutar `pnpm dev`, `pnpm build` o `pnpm build:dev`; también puedes ejecutar `pnpm run changelog:sync` a mano. Para revisar el siguiente intervalo de commits, ejecutar `pnpm run changelog:plan`; tras redactar y añadir una entrada con `node scripts/changelog.mjs add <sha-destino> <fecha-UTC> <título> <borrador.json>`, verifica el resultado con `pnpm run changelog:check`. Las entradas describen cambios del repositorio y no implican por sí mismas que estén desplegados.
 
 ## Modelo funcional
 

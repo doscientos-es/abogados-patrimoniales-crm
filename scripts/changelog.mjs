@@ -111,7 +111,9 @@ export function renderRelease(date, title, sections) {
 }
 
 function run([command, ...args]) {
-  const head = commit('HEAD')
+  // Rendering the JSON only needs the editorial Markdown source. Keep it usable
+  // in build environments that don't include Git history (for example, Lovable).
+  const head = command === 'sync' ? null : commit('HEAD')
   if (command === 'init') {
     if (existsSync('CHANGELOG.md')) throw new Error('CHANGELOG.md ya existe')
     if (!args[0] || !SHA.test(args[0])) throw new Error('Indica el SHA completo inicial')

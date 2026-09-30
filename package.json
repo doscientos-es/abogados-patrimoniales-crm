@@ -3,9 +3,9 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "dev": "pnpm run changelog:sync && vite dev",
+    "build": "pnpm run changelog:sync && vite build",
+    "build:dev": "pnpm run changelog:sync && vite build --mode development",
     "preview": "vite preview",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix --fix-suggestions",
