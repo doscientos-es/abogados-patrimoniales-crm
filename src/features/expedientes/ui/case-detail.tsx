@@ -8,7 +8,9 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Flag,
   History,
+  ListChecks,
   Layers3,
   MessageSquareText,
   MoreHorizontal,
@@ -889,9 +891,14 @@ function CaseSummary({
               'Actualiza la situación y el siguiente paso para orientar al equipo.'}
           </CardContent>
         </Card>
-        <Card>
+        <Card className={nextAction ? undefined : 'border-rose-300 bg-rose-50'}>
           <CardHeader>
-            <CardTitle className="text-base">Próxima acción</CardTitle>
+            <CardTitle
+              className={`flex items-center gap-1.5 text-base ${nextAction ? '' : 'text-rose-700'}`}
+            >
+              {nextAction ? null : <AlertTriangle className="size-4" aria-hidden="true" />}
+              Próxima acción
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm font-medium">
             {nextAction ? (
@@ -901,7 +908,9 @@ function CaseSummary({
                 className="hover:text-primary underline-offset-4 hover:underline"
               />
             ) : (
-              <span className="text-muted-foreground">Sin siguiente acción</span>
+              <span role="alert" className="text-rose-700">
+                Sin siguiente acción: el expediente está parado
+              </span>
             )}
           </CardContent>
         </Card>
@@ -983,6 +992,52 @@ function isLineArchived(line: LineaPersistida) {
 function detailString(details: Record<string, Json>, key: string) {
   const value = details[key]
   return typeof value === 'string' ? value.trim() : ''
+}
+
+const LINE_STATUS_STYLE: Record<string, { accent: string; badge: string }> = {
+  pending: { accent: 'bg-slate-400', badge: 'border-slate-300 bg-slate-100 text-slate-700' },
+  in_analysis: { accent: 'bg-violet-500', badge: 'border-violet-300 bg-violet-50 text-violet-700' },
+  in_progress: { accent: 'bg-blue-500', badge: 'border-blue-300 bg-blue-50 text-blue-700' },
+  on_hold: { accent: 'bg-amber-500', badge: 'border-amber-300 bg-amber-50 text-amber-700' },
+  resolved: { accent: 'bg-emerald-500', badge: 'border-emerald-300 bg-emerald-50 text-emerald-700' },
+  closed: { accent: 'bg-emerald-700', badge: 'border-emerald-400 bg-emerald-100 text-emerald-800' },
+  discarded: { accent: 'bg-zinc-300', badge: 'border-zinc-300 bg-zinc-100 text-zinc-500' },
+}
+const LINE_STATUS_FALLBACK = LINE_STATUS_STYLE['pending']!
+
+const LINE_PRIORITY_STYLE: Record<string, string> = {
+  Alta: 'border-rose-300 bg-rose-50 text-rose-700',
+  Media: 'border-amber-300 bg-amber-50 text-amber-700',
+  Baja: 'border-sky-300 bg-sky-50 text-sky-700',
+}
+
+function initials(name: string | undefined) {
+  if (!name) return '?'
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('')
+}
+
+function LineChip({
+  className,
+  icon: Icon,
+  children,
+}: {
+  className?: string | undefined
+  icon?: typeof Flag
+  children: ReactNode
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${className ?? 'text-muted-foreground bg-muted/40'}`}
+    >
+      {Icon ? <Icon className="size-3" aria-hidden="true" /> : null}
+      {children}
+    </span>
+  )
 }
 
 function LineDetail({ label, value }: { label: string; value: string }) {
@@ -1344,6 +1399,12 @@ function WorkstreamCard({
   const [taskOpen, setTaskOpen] = useState(false)
   const archived = isLineArchived(line)
   const closedStatus = ['resolved', 'closed', 'discarded'].includes(line.estado)
+  const statusStyle = LINE_STATUS_STYLE[line.estado] ?? LINE_STATUS_FALLBACK
+  const doneTasks = tasks.filter((task) => ['Completada', 'Cancelada'].includes(task.estado)).length
+  const overdue =
+    !closedStatus &&
+    Boolean(line.fechaObjetivo) &&
+    line.fechaObjetivo! < new Date().toISOString().slice(0, 10)
   const details = lineDetails(line)
   const collaborators = Array.isArray(details['colaboradores'])
     ? details['colaboradores']
@@ -1410,18 +1471,26 @@ function WorkstreamCard({
   }
 
   return (
-    <Card className={archived ? 'opacity-60' : undefined}>
-      <CardContent className="space-y-3 pt-5">
+    <Card
+      className={`relative overflow-hidden transition-shadow hover:shadow-md ${archived ? 'opacity-60' : ''}`}
+    >
+      <span
+        className={`absolute inset-y-0 left-0 w-1 ${statusStyle.accent}`}
+        aria-hidden="true"
+      />
+      <CardContent className="space-y-3 pt-5 pl-6">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-medium">{line.titulo}</p>
-            <p className="text-muted-foreground mt-1 text-sm">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-base leading-tight font-semibold">{line.titulo}</p>
+              <LineChip className={statusStyle.badge}>{workstreamStatusLabel(line.estado)}</LineChip>
+              {archived ? <LineChip>Archivada</LineChip> : null}
+            </div>
+            <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
               {line.descripcion || line.tipo || 'Sin descripción'}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <Badge variant="outline">{workstreamStatusLabel(line.estado)}</Badge>
-            {archived ? <Badge variant="secondary">Archivada</Badge> : null}
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -1430,6 +1499,10 @@ function WorkstreamCard({
               onClick={() => setExpanded((value) => !value)}
             >
               {expanded ? 'Contraer' : 'Ver detalles'}
+              <ChevronDown
+                className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
             </Button>
             <LineActionsMenu
               label={line.titulo}
@@ -1481,11 +1554,52 @@ function WorkstreamCard({
             />
           </div>
         </div>
-        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <span>Responsable: {memberName ?? 'Sin asignar'}</span>
-          <span>Objetivo: {formatDate(line.fechaObjetivo)}</span>
-          <span>Prioridad: {line.prioridad}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <LineChip>
+            <span
+              className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[9px] font-semibold"
+              aria-hidden="true"
+            >
+              {initials(memberName)}
+            </span>
+            Responsable: {memberName ?? 'Sin asignar'}
+          </LineChip>
+          <LineChip
+            icon={CalendarClock}
+            className={
+              overdue
+                ? 'border-rose-300 bg-rose-50 text-rose-700'
+                : 'text-muted-foreground bg-muted/40'
+            }
+          >
+            Objetivo: {formatDate(line.fechaObjetivo)}
+            {overdue ? ' · vencida' : ''}
+          </LineChip>
+          <LineChip
+            icon={Flag}
+            className={LINE_PRIORITY_STYLE[line.prioridad] ?? 'text-muted-foreground bg-muted/40'}
+          >
+            Prioridad: {line.prioridad}
+          </LineChip>
+          <LineChip icon={ListChecks}>
+            {doneTasks}/{tasks.length} tareas
+          </LineChip>
         </div>
+        {tasks.length ? (
+          <div
+            className="bg-muted h-1.5 overflow-hidden rounded-full"
+            role="progressbar"
+            aria-label={`Progreso de tareas de ${line.titulo}`}
+            aria-valuemin={0}
+            aria-valuemax={tasks.length}
+            aria-valuenow={doneTasks}
+          >
+            <div
+              className={`h-full rounded-full ${statusStyle.accent}`}
+              style={{ width: `${(doneTasks / tasks.length) * 100}%` }}
+            />
+          </div>
+        ) : null}
         {expanded ? (
           <dl className="bg-muted/30 space-y-1.5 rounded-md border border-dashed p-3 text-xs">
             <LineDetail label="Objetivo" value={detailString(details, 'objetivo')} />
@@ -1502,8 +1616,22 @@ function WorkstreamCard({
             />
           </dl>
         ) : null}
-        <div className="border-primary/20 bg-primary/5 rounded-md border px-3 py-2">
-          <p className="text-primary text-xs font-semibold">Siguiente acción</p>
+        <div
+          role={!nextAction && !closedStatus ? 'alert' : undefined}
+          className={`rounded-md border px-3 py-2 ${!nextAction && !closedStatus
+            ? 'border-rose-300 bg-rose-50 text-rose-800'
+            : 'border-primary/20 bg-primary/5'
+            }`}
+        >
+          <p
+            className={`flex items-center gap-1 text-xs font-semibold ${!nextAction && !closedStatus ? 'text-rose-700' : 'text-primary'
+              }`}
+          >
+            {!nextAction && !closedStatus ? (
+              <AlertTriangle className="size-3.5" aria-hidden="true" />
+            ) : null}
+            Siguiente acción
+          </p>
           {nextAction ? (
             <TaskOpenLink
               task={nextAction}
@@ -1512,7 +1640,9 @@ function WorkstreamCard({
               className="mt-1 inline-block text-left text-sm font-medium underline-offset-4 hover:underline"
             />
           ) : (
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p
+              className={`mt-1 text-sm ${closedStatus ? 'text-muted-foreground' : 'font-medium text-rose-700'}`}
+            >
               Sin siguiente acción definida para esta línea.
             </p>
           )}

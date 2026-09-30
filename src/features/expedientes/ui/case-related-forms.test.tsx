@@ -38,7 +38,43 @@ describe('CaseRelatedForms', () => {
       'Ej. Análisis jurídico',
     )
     expect(
-      (screen.getByLabelText('Descripción (opcional)') as HTMLTextAreaElement).placeholder,
-    ).toBe('Delimita el trabajo y el resultado que se espera conseguir.')
+      (screen.getByLabelText('Objetivos (opcional)') as HTMLTextAreaElement).placeholder,
+    ).toBe('Qué se pretende conseguir y qué resultado se espera.')
+  })
+
+  it('submits a workstream with objectives and status, without priority', async () => {
+    const onWorkstream = vi.fn().mockResolvedValue(undefined)
+    render(<CaseRelatedForms {...props} onWorkstream={onWorkstream} section="workstream" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva línea' }))
+
+    expect(screen.queryByLabelText('Prioridad')).toBeNull()
+    expect(screen.queryByLabelText('Descripción (opcional)')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Título de la línea *'), {
+      target: { value: 'Recuperación posesoria' },
+    })
+    fireEvent.change(screen.getByLabelText('Objetivos (opcional)'), {
+      target: { value: 'Recuperar la posesión' },
+    })
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'in_progress' } })
+    fireEvent.change(screen.getByLabelText('Responsable (opcional)'), {
+      target: { value: 'member-1' },
+    })
+    fireEvent.change(screen.getByLabelText('Fecha objetivo (opcional)'), {
+      target: { value: '2026-12-01' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear línea' }))
+
+    await vi.waitFor(() => expect(onWorkstream).toHaveBeenCalledTimes(1))
+    const input = onWorkstream.mock.calls[0]?.[0]
+    expect(input).toEqual({
+      expedienteId: 'case-1',
+      titulo: 'Recuperación posesoria',
+      tipo: '',
+      objetivos: 'Recuperar la posesión',
+      estado: 'in_progress',
+      asignadoId: 'member-1',
+      fechaObjetivo: '2026-12-01',
+    })
   })
 })

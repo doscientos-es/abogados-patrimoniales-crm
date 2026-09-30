@@ -281,7 +281,7 @@ export function WorkstreamDetailDialog({
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[min(96vw,76rem)]">
-        <DialogHeader>
+        <DialogHeader className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 -mt-1 pt-1 pb-2 backdrop-blur-md">
           <DialogTitle>{line.titulo}</DialogTitle>
           <DialogDescription>
             Ficha operativa con objetivo, estrategia, seguimiento y elementos relacionados.
@@ -430,7 +430,7 @@ export function WorkstreamDetailDialog({
             </div>
           ) : null}
         </form>
-        <DialogFooter>
+        <DialogFooter className="bg-background/80 supports-[backdrop-filter]:bg-background/60 border-t pt-3 backdrop-blur-md">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
           {section !== 'vinculados' && section !== 'historico' ? (
             <Button type="submit" form={`workstream-form-${line.id}`} disabled={pending}>

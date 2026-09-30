@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -54,95 +55,97 @@ function renderDetail(
   onUpdateWorkstream = vi.fn().mockResolvedValue(undefined),
 ) {
   return render(
-    <CaseDetail
-      expediente={expediente}
-      lineas={
-        [{
-          id: 'line-1',
-          expedienteId: 'case-1',
-          parentId: null,
-          titulo: 'Due diligence',
-          tipo: 'Análisis jurídico',
-          descripcion: 'Revisión de la operación',
-          estado: 'En curso',
-          prioridad: 'Alta',
-          asignadoId: 'member-1',
-          fechaInicio: '2026-08-05',
-          fechaObjetivo: '2026-09-05',
-          fechaResolucion: null,
-          fechaCierre: null,
-          orden: 0,
-          details: { colaboradores: [], customField: 'conservar' },
-          version: 2,
-        }] as never
-      }
-      actuaciones={
-        [
-          {
-            id: 'activity-1',
+    <QueryClientProvider client={new QueryClient()}>
+      <CaseDetail
+        expediente={expediente}
+        lineas={
+          [{
+            id: 'line-1',
             expedienteId: 'case-1',
-            titulo: 'Revisión inicial',
-            tipo: 'Análisis',
-            ocurridaEn: '2026-08-07T09:15:00Z',
-            relevancia: 'activity',
-          },
-        ] as never
-      }
-      participantes={
-        [
-          {
-            id: 'participant-1',
-            nombre: 'Inversiones Torrelodones',
-            rol: 'Cliente',
-            confidencialidad: 'Normal',
-          },
-        ] as never
-      }
-      eventos={eventos}
-      documentos={
-        [
-          {
-            id: 'doc-1',
-            original_name: 'Escritura.pdf',
-            category: 'Escrituras',
-            version: 1,
-            confidentiality: 'normal',
-            updated_at: '2026-08-07T09:15:00Z',
-          },
-        ] as never
-      }
-      tareas={
-        [
-          {
-            id: 'task-1',
-            expedienteId: 'case-1',
-            lineaId: 'line-1',
-            titulo: 'Preparar firma',
-            creadaPorId: 'member-1',
-            tipo: 'Tarea',
-            estado: 'Pendiente',
-            esSiguienteAccion: true,
+            parentId: null,
+            titulo: 'Due diligence',
+            tipo: 'Análisis jurídico',
+            descripcion: 'Revisión de la operación',
+            estado: 'En curso',
             prioridad: 'Alta',
-            venceEn: '2026-08-10T09:00:00Z',
-            version: 1,
-          },
-        ] as never
-      }
-      miembros={[{ id: 'member-1', nombre: 'Luis Ferrán' }] as never}
-      clienteNombre="Inversiones Torrelodones, S.L."
-      taskPending={false}
-      onCreateTask={onCreateTask}
-      onSetNextAction={onSetNextAction}
-      onUpdateWorkstream={onUpdateWorkstream}
-      canManageNextAction={canManageNextAction}
-      nextActionPending={false}
-      editor={<div>Editor del expediente</div>}
-      notas={notas}
-      relatedForms={{
-        participant: <div>Alta de interviniente</div>,
-        workstream: <div>Nueva línea</div>,
-      }}
-    />,
+            asignadoId: 'member-1',
+            fechaInicio: '2026-08-05',
+            fechaObjetivo: '2026-09-05',
+            fechaResolucion: null,
+            fechaCierre: null,
+            orden: 0,
+            details: { colaboradores: [], customField: 'conservar' },
+            version: 2,
+          }] as never
+        }
+        actuaciones={
+          [
+            {
+              id: 'activity-1',
+              expedienteId: 'case-1',
+              titulo: 'Revisión inicial',
+              tipo: 'Análisis',
+              ocurridaEn: '2026-08-07T09:15:00Z',
+              relevancia: 'activity',
+            },
+          ] as never
+        }
+        participantes={
+          [
+            {
+              id: 'participant-1',
+              nombre: 'Inversiones Torrelodones',
+              rol: 'Cliente',
+              confidencialidad: 'Normal',
+            },
+          ] as never
+        }
+        eventos={eventos}
+        documentos={
+          [
+            {
+              id: 'doc-1',
+              original_name: 'Escritura.pdf',
+              category: 'Escrituras',
+              version: 1,
+              confidentiality: 'normal',
+              updated_at: '2026-08-07T09:15:00Z',
+            },
+          ] as never
+        }
+        tareas={
+          [
+            {
+              id: 'task-1',
+              expedienteId: 'case-1',
+              lineaId: 'line-1',
+              titulo: 'Preparar firma',
+              creadaPorId: 'member-1',
+              tipo: 'Tarea',
+              estado: 'Pendiente',
+              esSiguienteAccion: true,
+              prioridad: 'Alta',
+              venceEn: '2026-08-10T09:00:00Z',
+              version: 1,
+            },
+          ] as never
+        }
+        miembros={[{ id: 'member-1', nombre: 'Luis Ferrán' }] as never}
+        clienteNombre="Inversiones Torrelodones, S.L."
+        taskPending={false}
+        onCreateTask={onCreateTask}
+        onSetNextAction={onSetNextAction}
+        onUpdateWorkstream={onUpdateWorkstream}
+        canManageNextAction={canManageNextAction}
+        nextActionPending={false}
+        editor={<div>Editor del expediente</div>}
+        notas={notas}
+        relatedForms={{
+          participant: <div>Alta de interviniente</div>,
+          workstream: <div>Nueva línea</div>,
+        }}
+      />
+    </QueryClientProvider>,
   )
 }
 
@@ -166,7 +169,7 @@ describe('CaseDetail', () => {
       screen.getByRole('link', { name: 'Abrir siguiente acción: Preparar firma' }),
     ).toBeTruthy()
     expect(
-      screen.getByText(/Frentes autónomos del expediente: cada uno con objetivo propio/i),
+      screen.getByText(/Frentes autónomos con objetivo, responsable y resultado propios/i),
     ).toBeTruthy()
     expect(screen.queryByRole('button', { name: /vista mapa/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /vista tarjetas/i })).toBeNull()
