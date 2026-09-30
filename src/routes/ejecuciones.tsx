@@ -270,8 +270,49 @@ function EjecucionesPage() {
       </div>
       {!rows.length ? (
         <Card>
-          <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            No hay ejecuciones en esta modalidad.
+          <CardContent className="space-y-4 py-10 text-center text-sm">
+            {!executions.data?.length ? (
+              <>
+                <div className="space-y-1">
+                  <p className="font-medium">Todavía no hay ejecuciones.</p>
+                  <p className="text-muted-foreground mx-auto max-w-xl">
+                    {cases.data?.length
+                      ? 'Una ejecución se activa sobre un expediente existente cuando hay que hacer cumplir una obligación o un título.'
+                      : 'Una ejecución depende de un expediente. Crea primero el expediente donde se origina.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {cases.data?.length ? (
+                    <Button type="button" size="sm" onClick={() => setShowForm(true)}>
+                      Activar ejecución
+                    </Button>
+                  ) : null}
+                  <Link
+                    to="/expedientes"
+                    className={buttonVariants({
+                      size: 'sm',
+                      variant: cases.data?.length ? 'outline' : 'default',
+                    })}
+                  >
+                    Ir a Expedientes
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  No hay ejecuciones {filter === 'judicial' ? 'judiciales' : 'extrajudiciales'}.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setFilter('all')}>
+                    Ver todas ({executions.data.length})
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => setShowForm(true)}>
+                    Activar ejecución
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -307,7 +348,7 @@ function EjecucionesPage() {
                       ))}
                     </select>
                     {execution.modality === 'extrajudicial' &&
-                    execution.status !== 'Derivado a ejecución judicial' ? (
+                      execution.status !== 'Derivado a ejecución judicial' ? (
                       <Button
                         type="button"
                         size="sm"

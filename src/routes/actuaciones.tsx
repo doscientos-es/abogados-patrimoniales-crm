@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
@@ -52,8 +53,23 @@ function ActuacionesPage() {
       />
       {!activities.data?.length ? (
         <Card>
-          <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            Todavía no hay actuaciones registradas.
+          <CardContent className="space-y-4 py-10 text-center text-sm">
+            <div className="space-y-1">
+              <p className="font-medium">Todavía no hay actuaciones registradas.</p>
+              <p className="text-muted-foreground mx-auto max-w-xl">
+                Las actuaciones no se crean aquí: nacen al completar una tarea vinculada a un
+                expediente y marcada como actuación o hito. Crea o completa tareas desde el
+                expediente o desde Tareas.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link to="/tareas" className={buttonVariants({ size: 'sm' })}>
+                Ir a Tareas
+              </Link>
+              <Link to="/expedientes" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+                Ir a Expedientes
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : (
