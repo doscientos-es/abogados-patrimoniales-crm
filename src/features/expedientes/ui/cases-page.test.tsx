@@ -100,11 +100,13 @@ describe('CasesPage', () => {
       />,
     )
 
-    expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tab', { name: /^Todos/ }).getAttribute('aria-selected')).toBe('true')
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Judicial' }))
+    fireEvent.click(screen.getByRole('tab', { name: /^Judicial/ }))
 
-    expect(screen.getByRole('tab', { name: 'Judicial' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tab', { name: /^Judicial/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
     expect(screen.getByText('EXP-002')).toBeTruthy()
     expect(screen.queryByText('EXP-001')).toBeNull()
   })

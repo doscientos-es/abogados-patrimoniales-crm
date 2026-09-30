@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import type { MiembroDespacho } from '@/features/crm'
 import type {
   ActuacionPersistida,
@@ -280,28 +281,25 @@ export function WorkstreamDetailDialog({
           Ver ficha
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[min(96vw,76rem)]">
-        <DialogHeader className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 -mt-1 pt-1 pb-2 backdrop-blur-md">
+      <DialogContent className="gap-0 p-0 sm:max-w-[min(96vw,76rem)] [&_[data-slot=dialog-close]]:z-30">
+        <DialogHeader className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 px-4 pt-4 pr-12 pb-3 backdrop-blur-md">
           <DialogTitle>{line.titulo}</DialogTitle>
           <DialogDescription>
             Ficha operativa con objetivo, estrategia, seguimiento y elementos relacionados.
           </DialogDescription>
         </DialogHeader>
-        <div className="border-border flex flex-wrap gap-1 border-b pb-3" role="tablist" aria-label="Secciones de la línea">
-          {SECTIONS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={section === item.id}
-              className={`rounded-md px-3 py-2 text-sm ${section === item.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-              onClick={() => setSection(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <form id={`workstream-form-${line.id}`} onSubmit={(event) => void save(event)}>
+        <UnderlineTabs
+          className="mx-4"
+          ariaLabel="Secciones de la línea"
+          items={SECTIONS}
+          value={section}
+          onChange={setSection}
+        />
+        <form
+          id={`workstream-form-${line.id}`}
+          className="px-4"
+          onSubmit={(event) => void save(event)}
+        >
           {section === 'ficha' ? (
             <div role="tabpanel" className="grid gap-4 py-4 sm:grid-cols-2">
               <TextField label="Nombre" value={draft.titulo} onChange={(value) => setDraft({ ...draft, titulo: value })} required />
@@ -430,7 +428,7 @@ export function WorkstreamDetailDialog({
             </div>
           ) : null}
         </form>
-        <DialogFooter className="bg-background/80 supports-[backdrop-filter]:bg-background/60 border-t pt-3 backdrop-blur-md">
+        <DialogFooter className="bg-background/80 supports-[backdrop-filter]:bg-background/60 mx-0 mb-0 rounded-b-xl border-t px-4 py-3 backdrop-blur-md">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
           {section !== 'vinculados' && section !== 'historico' ? (
             <Button type="submit" form={`workstream-form-${line.id}`} disabled={pending}>

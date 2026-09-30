@@ -36,6 +36,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
+
 import { TaskCreateDialog, type TaskLabelOption } from '@/components/tareas/task-create-dialog'
 import type { MiembroDespacho } from '@/features/crm'
 import {
@@ -210,41 +212,16 @@ export function CaseDetail({
         hasActivities={actuaciones.some((activity) => activity.expedienteId === item.id)}
       />
 
-      <div
-        className="border-border/80 flex max-w-full gap-0.5 overflow-x-auto border-b"
-        role="tablist"
-      >
-        {TABS.map(({ id, label, Icon }) => {
-          const count = countForTab[id]
-          const selected = activeTab === id
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`case-detail-tab-${id}`}
-              aria-controls={`case-detail-panel-${id}`}
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => {
-                setLocalTab(id)
-                onSelectTab?.(id)
-              }}
-              className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2 text-[13px] font-medium whitespace-nowrap transition-colors ${selected ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent'}`}
-            >
-              <Icon className="size-3.5" aria-hidden="true" />
-              {label}
-              {count !== undefined ? (
-                <span
-                  className={`rounded-full px-1.5 text-[11px] leading-4 tabular-nums ${selected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
-                >
-                  {count}
-                </span>
-              ) : null}
-            </button>
-          )
-        })}
-      </div>
+      <UnderlineTabs
+        idPrefix="case-detail-tab"
+        panelIdPrefix="case-detail-panel"
+        items={TABS.map((tab) => ({ ...tab, count: countForTab[tab.id] }))}
+        value={activeTab}
+        onChange={(id) => {
+          setLocalTab(id)
+          onSelectTab?.(id)
+        }}
+      />
 
       <section
         id={`case-detail-panel-${activeTab}`}
@@ -2090,6 +2067,62 @@ function TaskRow({
   )
 }
 
+const EVENT_ENTITIES: Record<string, [string, string]> = {
+  case: ['Expediente', 'Expediente'],
+  workstream: ['Línea de trabajo', 'Línea de trabajo'],
+  activity: ['Actuación', 'Actuación'],
+  participant: ['Interviniente', 'Interviniente'],
+}
+const EVENT_ACTIONS: Record<string, string> = {
+  created: 'creado',
+  updated: 'actualizado',
+  deleted: 'eliminado',
+}
+const EVENT_FIELDS: Record<string, string> = {
+  reference: 'referencia',
+  primary_contact_id: 'cliente principal',
+  opportunity_id: 'oportunidad',
+  title: 'título',
+  area: 'área',
+  matter_type: 'tipo de asunto',
+  nature: 'naturaleza',
+  general_status: 'estado general',
+  phase: 'fase',
+  operational_status: 'estado operativo',
+  priority: 'prioridad',
+  assigned_to: 'responsable',
+  opened_on: 'fecha de apertura',
+  closed_on: 'fecha de cierre',
+  next_action: 'próxima acción',
+  current_position: 'dónde estamos',
+  details: 'detalles',
+  parent_id: 'línea superior',
+  work_type: 'tipo',
+  description: 'descripción',
+  status: 'estado',
+  starts_on: 'fecha de inicio',
+  target_on: 'fecha objetivo',
+  resolved_on: 'fecha de resolución',
+  sort_order: 'orden',
+  role: 'rol',
+  name: 'nombre',
+  contact_id: 'contacto',
+  confidentiality: 'confidencialidad',
+  client_visible: 'visible para el cliente',
+  client_informed: 'cliente informado',
+  completion_result: 'resultado',
+}
+
+function fieldLabel(field: string) {
+  return EVENT_FIELDS[field] ?? field.replace(/_/g, ' ')
+}
+
+function eventLabel(event: EventoExpediente) {
+  const entity = EVENT_ENTITIES[event.entidad]?.[0] ?? event.entidad
+  const action = EVENT_ACTIONS[event.accion] ?? event.accion
+  return `${entity} ${action}`
+}
+
 function HistorySection({
   events,
   memberNames,
@@ -2108,7 +2141,7 @@ function HistorySection({
             <article key={event.id} className="border-l-primary/40 border-l-2 pl-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="font-medium">
-                  {event.entidad} · {event.accion}
+                  {eventLabel(event)}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {formatDate(event.creadoEn, true)} · Por{' '}
@@ -2118,7 +2151,9 @@ function HistorySection({
                 </span>
               </div>
               {event.campos.length ? (
-                <p className="text-muted-foreground mt-1 text-xs">{event.campos.join(', ')}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Campos: {event.campos.map(fieldLabel).join(', ')}
+                </p>
               ) : null}
             </article>
           ))}

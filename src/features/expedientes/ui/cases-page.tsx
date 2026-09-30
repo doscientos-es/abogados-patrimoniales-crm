@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import type { ContactoPersistido } from '@/features/contactos'
 import type { MiembroDespacho } from '@/features/crm'
 import {
@@ -156,38 +157,23 @@ export function CasesPage({
         subtitle="Supervisión y seguimiento del recorrido de los expedientes judiciales y extrajudiciales del despacho."
         actions={actions}
       />
-      <div className="border-border/80 flex items-center gap-1 border-b px-3 pt-2.5" role="tablist">
-        {CASE_NATURE_TABS.map(({ value, label }) => {
-          const count =
+      <UnderlineTabs
+        items={CASE_NATURE_TABS.map(({ value, label }) => ({
+          id: value,
+          label,
+          domId: `case-nature-tab-${value.toLowerCase()}`,
+          controls: 'case-control-board',
+          count:
             value === 'all'
               ? expedientes.length
-              : expedientes.filter((item) => item.naturaleza === value).length
-          return (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              id={`case-nature-tab-${value.toLowerCase()}`}
-              aria-controls="case-control-board"
-              aria-selected={nature === value}
-              tabIndex={nature === value ? 0 : -1}
-              onClick={() => {
-                setLocalNature(value)
-                onNatureChange?.(value)
-              }}
-              className={caseNatureTabClass(nature === value)}
-            >
-              {label}
-              <span
-                aria-hidden="true"
-                className="text-muted-foreground ml-1.5 text-xs tabular-nums"
-              >
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+              : expedientes.filter((item) => item.naturaleza === value).length,
+        }))}
+        value={nature}
+        onChange={(value) => {
+          setLocalNature(value)
+          onNatureChange?.(value)
+        }}
+      />
       <div className="border-border/80 space-y-2 border-b pb-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
           <label htmlFor="case-search" className="relative min-w-0">
@@ -595,11 +581,4 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
       {children}
     </label>
   )
-}
-
-function caseNatureTabClass(active: boolean) {
-  return `border-b-2 px-3 pb-2 text-sm font-medium transition-colors ${active
-    ? 'border-primary text-primary'
-    : 'border-transparent text-muted-foreground hover:text-foreground'
-    }`
 }

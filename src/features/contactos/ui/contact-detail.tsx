@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
@@ -326,35 +327,21 @@ export function ContactDetail({
           </div>
         </CardContent>
       </Card>
-      <div
-        role="tablist"
-        aria-label="Secciones de la ficha"
-        className="border-border/60 flex min-w-0 [scrollbar-width:none] items-center gap-1 overflow-x-auto border-b sm:gap-3 [&::-webkit-scrollbar]:hidden"
-      >
-        {(
-          [
-            ['summary', 'Resumen'],
-            ['general', 'Datos generales'],
-            ['banking', 'Datos bancarios'],
-            ['profile', 'Perfil'],
-            ['files', 'Archivos personales'],
-            ['notes', 'Notas internas'],
-          ] as const
-        ).map(([tab, label]) => (
-          <button
-            key={tab}
-            id={`contact-tab-${tab}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            aria-controls={`contact-panel-${tab}`}
-            onClick={() => setActiveTab(tab)}
-            className={`focus-visible:ring-ring relative shrink-0 px-3 py-3 text-sm whitespace-nowrap transition-colors after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${activeTab === tab ? 'text-foreground after:bg-primary font-medium' : 'text-muted-foreground hover:text-foreground hover:after:bg-border after:bg-transparent'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <UnderlineTabs
+        ariaLabel="Secciones de la ficha"
+        idPrefix="contact-tab"
+        panelIdPrefix="contact-panel"
+        items={[
+          { id: 'summary', label: 'Resumen' },
+          { id: 'general', label: 'Datos generales' },
+          { id: 'banking', label: 'Datos bancarios' },
+          { id: 'profile', label: 'Perfil' },
+          { id: 'files', label: 'Archivos personales' },
+          { id: 'notes', label: 'Notas internas' },
+        ]}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
       {activeTab === 'summary' ? (
         <section
           id="contact-panel-summary"

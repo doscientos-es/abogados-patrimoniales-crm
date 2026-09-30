@@ -7,6 +7,7 @@ import { UserAvatar } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { requestPasswordReset, useActiveMembership, useAuthSession } from '@/features/auth'
 import {
@@ -213,33 +214,19 @@ export function FirmSettings({
 
   return (
     <div className="space-y-4">
-      <div
-        className="border-border bg-muted/30 flex gap-1 overflow-x-auto rounded-lg border p-1"
-        role="tablist"
-        aria-label="Secciones de configuración"
-      >
-        {(
-          [
-            ['firm', 'Despacho'],
-            ['profile', 'Mi perfil'],
-            ['team', 'Equipo'],
-            ['catalogs', 'Catálogos'],
-            ['drive', 'Google Drive'],
-            ['changelog', 'Novedades'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            onClick={() => setTab(value)}
-            className={`rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${tab === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <UnderlineTabs
+        ariaLabel="Secciones de configuración"
+        items={[
+          { id: 'firm', label: 'Despacho' },
+          { id: 'profile', label: 'Mi perfil' },
+          { id: 'team', label: 'Equipo' },
+          { id: 'catalogs', label: 'Catálogos' },
+          { id: 'drive', label: 'Google Drive' },
+          { id: 'changelog', label: 'Novedades' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       {tab === 'firm' ? (
         <Card className="border-border/80 shadow-sm">

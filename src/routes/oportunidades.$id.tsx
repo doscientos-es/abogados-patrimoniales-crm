@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { UnderlineTabs } from "@/components/ui/underline-tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useActiveMembership, useAuthSession } from "@/features/auth";
@@ -576,29 +577,13 @@ export function LeadDetailTabs({
   onSelectTab: (tab: LeadDetailTab) => void;
 }) {
   return (
-    <div
-      className="border-border/80 flex max-w-full gap-1 overflow-x-auto border-b px-2"
-      role="tablist"
-    >
-      {LEAD_DETAIL_TABS.map(({ id, label }) => {
-        const selected = activeTab === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            id={`lead-detail-tab-${id}`}
-            aria-controls={`lead-detail-panel-${id}`}
-            aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
-            onClick={() => onSelectTab(id)}
-            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${selected ? "border-primary text-foreground" : "text-muted-foreground hover:text-foreground border-transparent"}`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
+    <UnderlineTabs
+      idPrefix="lead-detail-tab"
+      panelIdPrefix="lead-detail-panel"
+      items={LEAD_DETAIL_TABS.map(({ id, label }) => ({ id, label }))}
+      value={activeTab}
+      onChange={onSelectTab}
+    />
   );
 }
 
@@ -877,11 +862,11 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? "Sin fecha"
     : new Intl.DateTimeFormat("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        timeZone: "UTC",
-      }).format(date);
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(date);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
