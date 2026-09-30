@@ -112,8 +112,8 @@ export type CrearLineaInput = {
   expedienteId: string;
   titulo: string;
   tipo: string;
-  descripcion: string;
-  prioridad: PrioridadExpediente;
+  objetivos: string;
+  estado: string;
   asignadoId: string | null;
   fechaObjetivo: string | null;
 };

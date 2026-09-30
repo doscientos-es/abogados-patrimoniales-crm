@@ -506,7 +506,14 @@ function CaseNotes({
                     </p>
                     <p className="mt-1 text-sm font-semibold">{note.title || 'Nota interna'}</p>
                   </div>
-                  {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
+                  <div className="flex gap-1.5">
+                    {note.requires_acknowledgement ? (
+                      <Badge variant="outline" className="border-current/40 text-inherit">
+                        Requiere confirmación
+                      </Badge>
+                    ) : null}
+                    {note.critical ? <Badge variant="destructive">Crítica</Badge> : null}
+                  </div>
                 </div>
                 <p className="mt-1.5 text-sm whitespace-pre-wrap">{note.content}</p>
                 <p className="mt-2 text-xs opacity-70">

@@ -119,10 +119,10 @@ export function useCrearLinea(firmId: string | undefined) {
         case_id: input.expedienteId,
         title: required(input.titulo, 'El título'),
         work_type: input.tipo,
-        description: input.descripcion,
-        priority: priorityToDatabase[input.prioridad],
+        status: input.estado || 'pending',
         assigned_to: input.asignadoId,
         target_on: input.fechaObjetivo,
+        details: input.objetivos.trim() ? { objetivo: input.objetivos.trim() } : {},
       }
       const { error } = await client.from('crm_case_workstreams').insert(payload)
       if (error) throw error

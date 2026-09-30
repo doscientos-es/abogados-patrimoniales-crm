@@ -119,8 +119,8 @@ export function CaseRelatedForms({
                 expedienteId,
                 titulo: formText(data, "titulo"),
                 tipo: formText(data, "tipo"),
-                descripcion: formText(data, "descripcion"),
-                prioridad: formText(data, "prioridad") as CrearLineaInput["prioridad"],
+                objetivos: formText(data, "objetivos"),
+                estado: formText(data, "estado") || "pending",
                 asignadoId: formText(data, "asignado") || null,
                 fechaObjetivo: formText(data, "objetivo") || null,
               }),
@@ -137,18 +137,19 @@ export function CaseRelatedForms({
           />
         </div>
         <Field name="tipo" label="Tipo (opcional)" placeholder="Ej. Análisis jurídico" />
-        <NativeSelect name="prioridad" label="Prioridad">
-          <option>Media</option>
-          <option>Alta</option>
-          <option>Baja</option>
+        <NativeSelect name="estado" label="Estado">
+          <option value="pending">Pendiente</option>
+          <option value="in_analysis">En análisis</option>
+          <option value="in_progress">En curso</option>
+          <option value="on_hold">En espera</option>
         </NativeSelect>
         <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="related-descripcion">Descripción (opcional)</Label>
+          <Label htmlFor="related-objetivos">Objetivos (opcional)</Label>
           <Textarea
-            id="related-descripcion"
-            name="descripcion"
+            id="related-objetivos"
+            name="objetivos"
             rows={3}
-            placeholder="Delimita el trabajo y el resultado que se espera conseguir."
+            placeholder="Qué se pretende conseguir y qué resultado se espera."
           />
         </div>
         <NativeSelect name="asignado" label="Responsable (opcional)">
@@ -169,7 +170,7 @@ export function CaseRelatedForms({
     workstream: {
       title: "Nueva línea de trabajo",
       description:
-        "El título es obligatorio. Añade el alcance, responsable y fecha objetivo si ya los tienes; podrás completarlos después.",
+        "El título es obligatorio. Añade objetivos, responsable y fecha objetivo si ya los tienes; podrás completarlos después.",
       trigger: "Nueva línea",
     },
   }[section];
