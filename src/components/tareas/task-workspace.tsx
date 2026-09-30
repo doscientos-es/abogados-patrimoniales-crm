@@ -893,6 +893,7 @@ export function TaskInbox({
 }) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const [dropStage, setDropStage] = useState<TaskInboxItemRow['stage'] | null>(null)
+  const [captureOpen, setCaptureOpen] = useState(false)
   const titles = new Map(tasks.map((task) => [task.id, task.titulo]))
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -903,53 +904,74 @@ export function TaskInbox({
     try {
       await onCapture(captureText, taskId)
       form.reset()
+      setCaptureOpen(false)
     } catch {
       // The mutation has already shown its actionable error message.
     }
   }
   return (
-    <Card>
-      <CardContent className="space-y-2 p-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h2
-            className="text-sm font-semibold"
-            title="Organiza tus capturas sin modificar el estado compartido de las tareas."
-          >
-            INBOX personal
-          </h2>
-          <Badge variant="secondary">{items.length}</Badge>
-          <form
-            className="flex min-w-64 flex-1 flex-wrap items-center gap-2"
-            onSubmit={(event) => void submit(event)}
-          >
-            <Input
-              name="capture"
-              aria-label="Captura rápida"
-              placeholder="Anota algo para revisar…"
-              className="h-8 min-w-40 flex-1 text-sm"
-            />
-            <select
-              name="task"
-              aria-label="Tarea opcional para INBOX"
-              defaultValue=""
-              className="border-input bg-background h-8 w-44 rounded-md border px-2 text-xs"
-            >
-              <option value="">Sin tarea vinculada</option>
-              {tasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.titulo}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" size="sm" className="h-8" disabled={pending}>
-              Capturar
-            </Button>
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold uppercase">
+              <InboxIcon className="h-4 w-4" /> INBOX personal
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              {items.length} captura{items.length === 1 ? '' : 's'} en proceso. Las etapas son
+              tuyas: no cambian el estado de la tarea.
+            </p>
+          </div>
+          <Button type="button" size="sm" className="gap-1.5" onClick={() => setCaptureOpen(true)}>
+            <Plus className="h-4 w-4" /> Captura rápida
+          </Button>
+        </CardContent>
+      </Card>
+      <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+            <DialogHeader>
+              <DialogTitle>Captura rápida</DialogTitle>
+              <DialogDescription>
+                Apunta ahora lo que no quieres olvidar. Podrás contextualizarlo después.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label htmlFor="inbox-capture">Qué hay que hacer</Label>
+              <Input id="inbox-capture" name="capture" autoFocus placeholder="Anota algo…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="inbox-task">Tarea vinculada (opcional)</Label>
+              <select
+                id="inbox-task"
+                name="task"
+                defaultValue=""
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              >
+                <option value="">Sin tarea vinculada</option>
+                {tasks.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.titulo}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCaptureOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={pending}>
+                Capturar
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-        <p id="task-inbox-drag-help" className="text-muted-foreground sr-only">
-          Arrastra una entrada a otra etapa o utiliza su selector para cambiarla.
-        </p>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        </DialogContent>
+      </Dialog>
+      <p id="task-inbox-drag-help" className="sr-only">
+        Arrastra una entrada a otra etapa o utiliza su selector para cambiarla.
+      </p>
+      <div className="-mx-1 overflow-x-auto pb-3">
+        <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
           {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map((stage) => {
             const stageItems = items.filter((item) => item.stage === stage)
             return (
@@ -975,85 +997,90 @@ export function TaskInbox({
                   if (itemId && items.some((item) => item.id === itemId && item.stage !== stage))
                     void onMove(itemId, stage)
                 }}
-                className={`bg-muted/30 min-w-36 space-y-1.5 rounded-md border p-2 transition-colors ${stageItems.length ? 'w-56 shrink-0' : 'w-36 shrink-0'} ${dropStage === stage ? 'border-primary bg-primary/5 ring-primary/20 ring-2' : ''}`}
+                className={`border-border/70 bg-muted/70 shrink-0 rounded-lg border p-2 transition-colors lg:w-72 ${dropStage === stage ? 'bg-primary/10 ring-primary/40 ring-1' : ''}`}
               >
-                <h3 className="text-[11px] font-semibold tracking-wide uppercase">
-                  {INBOX_STAGE_LABELS[stage]} · {stageItems.length}
-                </h3>
-                {stageItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className={`bg-background space-y-1 rounded border p-1.5 text-xs ${draggedItemId === item.id ? 'opacity-50' : ''}`}
-                  >
-                    <div className="flex items-start gap-1">
-                      <button
-                        type="button"
-                        draggable={!pending}
-                        disabled={pending}
-                        aria-label={`Arrastrar entrada ${item.capture_text || 'del INBOX'}`}
-                        aria-describedby="task-inbox-drag-help"
-                        onDragStart={(event) => {
-                          event.dataTransfer.effectAllowed = 'move'
-                          event.dataTransfer.setData('text/plain', item.id)
-                          setDraggedItemId(item.id)
-                        }}
-                        onDragEnd={() => {
-                          setDraggedItemId(null)
-                          setDropStage(null)
-                        }}
-                        className="text-muted-foreground hover:bg-muted flex h-5 w-4 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-not-allowed"
-                      >
-                        <GripVertical className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                      <p className="line-clamp-2 min-w-0 flex-1 leading-snug">
-                        {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
-                      </p>
-                    </div>
-                    {item.task_id && onOpenTask ? (
-                      <button
-                        type="button"
-                        onClick={() => item.task_id && onOpenTask(item.task_id)}
-                        className="text-primary block max-w-full truncate text-left text-xs underline underline-offset-4"
-                      >
-                        {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
-                      </button>
-                    ) : item.task_id ? (
-                      <Link
-                        to="/tareas/$taskId"
-                        params={{ taskId: item.task_id }}
-                        className="text-primary block truncate text-xs underline underline-offset-4"
-                      >
-                        {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
-                      </Link>
-                    ) : null}
-                    <select
-                      aria-label={`Mover ${item.capture_text || 'entrada'} del INBOX`}
-                      value={item.stage}
-                      disabled={pending}
-                      onChange={(event) =>
-                        void onMove(item.id, event.target.value as TaskInboxItemRow['stage'])
-                      }
-                      className="border-input bg-background text-muted-foreground h-6 w-full rounded border px-1 text-[11px]"
+                <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
+                  <span className="truncate text-[11px] font-semibold tracking-wide uppercase">
+                    {INBOX_STAGE_LABELS[stage]}
+                  </span>
+                  <Badge variant="secondary">{stageItems.length}</Badge>
+                </header>
+                <div className="space-y-2">
+                  {stageItems.map((item) => (
+                    <article
+                      key={item.id}
+                      className={`group bg-background space-y-1.5 rounded-md border p-2.5 text-sm ${draggedItemId === item.id ? 'opacity-50' : ''}`}
                     >
-                      {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map(
-                        (option) => (
-                          <option key={option} value={option}>
-                            {INBOX_STAGE_LABELS[option]}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  </article>
-                ))}
-                {!stageItems.length ? (
-                  <p className="text-muted-foreground text-[11px]">Vacío</p>
-                ) : null}
+                      <div className="flex items-start gap-1.5">
+                        <button
+                          type="button"
+                          draggable={!pending}
+                          disabled={pending}
+                          aria-label={`Arrastrar entrada ${item.capture_text || 'del INBOX'}`}
+                          aria-describedby="task-inbox-drag-help"
+                          onDragStart={(event) => {
+                            event.dataTransfer.effectAllowed = 'move'
+                            event.dataTransfer.setData('text/plain', item.id)
+                            setDraggedItemId(item.id)
+                          }}
+                          onDragEnd={() => {
+                            setDraggedItemId(null)
+                            setDropStage(null)
+                          }}
+                          className="text-muted-foreground hover:bg-muted flex h-5 w-4 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-not-allowed"
+                        >
+                          <GripVertical className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <p className="line-clamp-2 min-w-0 flex-1 leading-snug">
+                          {item.capture_text || titles.get(item.task_id ?? '') || 'Tarea vinculada'}
+                        </p>
+                      </div>
+                      {item.task_id && onOpenTask ? (
+                        <button
+                          type="button"
+                          onClick={() => item.task_id && onOpenTask(item.task_id)}
+                          className="text-primary block max-w-full truncate text-left text-xs underline underline-offset-4"
+                        >
+                          {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
+                        </button>
+                      ) : item.task_id ? (
+                        <Link
+                          to="/tareas/$taskId"
+                          params={{ taskId: item.task_id }}
+                          className="text-primary block truncate text-xs underline underline-offset-4"
+                        >
+                          {titles.get(item.task_id) ?? 'Abrir tarea vinculada'}
+                        </Link>
+                      ) : null}
+                      <select
+                        aria-label={`Mover ${item.capture_text || 'entrada'} del INBOX`}
+                        value={item.stage}
+                        disabled={pending}
+                        onChange={(event) =>
+                          void onMove(item.id, event.target.value as TaskInboxItemRow['stage'])
+                        }
+                        className="border-input bg-background text-muted-foreground h-6 w-full rounded border px-1 text-[11px] opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+                      >
+                        {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map(
+                          (option) => (
+                            <option key={option} value={option}>
+                              {INBOX_STAGE_LABELS[option]}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </article>
+                  ))}
+                  {!stageItems.length ? (
+                    <p className="text-muted-foreground px-1 py-2 text-xs">Vacío.</p>
+                  ) : null}
+                </div>
               </section>
             )
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
