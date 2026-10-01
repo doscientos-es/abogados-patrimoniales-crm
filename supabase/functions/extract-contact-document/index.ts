@@ -7,7 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
 }
 const MAX_BYTES = 4 * 1024 * 1024
-const OPENAI_MODEL = 'gpt-4o-mini'
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4.1'
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses'
+const OPENAI_TIMEOUT_MS = 90_000
+const OPENAI_ATTEMPTS = 3
+const DNI_RULES =
+  ' Si el documento es un DNI, NIE o pasaporte: puede venir solo el anverso, solo el reverso o ambas caras, combina los datos de ambas. ' +
+  'Anverso: nombre, apellidos, número de documento y fecha de nacimiento. Reverso: domicilio, municipio y provincia (el código postal solo si consta) y zona MRZ (líneas con "<<<"), que sirve para contrastar número, nombre y fechas. ' +
+  'Devuelve nombre y apellidos con capitalización normal (no todo en mayúsculas), "documento" sin espacios ni guiones y en mayúsculas, y naturaleza "Persona física". ' +
+  'No uses la fecha de validez como fecha de nacimiento. Si un dato no coincide con la MRZ, omítelo.'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const FIELDS: Record<string, string> = {
   naturaleza:
@@ -40,6 +48,37 @@ function response(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Calls OpenAI with a timeout and retries on rate limits / 5xx / network errors.
+// Never logs the document or the key, only status and OpenAI's error message.
+async function callOpenAI(payload: Record<string, unknown>, apiKey: string) {
+  let last: Response | null = null
+  for (let attempt = 1; attempt <= OPENAI_ATTEMPTS; attempt++) {
+    try {
+      const result = await fetch(OPENAI_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
+      })
+      if (result.ok) return result
+      last = result
+      const detail = await result
+        .clone()
+        .text()
+        .catch(() => '')
+      console.error(`openai_error status=${result.status} attempt=${attempt} ${detail.slice(0, 400)}`)
+      const noQuota = result.status === 429 && /quota|billing|insufficient/i.test(detail)
+      if (noQuota || (result.status !== 429 && result.status < 500)) return result
+    } catch (error) {
+      console.error(`openai_network_error attempt=${attempt}`, error instanceof Error ? error.name : error)
+    }
+    if (attempt < OPENAI_ATTEMPTS) await sleep(1000 * 2 ** (attempt - 1))
+  }
+  return last
 }
 
 function validDocument(bytes: Uint8Array, mime: string) {
@@ -150,15 +189,12 @@ Deno.serve(async (req) => {
           image_url: `data:${mime};base64,${base64}`,
           detail: 'high',
         }
-      : { type: 'input_file', filename: name, file_data: base64 }
-    const result = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openAiKey}`,
-      },
-      body: JSON.stringify({
+      : { type: 'input_file', filename: name, file_data: `data:${mime};base64,${base64}` }
+    const result = await callOpenAI(
+      {
         model: OPENAI_MODEL,
+        temperature: 0,
+        store: false,
         input: [
           {
             role: 'system',
