@@ -38,8 +38,8 @@ export function proformaHtml(
   standalone: boolean,
 ) {
   const css =
-    '.document{font:12px/1.5 Georgia,serif;color:#111}.document table{width:100%;border-collapse:collapse;margin-top:10px}.document th,.document td{border-bottom:1px solid #ccc;padding:6px;text-align:left}.document .number{text-align:right;white-space:nowrap}.document .total{width:280px;margin-left:auto}.document .total td{border:0}.document header{border-bottom:2px solid #111;margin-bottom:16px;padding-bottom:10px}.document footer{border-top:1px solid #ccc;margin-top:24px;padding-top:8px;text-align:right;color:#555}'
-  const body = `<article class="document"><header><h1>Proforma · provisión de fondos</h1><p>Referencia ${escapeHtml(proforma.referencia)} · ${escapeHtml(proforma.fecha)} · presupuesto ${escapeHtml(proforma.presupuestoReferencia)}${proforma.version ? ` v${proforma.version}` : ''}</p></header><p><strong>Cliente:</strong> ${escapeHtml(client.nombre)}<br><strong>Asunto:</strong> ${escapeHtml(matter)}</p><table><thead><tr><th>Concepto</th><th class="number">Base imponible</th></tr></thead><tbody><tr><td>${escapeHtml(proforma.concepto)}</td><td class="number">${euros(proforma.baseCents)}</td></tr></tbody></table><table class="total"><tr><td>Base imponible</td><td class="number">${euros(proforma.baseCents)}</td></tr><tr><td>IVA</td><td class="number">${euros(proforma.ivaCents)}</td></tr><tr><td><strong>Total a provisionar</strong></td><td class="number"><strong>${euros(proforma.totalCents)}</strong></td></tr><tr><td>Total presupuesto</td><td class="number">${euros(proforma.totalPresupuestoCents)}</td></tr><tr><td>Resto pendiente</td><td class="number">${euros(Math.max(0, proforma.totalPresupuestoCents - proforma.totalCents))}</td></tr></table><p>Documento proforma sin validez fiscal. La factura definitiva se emitirá conforme al encargo.</p><footer>LEX &amp; DOSCIENTOS</footer></article>`
+    '.document{font:12px/1.5 Georgia,serif;color:#111}.document table{width:100%;border-collapse:collapse;margin-top:10px}.document th,.document td{border-bottom:1px solid #ccc;padding:6px;text-align:left}.document .number{text-align:right;white-space:nowrap}.document .total{width:280px;margin-left:auto}.document .total td{border:0}.document header{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #111;margin-bottom:16px;padding-bottom:10px}.document .logo{height:48px}.document footer{border-top:1px solid #ccc;margin-top:24px;padding-top:8px;text-align:right;color:#555}'
+  const body = `<article class="document"><header><div><img class="logo" src="/logo-lex.svg" alt="LEX &amp; DOSCIENTOS"><h1>Proforma · provisión de fondos</h1></div><p>Referencia ${escapeHtml(proforma.referencia)} · ${escapeHtml(proforma.fecha)} · presupuesto ${escapeHtml(proforma.presupuestoReferencia)}${proforma.version ? ` v${proforma.version}` : ''}</p></header><p><strong>Cliente:</strong> ${escapeHtml(client.nombre)}<br><strong>Asunto:</strong> ${escapeHtml(matter)}</p><table><thead><tr><th>Concepto</th><th class="number">Base imponible</th></tr></thead><tbody><tr><td>${escapeHtml(proforma.concepto)}</td><td class="number">${euros(proforma.baseCents)}</td></tr></tbody></table><table class="total"><tr><td>Base imponible</td><td class="number">${euros(proforma.baseCents)}</td></tr><tr><td>IVA</td><td class="number">${euros(proforma.ivaCents)}</td></tr><tr><td><strong>Total a provisionar</strong></td><td class="number"><strong>${euros(proforma.totalCents)}</strong></td></tr><tr><td>Total presupuesto</td><td class="number">${euros(proforma.totalPresupuestoCents)}</td></tr><tr><td>Resto pendiente</td><td class="number">${euros(Math.max(0, proforma.totalPresupuestoCents - proforma.totalCents))}</td></tr></table><p>Documento proforma sin validez fiscal. La factura definitiva se emitirá conforme al encargo.</p><footer>LEX &amp; DOSCIENTOS</footer></article>`
   return standalone
     ? `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(proforma.referencia)}</title><style>@page{size:A4;margin:18mm}body{margin:0}${css}</style></head><body>${body}</body></html>`
     : `<style>${css}</style>${body}`
@@ -54,7 +54,17 @@ function printProforma(proforma: Proforma, client: Cliente, matter: string) {
   printWindow.document.write(proformaHtml(proforma, client, matter, true))
   printWindow.document.close()
   printWindow.focus()
-  setTimeout(() => printWindow.print(), 150)
+  const images = Array.from(printWindow.document.images)
+  void Promise.all(
+    images.map(
+      (image) =>
+        image.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+            image.onload = image.onerror = () => resolve()
+          }),
+    ),
+  ).then(() => setTimeout(() => printWindow.print(), 150))
 }
 
 export function ProformaCard({
@@ -99,6 +109,14 @@ export function ProformaCard({
       setEditing(null)
     } catch {
       // The caller reports the persistence error; keep the dialog open for retry.
+    }
+  }
+  const saveSent = async (value: Proforma) => {
+    try {
+      await onSave(value)
+      setSending(false)
+    } catch {
+      // Keep the confirmation open so the user can retry the synchronization.
     }
   }
 
@@ -304,7 +322,9 @@ export function ProformaCard({
                     quoteSentOn,
                   ).length > 0
                 }
-                onClick={() => void save({ ...proforma, estado: 'enviada', fechaEnvio: sentOn })}
+                onClick={() =>
+                  void saveSent({ ...proforma, estado: 'enviada', fechaEnvio: sentOn })
+                }
               >
                 {busy ? 'Guardando…' : 'Confirmar fecha real'}
               </Button>

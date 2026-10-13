@@ -76,6 +76,7 @@ describe('ProformaCard', () => {
       estado: 'enviada',
       fechaEnvio: expect.any(String),
     })
+    expect(screen.queryByText('Registrar envío de proforma')).toBeNull()
   })
 
   it('escapes client-controlled content in the printable document', () => {

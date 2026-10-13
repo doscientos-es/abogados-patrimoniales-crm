@@ -2,6 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ save: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, className }: { children: string; to: string; className: string }) => (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  ),
+}))
 vi.mock('@/features/notas', () => ({
   useGuardarNota: () => ({ isPending: false, mutateAsync: mocks.save }),
   useNotasRemotas: () => ({ data: [], isPending: false }),

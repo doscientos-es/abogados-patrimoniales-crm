@@ -1,4 +1,5 @@
 import { AlertTriangle, Star } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -74,8 +75,8 @@ export function QuoteInternalNotes({
       <CardHeader>
         <CardTitle className="text-base">Notas internas del presupuesto</CardTitle>
         <p className="text-muted-foreground text-sm">
-          Contexto privado para el equipo. No forma parte del documento ni de las comunicaciones con
-          el cliente.
+          Contexto privado para el equipo. No forma parte del presupuesto, de las comunicaciones con
+          el cliente ni del portal.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -93,7 +94,7 @@ export function QuoteInternalNotes({
             </div>
             <p className="whitespace-pre-wrap">{note.content}</p>
             <p className="text-muted-foreground text-xs">
-              {note.created_by ? (note.actorNames[note.created_by] ?? '') : 'Sistema'} ·{' '}
+              {note.created_by ? (note.actorNames[note.created_by] ?? note.created_by) : 'Sistema'} ·{' '}
               {new Date(note.created_at).toLocaleString('es-ES', {
                 dateStyle: 'short',
                 timeStyle: 'short',
@@ -148,6 +149,9 @@ export function QuoteInternalNotes({
             {save.isPending ? 'Guardando…' : 'Guardar nota privada'}
           </Button>
         </form>
+        <Link to="/notas" className="text-primary text-xs hover:underline">
+          Ver todas las notas
+        </Link>
       </CardContent>
     </Card>
   )
