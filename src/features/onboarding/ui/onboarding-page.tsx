@@ -81,12 +81,12 @@ import {
   type EventoOnboardingPersistido,
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
-import { useCrearTarea } from '@/features/tareas'
 import {
   PaymentEvidenceList,
   PaymentEvidencePicker,
   uploadPaymentEvidence,
 } from '@/features/onboarding/ui/payment-evidence'
+import { useCrearTarea } from '@/features/tareas'
 import { cn } from '@/lib/utils'
 import type { Json } from '@/shared/infrastructure/supabase'
 
@@ -110,9 +110,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof error.message === 'string'
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -346,7 +346,9 @@ export function OnboardingPage() {
           className="fase-columna bg-muted/40 hover:bg-muted flex h-full w-14 flex-col items-center gap-3 rounded-xl border py-4 shadow-sm"
           aria-label={`Desplegar ${COLUMNA_ONBOARDING_LABEL[columna]} (${columnItems.length})`}
         >
-          <Badge variant="secondary" className="tabular-nums">{columnItems.length}</Badge>
+          <Badge variant="secondary" className="tabular-nums">
+            {columnItems.length}
+          </Badge>
           <span className="text-muted-foreground text-xs font-semibold [writing-mode:vertical-rl]">
             {COLUMNA_ONBOARDING_LABEL[columna]} · Desplegar
           </span>
@@ -442,7 +444,9 @@ export function OnboardingPage() {
               }
               onOpenCase={async (input) => {
                 const { motivoNaturaleza, ...caseInput } = input
-                const lead = leadsCompletos.data?.find((candidate) => candidate.id === item.oportunidadId)
+                const lead = leadsCompletos.data?.find(
+                  (candidate) => candidate.id === item.oportunidadId,
+                )
                 const naturalezaActual = leerNaturaleza(lead?.detalles)?.valor ?? null
                 if (lead && !naturalezaDefinitiva(naturalezaActual)) {
                   const actorId = session.user?.id
@@ -1248,7 +1252,9 @@ function OpenCaseDialog({
             aria-label="Más acciones: iniciar sin provisión (excepción)"
             title="Iniciar sin provisión (excepción)"
           >
-            <span aria-hidden="true" className="text-base leading-none">···</span>
+            <span aria-hidden="true" className="text-base leading-none">
+              ···
+            </span>
           </Button>
         ) : (
           <Button type="button" className="w-full justify-center">
@@ -1323,8 +1329,9 @@ function OpenCaseDialog({
       ) : (
         <>
           <p className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2 text-sm">
-            La naturaleza del asunto está {naturaleza ? 'pendiente de determinar' : 'sin clasificar'}.
-            Para entrar en CASEWORK debe ser definitiva; el cambio quedará registrado en el Lead.
+            La naturaleza del asunto está{' '}
+            {naturaleza ? 'pendiente de determinar' : 'sin clasificar'}. Para entrar en CASEWORK
+            debe ser definitiva; el cambio quedará registrado en el Lead.
           </p>
           <Field
             select

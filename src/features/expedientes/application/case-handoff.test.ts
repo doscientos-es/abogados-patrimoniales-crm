@@ -21,7 +21,13 @@ const content = {
   plazos: '',
   provision: 'Pagada',
 }
-const input = { id: 'handoff-1', expedienteId: 'case-1', emisorId: 'ana', receptorId: 'luis', ...content }
+const input = {
+  id: 'handoff-1',
+  expedienteId: 'case-1',
+  emisorId: 'ana',
+  receptorId: 'luis',
+  ...content,
+}
 const createdAt = '2026-10-05T10:00:00.000Z'
 
 describe('case handoff', () => {
@@ -41,7 +47,9 @@ describe('case handoff', () => {
     const result = aceptarTraspaso(detalles, traspaso, 'luis', createdAt)
     expect(responsableEfectivo(result.traspaso)).toBe('luis')
     expect(traspasoActivo(result.detalles, 'case-1')).toBeUndefined()
-    expect(aceptarTraspaso(result.detalles, result.traspaso, 'luis', createdAt).yaAceptado).toBe(true)
+    expect(aceptarTraspaso(result.detalles, result.traspaso, 'luis', createdAt).yaAceptado).toBe(
+      true,
+    )
   })
 
   it('requires a reason for a clarification and keeps the handoff active', () => {
@@ -60,11 +68,22 @@ describe('case handoff', () => {
   })
 
   it('creates a task for the recipient and escalates after three weekdays', () => {
-    const task = tareaAsuncion({ expedienteId: 'case-1', oportunidadId: 'lead-1', receptorId: 'luis', referencia: 'EXP-1' })
-    expect(task).toMatchObject({ titulo: TAREA_ASUNCION, asignadoId: 'luis', expedienteId: 'case-1' })
-    expect(nivelDemora(
-      { creadoEn: createdAt, estado: 'pendiente' },
-      new Date('2026-10-08T10:00:00.000Z'),
-    )).toBe('escalar')
+    const task = tareaAsuncion({
+      expedienteId: 'case-1',
+      oportunidadId: 'lead-1',
+      receptorId: 'luis',
+      referencia: 'EXP-1',
+    })
+    expect(task).toMatchObject({
+      titulo: TAREA_ASUNCION,
+      asignadoId: 'luis',
+      expedienteId: 'case-1',
+    })
+    expect(
+      nivelDemora(
+        { creadoEn: createdAt, estado: 'pendiente' },
+        new Date('2026-10-08T10:00:00.000Z'),
+      ),
+    ).toBe('escalar')
   })
 })

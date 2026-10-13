@@ -14,7 +14,11 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useActualizarDetallesOportunidad, useMiembrosDespacho, useOportunidad } from '@/features/crm'
+import {
+  useActualizarDetallesOportunidad,
+  useMiembrosDespacho,
+  useOportunidad,
+} from '@/features/crm'
 import {
   ESTADO_TRASPASO_LABEL,
   PENDIENTE_ASUNCION,
@@ -86,7 +90,9 @@ export function CaseHandoffBar({
   const active = traspasoActivo(opportunity.data?.detalles, expediente.id)
   const history = traspasosExpediente(opportunity.data?.detalles, expediente.id)
   const latest = history.at(-1)
-  const notStarted = Boolean(latest && (latest.estado !== 'aceptado' || !/curso/i.test(expediente.estadoGeneral)))
+  const notStarted = Boolean(
+    latest && (latest.estado !== 'aceptado' || !/curso/i.test(expediente.estadoGeneral)),
+  )
 
   return (
     <section
@@ -95,7 +101,9 @@ export function CaseHandoffBar({
     >
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <ArrowRightLeft className="text-primary size-4" aria-hidden="true" />
-        {notStarted ? <Badge variant="outline">{etiquetaCasework(expediente.naturaleza)}</Badge> : null}
+        {notStarted ? (
+          <Badge variant="outline">{etiquetaCasework(expediente.naturaleza)}</Badge>
+        ) : null}
         {active ? (
           <>
             <Badge variant="destructive">{PENDIENTE_ASUNCION}</Badge>
@@ -258,7 +266,8 @@ function CaseHandoffDialog({
     guard(async () => {
       if (!active) return
       await saveLeadDetails(
-        editarTraspaso(opportunity.detalles, active, content, me, new Date().toISOString()).detalles,
+        editarTraspaso(opportunity.detalles, active, content, me, new Date().toISOString())
+          .detalles,
       )
     }, 'Traspaso actualizado.')
 
@@ -278,9 +287,11 @@ function CaseHandoffDialog({
     guard(async () => {
       if (!active) return
       await saveLeadDetails(
-        solicitarAclaracion(opportunity.detalles, active, me, reason, new Date().toISOString()).detalles,
+        solicitarAclaracion(opportunity.detalles, active, me, reason, new Date().toISOString())
+          .detalles,
       )
-      if (active.tareaId) await message.mutateAsync(`Solicito aclaración del traspaso: ${reason.trim()}`)
+      if (active.tareaId)
+        await message.mutateAsync(`Solicito aclaración del traspaso: ${reason.trim()}`)
       setMode(null)
       setReason('')
     }, 'Aclaración enviada a quien entrega. El traspaso sigue pendiente.')
@@ -328,7 +339,8 @@ function CaseHandoffDialog({
         <DialogHeader>
           <DialogTitle>Traspaso del expediente · {expediente.referencia}</DialogTitle>
           <DialogDescription>
-            Entregar no es asumir: hasta que el destinatario acepte, el responsable sigue siendo quien entrega.
+            Entregar no es asumir: hasta que el destinatario acepte, el responsable sigue siendo
+            quien entrega.
           </DialogDescription>
         </DialogHeader>
         {active ? (
@@ -356,7 +368,9 @@ function CaseHandoffDialog({
               onChange={(event) => setSenderId(event.target.value)}
             >
               {(members.data ?? []).map((member) => (
-                <option key={member.id} value={member.id}>{member.nombre}</option>
+                <option key={member.id} value={member.id}>
+                  {member.nombre}
+                </option>
               ))}
             </select>
           </label>
@@ -370,7 +384,9 @@ function CaseHandoffDialog({
             >
               <option value="">Selecciona…</option>
               {otherMembers.map((member) => (
-                <option key={member.id} value={member.id}>{member.nombre}</option>
+                <option key={member.id} value={member.id}>
+                  {member.nombre}
+                </option>
               ))}
             </select>
           </label>
@@ -379,14 +395,17 @@ function CaseHandoffDialog({
           {CAMPOS.map((field) => (
             <div key={field.key} className="space-y-1">
               <Label htmlFor={`handoff-${field.key}`}>
-                {field.label}{field.required ? ' *' : ''}
+                {field.label}
+                {field.required ? ' *' : ''}
               </Label>
               <Textarea
                 id={`handoff-${field.key}`}
                 rows={2}
                 readOnly={!isSender}
                 value={content[field.key]}
-                onChange={(event) => setContent((value) => ({ ...value, [field.key]: event.target.value }))}
+                onChange={(event) =>
+                  setContent((value) => ({ ...value, [field.key]: event.target.value }))
+                }
               />
             </div>
           ))}
@@ -407,7 +426,9 @@ function CaseHandoffDialog({
         ) : null}
         {history.length ? (
           <details className="text-xs">
-            <summary className="cursor-pointer font-medium">Histórico de traspasos ({history.length})</summary>
+            <summary className="cursor-pointer font-medium">
+              Histórico de traspasos ({history.length})
+            </summary>
             <ul className="text-muted-foreground mt-1 space-y-0.5">
               {history.flatMap((item) =>
                 item.historial.map((entry, index) => (
@@ -422,26 +443,44 @@ function CaseHandoffDialog({
           </details>
         ) : null}
         <DialogFooter className="flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cerrar</Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cerrar
+          </Button>
           {!active && isSender ? (
-            <Button type="button" disabled={busy || !recipientId} onClick={() => void startHandoff()}>
+            <Button
+              type="button"
+              disabled={busy || !recipientId}
+              onClick={() => void startHandoff()}
+            >
               Iniciar traspaso
             </Button>
           ) : null}
           {active && isSender && !isRecipient ? (
             <>
               {!active.tareaId ? (
-                <Button type="button" variant="outline" disabled={busy} onClick={() => void retryAcceptanceTask()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void retryAcceptanceTask()}
+                >
                   Crear tarea de asunción
                 </Button>
               ) : null}
-              <Button type="button" variant="outline" disabled={busy} onClick={() => void saveHandoff()}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void saveHandoff()}
+              >
                 Guardar cambios
               </Button>
               {mode === 'reasignar' ? (
                 <Button
                   type="button"
-                  disabled={busy || !reason.trim() || !recipientId || recipientId === active.receptorId}
+                  disabled={
+                    busy || !reason.trim() || !recipientId || recipientId === active.receptorId
+                  }
                   onClick={() => void reassign()}
                 >
                   Confirmar reasignación
@@ -456,7 +495,12 @@ function CaseHandoffDialog({
           {active && isRecipient ? (
             <>
               {mode === 'aclaracion' ? (
-                <Button type="button" variant="outline" disabled={busy || !reason.trim()} onClick={() => void askClarification()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || !reason.trim()}
+                  onClick={() => void askClarification()}
+                >
                   <HelpCircle className="size-4" aria-hidden="true" /> Enviar aclaración
                 </Button>
               ) : (
@@ -480,7 +524,15 @@ function CaseHandoffDialog({
   )
 }
 
-function HandoffNotes({ firmId, caseId, label }: { firmId: string; caseId: string; label: string }) {
+function HandoffNotes({
+  firmId,
+  caseId,
+  label,
+}: {
+  firmId: string
+  caseId: string
+  label: string
+}) {
   const notes = useNotasRemotas(firmId)
   const save = useGuardarNota(firmId)
   const linked = (notes.data ?? []).filter((note) => {
