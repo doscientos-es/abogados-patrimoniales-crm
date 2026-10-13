@@ -1,5 +1,6 @@
 import {
   getSupabaseBrowserClient,
+  type ContactDocumentRow,
   type ContactDocumentType,
 } from '@/shared/infrastructure/supabase'
 
@@ -21,6 +22,11 @@ export async function uploadContactDocument(input: {
   file: File
   name: string
   type: ContactDocumentType
+  documentStatus?: ContactDocumentRow['document_status']
+  documentNumber?: string
+  issuedOn?: string | null
+  expiresOn?: string | null
+  signedOn?: string | null
   observations?: string
   tags?: string[]
 }) {
@@ -49,11 +55,11 @@ export async function uploadContactDocument(input: {
     storage_path: storagePath,
     mime_type: file.type,
     size_bytes: file.size,
-    document_status: 'current',
-    document_number: '',
-    issued_on: null,
-    expires_on: null,
-    signed_on: null,
+    document_status: input.documentStatus ?? 'current',
+    document_number: input.documentNumber ?? '',
+    issued_on: input.issuedOn ?? null,
+    expires_on: input.expiresOn ?? null,
+    signed_on: input.signedOn ?? null,
     observations: input.observations ?? '',
     tags: input.tags ?? [],
   })

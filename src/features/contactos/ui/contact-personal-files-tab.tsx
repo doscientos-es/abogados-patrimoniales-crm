@@ -25,6 +25,11 @@ import {
   reconcileRequestedLeadDocuments,
 } from '@/features/crm/application/lead-document-reconciliation'
 import {
+  CONTACT_DOCUMENT_MAX_BYTES,
+  CONTACT_DOCUMENT_MIME,
+  uploadContactDocument,
+} from '@/features/contactos/infrastructure/upload-contact-document'
+import {
   getSupabaseBrowserClient,
   type ContactDocumentRow,
   type ContactDocumentType,
@@ -129,51 +134,32 @@ export function ContactPersonalFilesTab({
       toast.error('Selecciona un archivo.')
       return
     }
-    if (
-      !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type) ||
-      file.size > 25 * 1024 * 1024
-    ) {
+    if (!CONTACT_DOCUMENT_MIME.includes(file.type) || file.size > CONTACT_DOCUMENT_MAX_BYTES) {
       toast.error('Sube un PDF, JPG o PNG de hasta 25 MB.')
       return
     }
-    const client = getSupabaseBrowserClient()
-    if (!client) return
-    const id = crypto.randomUUID()
-    const storagePath = `${firmId}/${contactId}/${id}/${file.name.replace(/[\\/]/g, '_')}`
     setUploading(true)
     try {
-      const { error: uploadError } = await client.storage
-        .from('contact-documents')
-        .upload(storagePath, file, { contentType: file.type, upsert: false })
-      if (uploadError) throw uploadError
-      const { error } = await client.from('crm_contact_documents').insert({
-        id,
-        firm_id: firmId,
-        contact_id: contactId,
-        document_type: category,
+      await uploadContactDocument({
+        firmId,
+        contactId,
+        file,
         name:
           field(form, 'documentName') ||
           CATEGORIES.find((item) => item.type === category)?.label ||
           'Documento',
-        original_name: file.name,
-        storage_path: storagePath,
-        mime_type: file.type,
-        size_bytes: file.size,
-        document_status: field(form, 'status') as ContactDocumentRow['document_status'],
-        document_number: field(form, 'number'),
-        issued_on: field(form, 'issuedOn') || null,
-        expires_on: field(form, 'expiresOn') || null,
-        signed_on: field(form, 'signedOn') || null,
+        type: category,
+        documentStatus: field(form, 'status') as ContactDocumentRow['document_status'],
+        documentNumber: field(form, 'number'),
+        issuedOn: field(form, 'issuedOn') || null,
+        expiresOn: field(form, 'expiresOn') || null,
+        signedOn: field(form, 'signedOn') || null,
         observations: field(form, 'observations'),
         tags: field(form, 'tags')
           .split(',')
           .map((tag) => tag.trim())
           .filter(Boolean),
       })
-      if (error) {
-        await client.storage.from('contact-documents').remove([storagePath])
-        throw error
-      }
       await queryClient.invalidateQueries({ queryKey: ['contact-documents', firmId, contactId] })
       formElement.reset()
       setFile(null)

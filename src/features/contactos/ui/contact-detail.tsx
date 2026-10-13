@@ -131,6 +131,9 @@ export function ContactDetail({
   )
   const leadToView =
     opportunities.find((item) => item.fase !== 'won' && item.fase !== 'lost') ?? opportunities[0]
+  const recommendedContact = (contactsQuery.data ?? []).find(
+    (item) => item.id === contact.recommendedById,
+  )
   const onboardings = (onboardingsQuery.data ?? []).filter((item) => item.contactoId === contactId)
   const opportunityIds = new Set(opportunities.map((item) => item.id))
   const caseIds = new Set(cases.map((item) => item.id))
@@ -177,7 +180,7 @@ export function ContactDetail({
       cargoContacto: text(data, 'contactRole'),
       origen: text(data, 'source'),
       relacion: text(data, 'relationship') as RelacionDespacho,
-      recommendedById: text(data, 'recommendedBy'),
+      recomendadoPor: text(data, 'recommendedBy'),
     }
     try {
       await update.mutateAsync({ contacto: changed, version: contact.version })
@@ -568,7 +571,14 @@ export function ContactDetail({
               )}
             </CardContent>
           </Card>
-          {contact.recommendedById ? (
+          {contact.recomendadoPor ? (
+            <Card>
+              <CardContent className="space-y-1 py-4">
+                <p className="text-sm font-medium">Recomendado por</p>
+                <p className="text-sm">{contact.recomendadoPor}</p>
+              </CardContent>
+            </Card>
+          ) : contact.recommendedById ? (
             <Related
               title="Recomendado por"
               empty="Sin contacto vinculado."
@@ -746,21 +756,16 @@ export function ContactDetail({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="contact-recommended-by">Recomendado por</Label>
-                <select
+                <Input
                   id="contact-recommended-by"
                   name="recommendedBy"
-                  defaultValue={contact.recommendedById ?? ''}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="">Sin recomendación vinculada</option>
-                  {(contactsQuery.data ?? [])
-                    .filter((item) => item.id !== contact.id)
-                    .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {displayName(item)}
-                      </option>
-                    ))}
-                </select>
+                  defaultValue={
+                    contact.recomendadoPor ??
+                    (recommendedContact ? displayName(recommendedContact) : '')
+                  }
+                  placeholder="Nombre de quien lo recomienda"
+                  className="uppercase"
+                />
               </div>
               <div className="flex items-end gap-2">
                 <Button type="submit" disabled={update.isPending}>

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
@@ -28,8 +28,10 @@ beforeEach(() => {
   mocks.upload.mockResolvedValue({ error: null })
   mocks.insert.mockResolvedValue({ error: null })
   mocks.remove.mockResolvedValue({ error: null })
-  vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('document-1')
+  vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('10000000-0000-4000-8000-000000000001')
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 describe('uploadContactDocument', () => {
   it('uploads the private file and inserts matching metadata', async () => {
@@ -43,21 +45,52 @@ describe('uploadContactDocument', () => {
     })
 
     expect(mocks.upload).toHaveBeenCalledWith(
-      'firm-1/contact-1/document-1/id.pdf',
+      'firm-1/contact-1/10000000-0000-4000-8000-000000000001/id.pdf',
       expect.any(File),
       { contentType: 'application/pdf', upsert: false },
     )
     expect(mocks.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'document-1',
+        id: '10000000-0000-4000-8000-000000000001',
         firm_id: 'firm-1',
         contact_id: 'contact-1',
         name: 'Identificación',
-        storage_path: 'firm-1/contact-1/document-1/id.pdf',
+        storage_path: 'firm-1/contact-1/10000000-0000-4000-8000-000000000001/id.pdf',
+        document_status: 'current',
+        document_number: '',
+        issued_on: null,
         tags: ['lead:1'],
       }),
     )
-    expect(result).toEqual({ id: 'document-1', name: 'Identificación' })
+    expect(result).toEqual({
+      id: '10000000-0000-4000-8000-000000000001',
+      name: 'Identificación',
+    })
+  })
+
+  it('preserves optional document details used by the personal-files form', async () => {
+    await uploadContactDocument({
+      firmId: 'firm-1',
+      contactId: 'contact-1',
+      file: file(),
+      name: 'Poder',
+      type: 'power',
+      documentStatus: 'expiring',
+      documentNumber: 'P-42',
+      issuedOn: '2026-01-02',
+      expiresOn: '2027-01-02',
+      signedOn: '2026-01-03',
+    })
+
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document_status: 'expiring',
+        document_number: 'P-42',
+        issued_on: '2026-01-02',
+        expires_on: '2027-01-02',
+        signed_on: '2026-01-03',
+      }),
+    )
   })
 
   it('rejects unsupported files before connecting to Supabase', async () => {
@@ -86,6 +119,8 @@ describe('uploadContactDocument', () => {
       }),
     ).rejects.toThrow('metadata failed')
 
-    expect(mocks.remove).toHaveBeenCalledWith(['firm-1/contact-1/document-1/id.pdf'])
+    expect(mocks.remove).toHaveBeenCalledWith([
+      'firm-1/contact-1/10000000-0000-4000-8000-000000000001/id.pdf',
+    ])
   })
 })
