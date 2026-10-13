@@ -26,9 +26,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   useActualizarContacto,
@@ -970,9 +970,9 @@ export function ContactInternalNotes({
       : scope === 'expediente'
         ? caseOptions.map((item) => ({ id: item.id, label: `${item.referencia} · ${item.titulo}` }))
         : opportunityOptions.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+          }))
   const selectedRelated = relatedOptions.find((item) => item.id === originId)
 
   const changeScope = (next: ContactNoteScope) => {

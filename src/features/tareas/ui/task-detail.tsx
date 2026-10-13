@@ -63,9 +63,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { TaskCommunications } from '@/features/tareas/ui/task-communications'
-import { MeetingCalendarPanel } from '@/features/tareas/ui/task-meeting-calendar'
-import { MeetingInternalNotes } from '@/features/tareas/ui/task-meeting-notes'
 import { useMiembrosDespacho } from '@/features/crm'
 import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
 import {
@@ -92,6 +89,7 @@ import {
   useMarcarSiguienteAccion,
   useMarcarSubtareaTarea,
   useMensajesTarea,
+  useEventosTarea,
   usePonerTareaEnEspera,
   useRechazarTarea,
   useTareasPersistentes,
@@ -103,7 +101,12 @@ import {
   type SubtareaPersistida,
   type TareaPersistida,
   RELEVANCIA_TAREA_LABELS,
+  historialEsperas,
+  leerDetalleEspera,
 } from '@/features/tareas'
+import { TaskCommunications } from '@/features/tareas/ui/task-communications'
+import { MeetingCalendarPanel } from '@/features/tareas/ui/task-meeting-calendar'
+import { MeetingInternalNotes } from '@/features/tareas/ui/task-meeting-notes'
 
 export const REMINDER_PREFIX = 'Recordatorio al responsable: '
 const TASK_STATES: EstadoTarea[] = ['Pendiente', 'En curso', 'En espera', 'Completada', 'Cancelada']
@@ -194,8 +197,8 @@ function PropertyRow({
 const date = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(value),
-    )
+        new Date(value),
+      )
     : 'Sin fecha'
 
 const formText = (data: FormData, name: string) => {
@@ -214,52 +217,52 @@ const detailsIds = (details: Record<string, unknown>, name: string) =>
 const meetingPreparationItems = (details: Record<string, unknown>) =>
   Array.isArray(details['preparationItems'])
     ? details['preparationItems'].filter(
-      (
-        item,
-      ): item is {
-        id: string
-        text: string
-        done: boolean
-        category?: string
-        createdById?: string
-        createdByName?: string
-        createdAt?: string
-      } => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-        const value = item as Record<string, unknown>
-        return (
-          typeof value['id'] === 'string' &&
-          typeof value['text'] === 'string' &&
-          typeof value['done'] === 'boolean' &&
-          ['category', 'createdById', 'createdByName', 'createdAt'].every(
-            (key) => value[key] === undefined || typeof value[key] === 'string',
+        (
+          item,
+        ): item is {
+          id: string
+          text: string
+          done: boolean
+          category?: string
+          createdById?: string
+          createdByName?: string
+          createdAt?: string
+        } => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+          const value = item as Record<string, unknown>
+          return (
+            typeof value['id'] === 'string' &&
+            typeof value['text'] === 'string' &&
+            typeof value['done'] === 'boolean' &&
+            ['category', 'createdById', 'createdByName', 'createdAt'].every(
+              (key) => value[key] === undefined || typeof value[key] === 'string',
+            )
           )
-        )
-      },
-    )
+        },
+      )
     : []
 
 const meetingRescheduleHistory = (details: Record<string, unknown>) =>
   Array.isArray(details['rescheduleHistory'])
     ? details['rescheduleHistory'].filter(
-      (
-        item,
-      ): item is {
-        requestedAt: string
-        reason: string
-        previousStartsAt: string
-        previousEndsAt: string
-      } => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-        const value = item as Record<string, unknown>
-        return (
-          typeof value['requestedAt'] === 'string' &&
-          typeof value['reason'] === 'string' &&
-          typeof value['previousStartsAt'] === 'string' &&
-          typeof value['previousEndsAt'] === 'string'
-        )
-      },
-    )
+        (
+          item,
+        ): item is {
+          requestedAt: string
+          reason: string
+          previousStartsAt: string
+          previousEndsAt: string
+        } => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+          const value = item as Record<string, unknown>
+          return (
+            typeof value['requestedAt'] === 'string' &&
+            typeof value['reason'] === 'string' &&
+            typeof value['previousStartsAt'] === 'string' &&
+            typeof value['previousEndsAt'] === 'string'
+          )
+        },
+      )
     : []
 
 const formatElapsedTime = (startedAt: string, now: number) => {
@@ -753,10 +756,7 @@ export function TaskDetail({
                 className="text-warning-foreground mt-0.5 h-4 w-4 shrink-0"
                 aria-hidden="true"
               />
-              <p>
-                <strong>{task.motivoEspera}</strong> · revisión: {date(task.revisarEn)}
-                {task.detalleEspera ? ` · ${task.detalleEspera}` : ''}
-              </p>
+              <WaitingSummary task={task} firmId={firmId} memberNames={memberNames} />
             </div>
           ) : null}
           {task.resultadoCierre ? (
@@ -890,10 +890,7 @@ export function TaskDetail({
             }
           >
             {task.subtareas.length ? (
-              <div
-                className="bg-muted h-1 overflow-hidden rounded-full"
-                aria-hidden="true"
-              >
+              <div className="bg-muted h-1 overflow-hidden rounded-full" aria-hidden="true">
                 <div
                   className="bg-success h-full transition-all"
                   style={{ width: `${subtaskProgress}%` }}
@@ -1303,10 +1300,11 @@ export function TaskDetail({
                   return (
                     <li
                       key={id}
-                      className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1 ${id === task.id
-                        ? 'bg-muted text-foreground font-medium'
-                        : 'text-muted-foreground'
-                        }`}
+                      className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1 ${
+                        id === task.id
+                          ? 'bg-muted text-foreground font-medium'
+                          : 'text-muted-foreground'
+                      }`}
                     >
                       <span className="w-5 shrink-0 text-xs tabular-nums">{index + 1}.</span>
                       {id === task.id || !phase ? (
@@ -1490,6 +1488,7 @@ export function TaskDetail({
         onOpenChange={setHoldOpen}
         pending={hold.isPending}
         taskTitle={task.titulo}
+        responsableNombre={memberNames.get(task.asignadoId ?? '')}
         onSubmit={(motivo, revisarEn, detalle) => {
           void run(async () => {
             await hold.mutateAsync({ task, motivo, revisarEn, detalle })
@@ -1566,6 +1565,50 @@ export function TaskDetail({
         }}
       />
     </Root>
+  )
+}
+
+function WaitingSummary({
+  task,
+  firmId,
+  memberNames,
+}: {
+  task: TareaPersistida
+  firmId: string | undefined
+  memberNames: Map<string, string>
+}) {
+  const events = useEventosTarea(firmId, task.id)
+  const { esperamosA, detalle } = leerDetalleEspera(task.detalleEspera)
+  const history = historialEsperas(events.data ?? [])
+
+  return (
+    <div className="space-y-1">
+      <p>
+        <strong>{task.motivoEspera}</strong>
+        {esperamosA ? ` · esperamos a ${esperamosA}` : ''} · seguimiento:{' '}
+        {memberNames.get(task.asignadoId ?? '') ?? 'Sin responsable'} · revisión:{' '}
+        {date(task.revisarEn)}
+        {detalle ? ` · ${detalle}` : ''}
+      </p>
+      {history.length ? (
+        <details className="text-xs">
+          <summary className="cursor-pointer">Historial de seguimientos ({history.length})</summary>
+          <ul className="mt-1 space-y-0.5">
+            {history.map((entry, index) => (
+              <li key={`${entry.fecha}-${index}`}>
+                {new Date(entry.fecha).toLocaleDateString('es-ES')} ·{' '}
+                {entry.tipo === 'inicio'
+                  ? `Puesta en espera${entry.motivo ? ` (${entry.motivo})` : ''}${entry.revisarEn ? `, revisar el ${new Date(entry.revisarEn).toLocaleDateString('es-ES')}` : ''}`
+                  : 'Llegó la fecha de revisión: la tarea vuelve a pendiente'}
+                {entry.actorId
+                  ? ` · ${memberNames.get(entry.actorId) ?? 'Miembro del despacho'}`
+                  : ''}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   )
 }
 
@@ -2087,20 +2130,20 @@ function SpecialMeetingWorkspace({
     const nextPreparationItems =
       meetingAction === 'add_preparation_item'
         ? [
-          ...submittedPreparationItems,
-          {
-            id:
-              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                ? crypto.randomUUID()
-                : `preparation-${Date.now()}`,
-            text: newItemText,
-            done: false,
-            category: formText(data, 'preparationCategory'),
-            createdById: actorId,
-            ...(createdByName ? { createdByName } : {}),
-            createdAt: now,
-          },
-        ]
+            ...submittedPreparationItems,
+            {
+              id:
+                typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                  ? crypto.randomUUID()
+                  : `preparation-${Date.now()}`,
+              text: newItemText,
+              done: false,
+              category: formText(data, 'preparationCategory'),
+              createdById: actorId,
+              ...(createdByName ? { createdByName } : {}),
+              createdAt: now,
+            },
+          ]
         : removePreparationItemId
           ? submittedPreparationItems.filter((item) => item.id !== removePreparationItemId)
           : submittedPreparationItems
@@ -2108,9 +2151,9 @@ function SpecialMeetingWorkspace({
     const actualDurationMinutes =
       nextStatus === 'finished' && detailsText(details, 'startedAt')
         ? Math.max(
-          0,
-          Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
-        )
+            0,
+            Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
+          )
         : typeof details['actualDurationMinutes'] === 'number'
           ? details['actualDurationMinutes']
           : undefined
@@ -2139,17 +2182,17 @@ function SpecialMeetingWorkspace({
         : '',
       attendeeContactIds: canManage
         ? data
-          .getAll('specialContacts')
-          .filter((value): value is string => typeof value === 'string')
+            .getAll('specialContacts')
+            .filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeContactIds'),
       attendeeUserIds: canManage
         ? data.getAll('specialUsers').filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeUserIds'),
       attendeeNames: canManage
         ? formText(data, 'specialOtherAttendees')
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
         : Array.isArray(details['attendeeNames'])
           ? details['attendeeNames'].filter((item): item is string => typeof item === 'string')
           : [],
@@ -2170,16 +2213,16 @@ function SpecialMeetingWorkspace({
       preparationItems: nextPreparationItems,
       ...(isRescheduling
         ? {
-          rescheduleHistory: [
-            ...rescheduleHistory,
-            {
-              requestedAt: now,
-              reason: rescheduleReason,
-              previousStartsAt: detailsText(details, 'startsAt'),
-              previousEndsAt: detailsText(details, 'endsAt'),
-            },
-          ],
-        }
+            rescheduleHistory: [
+              ...rescheduleHistory,
+              {
+                requestedAt: now,
+                reason: rescheduleReason,
+                previousStartsAt: detailsText(details, 'startsAt'),
+                previousEndsAt: detailsText(details, 'endsAt'),
+              },
+            ],
+          }
         : {}),
       ...(nextStatus === 'in_progress' && !details['startedAt'] ? { startedAt: now } : {}),
       ...(nextStatus === 'finished' ? { finishedAt: now } : {}),
@@ -2475,7 +2518,9 @@ function SpecialMeetingWorkspace({
                 taskId={task.id}
                 disabled={!canManage}
                 initialDate={
-                  detailsText(details, 'startsAt') ? new Date(detailsText(details, 'startsAt')) : null
+                  detailsText(details, 'startsAt')
+                    ? new Date(detailsText(details, 'startsAt'))
+                    : null
                 }
                 onPickDay={pickMeetingDay}
               />
@@ -2702,8 +2747,8 @@ function MeetingDetailsCard({
   const contactIds = storedContactIds.length
     ? storedContactIds
     : participants.flatMap((participant) =>
-      participant.contactoId ? [participant.contactoId] : [],
-    )
+        participant.contactoId ? [participant.contactoId] : [],
+      )
   const userIds = detailsIds(details, 'attendeeUserIds')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

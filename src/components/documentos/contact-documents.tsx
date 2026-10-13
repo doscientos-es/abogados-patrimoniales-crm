@@ -60,13 +60,13 @@ export function ContactDocuments() {
   const requirements =
     selected?.tipoPersona === 'Persona jurídica'
       ? [
-        ...REQUIRED_DOCUMENTS,
-        {
-          type: 'authority' as const,
-          label: 'Acreditación de representación (si procede)',
-          accepts: '.pdf,.jpg,.jpeg,.png',
-        },
-      ]
+          ...REQUIRED_DOCUMENTS,
+          {
+            type: 'authority' as const,
+            label: 'Acreditación de representación (si procede)',
+            accepts: '.pdf,.jpg,.jpeg,.png',
+          },
+        ]
       : REQUIRED_DOCUMENTS
   const uploadedTypes = new Set((documents.data ?? []).map((document) => document.document_type))
   const missing = requirements.filter((item) => !uploadedTypes.has(item.type))

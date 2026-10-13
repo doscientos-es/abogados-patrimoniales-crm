@@ -20,15 +20,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { RelacionDespacho } from '@/features/contactos'
 import {
-  categoriesForRequirement,
-  ensureRequiredLeadDocumentRequests,
-  reconcileRequestedLeadDocuments,
-} from '@/features/crm/application/lead-document-reconciliation'
-import {
   CONTACT_DOCUMENT_MAX_BYTES,
   CONTACT_DOCUMENT_MIME,
   uploadContactDocument,
 } from '@/features/contactos/infrastructure/upload-contact-document'
+import {
+  categoriesForRequirement,
+  ensureRequiredLeadDocumentRequests,
+  reconcileRequestedLeadDocuments,
+} from '@/features/crm/application/lead-document-reconciliation'
 import {
   getSupabaseBrowserClient,
   type ContactDocumentRow,
@@ -228,11 +228,11 @@ export function ContactPersonalFilesTab({
     title: string
     types: ContactDocumentType[]
   }> = [
-      { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
-      { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
-      { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
-      { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
-    ]
+    { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
+    { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
+    { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
+    { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
+  ]
 
   return (
     <section className="space-y-4" aria-label="Archivos personales">
@@ -335,9 +335,7 @@ export function ContactPersonalFilesTab({
           <DialogHeader>
             <DialogTitle>Subir documento personal</DialogTitle>
             <DialogDescription>
-              {uploadRequirement
-                ? `Requisito: ${uploadRequirement}. `
-                : ''}
+              {uploadRequirement ? `Requisito: ${uploadRequirement}. ` : ''}
               Se guardará en el almacenamiento privado del despacho. PDF, JPG o PNG de hasta 25 MB.
             </DialogDescription>
           </DialogHeader>

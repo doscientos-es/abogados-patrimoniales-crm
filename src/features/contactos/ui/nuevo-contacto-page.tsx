@@ -11,11 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import {
-  useCrearContacto,
-  type Naturaleza,
-  type RelacionDespacho,
-} from '@/features/contactos'
+import { useCrearContacto, type Naturaleza, type RelacionDespacho } from '@/features/contactos'
 import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
@@ -460,7 +456,7 @@ export function NuevoContactoPage() {
         {saveError && (
           <div
             role="alert"
-            className="rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+            className="border-destructive bg-destructive/10 text-destructive rounded-md border px-4 py-3 text-sm font-medium"
           >
             {saveError}
           </div>

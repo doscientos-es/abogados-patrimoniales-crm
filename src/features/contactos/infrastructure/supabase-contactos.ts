@@ -322,8 +322,7 @@ export function useActualizarContacto(firmId: string | undefined) {
         .from('crm_contacts')
         .update({
           display_name:
-            normalized.razonSocial ||
-            `${normalized.nombre} ${normalized.apellidos ?? ''}`.trim(),
+            normalized.razonSocial || `${normalized.nombre} ${normalized.apellidos ?? ''}`.trim(),
           first_name: normalized.nombre || null,
           last_name: normalized.apellidos || null,
           legal_name: normalized.razonSocial || null,
@@ -375,7 +374,14 @@ function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
   }
 }
 
-const KEEP_CASE = new Set(['email', 'email2', 'origen', 'canal', 'recommendedById', 'fechaNacimiento'])
+const KEEP_CASE = new Set([
+  'email',
+  'email2',
+  'origen',
+  'canal',
+  'recommendedById',
+  'fechaNacimiento',
+])
 
 export function upperContactValues(values: Record<string, string>) {
   return Object.fromEntries(
