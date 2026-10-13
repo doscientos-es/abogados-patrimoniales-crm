@@ -94,7 +94,7 @@ export function QuoteInternalNotes({
             </div>
             <p className="whitespace-pre-wrap">{note.content}</p>
             <p className="text-muted-foreground text-xs">
-              {note.created_by ? (note.actorNames[note.created_by] ?? note.created_by) : 'Sistema'} ·{' '}
+              {note.created_by ? (note.actorNames[note.created_by] ?? 'Equipo') : 'Sistema'} ·{' '}
               {new Date(note.created_at).toLocaleString('es-ES', {
                 dateStyle: 'short',
                 timeStyle: 'short',
