@@ -127,17 +127,20 @@ export type Database = {
         PracticeAreaInsert,
         Partial<PracticeAreaInsert> & { id?: string }
       >
-      crm_lead_roles: Table<
-        LeadRoleRow,
-        LeadRoleInsert,
-        Partial<LeadRoleInsert> & { id?: string }
-      >
+      crm_lead_roles: Table<LeadRoleRow, LeadRoleInsert, Partial<LeadRoleInsert> & { id?: string }>
       crm_task_label_assignments: Table<TaskLabelAssignmentRow, TaskLabelAssignmentInsert, never>
+      crm_quote_services: Table<QuoteServiceRow, QuoteServiceInsert, Partial<QuoteServiceInsert> & { id?: string }>
+      crm_engagement_blocks: Table<EngagementBlockRow, EngagementBlockInsert, Partial<EngagementBlockInsert> & { id?: string }>
+      crm_quote_email_templates: Table<QuoteEmailTemplateRow, QuoteEmailTemplateInsert, Partial<QuoteEmailTemplateInsert> & { id?: string }>
     }
     Views: Record<never, never>
     Functions: {
       crm_merge_task_labels: {
         Args: { source_label_id: string; target_label_id: string }
+        Returns: undefined
+      }
+      crm_set_default_quote_template: {
+        Args: { target_template_id: string }
         Returns: undefined
       }
       crm_derive_execution: {
@@ -846,6 +849,77 @@ export type LeadRoleInsert = {
 }
 export type TaskLabelAssignmentRow = { label_id: string; task_id: string; created_at: string }
 export type TaskLabelAssignmentInsert = { label_id: string; task_id: string }
+export type QuoteServiceRow = {
+  id: string
+  firm_id: string
+  code: string
+  name: string
+  description: string
+  family: string
+  price_cents: number
+  vat_pct: number | null
+  withholding_pct: number | null
+  cost_cents: number
+  active: boolean
+  source_data: Json
+  created_at: string
+  updated_at: string
+}
+export type QuoteServiceInsert = {
+  firm_id: string
+  code: string
+  name: string
+  description?: string
+  family?: string
+  price_cents?: number
+  vat_pct?: number | null
+  withholding_pct?: number | null
+  cost_cents?: number
+  active?: boolean
+  source_data?: Json
+}
+export type EngagementBlockRow = {
+  id: string
+  firm_id: string
+  title: string
+  body: string
+  sort_order: number
+  active: boolean
+  include_by_default: boolean
+  reviewed: boolean
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+export type EngagementBlockInsert = {
+  firm_id: string
+  title: string
+  body?: string
+  sort_order?: number
+  active?: boolean
+  include_by_default?: boolean
+  reviewed?: boolean
+  archived?: boolean
+}
+export type QuoteEmailTemplateRow = {
+  id: string
+  firm_id: string
+  name: string
+  subject: string
+  body: string
+  active: boolean
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+export type QuoteEmailTemplateInsert = {
+  firm_id: string
+  name: string
+  subject?: string
+  body?: string
+  active?: boolean
+  is_default?: boolean
+}
 export type MemberStatus = 'invited' | 'active' | 'disabled'
 export type FirmSettingsRow = {
   firm_id: string

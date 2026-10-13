@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
+import { combinarTareasLead, leerTodasLasPaginas } from '@/features/tareas/application/task-scopes'
 import type {
   CompletarTareaInput,
   CrearTareaInput,
@@ -10,7 +11,6 @@ import type {
   TransicionEsperaInput,
   ValidarPlazoInput,
 } from '@/features/tareas/application/task-types'
-import { combinarTareasLead, leerTodasLasPaginas } from '@/features/tareas/application/task-scopes'
 import {
   type CaseCommunicationInsert,
   type CaseCommunicationRow,
@@ -436,7 +436,9 @@ export function useCrearTarea(firmId: string | undefined) {
         })
       }
       if (task.asignadoId && task.asignadoId === task.creadaPorId) {
-        void queryClient.invalidateQueries({ queryKey: ['tareas', firmId, task.asignadoId, 'inbox'] })
+        void queryClient.invalidateQueries({
+          queryKey: ['tareas', firmId, task.asignadoId, 'inbox'],
+        })
       }
     },
   })

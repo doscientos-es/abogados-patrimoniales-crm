@@ -178,11 +178,7 @@ function CaseRoute() {
         comunicaciones={communications.data ?? []}
         documentos={documents.data ?? []}
         facturas={(invoices.data ?? []).filter((invoice) => invoice.asuntoId === id)}
-        tareas={tareasDelExpediente(
-          tasks.data ?? [],
-          id,
-          expediente.oportunidadId,
-        )}
+        tareas={tareasDelExpediente(tasks.data ?? [], id, expediente.oportunidadId)}
         notas={notes.data ?? []}
         taskTitleTemplates={titleTemplates.data ?? []}
         miembros={members.data ?? []}

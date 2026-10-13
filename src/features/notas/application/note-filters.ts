@@ -37,9 +37,9 @@ export function estaPospuesta(nota: NotaInterna, hoy = new Date()): boolean {
 export function pendienteDeLectura(nota: NotaInterna, userId?: string): boolean {
   return Boolean(
     userId &&
-      nota.estado === 'activa' &&
-      nota.requiereConfirmacion &&
-      !nota.confirmaciones.some((confirmation) => confirmation.usuario === userId),
+    nota.estado === 'activa' &&
+    nota.requiereConfirmacion &&
+    !nota.confirmaciones.some((confirmation) => confirmation.usuario === userId),
   )
 }
 

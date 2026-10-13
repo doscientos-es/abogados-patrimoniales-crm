@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import type { TareaPersistida } from './task-types'
 import {
   combinarTareasLead,
   enAlcance,
@@ -8,6 +7,7 @@ import {
   leerTodasLasPaginas,
   tareasDelExpediente,
 } from './task-scopes'
+import type { TareaPersistida } from './task-types'
 
 const task = (id: string, extra: Partial<TareaPersistida> = {}) =>
   ({
@@ -31,7 +31,11 @@ describe('paginación de tareas', () => {
 
     expect(rows).toHaveLength(2345)
     expect(rows.at(-1)?.id).toBe('t2344')
-    expect(ranges).toEqual([[0, 999], [1000, 1999], [2000, 2999]])
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+      [2000, 2999],
+    ])
   })
 
   it('propaga errores y rechaza tamaños de página inválidos', async () => {

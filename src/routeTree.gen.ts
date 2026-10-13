@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActuacionesRouteImport } from './routes/actuaciones'
 import { Route as AlertasRouteImport } from './routes/alertas'
+import { Route as BloquesEncargoRouteImport } from './routes/bloques-encargo'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ComunicacionesRouteImport } from './routes/comunicaciones'
 import { Route as CondicionesRouteImport } from './routes/condiciones'
@@ -24,7 +25,9 @@ import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as NotasRouteImport } from './routes/notas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PlantillasPresupuestoRouteImport } from './routes/plantillas-presupuesto'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AceptarTokenRouteImport } from './routes/aceptar.$token'
@@ -52,6 +55,11 @@ const ActuacionesRoute = ActuacionesRouteImport.update({
 const AlertasRoute = AlertasRouteImport.update({
   id: '/alertas',
   path: '/alertas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BloquesEncargoRoute = BloquesEncargoRouteImport.update({
+  id: '/bloques-encargo',
+  path: '/bloques-encargo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarioRoute = CalendarioRouteImport.update({
@@ -114,9 +122,19 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlantillasPresupuestoRoute = PlantillasPresupuestoRouteImport.update({
+  id: '/plantillas-presupuesto',
+  path: '/plantillas-presupuesto',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacidadRoute = PrivacidadRouteImport.update({
   id: '/privacidad',
   path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServiciosRoute = ServiciosRouteImport.update({
+  id: '/servicios',
+  path: '/servicios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TareasRoute = TareasRouteImport.update({
@@ -189,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/actuaciones': typeof ActuacionesRoute
   '/alertas': typeof AlertasRoute
+  '/bloques-encargo': typeof BloquesEncargoRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -201,7 +220,9 @@ export interface FileRoutesByFullPath {
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
+  '/servicios': typeof ServiciosRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
@@ -220,6 +241,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/actuaciones': typeof ActuacionesRoute
   '/alertas': typeof AlertasRoute
+  '/bloques-encargo': typeof BloquesEncargoRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -232,7 +254,9 @@ export interface FileRoutesByTo {
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
+  '/servicios': typeof ServiciosRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
@@ -252,6 +276,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/actuaciones': typeof ActuacionesRoute
   '/alertas': typeof AlertasRoute
+  '/bloques-encargo': typeof BloquesEncargoRoute
   '/calendario': typeof CalendarioRoute
   '/comunicaciones': typeof ComunicacionesRoute
   '/condiciones': typeof CondicionesRoute
@@ -264,7 +289,9 @@ export interface FileRoutesById {
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
   '/onboarding': typeof OnboardingRoute
+  '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
+  '/servicios': typeof ServiciosRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
@@ -285,6 +312,7 @@ export interface FileRouteTypes {
     | '/'
     | '/actuaciones'
     | '/alertas'
+    | '/bloques-encargo'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -297,7 +325,9 @@ export interface FileRouteTypes {
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/plantillas-presupuesto'
     | '/privacidad'
+    | '/servicios'
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
@@ -316,6 +346,7 @@ export interface FileRouteTypes {
     | '/'
     | '/actuaciones'
     | '/alertas'
+    | '/bloques-encargo'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -328,7 +359,9 @@ export interface FileRouteTypes {
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/plantillas-presupuesto'
     | '/privacidad'
+    | '/servicios'
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
@@ -347,6 +380,7 @@ export interface FileRouteTypes {
     | '/'
     | '/actuaciones'
     | '/alertas'
+    | '/bloques-encargo'
     | '/calendario'
     | '/comunicaciones'
     | '/condiciones'
@@ -359,7 +393,9 @@ export interface FileRouteTypes {
     | '/informes'
     | '/notas'
     | '/onboarding'
+    | '/plantillas-presupuesto'
     | '/privacidad'
+    | '/servicios'
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
@@ -379,6 +415,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActuacionesRoute: typeof ActuacionesRoute
   AlertasRoute: typeof AlertasRoute
+  BloquesEncargoRoute: typeof BloquesEncargoRoute
   CalendarioRoute: typeof CalendarioRoute
   ComunicacionesRoute: typeof ComunicacionesRoute
   CondicionesRoute: typeof CondicionesRoute
@@ -391,7 +428,9 @@ export interface RootRouteChildren {
   InformesRoute: typeof InformesRoute
   NotasRoute: typeof NotasRoute
   OnboardingRoute: typeof OnboardingRoute
+  PlantillasPresupuestoRoute: typeof PlantillasPresupuestoRoute
   PrivacidadRoute: typeof PrivacidadRoute
+  ServiciosRoute: typeof ServiciosRoute
   TareasRoute: typeof TareasRouteWithChildren
   TerminosRoute: typeof TerminosRoute
   AceptarTokenRoute: typeof AceptarTokenRoute
@@ -427,6 +466,13 @@ declare module '@tanstack/react-router' {
       path: '/alertas'
       fullPath: '/alertas'
       preLoaderRoute: typeof AlertasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bloques-encargo': {
+      id: '/bloques-encargo'
+      path: '/bloques-encargo'
+      fullPath: '/bloques-encargo'
+      preLoaderRoute: typeof BloquesEncargoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendario': {
@@ -513,11 +559,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plantillas-presupuesto': {
+      id: '/plantillas-presupuesto'
+      path: '/plantillas-presupuesto'
+      fullPath: '/plantillas-presupuesto'
+      preLoaderRoute: typeof PlantillasPresupuestoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacidad': {
       id: '/privacidad'
       path: '/privacidad'
       fullPath: '/privacidad'
       preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/servicios': {
+      id: '/servicios'
+      path: '/servicios'
+      fullPath: '/servicios'
+      preLoaderRoute: typeof ServiciosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tareas': {
@@ -629,6 +689,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActuacionesRoute: ActuacionesRoute,
   AlertasRoute: AlertasRoute,
+  BloquesEncargoRoute: BloquesEncargoRoute,
   CalendarioRoute: CalendarioRoute,
   ComunicacionesRoute: ComunicacionesRoute,
   CondicionesRoute: CondicionesRoute,
@@ -641,7 +702,9 @@ const rootRouteChildren: RootRouteChildren = {
   InformesRoute: InformesRoute,
   NotasRoute: NotasRoute,
   OnboardingRoute: OnboardingRoute,
+  PlantillasPresupuestoRoute: PlantillasPresupuestoRoute,
   PrivacidadRoute: PrivacidadRoute,
+  ServiciosRoute: ServiciosRoute,
   TareasRoute: TareasRouteWithChildren,
   TerminosRoute: TerminosRoute,
   AceptarTokenRoute: AceptarTokenRoute,

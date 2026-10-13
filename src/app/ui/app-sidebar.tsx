@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Target,
+  LibraryBig,
 } from 'lucide-react'
 
 import {
@@ -57,7 +58,12 @@ const gestion = [
   { title: 'Facturación y cobros', url: '/facturacion', icon: Receipt },
 ] as const
 
-const sistema = [{ title: 'Configuración', url: '/configuracion', icon: Settings }] as const
+const sistema = [
+  { title: 'Configuración', url: '/configuracion', icon: Settings },
+  { title: 'Servicios', url: '/servicios', icon: LibraryBig },
+  { title: 'Bloques del encargo', url: '/bloques-encargo', icon: FileText },
+  { title: 'Plantillas de presupuesto', url: '/plantillas-presupuesto', icon: FileText },
+] as const
 
 export function AppSidebar({ open }: { open: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })

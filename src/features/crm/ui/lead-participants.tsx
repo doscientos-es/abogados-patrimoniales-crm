@@ -15,11 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useContactos, useCrearContacto } from '@/features/contactos'
-import {
-  DEFAULT_LEAD_ROLES,
-  useActualizarDetallesOportunidad,
-  useLeadRoles,
-} from '@/features/crm'
+import { DEFAULT_LEAD_ROLES, useActualizarDetallesOportunidad, useLeadRoles } from '@/features/crm'
 import { contactosParaAutocompletado } from '@/features/crm/application/contact-autocomplete'
 import {
   PARTICIPANT_POSITIONS,
@@ -282,7 +278,9 @@ function AddParticipantDialog({
             />
             <datalist id={`lead-participant-roles-${firmId}`}>
               {(leadRoles.data ?? DEFAULT_LEAD_ROLES).map((role) => (
-                <option key={role} value={role} />
+                <option key={role} value={role}>
+                  {role}
+                </option>
               ))}
             </datalist>
           </div>

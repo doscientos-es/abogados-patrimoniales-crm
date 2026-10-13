@@ -26,10 +26,8 @@ export function combinarTareasLead(
   leadId: string,
 ): TareaPersistida[] {
   const byId = new Map<string, TareaPersistida>()
-  for (const task of directas ?? [])
-    if (task.oportunidadId === leadId) byId.set(task.id, task)
-  for (const task of globales ?? [])
-    if (task.oportunidadId === leadId) byId.set(task.id, task)
+  for (const task of directas ?? []) if (task.oportunidadId === leadId) byId.set(task.id, task)
+  for (const task of globales ?? []) if (task.oportunidadId === leadId) byId.set(task.id, task)
   return [...byId.values()]
 }
 

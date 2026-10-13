@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { NotaInterna } from './note-types'
 import { contarNotas, estaPospuesta, filtrarNotas, pendienteDeLectura } from './note-filters'
+import type { NotaInterna } from './note-types'
 
 function note(id: string, overrides: Partial<NotaInterna> = {}): NotaInterna {
   return {
@@ -41,9 +41,11 @@ describe('filtros y contadores de notas', () => {
     ]
 
     expect(
-      filtrarNotas(notes, { estado: 'activa', pendientesLectura: true, texto: 'NOTARÍA' }, 'u1').map(
-        (item) => item.id,
-      ),
+      filtrarNotas(
+        notes,
+        { estado: 'activa', pendientesLectura: true, texto: 'NOTARÍA' },
+        'u1',
+      ).map((item) => item.id),
     ).toEqual(['new'])
     expect(filtrarNotas(notes, { contactoId: 'other' }, 'u1')).toEqual([])
   })

@@ -9,13 +9,7 @@ import { Input } from '@/components/ui/input'
 import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
 import { getSupabaseBrowserClient, type LeadRoleRow } from '@/shared/infrastructure/supabase'
 
-export function LeadRolesCatalog({
-  firmId,
-  canManage,
-}: {
-  firmId: string
-  canManage: boolean
-}) {
+export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canManage: boolean }) {
   const client = getSupabaseBrowserClient()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')

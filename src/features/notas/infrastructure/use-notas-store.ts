@@ -17,7 +17,10 @@ export function useNotasStore(firmId: string | undefined, userId?: string) {
   const save = useGuardarNota(firmId)
   const updateState = useActualizarEstadoNota(firmId)
   const acknowledge = useConfirmarLectura(firmId)
-  const notes = useMemo<NotaInterna[]>(() => (remote.data ?? []).map(notaDesdeRemota), [remote.data])
+  const notes = useMemo<NotaInterna[]>(
+    () => (remote.data ?? []).map(notaDesdeRemota),
+    [remote.data],
+  )
   const counts = useMemo(() => contarNotas(notes, userId), [notes, userId])
   const findNote = (noteId: string) => notes.find((note) => note.id === noteId)
 
