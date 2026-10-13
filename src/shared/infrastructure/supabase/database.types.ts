@@ -659,7 +659,7 @@ export type Database = {
           new_quote_reference: string
           new_quote_amount: number | null
           new_assigned_to: string | null
-          new_proforma_sent_on: string
+          new_proforma_sent_on: string | null
           new_next_action: string
         }
         Returns: OnboardingRow
@@ -1663,7 +1663,7 @@ export type OnboardingRow = {
   phase_changed_on: string
   quote_reference: string | null
   quote_amount: number | null
-  proforma_sent_on: string
+  proforma_sent_on: string | null
   payment_confirmed_on: string | null
   formal_start_scheduled_at: string | null
   formal_start_completed_at: string | null

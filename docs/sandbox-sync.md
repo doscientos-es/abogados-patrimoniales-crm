@@ -19,6 +19,7 @@
 3. Crear una rama de integración en Nuestro (`sync/sandbox-<sha-corto>`); mantener los cambios de cada flujo en commits pequeños y revisables.
 4. Para cada flujo, comparar comportamiento y criterios de aceptación, no solo nombres de archivos. Traducir operaciones de prototipo a Supabase/RPC/RLS, membresías, control de versión y auditoría de Nuestro.
 5. Revisar migraciones por separado: contrastar esquema, permisos, datos existentes y orden; probarlas en un entorno de desarrollo. No aplicar migraciones al proyecto remoto como parte automática de la sincronización.
+   Si existe autorización expresa para aplicar una migración remota, conservar el SQL en `supabase/migrations` y ajustar su prefijo al `version` que devuelva Supabase. Así el historial local no intenta volver a aplicar una migración registrada con una marca de tiempo distinta.
 6. Ejecutar pruebas del flujo, controles de calidad y un recorrido manual por rol. Registrar resultado y actualizar este documento antes de avanzar al siguiente lote.
 7. Marcar la tanda completa solo cuando cada cambio del delta tenga decisión y evidencia; entonces actualizar el SHA de último origen revisado.
 

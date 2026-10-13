@@ -27,6 +27,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as AceptarTokenRouteImport } from './routes/aceptar.$token'
 import { Route as ContactosIndexRouteImport } from './routes/contactos.index'
 import { Route as ContactosIdRouteImport } from './routes/contactos.$id'
 import { Route as ContactosNuevoRouteImport } from './routes/contactos.nuevo'
@@ -128,6 +129,11 @@ const TerminosRoute = TerminosRouteImport.update({
   path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AceptarTokenRoute = AceptarTokenRouteImport.update({
+  id: '/aceptar/$token',
+  path: '/aceptar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactosIndexRoute = ContactosIndexRouteImport.update({
   id: '/contactos/',
   path: '/contactos/',
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
+  '/aceptar/$token': typeof AceptarTokenRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
+  '/aceptar/$token': typeof AceptarTokenRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/privacidad': typeof PrivacidadRoute
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
+  '/aceptar/$token': typeof AceptarTokenRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/tareas'
     | '/terminos'
+    | '/aceptar/$token'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/tareas'
     | '/terminos'
+    | '/aceptar/$token'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/tareas'
     | '/terminos'
+    | '/aceptar/$token'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -382,6 +394,7 @@ export interface RootRouteChildren {
   PrivacidadRoute: typeof PrivacidadRoute
   TareasRoute: typeof TareasRouteWithChildren
   TerminosRoute: typeof TerminosRoute
+  AceptarTokenRoute: typeof AceptarTokenRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
   ExpedientesIdRoute: typeof ExpedientesIdRoute
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aceptar/$token': {
+      id: '/aceptar/$token'
+      path: '/aceptar/$token'
+      fullPath: '/aceptar/$token'
+      preLoaderRoute: typeof AceptarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contactos/': {
       id: '/contactos/'
       path: '/contactos'
@@ -624,6 +644,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadRoute: PrivacidadRoute,
   TareasRoute: TareasRouteWithChildren,
   TerminosRoute: TerminosRoute,
+  AceptarTokenRoute: AceptarTokenRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,
   ExpedientesIdRoute: ExpedientesIdRoute,

@@ -13,6 +13,7 @@ declare
   body_text text;
   is_reassignment boolean := tg_op = 'UPDATE';
 begin
+  if actor is null then return null; end if;
   select * into current_task from public.crm_tasks where id = new.id;
   if not found then return null; end if;
   if current_task.assigned_to is null

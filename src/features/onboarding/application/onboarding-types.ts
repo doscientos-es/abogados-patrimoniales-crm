@@ -14,7 +14,7 @@ export type OnboardingPersistido = {
   cambioFase: string
   presupuestoReferencia: string | null
   importePresupuesto: number | null
-  proformaEnviada: string
+  proformaEnviada: string | null
   pagoConfirmado: string | null
   inicioProgramado: string | null
   inicioRealizado: string | null
@@ -40,7 +40,7 @@ export type CrearOnboardingInput = {
   presupuestoReferencia: string
   importePresupuesto: number | null
   responsableId: string | null
-  proformaEnviada: string
+  proformaEnviada: string | null
   siguienteAccion: string
 }
 

@@ -43,8 +43,8 @@ const SECTION_LABELS = [
 
 const PUBLIC_LEGAL_PATHS = new Set(['/condiciones', '/privacidad', '/cookies', '/terminos'])
 
-function isPublicLegalPath(pathname: string) {
-  return PUBLIC_LEGAL_PATHS.has(pathname)
+function isPublicPage(pathname: string) {
+  return PUBLIC_LEGAL_PATHS.has(pathname) || /^\/aceptar\/[^/]+$/.test(pathname)
 }
 
 function sectionInfo(pathname: string) {
@@ -59,8 +59,9 @@ function NavigationProgress() {
     <>
       <div
         aria-hidden="true"
-        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-          }`}
+        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
+          isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
+        }`}
       />
       <output aria-atomic="true" aria-live="polite" className="sr-only">
         {isNavigating ? 'Cargando la nueva página' : ''}
@@ -177,7 +178,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {isPublicLegalPath(pathname) ? (
+      {isPublicPage(pathname) ? (
         <Outlet />
       ) : (
         <AccessGate>

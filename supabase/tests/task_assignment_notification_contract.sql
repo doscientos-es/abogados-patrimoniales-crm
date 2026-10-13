@@ -25,6 +25,9 @@ begin
   if position('is not distinct from actor' in function_body) = 0 then
     raise exception 'Self-assignment must not notify';
   end if;
+  if position('actor is null then return null' in function_body) = 0 then
+    raise exception 'System-generated tasks without an actor must not produce generic assignment notifications';
+  end if;
   if position('initial_assignment' in function_body) = 0 then
     raise exception 'A manual initial message must not be duplicated';
   end if;

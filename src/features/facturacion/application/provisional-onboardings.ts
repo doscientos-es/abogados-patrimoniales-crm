@@ -10,7 +10,7 @@ export type OnboardingEconomicoProvisional = OnboardingPersistido & {
 export function onboardingEconomicoProvisional(
   onboarding: OnboardingPersistido,
 ): OnboardingEconomicoProvisional | null {
-  if (onboarding.fase === 'proforma')
+  if (onboarding.fase === 'proforma' && onboarding.proformaEnviada)
     return {
       ...onboarding,
       estadoEconomico: 'proforma_sent',

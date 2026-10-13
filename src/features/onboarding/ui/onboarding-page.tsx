@@ -90,9 +90,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof error.message === 'string'
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -443,7 +443,9 @@ export function OnboardingCard({
   const days = diasEnFase(item.cambioFase)
   const details =
     item.fase === 'proforma'
-      ? `Proforma enviada: ${date(item.proformaEnviada)}`
+      ? item.proformaEnviada
+        ? `Proforma enviada: ${date(item.proformaEnviada)}`
+        : 'Proforma pendiente de envío'
       : item.fase === 'payment'
         ? `Pago confirmado: ${date(item.pagoConfirmado)}`
         : item.fase === 'formal_start'
@@ -527,7 +529,7 @@ export function OnboardingCard({
             ))}
           </div>
         ) : null}
-        {item.fase === 'proforma' ? (
+        {item.fase === 'proforma' && item.proformaEnviada ? (
           <PaymentDialog
             pending={pending}
             onConfirm={(fecha) => onAction('payment_confirmed', { fecha })}
@@ -627,7 +629,7 @@ export function CreateOnboardingDialog({
     presupuestoReferencia: string
     importePresupuesto: number | null
     responsableId: string | null
-    proformaEnviada: string
+    proformaEnviada: string | null
     siguienteAccion: string
   }) => Promise<unknown>
 }) {

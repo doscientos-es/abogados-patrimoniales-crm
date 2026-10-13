@@ -32,6 +32,7 @@ describe('resumenEconomicoProvisional', () => {
   it('includes only manual proforma and payment confirmations', () => {
     const summary = resumenEconomicoProvisional([
       onboarding(),
+      onboarding({ id: 'onb-pending', proformaEnviada: null }),
       onboarding({ id: 'onb-2', fase: 'payment', pagoConfirmado: '2026-09-05' }),
       onboarding({ id: 'onb-3', fase: 'formal_start' }),
       onboarding({ id: 'onb-4', fase: 'completed' }),
