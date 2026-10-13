@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
   save: vi.fn().mockResolvedValue({}),
@@ -28,6 +30,16 @@ const opportunity = {
   detalles: { resultadoCualificacion: 'x', otrosIntervinientes: [] },
 } as never
 
+function renderParticipants() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+  return render(<LeadParticipants firmId="f" opportunity={opportunity} canEdit />, { wrapper })
+}
+
 afterEach(() => {
   cleanup()
   mocks.save.mockClear()
@@ -36,7 +48,7 @@ afterEach(() => {
 
 describe('Intervinientes del Lead', () => {
   it('vincula un contacto existente sin crear un duplicado', async () => {
-    render(<LeadParticipants firmId="f" opportunity={opportunity} canEdit />)
+    renderParticipants()
     fireEvent.click(screen.getByRole('button', { name: /Añadir interviniente/ }))
     fireEvent.change(screen.getByLabelText('Buscar en Contactos'), { target: { value: 'luis' } })
     expect(screen.queryByText('Ana López')).toBeNull()
@@ -67,7 +79,7 @@ describe('Intervinientes del Lead', () => {
   })
 
   it('crea un contacto nuevo y lo vincula al Lead', async () => {
-    render(<LeadParticipants firmId="f" opportunity={opportunity} canEdit />)
+    renderParticipants()
     fireEvent.click(screen.getByRole('button', { name: /Añadir interviniente/ }))
     fireEvent.change(screen.getByLabelText('Buscar en Contactos'), { target: { value: 'Marta' } })
     fireEvent.click(screen.getByRole('button', { name: /Crear contacto nuevo/ }))

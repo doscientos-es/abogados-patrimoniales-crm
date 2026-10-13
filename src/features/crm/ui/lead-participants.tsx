@@ -15,7 +15,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useContactos, useCrearContacto } from '@/features/contactos'
-import { useActualizarDetallesOportunidad } from '@/features/crm'
+import {
+  DEFAULT_LEAD_ROLES,
+  useActualizarDetallesOportunidad,
+  useLeadRoles,
+} from '@/features/crm'
 import { contactosParaAutocompletado } from '@/features/crm/application/contact-autocomplete'
 import {
   PARTICIPANT_POSITIONS,
@@ -145,6 +149,7 @@ function AddParticipantDialog({
 }) {
   const contacts = useContactos(firmId)
   const createContact = useCrearContacto(firmId)
+  const leadRoles = useLeadRoles(firmId)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<{ id: string; nombre: string } | null>(null)
   const [newMode, setNewMode] = useState(false)
@@ -270,9 +275,16 @@ function AddParticipantDialog({
             <Input
               id="participant-role"
               value={rol}
+              list={`lead-participant-roles-${firmId}`}
+              maxLength={120}
               placeholder="Hermano, coheredero, arrendatario…"
               onChange={(event) => setRol(event.target.value)}
             />
+            <datalist id={`lead-participant-roles-${firmId}`}>
+              {(leadRoles.data ?? DEFAULT_LEAD_ROLES).map((role) => (
+                <option key={role} value={role} />
+              ))}
+            </datalist>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="participant-position">Posición en el asunto</Label>

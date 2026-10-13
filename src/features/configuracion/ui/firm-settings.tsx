@@ -389,7 +389,9 @@ export function FirmSettings({
         />
       ) : null}
 
-      {tab === 'catalogs' ? <CatalogsSettings firmId={firmId ?? ''} /> : null}
+      {tab === 'catalogs' ? (
+        <CatalogsSettings firmId={firmId ?? ''} actorRole={membership.data?.role ?? 'paralegal'} />
+      ) : null}
 
       {tab === 'drive' ? (
         <DriveSettings actorRole={membership.data?.role ?? 'paralegal'} firmId={firmId ?? ''} />
