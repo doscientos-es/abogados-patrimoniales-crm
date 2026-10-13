@@ -36,6 +36,7 @@ import {
   useEtiquetasTarea,
   useMarcarSiguienteAccion,
   useTareasPersistentes,
+  tareasDelExpediente,
 } from '@/features/tareas'
 import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
@@ -177,7 +178,11 @@ function CaseRoute() {
         comunicaciones={communications.data ?? []}
         documentos={documents.data ?? []}
         facturas={(invoices.data ?? []).filter((invoice) => invoice.asuntoId === id)}
-        tareas={tasks.data ?? []}
+        tareas={tareasDelExpediente(
+          tasks.data ?? [],
+          id,
+          expediente.oportunidadId,
+        )}
         notas={notes.data ?? []}
         taskTitleTemplates={titleTemplates.data ?? []}
         miembros={members.data ?? []}
