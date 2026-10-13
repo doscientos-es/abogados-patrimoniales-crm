@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
@@ -12,6 +13,7 @@ import type {
   OportunidadResumen,
   TransicionarOportunidadInput,
 } from "@/features/crm/application";
+import { esConflictoIdempotente, pasosHito, type HitoLead } from "@/features/crm/application/lead-milestones";
 import {
   getSupabaseBrowserClient,
   type Json,
@@ -490,4 +492,82 @@ export function useArchivarOportunidad(firmId: string | undefined) {
       queryClient.removeQueries({ queryKey: ["crm", "oportunidades", firmId, id], exact: true });
     },
   });
+}
+
+/** Advances a Lead from its current server-side stage, one audited transition at a time. */
+export function useAvanzarLeadPorHito(firmId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, hito }: { id: string; hito: HitoLead }) => {
+      const client = getSupabaseBrowserClient();
+      if (!client || !firmId) throw new Error("No hay un despacho activo.");
+      const { data: current, error: readError } = await client
+        .from("crm_opportunities")
+        .select("stage")
+        .eq("id", id)
+        .eq("firm_id", firmId)
+        .single();
+      if (readError) throw readError;
+      const steps = pasosHito(current.stage, hito);
+      for (const step of steps) {
+        const { error } = await client.rpc("crm_transition_opportunity", {
+          target_opportunity_id: id,
+          target_stage: step.fase,
+          target_substage: step.subestado,
+          transition_reason: step.motivo,
+        });
+        if (error && !esConflictoIdempotente(error.message)) throw error;
+      }
+      const { data: latest, error: latestError } = await client
+        .from("crm_opportunities")
+        .select("stage, version")
+        .eq("id", id)
+        .eq("firm_id", firmId)
+        .single();
+      if (latestError) throw latestError;
+      return { pasos: steps.length, fase: latest.stage, version: latest.version };
+    },
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["crm", "oportunidades", firmId] }),
+        queryClient.invalidateQueries({ queryKey: ["crm", "oportunidades-completas", firmId] }),
+      ]).then(() => undefined),
+  });
+}
+
+/** Subscribes to firm-scoped database changes and refreshes board caches; writes remain RPC/RLS guarded. */
+export function useRefrescoTablerosEnVivo(firmId: string | undefined) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client || !firmId) return;
+    const invalidate = (keys: readonly (readonly unknown[])[]) => () => {
+      for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey: [...queryKey] });
+    };
+    const filter = `firm_id=eq.${firmId}`;
+    const channel = client
+      .channel(`tableros:${firmId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "crm_opportunities", filter },
+        invalidate([
+          ["crm", "oportunidades", firmId],
+          ["crm", "oportunidades-completas", firmId],
+        ]),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "crm_onboardings", filter },
+        invalidate([["onboardings", firmId], ["onboarding-events", firmId]]),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "crm_cases", filter },
+        invalidate([["expedientes", firmId]]),
+      )
+      .subscribe();
+    return () => {
+      void client.removeChannel(channel);
+    };
+  }, [firmId, queryClient]);
 }
