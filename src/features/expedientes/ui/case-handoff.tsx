@@ -33,8 +33,10 @@ import {
   type ContenidoTraspaso,
   type Traspaso,
 } from '@/features/expedientes/application/case-handoff'
-import type { ExpedientePersistido } from '@/features/expedientes/application/case-types'
-import { useActualizarExpediente } from '@/features/expedientes/infrastructure/supabase-expedientes-write'
+import type {
+  ActualizarExpedienteInput,
+  ExpedientePersistido,
+} from '@/features/expedientes/application/case-types'
 import { useGuardarNota, useNotasRemotas } from '@/features/notas'
 import { useOnboardings } from '@/features/onboarding'
 import {
@@ -65,11 +67,13 @@ export function CaseHandoffBar({
   firmId,
   expediente,
   currentUserId,
+  onUpdateCase,
   autoOpen = false,
 }: {
   firmId: string
   expediente: ExpedientePersistido
   currentUserId: string | null
+  onUpdateCase: (input: ActualizarExpedienteInput) => Promise<ExpedientePersistido>
   autoOpen?: boolean
 }) {
   const [open, setOpen] = useState(autoOpen)
@@ -123,6 +127,7 @@ export function CaseHandoffBar({
           expediente={expediente}
           opportunity={opportunity.data}
           currentUserId={currentUserId}
+          onUpdateCase={onUpdateCase}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -135,12 +140,14 @@ function CaseHandoffDialog({
   expediente,
   opportunity,
   currentUserId,
+  onUpdateCase,
   onClose,
 }: {
   firmId: string
   expediente: ExpedientePersistido
   opportunity: { id: string; version: number; detalles: unknown }
   currentUserId: string | null
+  onUpdateCase: (input: ActualizarExpedienteInput) => Promise<ExpedientePersistido>
   onClose: () => void
 }) {
   const members = useMiembrosDespacho(firmId)
@@ -150,7 +157,6 @@ function CaseHandoffDialog({
   const createTask = useCrearTarea(firmId)
   const completeTask = useCompletarTarea(firmId)
   const editTask = useEditarTarea(firmId)
-  const updateCase = useActualizarExpediente(firmId)
   const active = traspasoActivo(opportunity.detalles, expediente.id)
   const history = traspasosExpediente(opportunity.detalles, expediente.id)
   const message = useAnadirMensajeTarea(firmId, active?.tareaId ?? '')
@@ -238,12 +244,12 @@ function CaseHandoffDialog({
           id: crypto.randomUUID(),
           expedienteId: expediente.id,
           emisorId: senderId,
-          receptorId,
+          receptorId: recipientId,
         },
         new Date().toISOString(),
       )
       const saved = await saveLeadDetails(detalles)
-      if (expediente.asignadoId !== senderId) await updateCase.mutateAsync(caseInput(senderId))
+      if (expediente.asignadoId !== senderId) await onUpdateCase(caseInput(senderId))
       await createAcceptanceTask(traspaso, saved.detalles, saved.version)
       onClose()
     }, 'Traspaso iniciado. Tarea enviada al abogado destinatario.')
@@ -261,7 +267,7 @@ function CaseHandoffDialog({
       if (!active) return
       const result = aceptarTraspaso(opportunity.detalles, active, me, new Date().toISOString())
       if (!result.yaAceptado) await saveLeadDetails(result.detalles)
-      if (expediente.asignadoId !== me) await updateCase.mutateAsync(caseInput(me))
+      if (expediente.asignadoId !== me) await onUpdateCase(caseInput(me))
       if (task && task.estado !== 'Completada' && task.estado !== 'Cancelada') {
         await completeTask.mutateAsync({ task, resultado: `Expediente aceptado por ${name(me)}.` })
       }

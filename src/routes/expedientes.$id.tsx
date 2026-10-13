@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PendingPanel } from "@/components/common";
@@ -18,7 +18,6 @@ import {
   useActualizarLinea,
   useReordenarLineas,
   useRegistrarReporteCliente,
-  CaseHandoffBar,
   useActuacionesPersistentes,
   useActualizarExpediente,
   useCrearComunicacionExpediente,
@@ -30,6 +29,7 @@ import {
   useLineasPersistentes,
   useParticipantesPersistentes,
 } from "@/features/expedientes";
+import { CaseHandoffBar } from "@/features/expedientes/ui/case-handoff";
 import { useConfirmarLectura, useNotasRemotas } from "@/features/notas";
 import {
   useCrearTarea,
@@ -158,7 +158,8 @@ function CaseRoute() {
         firmId={firmId}
         expediente={expediente}
         currentUserId={session.user?.id ?? null}
-        autoOpen={traspaso}
+        onUpdateCase={updateCase.mutateAsync}
+        autoOpen={traspaso ?? false}
       />
       <CaseDetail
         activeTab={selectedTab}

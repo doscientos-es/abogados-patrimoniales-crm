@@ -47,6 +47,7 @@ import {
   useMiembrosDespacho,
   useOportunidades,
   useOportunidadesCompletas,
+  useRefrescoTablerosEnVivo,
   type MiembroDespacho,
   type OportunidadResumen,
 } from '@/features/crm'
@@ -57,13 +58,13 @@ import {
   naturalezaDefinitiva,
   type NaturalezaAsunto,
 } from '@/features/crm/application/matter-nature'
-import { useRefrescoTablerosEnVivo } from '@/features/crm/infrastructure/supabase-oportunidades'
 import {
   COLUMNAS_ONBOARDING,
   COLUMNA_ONBOARDING_LABEL,
   COLUMNA_PROXIMO_PASO,
   columnaOnboarding,
   type ColumnaOnboarding,
+  FASE_ONBOARDING_LABEL,
   HITO_ONBOARDING_LABEL,
   hitoOnboarding,
   MODALIDAD_LABEL,
@@ -78,7 +79,6 @@ import {
   useRegistrarComunicacionOnboarding,
   useTransicionarOnboarding,
   type EventoOnboardingPersistido,
-  type FaseOnboarding,
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
 import { useCrearTarea } from '@/features/tareas'
@@ -155,13 +155,6 @@ const onboardingEventLabel = (type: string, payload: Json) => {
   }
   const summary = data['summary']
   return `${labels[type] ?? type}${typeof summary === 'string' && summary ? `: ${summary}` : ''}`
-}
-
-const ONBOARDING_STAGE_CLASS: Record<FaseOnboarding, string> = {
-  proforma: 'fase-ambar',
-  payment: 'fase-cian',
-  formal_start: 'fase-indigo',
-  completed: 'fase-verde',
 }
 
 export function OnboardingPage() {

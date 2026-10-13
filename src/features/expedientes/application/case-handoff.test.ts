@@ -63,7 +63,7 @@ describe('case handoff', () => {
     const task = tareaAsuncion({ expedienteId: 'case-1', oportunidadId: 'lead-1', receptorId: 'luis', referencia: 'EXP-1' })
     expect(task).toMatchObject({ titulo: TAREA_ASUNCION, asignadoId: 'luis', expedienteId: 'case-1' })
     expect(nivelDemora(
-      { creadoEn: createdAt, estado: 'pendiente', ...input, tareaId: null, aceptadoEn: null, aceptadoPor: null, historial: [] },
+      { creadoEn: createdAt, estado: 'pendiente' },
       new Date('2026-10-08T10:00:00.000Z'),
     )).toBe('escalar')
   })
