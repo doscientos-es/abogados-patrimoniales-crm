@@ -43,6 +43,8 @@ import {
   type OportunidadPersistida,
 } from "@/features/crm";
 import { LeadFirstMeetingTab } from "@/features/crm/ui/lead-first-meeting-tab";
+import { LeadParticipants } from "@/features/crm/ui/lead-participants";
+import { LeadQualificationDecision } from "@/features/crm/ui/lead-qualification-decision";
 import { LeadWorkspace } from "@/features/crm/ui/lead-workspace";
 import { useTareasPersistentes, type TareaPersistida } from "@/features/tareas";
 import type { OpportunityStage } from "@/shared/infrastructure/supabase";
@@ -247,6 +249,11 @@ function FichaOportunidadPage() {
               contact={contacto.data}
               contactLoading={contacto.isPending}
             />
+            <LeadParticipants
+              firmId={membership.data.firmId}
+              opportunity={data}
+              canEdit={!data.archivadoEn}
+            />
             {!data.archivadoEn ? (
               <OpportunityEditForm
                 key={`edit-${data.id}-${data.version}`}
@@ -264,10 +271,12 @@ function FichaOportunidadPage() {
           </div>
         ) : null}
         {activeTab === "qualification" ? (
-          <LeadWorkspace
+          <LeadQualificationDecision
             opportunity={data}
             firmId={membership.data.firmId}
-            section="qualification"
+            canEdit={!data.archivadoEn}
+            currentUserId={session.user.id}
+            onOpenQuote={() => setActiveTab("quote")}
           />
         ) : null}
         {activeTab === "firstMeeting" ? (
