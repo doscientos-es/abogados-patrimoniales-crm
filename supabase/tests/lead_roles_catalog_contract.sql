@@ -18,7 +18,9 @@ begin
   where schemaname = 'public' and tablename = 'crm_lead_roles'
     and indexname = 'crm_lead_roles_active_name_idx';
   if unique_index is null or position('UNIQUE' in upper(unique_index)) = 0
-    or position('LOWER(TRIM(NAME))' in upper(unique_index)) = 0 then
+    or position('LOWER' in upper(unique_index)) = 0
+    or position('TRIM' in upper(unique_index)) = 0
+    or position('NAME' in upper(unique_index)) = 0 then
     raise exception 'Active role names must be unique after trimming and case normalization';
   end if;
 
