@@ -1,4 +1,4 @@
--- Run after 20261013150000_open_case_on_payment_or_authorized_exception.sql.
+-- Run after 20261013154653_open_case_on_payment_or_authorized_exception.sql.
 do $$
 declare
   body text;
