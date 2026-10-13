@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { OportunidadPersistida } from '@/features/crm'
+import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
+import { FirstMeetingWorkspace } from '@/features/crm/ui/first-meeting-workspace'
 import {
   useActualizarReunionTarea,
   useCompletarTarea,
@@ -249,6 +251,20 @@ export function LeadFirstMeetingTab({
           </p>
         </CardContent>
       </Card>
+      {selectedTask ? (
+        <>
+          <FirstMeetingAssistant
+            firmId={firmId}
+            task={selectedTask}
+            reference={opportunity.referencia}
+            contactName={contactName}
+            canEdit={canManage}
+          />
+          <FirstMeetingWorkspace firmId={firmId} task={selectedTask} canEdit={canManage} />
+        </>
+      ) : (
+        <FirstMeetingWorkspace firmId={firmId} task={null} canEdit={canManage} />
+      )}
     </div>
   )
 }

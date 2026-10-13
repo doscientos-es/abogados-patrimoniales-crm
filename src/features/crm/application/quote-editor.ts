@@ -73,32 +73,36 @@ export type Revision = {
   obsoletaEn?: string
 }
 
+export type BorradorEnvio = {
+  plantilla: { id: string; nombre: string } | null
+  destinatario: string
+  asunto: string
+  mensaje: string
+  guardadoEn: string
+  guardadoPor: string | null
+}
+
+export type Envio = {
+  fecha: string
+  destinatario: string
+  canal: string
+  asunto: string
+  mensaje: string
+  declaradoPor: string | null
+  declaradoPorNombre?: string
+  plantilla?: { id: string; nombre: string } | null
+  copia?: CopiaVersion
+}
+
 export type VersionPresupuesto = CopiaVersion & {
   estado: EstadoEditor
   finalizadoEn?: string
   revisiones?: Revision[]
-  borradorEnvio?: {
-    plantilla: { id: string; nombre: string } | null
-    destinatario: string
-    asunto: string
-    mensaje: string
-    guardadoEn: string
-    guardadoPor: string | null
-  }
+  borradorEnvio?: BorradorEnvio
   envioTarea?: { tareaId: string; asignadoId: string; asignadoNombre: string; creadaEn: string }
   validacion?: { fecha: string; por: string; tareaId: string }
   revision?: Revision
-  envio?: {
-    fecha: string
-    destinatario: string
-    canal: string
-    asunto: string
-    mensaje: string
-    declaradoPor: string | null
-    declaradoPorNombre?: string
-    plantilla?: { id: string; nombre: string } | null
-    copia?: CopiaVersion
-  }
+  envio?: Envio
 }
 
 export type EditorPresupuesto = { actual: VersionPresupuesto; anteriores: VersionPresupuesto[] }
@@ -667,16 +671,7 @@ export function resolverRevision(
 export const ENVIO_REGISTRADO = 'Envío registrado'
 export function registrarEnvio(
   editor: EditorPresupuesto,
-  envio: {
-    fecha: string
-    destinatario: string
-    canal: string
-    asunto: string
-    mensaje: string
-    declaradoPor: string | null
-    declaradoPorNombre?: string
-    plantilla?: { id: string; nombre: string } | null
-  },
+  envio: Envio,
   declaracionExplicita: boolean,
   presupuestoExterior: unknown = {},
 ) {
