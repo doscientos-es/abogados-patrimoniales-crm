@@ -56,11 +56,10 @@ function printProforma(proforma: Proforma, client: Cliente, matter: string) {
   printWindow.focus()
   const images = Array.from(printWindow.document.images)
   void Promise.all(
-    images.map(
-      (image) =>
-        image.complete
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => {
+    images.map((image) =>
+      image.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
             image.onload = image.onerror = () => resolve()
           }),
     ),

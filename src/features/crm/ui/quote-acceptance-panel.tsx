@@ -101,8 +101,8 @@ export function QuoteAcceptancePanel({
     sentVersion === null
       ? null
       : ([editor?.actual, ...(editor?.anteriores ?? [])].find(
-        (item) => item?.version === sentVersion,
-      ) ?? null)
+          (item) => item?.version === sentVersion,
+        ) ?? null)
   const snapshot = sent ? copiaEnviada(sent) : null
   const acceptanceDescription = describirAceptacion(acceptance)
   const onboarding = onboardings.data?.find((item) => item.oportunidadId === opportunity.id)
@@ -287,22 +287,22 @@ export function QuoteAcceptancePanel({
         detalles:
           status === 'rechazado'
             ? ({
-              ...rec(next),
-              contratacion: {
-                ...rec(details['contratacion']),
-                decision: 'Rechazado',
-                motivoRechazo: reason.trim(),
-              },
-            } as Json)
+                ...rec(next),
+                contratacion: {
+                  ...rec(details['contratacion']),
+                  decision: 'Rechazado',
+                  motivoRechazo: reason.trim(),
+                },
+              } as Json)
             : next,
         ...(status === 'rechazado' && opportunity.fase === 'engagement'
           ? {
-            transicionContratacion: {
-              fase: 'lost',
-              subestado: 'Rechazado por el cliente',
-              motivo: reason.trim(),
-            },
-          }
+              transicionContratacion: {
+                fase: 'lost',
+                subestado: 'Rechazado por el cliente',
+                motivo: reason.trim(),
+              },
+            }
           : {}),
       })
       toast.success('Respuesta del cliente registrada.')
