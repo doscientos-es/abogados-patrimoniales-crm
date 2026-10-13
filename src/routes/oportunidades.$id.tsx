@@ -46,6 +46,9 @@ import { LeadFirstMeetingTab } from "@/features/crm/ui/lead-first-meeting-tab";
 import { LeadParticipants } from "@/features/crm/ui/lead-participants";
 import { LeadQualificationDecision } from "@/features/crm/ui/lead-qualification-decision";
 import { LeadWorkspace } from "@/features/crm/ui/lead-workspace";
+import { QuoteAcceptancePanel } from "@/features/crm/ui/quote-acceptance-panel";
+import { QuoteEditor } from "@/features/crm/ui/quote-editor";
+import { QuoteSendPanel } from "@/features/crm/ui/quote-send-panel";
 import { useTareasPersistentes, type TareaPersistida } from "@/features/tareas";
 import type { OpportunityStage } from "@/shared/infrastructure/supabase";
 
@@ -59,13 +62,13 @@ export type LeadDetailTab =
   | "notes"
   | "quote"
   | "sent"
-  | "engagement"
   | "documents"
   | "acceptance"
   | "history";
 
 function isLeadTab(tab: unknown): tab is LeadDetailTab {
   if (typeof tab !== 'string') return false
+  if (tab === 'engagement') return true
   return LEAD_DETAIL_TABS.some((candidate) => candidate.id === tab);
 }
 
@@ -78,8 +81,7 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: "communications", label: "Comunicaciones" },
   { id: "notes", label: "Notas internas" },
   { id: "quote", label: "Presupuesto" },
-  { id: "sent", label: "Enviado al cliente" },
-  { id: "engagement", label: "Contratación" },
+  { id: "sent", label: "Enviar al cliente" },
   { id: "documents", label: "Documentación" },
   { id: "acceptance", label: "Validación y aceptación" },
   { id: "history", label: "Histórico" },
@@ -88,6 +90,7 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
 export const Route = createFileRoute("/oportunidades/$id")({
   validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => {
     const tab = search["tab"];
+    if (tab === 'engagement') return { tab: 'acceptance' }
     return isLeadTab(tab) ? { tab } : {};
   },
   head: () => ({
@@ -306,26 +309,26 @@ function FichaOportunidadPage() {
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="notes" />
         ) : null}
         {activeTab === "quote" ? (
-          <LeadWorkspace
-            opportunity={data}
+          <QuoteEditor
             firmId={membership.data.firmId}
-            section="quote"
-            canEdit={!data.archivadoEn}
-          />
-        ) : null}
-        {activeTab === "engagement" ? (
-          <LeadWorkspace
             opportunity={data}
-            firmId={membership.data.firmId}
-            section="engagement"
+            cliente={{
+              nombre: contactName(contacto.data),
+              email: contacto.data?.email ?? '',
+              ...(contacto.data?.nif ? { nif: contacto.data.nif } : {}),
+            }}
             canEdit={!data.archivadoEn}
           />
         ) : null}
         {activeTab === "sent" ? (
-          <LeadWorkspace
-            opportunity={data}
+          <QuoteSendPanel
             firmId={membership.data.firmId}
-            section="sent"
+            opportunity={data}
+            cliente={{
+              nombre: contactName(contacto.data),
+              email: contacto.data?.email ?? '',
+              ...(contacto.data?.nif ? { nif: contacto.data.nif } : {}),
+            }}
             canEdit={!data.archivadoEn}
           />
         ) : null}
@@ -337,11 +340,16 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === "acceptance" ? (
           <div className="space-y-4">
-            <LeadWorkspace
-              opportunity={data}
+            <QuoteAcceptancePanel
               firmId={membership.data.firmId}
-              section="acceptance"
+              opportunity={data}
+              cliente={{
+                nombre: contactName(contacto.data),
+                email: contacto.data?.email ?? '',
+                ...(contacto.data?.nif ? { nif: contacto.data.nif } : {}),
+              }}
               canEdit={!data.archivadoEn}
+              onIrPresupuesto={() => setActiveTab('quote')}
             />
             {!data.archivadoEn ? (
               <>

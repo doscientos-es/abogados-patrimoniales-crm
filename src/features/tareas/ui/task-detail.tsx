@@ -64,6 +64,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
+import { leerMarcador } from '@/features/crm/application/quote-editor'
+import { leerMarcadorEnvio } from '@/features/crm/application/quote-send-task'
+import { QuoteReviewPanel } from '@/features/crm/ui/quote-review-panel'
+import { SendTaskLink } from '@/features/crm/ui/quote-send-task'
 import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
 import {
   useAbrirTarea,
@@ -197,8 +201,8 @@ function PropertyRow({
 const date = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
-        new Date(value),
-      )
+      new Date(value),
+    )
     : 'Sin fecha'
 
 const formText = (data: FormData, name: string) => {
@@ -217,52 +221,52 @@ const detailsIds = (details: Record<string, unknown>, name: string) =>
 const meetingPreparationItems = (details: Record<string, unknown>) =>
   Array.isArray(details['preparationItems'])
     ? details['preparationItems'].filter(
-        (
-          item,
-        ): item is {
-          id: string
-          text: string
-          done: boolean
-          category?: string
-          createdById?: string
-          createdByName?: string
-          createdAt?: string
-        } => {
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-          const value = item as Record<string, unknown>
-          return (
-            typeof value['id'] === 'string' &&
-            typeof value['text'] === 'string' &&
-            typeof value['done'] === 'boolean' &&
-            ['category', 'createdById', 'createdByName', 'createdAt'].every(
-              (key) => value[key] === undefined || typeof value[key] === 'string',
-            )
+      (
+        item,
+      ): item is {
+        id: string
+        text: string
+        done: boolean
+        category?: string
+        createdById?: string
+        createdByName?: string
+        createdAt?: string
+      } => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const value = item as Record<string, unknown>
+        return (
+          typeof value['id'] === 'string' &&
+          typeof value['text'] === 'string' &&
+          typeof value['done'] === 'boolean' &&
+          ['category', 'createdById', 'createdByName', 'createdAt'].every(
+            (key) => value[key] === undefined || typeof value[key] === 'string',
           )
-        },
-      )
+        )
+      },
+    )
     : []
 
 const meetingRescheduleHistory = (details: Record<string, unknown>) =>
   Array.isArray(details['rescheduleHistory'])
     ? details['rescheduleHistory'].filter(
-        (
-          item,
-        ): item is {
-          requestedAt: string
-          reason: string
-          previousStartsAt: string
-          previousEndsAt: string
-        } => {
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-          const value = item as Record<string, unknown>
-          return (
-            typeof value['requestedAt'] === 'string' &&
-            typeof value['reason'] === 'string' &&
-            typeof value['previousStartsAt'] === 'string' &&
-            typeof value['previousEndsAt'] === 'string'
-          )
-        },
-      )
+      (
+        item,
+      ): item is {
+        requestedAt: string
+        reason: string
+        previousStartsAt: string
+        previousEndsAt: string
+      } => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const value = item as Record<string, unknown>
+        return (
+          typeof value['requestedAt'] === 'string' &&
+          typeof value['reason'] === 'string' &&
+          typeof value['previousStartsAt'] === 'string' &&
+          typeof value['previousEndsAt'] === 'string'
+        )
+      },
+    )
     : []
 
 const formatElapsedTime = (startedAt: string, now: number) => {
@@ -392,6 +396,8 @@ export function TaskDetail({
   const availableDocuments = (caseDocuments.data ?? []).filter(
     (document) => !linkedDocumentIds.has(document.logical_document_id),
   )
+  const quoteReview = leerMarcador(task?.descripcion ?? '')
+  const quoteSend = leerMarcadorEnvio(task?.descripcion)
 
   useEffect(() => {
     if (task && canWork && !task.abiertaEn && openedTaskId.current !== task.id) {
@@ -660,6 +666,12 @@ export function TaskDetail({
           )}
         </div>
       </header>
+      {task.oportunidadId && quoteReview ? (
+        <QuoteReviewPanel task={task} firmId={firmId} />
+      ) : null}
+      {task.oportunidadId && quoteSend ? (
+        <SendTaskLink leadId={quoteSend.leadId} version={quoteSend.version} />
+      ) : null}
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-8">
           {isOpen ? (
@@ -1300,11 +1312,10 @@ export function TaskDetail({
                   return (
                     <li
                       key={id}
-                      className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1 ${
-                        id === task.id
+                      className={`-mx-2 flex items-center gap-2 rounded-md px-2 py-1 ${id === task.id
                           ? 'bg-muted text-foreground font-medium'
                           : 'text-muted-foreground'
-                      }`}
+                        }`}
                     >
                       <span className="w-5 shrink-0 text-xs tabular-nums">{index + 1}.</span>
                       {id === task.id || !phase ? (
@@ -2130,20 +2141,20 @@ function SpecialMeetingWorkspace({
     const nextPreparationItems =
       meetingAction === 'add_preparation_item'
         ? [
-            ...submittedPreparationItems,
-            {
-              id:
-                typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                  ? crypto.randomUUID()
-                  : `preparation-${Date.now()}`,
-              text: newItemText,
-              done: false,
-              category: formText(data, 'preparationCategory'),
-              createdById: actorId,
-              ...(createdByName ? { createdByName } : {}),
-              createdAt: now,
-            },
-          ]
+          ...submittedPreparationItems,
+          {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `preparation-${Date.now()}`,
+            text: newItemText,
+            done: false,
+            category: formText(data, 'preparationCategory'),
+            createdById: actorId,
+            ...(createdByName ? { createdByName } : {}),
+            createdAt: now,
+          },
+        ]
         : removePreparationItemId
           ? submittedPreparationItems.filter((item) => item.id !== removePreparationItemId)
           : submittedPreparationItems
@@ -2151,9 +2162,9 @@ function SpecialMeetingWorkspace({
     const actualDurationMinutes =
       nextStatus === 'finished' && detailsText(details, 'startedAt')
         ? Math.max(
-            0,
-            Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
-          )
+          0,
+          Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
+        )
         : typeof details['actualDurationMinutes'] === 'number'
           ? details['actualDurationMinutes']
           : undefined
@@ -2182,17 +2193,17 @@ function SpecialMeetingWorkspace({
         : '',
       attendeeContactIds: canManage
         ? data
-            .getAll('specialContacts')
-            .filter((value): value is string => typeof value === 'string')
+          .getAll('specialContacts')
+          .filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeContactIds'),
       attendeeUserIds: canManage
         ? data.getAll('specialUsers').filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeUserIds'),
       attendeeNames: canManage
         ? formText(data, 'specialOtherAttendees')
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean)
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
         : Array.isArray(details['attendeeNames'])
           ? details['attendeeNames'].filter((item): item is string => typeof item === 'string')
           : [],
@@ -2213,16 +2224,16 @@ function SpecialMeetingWorkspace({
       preparationItems: nextPreparationItems,
       ...(isRescheduling
         ? {
-            rescheduleHistory: [
-              ...rescheduleHistory,
-              {
-                requestedAt: now,
-                reason: rescheduleReason,
-                previousStartsAt: detailsText(details, 'startsAt'),
-                previousEndsAt: detailsText(details, 'endsAt'),
-              },
-            ],
-          }
+          rescheduleHistory: [
+            ...rescheduleHistory,
+            {
+              requestedAt: now,
+              reason: rescheduleReason,
+              previousStartsAt: detailsText(details, 'startsAt'),
+              previousEndsAt: detailsText(details, 'endsAt'),
+            },
+          ],
+        }
         : {}),
       ...(nextStatus === 'in_progress' && !details['startedAt'] ? { startedAt: now } : {}),
       ...(nextStatus === 'finished' ? { finishedAt: now } : {}),
@@ -2747,8 +2758,8 @@ function MeetingDetailsCard({
   const contactIds = storedContactIds.length
     ? storedContactIds
     : participants.flatMap((participant) =>
-        participant.contactoId ? [participant.contactoId] : [],
-      )
+      participant.contactoId ? [participant.contactoId] : [],
+    )
   const userIds = detailsIds(details, 'attendeeUserIds')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
