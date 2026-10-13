@@ -43,14 +43,29 @@ import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import {
+  useActualizarDetallesOportunidad,
   useMiembrosDespacho,
   useOportunidades,
+  useOportunidadesCompletas,
   type MiembroDespacho,
   type OportunidadResumen,
 } from '@/features/crm'
 import {
-  FASES_ONBOARDING,
-  FASE_ONBOARDING_LABEL,
+  fijarNaturaleza,
+  leerNaturaleza,
+  NATURALEZA_LABEL,
+  naturalezaDefinitiva,
+  type NaturalezaAsunto,
+} from '@/features/crm/application/matter-nature'
+import { useRefrescoTablerosEnVivo } from '@/features/crm/infrastructure/supabase-oportunidades'
+import {
+  COLUMNAS_ONBOARDING,
+  COLUMNA_ONBOARDING_LABEL,
+  COLUMNA_PROXIMO_PASO,
+  columnaOnboarding,
+  type ColumnaOnboarding,
+  HITO_ONBOARDING_LABEL,
+  hitoOnboarding,
   MODALIDAD_LABEL,
   PROXIMO_PASO,
   diasEnFase,
@@ -67,6 +82,11 @@ import {
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
 import { useCrearTarea } from '@/features/tareas'
+import {
+  PaymentEvidenceList,
+  PaymentEvidencePicker,
+  uploadPaymentEvidence,
+} from '@/features/onboarding/ui/payment-evidence'
 import { cn } from '@/lib/utils'
 import type { Json } from '@/shared/infrastructure/supabase'
 
@@ -90,9 +110,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-          typeof error === 'object' &&
-          'message' in error &&
-          typeof error.message === 'string'
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -150,8 +170,10 @@ export function OnboardingPage() {
   const firmId = membership.data?.firmId
   const onboardings = useOnboardings(firmId)
   const eventos = useEventosOnboarding(firmId)
+  useRefrescoTablerosEnVivo(firmId)
   const contactos = useContactos(firmId)
   const oportunidades = useOportunidades(firmId)
+  const leadsCompletos = useOportunidadesCompletas(firmId)
   const miembros = useMiembrosDespacho(firmId)
   const crear = useCrearOnboarding(firmId)
   const actualizarAccion = useActualizarSiguienteAccion(firmId)
@@ -159,6 +181,7 @@ export function OnboardingPage() {
   const comunicar = useRegistrarComunicacionOnboarding(firmId)
   const crearTarea = useCrearTarea(firmId)
   const abrirExpediente = useAbrirExpedienteDesdeOnboarding(firmId)
+  const guardarDetallesLead = useActualizarDetallesOportunidad(firmId)
   const navigate = useNavigate()
   const [vista, setVista] = useState('kanban')
   const [responsable, setResponsable] = useState('todos')
@@ -197,6 +220,7 @@ export function OnboardingPage() {
     eventos.isLoading ||
     contactos.isLoading ||
     oportunidades.isLoading ||
+    leadsCompletos.isLoading ||
     miembros.isLoading
   const isPending =
     crear.isPending ||
@@ -264,7 +288,7 @@ export function OnboardingPage() {
         />
       </div>
 
-      {onboardings.isError || eventos.isError ? (
+      {onboardings.isError || eventos.isError || leadsCompletos.isError ? (
         <p role="alert" className="text-destructive mb-4 text-sm">
           No se han podido cargar los onboardings o su trazabilidad. Puedes reintentar la página.
         </p>
@@ -272,13 +296,13 @@ export function OnboardingPage() {
       {isLoading || items.length ? (
         vista === 'kanban' ? (
           <section aria-label="Kanban de Onboarding" className="overflow-x-auto pb-4">
-            <div className="grid min-w-max auto-cols-[21rem] grid-flow-col gap-4">
-              {FASES_ONBOARDING.map((fase) => {
-                const columnItems = items.filter((item) => item.fase === fase)
+            <div className="flex min-w-max items-stretch gap-4 [&>section]:w-[21rem]">
+              {COLUMNAS_ONBOARDING.map((columna) => {
+                const columnItems = items.filter((item) => columnaOnboarding(item) === columna)
                 return (
                   <OnboardingColumn
-                    key={fase}
-                    fase={fase}
+                    key={columna}
+                    columna={columna}
                     items={columnItems}
                     loading={isLoading}
                   />
@@ -297,33 +321,55 @@ export function OnboardingPage() {
         <EmptyOnboarding hasOnboardings={Boolean(onboardings.data?.length)} />
       )}
       <p className="text-muted-foreground mt-5 rounded-md border border-dashed px-4 py-3 text-xs leading-5">
-        <strong className="text-foreground">Estados provisionales:</strong> «Proforma enviada» y
-        «Pago confirmado» quedan registrados y auditados como confirmaciones manuales. Puedes
-        consultarlos también en Facturación y cobros; no generan documentos, facturas ni cobros
-        reales.
+        <strong className="text-foreground">Cómo funciona:</strong> al confirmar el pago de la
+        provisión se abre el expediente en CASEWORK. Solo por excepción (urgencia, cliente habitual
+        o interés comercial), el abogado puede usar el menú «···» de la tarjeta indicando el motivo.
+        No se generan facturas ni cobros reales.
       </p>
     </main>
   )
 
   function OnboardingColumn({
-    fase,
+    columna,
     items: columnItems,
     loading,
   }: {
-    fase: FaseOnboarding
+    columna: ColumnaOnboarding
     items: OnboardingPersistido[]
     loading: boolean
   }) {
+    const [abierta, setAbierta] = useState(columna !== 'completados')
+    const stageClass =
+      columna === 'esperando_provision'
+        ? 'fase-ambar'
+        : columna === 'completados'
+          ? 'fase-gris'
+          : 'fase-verde'
+    if (!abierta) {
+      return (
+        <button
+          type="button"
+          onClick={() => setAbierta(true)}
+          className="fase-columna bg-muted/40 hover:bg-muted flex h-full w-14 flex-col items-center gap-3 rounded-xl border py-4 shadow-sm"
+          aria-label={`Desplegar ${COLUMNA_ONBOARDING_LABEL[columna]} (${columnItems.length})`}
+        >
+          <Badge variant="secondary" className="tabular-nums">{columnItems.length}</Badge>
+          <span className="text-muted-foreground text-xs font-semibold [writing-mode:vertical-rl]">
+            {COLUMNA_ONBOARDING_LABEL[columna]} · Desplegar
+          </span>
+        </button>
+      )
+    }
     return (
       <section
-        className={`fase-columna ${ONBOARDING_STAGE_CLASS[fase]} flex h-full flex-col overflow-hidden rounded-xl border shadow-sm`}
-        aria-label={FASE_ONBOARDING_LABEL[fase]}
+        className={`fase-columna ${stageClass} flex h-full flex-col overflow-hidden rounded-xl border shadow-sm`}
+        aria-label={COLUMNA_ONBOARDING_LABEL[columna]}
       >
         <header className="border-border/60 border-b px-4 py-3">
           <div className="flex items-center gap-1.5">
             <span className="fase-punto size-1.5 shrink-0 rounded-full" aria-hidden="true" />
             <h2 className="min-w-0 text-sm leading-tight font-semibold">
-              {FASE_ONBOARDING_LABEL[fase]}
+              {COLUMNA_ONBOARDING_LABEL[columna]}
             </h2>
             <Badge
               className="fase-chip ml-auto h-5 min-w-5 shrink-0 border px-1.5 text-[10px] tabular-nums"
@@ -336,7 +382,18 @@ export function OnboardingPage() {
               {columnItems.length}
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-2 text-xs">Ahora toca: {PROXIMO_PASO[fase]}</p>
+          <p className="text-muted-foreground mt-2 text-xs">
+            Ahora toca: {COLUMNA_PROXIMO_PASO[columna]}
+          </p>
+          {columna === 'completados' ? (
+            <button
+              type="button"
+              onClick={() => setAbierta(false)}
+              className="text-muted-foreground hover:text-foreground mt-1 text-xs underline"
+            >
+              Plegar
+            </button>
+          ) : null}
         </header>
         <div className="flex-1 space-y-3 p-3">
           {loading ? <div className="bg-card h-48 animate-pulse rounded-lg border" /> : null}
@@ -349,11 +406,17 @@ export function OnboardingPage() {
             <OnboardingCard
               key={item.id}
               item={item}
+              firmId={firmId}
               eventos={(eventos.data ?? []).filter((event) => event.onboardingId === item.id)}
               actorNames={miembrosPorId}
               contacto={contactosPorId.get(item.contactoId)}
               responsableNombre={
                 item.responsableId ? miembrosPorId.get(item.responsableId) : undefined
+              }
+              naturaleza={
+                leerNaturaleza(
+                  leadsCompletos.data?.find((lead) => lead.id === item.oportunidadId)?.detalles,
+                )?.valor ?? null
               }
               pending={isPending}
               onAction={(accion, payload) =>
@@ -385,9 +448,31 @@ export function OnboardingPage() {
                 })
               }
               onOpenCase={async (input) => {
-                const expediente = await abrirExpediente.mutateAsync(input)
-                toast.success('Expediente abierto y vinculado al onboarding.')
-                await navigate({ to: '/expedientes/$id', params: { id: expediente.id } })
+                const { motivoNaturaleza, ...caseInput } = input
+                const lead = leadsCompletos.data?.find((candidate) => candidate.id === item.oportunidadId)
+                const naturalezaActual = leerNaturaleza(lead?.detalles)?.valor ?? null
+                if (lead && !naturalezaDefinitiva(naturalezaActual)) {
+                  const actorId = session.user?.id
+                  if (!actorId) throw new Error('No se ha identificado al usuario.')
+                  await guardarDetallesLead.mutateAsync({
+                    id: lead.id,
+                    versionEsperada: lead.version,
+                    detalles: fijarNaturaleza(
+                      lead.detalles,
+                      caseInput.naturaleza,
+                      actorId,
+                      new Date().toISOString(),
+                      motivoNaturaleza ?? '',
+                    ) as Json,
+                  })
+                }
+                const expediente = await abrirExpediente.mutateAsync(caseInput)
+                toast.success('Expediente en CASEWORK. Prepara ahora el traspaso al abogado.')
+                await navigate({
+                  to: '/expedientes/$id',
+                  params: { id: expediente.id },
+                  search: { traspaso: true },
+                })
               }}
             />
           ))}
@@ -399,6 +484,7 @@ export function OnboardingPage() {
 
 export function OnboardingCard({
   item,
+  firmId,
   eventos,
   actorNames,
   contacto,
@@ -409,7 +495,10 @@ export function OnboardingCard({
   onCommunication,
   onTask,
   onOpenCase,
+  naturaleza = null,
 }: {
+  firmId?: string | undefined
+  naturaleza?: NaturalezaAsunto | null
   item: OnboardingPersistido
   eventos: EventoOnboardingPersistido[]
   actorNames: Map<string, string>
@@ -438,6 +527,7 @@ export function OnboardingCard({
     responsableId: string | null
     siguienteAccion: string
     dondeEstamos: string
+    motivoNaturaleza?: string
   }) => Promise<void>
 }) {
   const days = diasEnFase(item.cambioFase)
@@ -481,6 +571,13 @@ export function OnboardingCard({
             {contactName(contacto)}
           </Link>
           <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">{item.asunto}</p>
+          <Badge
+            variant="outline"
+            className={`mt-1.5 text-[10px] ${hitoOnboarding(item) === 'expediente_sin_pago' ? 'border-warning/60 bg-warning/15 text-foreground font-semibold' : ''}`}
+          >
+            {hitoOnboarding(item) === 'expediente_sin_pago' ? '⚠ ' : ''}
+            {HITO_ONBOARDING_LABEL[hitoOnboarding(item)]}
+          </Badge>
         </div>
         <div className="border-border/70 text-muted-foreground space-y-1.5 border-y py-2 text-xs leading-5">
           <p className="flex min-w-0 items-center gap-1.5">
@@ -529,11 +626,63 @@ export function OnboardingCard({
             ))}
           </div>
         ) : null}
-        {item.fase === 'proforma' && item.proformaEnviada ? (
+        {item.fase === 'proforma' ? (
           <PaymentDialog
             pending={pending}
-            onConfirm={(fecha) => onAction('payment_confirmed', { fecha })}
+            onConfirm={async (fecha, files) => {
+              if (files.length) {
+                if (!firmId) throw new Error('No hay un despacho activo para subir justificantes.')
+                await uploadPaymentEvidence({
+                  firmId,
+                  contactId: item.contactoId,
+                  onboardingId: item.id,
+                  opportunityId: item.oportunidadId,
+                  paymentDate: fecha,
+                  files,
+                })
+              }
+              const updated = (await onAction('payment_confirmed', { fecha })) as
+                | OnboardingPersistido
+                | undefined
+              if (updated?.pagoConfirmado && !updated.expedienteId) {
+                if (naturalezaDefinitiva(naturaleza)) {
+                  try {
+                    await onOpenCase({
+                      onboardingId: updated.id,
+                      versionEsperada: updated.version,
+                      titulo: updated.asunto,
+                      area: '',
+                      tipoAsunto: '',
+                      naturaleza,
+                      prioridad: 'medium',
+                      responsableId: updated.responsableId,
+                      siguienteAccion: 'Asumir responsabilidad del expediente',
+                      dondeEstamos: 'Pago de la provisión confirmado',
+                    })
+                  } catch (error) {
+                    toast.warning(
+                      `Pago confirmado, pero el expediente no se abrió automáticamente: ${error instanceof Error ? error.message : ''}`,
+                    )
+                  }
+                } else {
+                  toast.warning(
+                    'Pago confirmado. Define la naturaleza del asunto en el Lead para abrir CASEWORK.',
+                  )
+                }
+              }
+              return updated
+            }}
           />
+        ) : firmId && item.pagoConfirmado ? (
+          <div className="border-border/70 border-t pt-2">
+            <PaymentEvidenceList
+              firmId={firmId}
+              contactId={item.contactoId}
+              onboardingId={item.id}
+              opportunityId={item.oportunidadId}
+              paymentDate={item.pagoConfirmado}
+            />
+          </div>
         ) : null}
         {item.fase === 'payment' ? (
           <FormalStartDialog
@@ -565,7 +714,12 @@ export function OnboardingCard({
               {primary}
             </Link>
           ) : (
-            <OpenCaseDialog item={item} pending={pending} onOpen={onOpenCase} />
+            <OpenCaseDialog
+              item={item}
+              pending={pending}
+              onOpen={onOpenCase}
+              naturaleza={naturaleza}
+            />
           )
         ) : null}
         <div
@@ -587,6 +741,15 @@ export function OnboardingCard({
               >
                 <ExternalLink className="size-3.5" aria-hidden="true" />
               </Link>
+            ) : null}
+            {!item.expedienteId && item.fase === 'proforma' ? (
+              <OpenCaseDialog
+                item={item}
+                pending={pending}
+                onOpen={onOpenCase}
+                naturaleza={naturaleza}
+                sinProvision
+              />
             ) : null}
           </div>
           <div className="border-border/70 flex items-center gap-1 border-l pl-2">
@@ -841,8 +1004,9 @@ function PaymentDialog({
   onConfirm,
 }: {
   pending: boolean
-  onConfirm: (date: string) => Promise<unknown>
+  onConfirm: (date: string, files: File[]) => Promise<unknown>
 }) {
+  const [files, setFiles] = useState<File[]>([])
   return (
     <SmallDialog
       trigger={
@@ -858,8 +1022,15 @@ function PaymentDialog({
       title="Confirmar pago"
       pending={pending}
       primary="Confirmar pago"
-      onSubmit={(form) => onConfirm(text(form, 'fecha'))}
+      onSubmit={async (form) => {
+        await onConfirm(text(form, 'fecha'), files)
+        setFiles([])
+      }}
     >
+      <p className="text-muted-foreground text-xs">
+        Confirma la recepción real del pago de provisión. No equivale a la aceptación del
+        presupuesto por el cliente.
+      </p>
       <Field
         label="Fecha de confirmación"
         name="fecha"
@@ -867,6 +1038,7 @@ function PaymentDialog({
         defaultValue={today()}
         required
       />
+      <PaymentEvidencePicker files={files} onChange={setFiles} disabled={pending} />
     </SmallDialog>
   )
 }
@@ -1050,7 +1222,11 @@ function OpenCaseDialog({
   item,
   pending,
   onOpen,
+  naturaleza = null,
+  sinProvision = false,
 }: {
+  sinProvision?: boolean
+  naturaleza?: NaturalezaAsunto | null
   item: OnboardingPersistido
   pending: boolean
   onOpen: (input: {
@@ -1064,49 +1240,115 @@ function OpenCaseDialog({
     responsableId: string | null
     siguienteAccion: string
     dondeEstamos: string
+    motivoNaturaleza?: string
   }) => Promise<void>
 }) {
   return (
     <SmallDialog
       trigger={
-        <Button type="button" className="w-full justify-center">
-          <FilePlus2 className="size-4" aria-hidden="true" />
-          Abrir expediente
-        </Button>
+        sinProvision ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground size-8"
+            aria-label="Más acciones: iniciar sin provisión (excepción)"
+            title="Iniciar sin provisión (excepción)"
+          >
+            <span aria-hidden="true" className="text-base leading-none">···</span>
+          </Button>
+        ) : (
+          <Button type="button" className="w-full justify-center">
+            <FilePlus2 className="size-4" aria-hidden="true" />
+            Abrir expediente
+          </Button>
+        )
       }
-      title="Abrir expediente desde el Onboarding"
+      title={
+        sinProvision
+          ? 'Iniciar sin provisión (excepción autorizada por el abogado)'
+          : 'Abrir expediente (pago de la provisión confirmado)'
+      }
       pending={pending}
       primary="Abrir expediente"
-      onSubmit={async (form) =>
-        onOpen({
+      onSubmit={async (form) => {
+        const motivo = text(form, 'motivoSinProvision')
+        const detalle = text(form, 'detalleSinProvision')
+        if (sinProvision && !motivo) throw new Error('Indica el motivo para iniciar sin provisión.')
+        return onOpen({
           onboardingId: item.id,
           versionEsperada: item.version,
           titulo: text(form, 'titulo'),
           area: text(form, 'area'),
           tipoAsunto: text(form, 'tipo'),
-          naturaleza: text(form, 'naturaleza') as 'judicial' | 'extrajudicial',
+          naturaleza: (naturalezaDefinitiva(naturaleza) ? naturaleza : text(form, 'naturaleza')) as
+            | 'judicial'
+            | 'extrajudicial',
+          ...(!naturalezaDefinitiva(naturaleza)
+            ? { motivoNaturaleza: text(form, 'motivoNaturaleza') }
+            : {}),
           prioridad: text(form, 'prioridad') as 'low' | 'medium' | 'high',
           responsableId: item.responsableId,
           siguienteAccion: text(form, 'accion'),
-          dondeEstamos: 'Inicio formal completado',
+          dondeEstamos: sinProvision
+            ? `Inicio sin provisión autorizado: ${motivo}${detalle ? ` — ${detalle}` : ''}`
+            : 'Pago de la provisión confirmado',
         })
-      }
+      }}
     >
       <p className="text-muted-foreground text-sm">
-        Se creará un expediente y quedará vinculado al onboarding de forma atómica.
+        {sinProvision
+          ? 'El expediente se abrirá en CASEWORK antes de recibir la provisión. El motivo quedará registrado y la proforma seguirá pendiente de cobro.'
+          : 'Se creará un expediente y quedará vinculado al onboarding de forma atómica.'}
       </p>
+      {sinProvision ? (
+        <>
+          <Field
+            select
+            required
+            label="Motivo"
+            name="motivoSinProvision"
+            options={[
+              ['', 'Selecciona…'],
+              ['Urgencia procesal o plazo inminente', 'Urgencia procesal o plazo inminente'],
+              ['Cliente habitual de confianza', 'Cliente habitual de confianza'],
+              ['Interés comercial', 'Interés comercial'],
+              ['Otro', 'Otro'],
+            ]}
+          />
+          <Field label="Detalle del motivo" name="detalleSinProvision" />
+        </>
+      ) : null}
       <Field label="Asunto" name="titulo" defaultValue={item.asunto} required />
       <Field label="Área" name="area" />
       <Field label="Tipo de asunto" name="tipo" defaultValue={item.asunto} />
-      <Field
-        select
-        label="Naturaleza"
-        name="naturaleza"
-        options={[
-          ['extrajudicial', 'Extrajudicial'],
-          ['judicial', 'Judicial'],
-        ]}
-      />
+      {naturalezaDefinitiva(naturaleza) ? (
+        <p className="text-sm">
+          Naturaleza heredada del Lead:{' '}
+          <strong>{NATURALEZA_LABEL[naturaleza].toUpperCase()} · PARA INICIAR</strong>
+        </p>
+      ) : (
+        <>
+          <p className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2 text-sm">
+            La naturaleza del asunto está {naturaleza ? 'pendiente de determinar' : 'sin clasificar'}.
+            Para entrar en CASEWORK debe ser definitiva; el cambio quedará registrado en el Lead.
+          </p>
+          <Field
+            select
+            required
+            label="Naturaleza definitiva"
+            name="naturaleza"
+            options={[
+              ['', 'Selecciona…'],
+              ['extrajudicial', 'Extrajudicial'],
+              ['judicial', 'Judicial'],
+            ]}
+          />
+          {naturaleza ? (
+            <Field required label="Motivo de la clasificación definitiva" name="motivoNaturaleza" />
+          ) : null}
+        </>
+      )}
       <Field
         select
         label="Prioridad"

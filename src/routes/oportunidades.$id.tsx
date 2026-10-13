@@ -86,9 +86,10 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
 ];
 
 export const Route = createFileRoute("/oportunidades/$id")({
-  validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => ({
-    ...(isLeadTab(search['tab']) ? { tab: search['tab'] } : {}),
-  }),
+  validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => {
+    const tab = search["tab"];
+    return isLeadTab(tab) ? { tab } : {};
+  },
   head: () => ({
     meta: [
       { title: "Ficha de Lead — LEX" },

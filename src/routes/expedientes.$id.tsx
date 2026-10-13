@@ -18,6 +18,7 @@ import {
   useActualizarLinea,
   useReordenarLineas,
   useRegistrarReporteCliente,
+  CaseHandoffBar,
   useActuacionesPersistentes,
   useActualizarExpediente,
   useCrearComunicacionExpediente,
@@ -40,8 +41,12 @@ import { TaskDetailDialog } from "@/features/tareas/ui/task-detail-dialog";
 import { getSupabaseBrowserClient } from "@/shared/infrastructure/supabase";
 
 export const Route = createFileRoute("/expedientes/$id")({
-  validateSearch: (search: Record<string, unknown>): { tab?: CaseDetailTab | undefined } => ({
+  validateSearch: (search: Record<string, unknown>): {
+    tab?: CaseDetailTab | undefined
+    traspaso?: boolean
+  } => ({
     ...(isCaseTab(search['tab']) ? { tab: search['tab'] } : {}),
+    ...(search['traspaso'] === true ? { traspaso: true } : {}),
   }),
   head: ({ params }) => ({
     meta: [
@@ -55,7 +60,7 @@ export const Route = createFileRoute("/expedientes/$id")({
 
 function CaseRoute() {
   const { id } = Route.useParams();
-  const { tab } = Route.useSearch();
+  const { tab, traspaso } = Route.useSearch();
   const navigate = Route.useNavigate();
   const selectedTab = isCaseTab(tab) ? tab : "summary";
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
@@ -149,6 +154,12 @@ function CaseRoute() {
 
   return (
     <>
+      <CaseHandoffBar
+        firmId={firmId}
+        expediente={expediente}
+        currentUserId={session.user?.id ?? null}
+        autoOpen={traspaso}
+      />
       <CaseDetail
         activeTab={selectedTab}
         onSelectTab={selectTab}
