@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuthSession } from '@/features/auth'
 import { useActualizarDetallesOportunidad } from '@/features/crm'
 import type { OportunidadPersistida } from '@/features/crm/application/opportunity-types'
+import { leerProforma, nuevaProforma, type Proforma } from '@/features/crm/application/proforma'
 import {
   construirAceptacionManual,
   contratacionAceptada,
@@ -39,9 +40,16 @@ import {
   euros,
   fechaEnvioEs,
   leerEditor,
+  parseEuros,
+  totales,
 } from '@/features/crm/application/quote-editor'
+import { ProformaCard } from '@/features/crm/ui/proforma-card'
 import { documentoHtml, imprimir, type Cliente } from '@/features/crm/ui/quote-document'
-import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
+import {
+  useCrearOnboarding,
+  useOnboardings,
+  useRegistrarEnvioProforma,
+} from '@/features/onboarding'
 import { useCompletarTarea, useTareaPorId } from '@/features/tareas'
 import { getSupabaseBrowserClient, type Json } from '@/shared/infrastructure/supabase'
 
@@ -81,10 +89,12 @@ export function QuoteAcceptancePanel({
   const save = useActualizarDetallesOportunidad(firmId)
   const onboardings = useOnboardings(firmId)
   const createOnboarding = useCrearOnboarding(firmId)
+  const registerProformaSent = useRegistrarEnvioProforma(firmId)
   const completeTask = useCompletarTarea(firmId)
   const details = rec(opportunity.detalles)
   const quote = rec(details['presupuesto'])
   const acceptance = rec(details['aceptacion'])
+  const proforma = leerProforma(details)
   const sentVersion = versionEnviada(opportunity.detalles)
   const editor = leerEditor(opportunity.detalles)
   const sent =
@@ -132,24 +142,59 @@ export function QuoteAcceptancePanel({
   const startOnboarding = async (saved = opportunity) => {
     if (onboarding) return
     try {
+      const savedDetails = rec(saved.detalles)
+      const savedQuote = rec(savedDetails['presupuesto'])
+      const savedProforma = leerProforma(savedDetails)
+      const proformaSent = savedProforma?.estado === 'enviada' ? savedProforma.fechaEnvio : null
       await createOnboarding.mutateAsync({
         contactoId: saved.contactoId,
         oportunidadId: saved.id,
         asunto: saved.titulo,
-        presupuestoReferencia: text(quote['referencia']) || saved.referencia,
+        presupuestoReferencia: text(savedQuote['referencia']) || saved.referencia,
         importePresupuesto:
-          typeof quote['importeEnviado'] === 'number'
-            ? quote['importeEnviado']
-            : Number(text(quote['importeEnviado'])) || null,
+          typeof savedQuote['importeEnviado'] === 'number'
+            ? savedQuote['importeEnviado']
+            : Number(text(savedQuote['importeEnviado'])) || null,
         responsableId: saved.asignadoId,
-        proformaEnviada: null,
-        siguienteAccion: 'Preparar y enviar proforma',
+        proformaEnviada: proformaSent,
+        siguienteAccion: proformaSent ? 'Comprobar el pago' : 'Preparar y enviar proforma',
       })
-      toast.success('Onboarding iniciado; la proforma queda pendiente de preparar.')
+      toast.success(
+        proformaSent
+          ? 'Onboarding iniciado con el envío real de la proforma registrado.'
+          : 'Onboarding iniciado; la proforma queda pendiente de preparar.',
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo iniciar el onboarding.'
       if (/already has onboarding/i.test(message)) return
       toast.error(message)
+    }
+  }
+
+  const saveProforma = async (value: Proforma) => {
+    try {
+      if (value.estado === 'enviada' && value.fechaEnvio && onboarding) {
+        await registerProformaSent.mutateAsync({
+          onboardingId: onboarding.id,
+          version: onboarding.version,
+          fecha: value.fechaEnvio,
+        })
+      }
+      await save.mutateAsync({
+        id: opportunity.id,
+        versionEsperada: opportunity.version,
+        detalles: { ...details, proforma: value } as unknown as Json,
+      })
+      toast.success(
+        value.estado === 'enviada'
+          ? 'Envío real de la proforma registrado.'
+          : 'Proforma guardada en el Lead.',
+      )
+      await refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo guardar la proforma.'
+      toast.error(message)
+      throw error
     }
   }
 
@@ -329,6 +374,9 @@ export function QuoteAcceptancePanel({
   }
 
   const pending = !acceptanceDescription && opportunity.fase !== 'lost'
+  const quoteTotals = snapshot ? (snapshot.instantanea?.totales ?? totales(snapshot.lineas)) : null
+  const proformaTotalCents = quoteTotals?.total ?? parseEuros(text(quote['importeEnviado'])) ?? 0
+  const proformaBaseCents = quoteTotals?.base ?? proformaTotalCents
   const copy = (value: string) =>
     void navigator.clipboard.writeText(value).then(
       () => toast.success('Copiado.'),
@@ -419,6 +467,31 @@ export function QuoteAcceptancePanel({
           ) : null}
         </CardContent>
       </Card>
+
+      {acceptanceDescription ? (
+        <ProformaCard
+          proforma={proforma}
+          createInitial={() =>
+            nuevaProforma({
+              presupuestoReferencia:
+                text(quote['referencia']) || sent?.referencia || opportunity.referencia,
+              version: sentVersion,
+              presBaseCents: proformaBaseCents,
+              presTotalCents: proformaTotalCents,
+              hoy: today(),
+              por: userId,
+            })
+          }
+          baseCents={proformaBaseCents}
+          totalCents={proformaTotalCents}
+          quoteSentOn={sent?.envio?.fecha ?? text(quote['fechaEnvio'])}
+          client={snapshot?.instantanea?.cliente ?? cliente}
+          matter={snapshot?.asunto ?? opportunity.titulo}
+          canEdit={canEdit && opportunity.fase === 'won'}
+          busy={save.isPending || registerProformaSent.isPending || onboardings.isPending}
+          onSave={saveProforma}
+        />
+      ) : null}
 
       {pending && canEdit ? (
         <Card>

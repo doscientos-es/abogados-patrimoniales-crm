@@ -48,6 +48,7 @@ import {
   type VersionPresupuesto,
 } from '@/features/crm/application/quote-editor'
 import { documentoHtml, imprimir } from '@/features/crm/ui/quote-document'
+import { QuoteInternalNotes } from '@/features/crm/ui/quote-internal-notes'
 import { useCrearTarea, useTareaPorId, useTareasLead } from '@/features/tareas'
 
 type ClientePresupuesto = { nombre: string; email: string; nif?: string }
@@ -206,34 +207,42 @@ export function QuoteEditor({
 
   if (!editor) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Presupuesto / nota de encargo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-muted-foreground text-sm">
-            Aún no hay borrador. Al crearlo se precargan el asunto y los bloques activos marcados
-            para incluir por defecto.
-          </p>
-          {legacy.length ? (
-            <p className="text-sm">
-              Se conservarán {legacy.length} campos históricos del presupuesto.
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Presupuesto / nota de encargo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              Aún no hay borrador. Al crearlo se precargan el asunto y los bloques activos marcados
+              para incluir por defecto.
             </p>
-          ) : null}
-          <Button
-            disabled={!canEdit || save.isPending || blocksQuery.isPending}
-            onClick={() =>
-              void createDraft().catch((error: unknown) =>
-                toast.error(
-                  error instanceof Error ? error.message : 'No se pudo crear el borrador.',
-                ),
-              )
-            }
-          >
-            Crear borrador de presupuesto
-          </Button>
-        </CardContent>
-      </Card>
+            {legacy.length ? (
+              <p className="text-sm">
+                Se conservarán {legacy.length} campos históricos del presupuesto.
+              </p>
+            ) : null}
+            <Button
+              disabled={!canEdit || save.isPending || blocksQuery.isPending}
+              onClick={() =>
+                void createDraft().catch((error: unknown) =>
+                  toast.error(
+                    error instanceof Error ? error.message : 'No se pudo crear el borrador.',
+                  ),
+                )
+              }
+            >
+              Crear borrador de presupuesto
+            </Button>
+          </CardContent>
+        </Card>
+        <QuoteInternalNotes
+          firmId={firmId}
+          opportunityId={opportunity.id}
+          label={`Presupuesto · ${opportunity.referencia}`}
+          contactId={opportunity.contactoId}
+        />
+      </div>
     )
   }
 
@@ -566,6 +575,13 @@ export function QuoteEditor({
           </div>
         </CardContent>
       </Card>
+
+      <QuoteInternalNotes
+        firmId={firmId}
+        opportunityId={opportunity.id}
+        label={`Presupuesto · ${version.referencia}`}
+        contactId={opportunity.contactoId}
+      />
 
       <div className="flex flex-wrap justify-end gap-2 border-t py-3">
         {canChange ? (

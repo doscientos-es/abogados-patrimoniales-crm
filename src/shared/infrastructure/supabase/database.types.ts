@@ -129,9 +129,21 @@ export type Database = {
       >
       crm_lead_roles: Table<LeadRoleRow, LeadRoleInsert, Partial<LeadRoleInsert> & { id?: string }>
       crm_task_label_assignments: Table<TaskLabelAssignmentRow, TaskLabelAssignmentInsert, never>
-      crm_quote_services: Table<QuoteServiceRow, QuoteServiceInsert, Partial<QuoteServiceInsert> & { id?: string }>
-      crm_engagement_blocks: Table<EngagementBlockRow, EngagementBlockInsert, Partial<EngagementBlockInsert> & { id?: string }>
-      crm_quote_email_templates: Table<QuoteEmailTemplateRow, QuoteEmailTemplateInsert, Partial<QuoteEmailTemplateInsert> & { id?: string }>
+      crm_quote_services: Table<
+        QuoteServiceRow,
+        QuoteServiceInsert,
+        Partial<QuoteServiceInsert> & { id?: string }
+      >
+      crm_engagement_blocks: Table<
+        EngagementBlockRow,
+        EngagementBlockInsert,
+        Partial<EngagementBlockInsert> & { id?: string }
+      >
+      crm_quote_email_templates: Table<
+        QuoteEmailTemplateRow,
+        QuoteEmailTemplateInsert,
+        Partial<QuoteEmailTemplateInsert> & { id?: string }
+      >
     }
     Views: Record<never, never>
     Functions: {
@@ -677,6 +689,14 @@ export type Database = {
           target_onboarding_id: string
           target_expected_version: number
           new_next_action: string
+        }
+        Returns: OnboardingRow
+      }
+      crm_register_onboarding_proforma_sent: {
+        Args: {
+          target_onboarding_id: string
+          target_expected_version: number
+          new_proforma_sent_on: string
         }
         Returns: OnboardingRow
       }

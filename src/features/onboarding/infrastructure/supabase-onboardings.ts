@@ -147,6 +147,30 @@ export function useActualizarSiguienteAccion(firmId: string | undefined) {
   })
 }
 
+export function useRegistrarEnvioProforma(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { onboardingId: string; version: number; fecha: string }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_register_onboarding_proforma_sent', {
+        target_onboarding_id: input.onboardingId,
+        target_expected_version: input.version,
+        new_proforma_sent_on: input.fecha,
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó el onboarding. Recarga antes de guardar.')
+      if (error) throw error
+      return onboardingFromRow(data)
+    },
+    onSuccess: (item) => {
+      if (!firmId) return
+      updateCache(queryClient, firmId, item)
+      void queryClient.invalidateQueries({ queryKey: ['onboarding-events', firmId] })
+    },
+  })
+}
+
 export function useTransicionarOnboarding(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
