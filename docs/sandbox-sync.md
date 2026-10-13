@@ -9,7 +9,7 @@
 - Fecha de revisión: 2026-10-13.
 - Sandbox: `HEAD` local `09c5af049b3f83e40f8feb8ece84a80df54155d9`; ref actualizada `origin/main` `1e243276d2d7037560bbf3de9df445a37d37f196`.
 - Delta auditado inicialmente: `09c5af0..1e24327`; 427 commits, 137 archivos, 16.359 inserciones y 1.701 eliminaciones.
-- Nuestro: `7d8f6352122700eec924dd5f0df49e0250374718`, limpio en su propio `origin/main`. Los dos repositorios no comparten historial.
+- Nuestro: rama de integración `sync/sandbox-1e24327`; los repositorios no comparten historial. El trabajo se valida aquí sin reescribir la rama publicada de Sandbox.
 - Antes de cada tanda, ejecutar `git fetch origin` en Sandbox y fijar el SHA fuente. El fetch actualizó las refs, no los archivos de trabajo.
 
 ## Rutina para cada tanda
@@ -23,19 +23,63 @@
 6. Ejecutar pruebas del flujo, controles de calidad y un recorrido manual por rol. Registrar resultado y actualizar este documento antes de avanzar al siguiente lote.
 7. Marcar la tanda completa solo cuando cada cambio del delta tenga decisión y evidencia; entonces actualizar el SHA de último origen revisado.
 
-## Alcance inicial a revisar
+## Resultado por flujo
 
-| Flujo                              | Lectura inicial en Nuestro                                                                                     | Trabajo de comparación                                                                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Primera cita y cualificación       | Hay ficha de primera cita y cualificación persistida.                                                          | Comparar asistente, participantes, decisiones y transiciones nuevas del fork.                  |
-| Presupuesto, proforma y aceptación | Seguimiento en la ficha del Lead; el análisis de Nuestro identifica que no hay editor completo de presupuesto. | Prioridad alta: versiones, revisión, envío, aceptación y creación transaccional de onboarding. |
-| Onboarding y pago                  | Hay etapas persistidas y transiciones RPC.                                                                     | Comparar justificante/evidencias y apertura a partir de la aceptación.                         |
-| Tareas y avisos                    | Hay espera, revisión, inbox y notificaciones en la app.                                                        | Comparar alcance, historial, asignaciones y migraciones nuevas; evitar duplicar lo existente.  |
-| Atención y traspaso a expediente   | Hay dashboard y controles/alertas de expediente.                                                               | Verificar detecciones, bandeja de traspasos, permisos y transacción de conversión.             |
-| Contactos y documentos             | Hay almacenamiento privado y flujos de documentos.                                                             | Revisar carga nueva, datos fiscales y compatibilidad con almacenamiento y RLS actuales.        |
-| Catálogos, bloques y plantillas    | No se ha confirmado equivalencia funcional.                                                                    | Decidir qué administración necesita persistencia compartida y qué es solo contenido inicial.   |
+| Flujo                           | Decisión y destino en Nuestro                                                                                                                                   | Evidencia principal                                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Contactos y documentos          | Adaptado a almacenamiento privado, NIF opcional por despacho y controles RLS existentes.                                                                        | Migración `20261013130822`; contrato `contact_tax_id_contract.sql`; pruebas focalizadas de documentos. |
+| Tareas y avisos                 | Incorporado: asignación, espera, avisos y refresco en tiempo real usando los RPC y tablas del CRM.                                                              | Migraciones `20261013143515`, `20261013143539`; contratos y tests de tareas.                           |
+| Presupuesto y aceptación        | Editor versionado en la ficha del Lead; revisión, envío externo registrado y aceptación online limitada por token.                                              | `quote-editor.tsx`, `quote-acceptance-panel.tsx`, contrato `quote_acceptance_contract.sql`.            |
+| Proforma y notas privadas       | Proforma ligada al Lead y al onboarding; notas privadas reutilizan notas persistentes y su RLS, marcadas como presupuesto.                                      | `proforma-card.tsx`, `quote-internal-notes.tsx`, contrato `onboarding_proforma_contract.sql`.          |
+| Primera cita y cualificación    | Adaptado en pestaña del Lead, con programación, estados, asistentes, cierre, notas y transcripción persistente; se conservan las decisiones de negocio.         | `lead-first-meeting-tab.tsx`, `first-meeting-assistant.tsx`, `first-meeting-workspace.tsx`.            |
+| Onboarding, pago y expediente   | Adaptado a hitos derivados, evidencia privada y apertura/traspaso con permisos y motivo auditado.                                                               | Migración `20261013154653`; `onboarding-workflow.ts`; tests de onboarding y traspaso.                  |
+| Servicios, bloques y plantillas | Sustituido `localStorage` por catálogos Supabase por despacho, RLS, roles de gestión e importadores validados; editor de presupuesto consume servicios/bloques. | Migraciones `20261013164719`, `20261013165152`; `quote_catalogs_contract.sql`; tests de catálogo.      |
 
-Esta tabla es una clasificación inicial, no una afirmación de paridad completa. La revisión detallada del delta debe añadir el destino, decisión y pruebas por flujo.
+### Inventario de paths sin correspondencia directa (33/137)
+
+La ausencia de un path idéntico no significa que falte el flujo: se registra aquí su decisión, destino y evidencia. Los datos iniciales de catálogo no se han sembrado en producción; cargar precios de Holded o cláusulas legales queda pendiente de autorización explícita.
+
+| Path del delta Sandbox                                                                     | Decisión / destino en Nuestro                                                                                                         |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `.lovable/plan/avisos-al-asignar-responsabilidad-mediante-tareas-revisión-y-2026-10-06.md` | Nota de planificación Lovable; comportamiento adaptado en tareas, avisos y contratos SQL, no se copia como especificación ejecutable. |
+| `.lovable/plan/diagnóstico-notas-del-abogado-en-preparar-presupuesto-sin-ca-2026-10-07.md` | Nota de diagnóstico; resuelto con `QuoteInternalNotes`, persistencia de notas y `quote-internal-notes.test.tsx`.                      |
+| `.lovable/plan/diagnóstico-plantillas-en-enviar-al-cliente-sin-cambios-2026-10-06.md`      | Nota de diagnóstico; textos de plantilla se gestionan en el catálogo persistente de Nuestro.                                          |
+| `bun.lock`                                                                                 | No aplica: Nuestro fija pnpm y conserva `pnpm-lock.yaml`; no se mezclan gestores de paquetes.                                         |
+| `roadmap.md`                                                                               | Roadmap del fork no se copia como plan operativo; la rutina de integración vive en este documento.                                    |
+| `src/assets/logo-abogados-patrimoniales.jpg.asset.json`                                    | Adaptación visual: proforma de Nuestro usa el recurso de marca existente `public/logo-lex.svg`.                                       |
+| `src/assets/qr-abogadospatrimoniales.png.asset.json`                                       | Recurso específico de Sandbox no importado; no afecta a persistencia, cálculo ni descarga de proforma.                                |
+| `src/features/bloques/bloques-encargo.json`                                                | Importable en `/bloques-encargo` a la tabla `crm_engagement_blocks`; no sembrado automáticamente.                                     |
+| `src/features/bloques/bloques-store.ts`                                                    | Sustituido por `supabase-quote-catalogs.ts` y RLS, sin almacenamiento local.                                                          |
+| `src/features/bloques/bloques-store.test.ts`                                               | Contrato adaptado por `quote-catalogs.test.ts` y `quote-catalog-admin.test.tsx`.                                                      |
+| `src/features/crm/application/quote-review-notice.test.ts`                                 | Cobertura integrada en `quote-editor.test.ts` y las pruebas de la revisión ligada a tareas.                                           |
+| `src/features/crm/application/quote-send-date.test.ts`                                     | Cobertura integrada en `quote-send-task.test.ts` y el flujo de envío del editor.                                                      |
+| `src/features/crm/ui/first-meeting-closing.test.tsx`                                       | Cobertura del cierre integrado en `lead-first-meeting-tab.test.tsx`.                                                                  |
+| `src/features/crm/ui/first-meeting-data.tsx`                                               | Su resumen/edición se integra en el formulario completo de `lead-first-meeting-tab.tsx`.                                              |
+| `src/features/crm/ui/first-meeting-workspace.test.tsx`                                     | Workspace adaptado y conectado a tarea persistente; cobertura desde tests de Primera cita y del workspace.                            |
+| `src/features/crm/ui/force-onboarding-button.tsx`                                          | No se porta: Sandbox lo marca como atajo temporal solo de preview; Nuestro conserva los gates reales de aceptación/onboarding.        |
+| `src/features/crm/ui/lead-created-dialog.tsx`                                              | Sustituido por `LeadNextActionDialog`, que crea tarea y marca siguiente acción con reintento sin duplicar.                            |
+| `src/features/crm/ui/no-next-action-warning.tsx`                                           | Aviso adaptado en ficha/dashboard CRM, con acción para definir una tarea real.                                                        |
+| `src/features/crm/ui/quote-acceptance-dialog.test.tsx`                                     | Aceptación adaptada a panel interno y página pública tokenizada; cubierto por el contrato SQL de acceptance links.                    |
+| `src/features/crm/ui/quote-editor-autocreate.test.tsx`                                     | Editor integrado en ficha operativa; cobertura en `quote-editor.test.ts` y `quote-editor.tsx`.                                        |
+| `src/features/onboarding/application/onboarding-columns.test.ts`                           | Columnas derivadas cubiertas en `onboarding-workflow.test.ts` y `onboarding-milestones.test.ts`.                                      |
+| `src/features/onboarding/application/onboarding-milestones.ts`                             | Lógica equivalente consolidada en `onboarding-workflow.ts`, sin duplicar estados.                                                     |
+| `src/features/plantillas/plantillas-presupuesto.ts`                                        | Sustituido por `crm_quote_email_templates`, RLS, RPC para plantilla predeterminada e importador persistente.                          |
+| `src/features/plantillas/plantillas-presupuesto.test.ts`                                   | Contrato adaptado por `quote-catalogs.test.ts` y pruebas del catálogo administrativo.                                                 |
+| `src/features/servicios/servicios-catalogo.json`                                           | Importable como export de Holded desde `/servicios`; no sembrado automáticamente.                                                     |
+| `src/features/servicios/servicios-store.ts`                                                | Sustituido por `crm_quote_services`, RLS por despacho y consumo desde el editor versionado.                                           |
+| `supabase/pending/20261006214500_notify_task_assignment.sql`                               | Promovida/consolidada en `20261013143515_task_assignment_notifications_and_waiting_history.sql`; aplicada en remoto.                  |
+| `supabase/pending/20261008100000_waiting_history_payload.sql`                              | Promovida/consolidada en `20261013143515_task_assignment_notifications_and_waiting_history.sql`; aplicada en remoto.                  |
+| `supabase/pending/20261008120000_quote_acceptance_links.sql`                               | Migración gestionada `20261013143623_quote_acceptance_links.sql`; aplicada en remoto.                                                 |
+| `supabase/pending/20261008150000_casework_on_payment_and_handoffs.sql`                     | Adaptada en `20261013154653_open_case_on_payment_or_authorized_exception.sql`; aplicada en remoto.                                    |
+| `supabase/pending/20261008210000_realtime_boards.sql`                                      | Migración gestionada `20261013143539_realtime_boards.sql`; aplicada en remoto.                                                        |
+| `supabase/pending/20261009090000_onboarding_start_without_provision.sql`                   | Consolidada con apertura autorizada de expediente en `20261013154653`; aplicada en remoto.                                            |
+| `supabase/pending/20261009100000_contacts_tax_id_optional_unique.sql`                      | Adaptada a NIF opcional normalizado en `20261013130822_allow_multiple_contacts_without_tax_id.sql`; aplicada en remoto.               |
+
+Las otras 104 rutas del delta se revisaron dentro de los siete lotes funcionales; no se copiaron en bloque cuando Nuestro ya tenía una implementación mejor alineada con su modelo. El inventario queda ligado al SHA de Sandbox de este documento; al avanzar el fork, repetir la comparación desde ese SHA.
+
+### Migración adicional de proforma
+
+Por autorización expresa, se aplicó al proyecto Supabase `abogados-patrimoniales-crm` la función versionada de registro del envío de proforma. Supabase asignó la versión `20261013185413`, ya alineada con `supabase/migrations/20261013185413_register_onboarding_proforma_sent.sql`. El contrato de seguridad se ejecutó después de aplicar la función y pasó; no se cargaron filas de catálogo.
 
 ## Puertas de calidad
 
