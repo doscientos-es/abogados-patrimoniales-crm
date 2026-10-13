@@ -8,8 +8,11 @@ import {
   CONTACT_DOCUMENT_MAX_BYTES,
   CONTACT_DOCUMENT_MIME,
   uploadContactDocument,
-} from '@/features/contactos/infrastructure/upload-contact-document'
-import { getSupabaseBrowserClient, type ContactDocumentRow } from '@/shared/infrastructure/supabase'
+} from '@/features/contactos'
+import {
+  getSupabaseBrowserClient,
+  type ContactDocumentRow,
+} from '@/shared/infrastructure/supabase'
 
 export const PAYMENT_EVIDENCE_TAG = 'justificante_pago'
 export const onboardingTag = (id: string) => `onboarding:${id}`

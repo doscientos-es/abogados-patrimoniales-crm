@@ -10,6 +10,11 @@ export {
   useOrígenesContacto,
 } from './infrastructure/supabase-contactos'
 export {
+  CONTACT_DOCUMENT_MAX_BYTES,
+  CONTACT_DOCUMENT_MIME,
+  uploadContactDocument,
+} from './infrastructure/upload-contact-document'
+export {
   useContactBankAccounts,
   useReplaceContactBankAccount,
   type ContactBankAccountInput,
