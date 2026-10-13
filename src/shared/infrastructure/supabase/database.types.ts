@@ -127,6 +127,11 @@ export type Database = {
         PracticeAreaInsert,
         Partial<PracticeAreaInsert> & { id?: string }
       >
+      crm_lead_roles: Table<
+        LeadRoleRow,
+        LeadRoleInsert,
+        Partial<LeadRoleInsert> & { id?: string }
+      >
       crm_task_label_assignments: Table<TaskLabelAssignmentRow, TaskLabelAssignmentInsert, never>
     }
     Views: Record<never, never>
@@ -825,6 +830,19 @@ export type PracticeAreaInsert = {
   name: string
   archived?: boolean
   sort_order?: number
+}
+export type LeadRoleRow = {
+  id: string
+  firm_id: string
+  name: string
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+export type LeadRoleInsert = {
+  firm_id: string
+  name: string
+  archived?: boolean
 }
 export type TaskLabelAssignmentRow = { label_id: string; task_id: string; created_at: string }
 export type TaskLabelAssignmentInsert = { label_id: string; task_id: string }
