@@ -833,7 +833,7 @@ function CaseSummary({
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
         <div className="grid content-start gap-4 xl:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle className="text-base">Dónde estamos</CardTitle>
             </CardHeader>
