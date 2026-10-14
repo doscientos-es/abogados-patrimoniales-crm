@@ -196,6 +196,15 @@ export function OnboardingPage() {
     () => new Map((miembros.data ?? []).map((item) => [item.id, item.nombre])),
     [miembros.data],
   )
+  const abogadosPorId = useMemo(
+    () =>
+      new Map(
+        (miembros.data ?? [])
+          .filter((item) => item.rol !== 'paralegal')
+          .map((item) => [item.id, item.nombre]),
+      ),
+    [miembros.data],
+  )
   const oportunidadesDisponiblesParaProforma = useMemo(
     () => leadsDisponiblesParaProforma(oportunidades.data ?? [], onboardings.data ?? []),
     [onboardings.data, oportunidades.data],
@@ -412,6 +421,7 @@ export function OnboardingPage() {
               firmId={firmId}
               eventos={(eventos.data ?? []).filter((event) => event.onboardingId === item.id)}
               actorNames={miembrosPorId}
+              lawyerNames={abogadosPorId}
               contacto={contactosPorId.get(item.contactoId)}
               responsableNombre={
                 item.responsableId ? miembrosPorId.get(item.responsableId) : undefined
@@ -494,6 +504,7 @@ export function OnboardingCard({
   firmId,
   eventos,
   actorNames,
+  lawyerNames,
   contacto,
   responsableNombre,
   pending,
@@ -511,6 +522,7 @@ export function OnboardingCard({
   item: OnboardingPersistido
   eventos: EventoOnboardingPersistido[]
   actorNames: Map<string, string>
+  lawyerNames: Map<string, string>
   contacto?: ContactoPersistido | undefined
   responsableNombre?: string | undefined
   pending: boolean
@@ -729,6 +741,7 @@ export function OnboardingCard({
               onOpen={onOpenCase}
               naturaleza={naturaleza}
               proximaReferencia={proximaReferencia}
+              miembros={lawyerNames}
             />
           )
         ) : null}
@@ -758,6 +771,8 @@ export function OnboardingCard({
                 pending={pending}
                 onOpen={onOpenCase}
                 naturaleza={naturaleza}
+                proximaReferencia={proximaReferencia}
+                miembros={lawyerNames}
                 sinProvision
               />
             ) : null}
@@ -1235,7 +1250,9 @@ function OpenCaseDialog({
   naturaleza = null,
   sinProvision = false,
   proximaReferencia = null,
+  miembros = new Map<string, string>(),
 }: {
+  miembros?: Map<string, string>
   sinProvision?: boolean
   proximaReferencia?: string | null
   naturaleza?: NaturalezaAsunto | null
@@ -1302,7 +1319,7 @@ function OpenCaseDialog({
             ? { motivoNaturaleza: text(form, 'motivoNaturaleza') }
             : {}),
           prioridad: text(form, 'prioridad') as 'low' | 'medium' | 'high',
-          responsableId: item.responsableId,
+          responsableId: text(form, 'responsable') || null,
           siguienteAccion: '',
           dondeEstamos: sinProvision
             ? `Inicio sin provisión autorizado: ${motivo}${detalle ? ` — ${detalle}` : ''}`
@@ -1349,6 +1366,17 @@ function OpenCaseDialog({
         name="titulo"
         defaultValue={item.asunto}
         required
+      />
+      <Field
+        select
+        label="Abogado responsable"
+        name="responsable"
+        defaultValue={item.responsableId ?? ''}
+        options={[
+          ['', 'Sin asignar'],
+          ...[...miembros.entries()].map(([id, name]) => [id, name] as [string, string]),
+        ]}
+        helper="Lleva el asunto desde el inicio. Si más adelante cambia, usa «Traspasar expediente»."
       />
       {naturalezaDefinitiva(naturaleza) ? (
         <p className="text-sm">

@@ -9,7 +9,7 @@
 - Fecha de revisión: 2026-10-13.
 - Sandbox: `HEAD` local `09c5af049b3f83e40f8feb8ece84a80df54155d9`; ref actualizada `origin/main` `1e243276d2d7037560bbf3de9df445a37d37f196`.
 - Delta auditado inicialmente: `09c5af0..1e24327`; 427 commits, 137 archivos, 16.359 inserciones y 1.701 eliminaciones.
-- Nuestro: rama de integración `sync/sandbox-1e24327`; los repositorios no comparten historial. El trabajo se valida aquí sin reescribir la rama publicada de Sandbox.
+- Nuestro: los repositorios no comparten historial. La integración anterior se fusionó en `main` con PR #1 el 14/10/2026 (merge `345652f`).
 - Antes de cada tanda, ejecutar `git fetch origin` en Sandbox y fijar el SHA fuente. El fetch actualizó las refs, no los archivos de trabajo.
 
 ### Revisión del delta del 14/10/2026
@@ -19,8 +19,18 @@
 - Apertura de expediente: adaptado el diálogo simplificado y enlace de expediente. El botón automático al confirmar pago y la autorización con motivo para iniciar sin provisión permanecen intactos.
 - Referencia: se muestra como estimación basada en expedientes cargados y se indica que Supabase asigna la definitiva. La asignación transaccional por despacho sigue en la base de datos.
 - Compatibilidad con la BD: no se copió la transición automática `formal_start_scheduled`/`formal_start_completed` de Sandbox; Nuestro ya permite abrir con pago confirmado o excepción autorizada en `20261013154653_open_case_on_payment_or_authorized_exception.sql`.
-- Revisión histórica: los cambios funcionales anteriores de la rama `sync/sandbox-1e24327` están presentes localmente; no hay PRs abiertos, cerrados o fusionados en GitHub para `abogados-patrimoniales-crm`. La rama contiene 32 commits por encima de `origin/main`; se conserva como rama de integración hasta validar y fusionar explícitamente.
+- Revisión histórica: los cambios funcionales anteriores de la rama `sync/sandbox-1e24327` se fusionaron en `main` mediante PR #1 (`345652f`). El CI del PR detectó fallos de formato y lint en archivos históricos ajenos a la tanda; el typecheck, build y pruebas focalizadas de la tanda pasaron localmente.
 - Los datos iniciales de servicios, bloques o plantillas no se importaron; requieren carga deliberada por el despacho.
+
+### Revisión del delta posterior del 14/10/2026
+
+- SHA revisado: `1e243276d2d7037560bbf3de9df445a37d37f196..a0ad560d576da3c9e1e58057b945e42393e73a0e` (28 commits; 15 paths en el delta acumulado).
+- Catálogos, navegación y referencia estimada: ya cubiertos por PR #1. Sandbox añadió pantallas `localStorage`; Nuestro conserva el administrador conectado a Supabase, sus controles de despacho/RLS y redirects desde las rutas antiguas.
+- Inicio de expediente: añadido selector de abogado al pago confirmado y a la excepción autorizada. La asignación usa `crm_open_onboarding_case`; una migración local nueva valida que el abogado pertenezca al despacho y esté activo.
+- Traspaso: añadido corte de responsabilidad, documento RECIBÍ con confirmación explícita del receptor, persistencia de texto y fecha en el historial versionado del Lead, y cambios de titularidad mediante `crm_update_case` (con evento/versionado). Los antecedentes siguen en el expediente y las notas privadas; no se duplican campos locales de Sandbox.
+- Compatibilidad: los traspasos históricos sin fecha siguen mostrando la fecha de aceptación como fallback. La migración SQL protege la nueva asignación desde onboarding; queda pendiente probar/aplicar el esquema en el proyecto Supabase correcto. No se modificó ninguna base remota.
+- Validación local: typecheck, build y 15 pruebas focalizadas pasan. `pnpm run quality` queda bloqueado por 144 archivos preexistentes con diferencias de formato; la base local no pudo arrancarse porque este equipo no tiene Docker/Podman.
+- Sin datos ficticios ni catálogos importados. Sandbox permanece intacto.
 
 ## Rutina para cada tanda
 

@@ -41,6 +41,10 @@ export type Traspaso = ContenidoTraspaso & {
   aceptadoEn: string | null
   aceptadoPor: string | null
   historial: EventoTraspaso[]
+  /** Fecha de corte de responsabilidad (ISO). Antes: emisor; desde: receptor. */
+  fechaCorte?: string
+  /** Constancia del RECIBÍ firmado por el abogado receptor. */
+  recibi?: string
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -54,7 +58,9 @@ function isTraspaso(value: unknown): value is Traspaso {
   return (
     typeof item['id'] === 'string' &&
     typeof item['expedienteId'] === 'string' &&
-    (item['estado'] === 'pendiente' || item['estado'] === 'aclaracion' || item['estado'] === 'aceptado') &&
+    (item['estado'] === 'pendiente' ||
+      item['estado'] === 'aclaracion' ||
+      item['estado'] === 'aceptado') &&
     typeof item['emisorId'] === 'string' &&
     typeof item['receptorId'] === 'string' &&
     typeof item['creadoEn'] === 'string' &&
@@ -85,10 +91,27 @@ function requerido(value: string, label: string) {
   if (!value.trim()) throw new Error(`${label} es obligatorio.`)
 }
 
-export function validarContenido(content: ContenidoTraspaso) {
-  requerido(content.resumen, 'El resumen del caso')
-  requerido(content.alcance, 'El alcance contratado')
-  requerido(content.actuaciones, 'Las actuaciones siguientes')
+/** El expediente conserva los antecedentes y actuaciones; no se duplican en la entrega formal. */
+export function validarContenido(_content: Partial<ContenidoTraspaso>) {}
+
+export function contenidoVacio(): ContenidoTraspaso {
+  return {
+    resumen: '',
+    antecedentes: '',
+    alcance: '',
+    actuaciones: '',
+    documentos: '',
+    plazos: '',
+    provision: '',
+  }
+}
+
+export function textoRecibi(input: { receptor: string; referencia: string; fechaCorte: string }) {
+  const corte = new Date(input.fechaCorte)
+  const fecha = Number.isNaN(corte.getTime())
+    ? input.fechaCorte
+    : corte.toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })
+  return `RECIBÍ: ${input.receptor} recibe el expediente ${input.referencia} (antecedentes, documentación y estado de actuaciones) y asume su dirección letrada. Fecha de corte: ${fecha}.`
 }
 
 export function crearTraspaso(
@@ -98,6 +121,7 @@ export function crearTraspaso(
     expedienteId: string
     emisorId: string
     receptorId: string
+    fechaCorte?: string
   },
   now: string,
 ) {
@@ -141,7 +165,13 @@ export function editarTraspaso(
   return { traspaso: next, detalles: guardar(details, next) }
 }
 
-export function aceptarTraspaso(details: Json | unknown, item: Traspaso, actorId: string, now: string) {
+export function aceptarTraspaso(
+  details: Json | unknown,
+  item: Traspaso,
+  actorId: string,
+  now: string,
+  recibi?: string,
+) {
   if (actorId !== item.receptorId)
     throw new Error('Solo el abogado destinatario puede aceptar el expediente.')
   if (item.estado === 'aceptado')
@@ -151,7 +181,12 @@ export function aceptarTraspaso(details: Json | unknown, item: Traspaso, actorId
     estado: 'aceptado',
     aceptadoEn: now,
     aceptadoPor: actorId,
-    historial: [...item.historial, { tipo: 'aceptado', por: actorId, en: now }],
+    fechaCorte: item.fechaCorte ?? now,
+    ...(recibi ? { recibi } : {}),
+    historial: [
+      ...item.historial,
+      { tipo: 'aceptado', por: actorId, en: now, ...(recibi ? { motivo: 'RECIBÍ firmado' } : {}) },
+    ],
   }
   return { traspaso: next, detalles: guardar(details, next), yaAceptado: false }
 }
@@ -170,7 +205,10 @@ export function solicitarAclaracion(
   const next: Traspaso = {
     ...item,
     estado: 'aclaracion',
-    historial: [...item.historial, { tipo: 'aclaracion', por: actorId, en: now, motivo: motivo.trim() }],
+    historial: [
+      ...item.historial,
+      { tipo: 'aclaracion', por: actorId, en: now, motivo: motivo.trim() },
+    ],
   }
   return { traspaso: next, detalles: guardar(details, next) }
 }
@@ -215,14 +253,14 @@ export function tareaAsuncion(input: {
     oportunidadId: input.oportunidadId,
     tipo: 'Tarea',
     titulo: TAREA_ASUNCION,
-    descripcion: `Traspaso del expediente ${input.referencia}. Revisa el traspaso y pulsa «Aceptar expediente» o «Solicitar aclaración».\nAbrir: /expedientes/${input.expedienteId}`,
+    descripcion: `Traspaso del expediente ${input.referencia}. Revisa el expediente y firma el RECIBÍ («Firmar RECIBÍ y asumir») o pide aclaración.\nAbrir: /expedientes/${input.expedienteId}`,
     prioridad: 'Alta',
     venceEn: due.toISOString(),
     recordarEn: null,
     clasePlazo: null,
     critico: false,
     asignadoId: input.receptorId,
-    mensajeInicial: `Se te ha traspasado el expediente ${input.referencia}. Abre el expediente y revisa «Traspaso del expediente» para aceptarlo o pedir aclaración.`,
+    mensajeInicial: `Se te ha traspasado el expediente ${input.referencia}. Abre el expediente y firma el RECIBÍ para asumir la responsabilidad o pide aclaración.`,
   }
 }
 
@@ -248,7 +286,10 @@ export function diasHabilesDesde(createdAt: string, now = new Date()) {
 
 export type NivelDemora = 'en_plazo' | 'demorado' | 'escalar'
 
-export function nivelDemora(item: Pick<Traspaso, 'creadoEn' | 'estado'>, now = new Date()): NivelDemora {
+export function nivelDemora(
+  item: Pick<Traspaso, 'creadoEn' | 'estado'>,
+  now = new Date(),
+): NivelDemora {
   if (item.estado === 'aceptado') return 'en_plazo'
   const days = diasHabilesDesde(item.creadoEn, now)
   return days >= 3 ? 'escalar' : days >= 1 ? 'demorado' : 'en_plazo'
