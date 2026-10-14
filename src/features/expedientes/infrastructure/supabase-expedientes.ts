@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type {
   ActuacionPersistida,
@@ -8,7 +8,7 @@ import type {
   LineaPersistida,
   ParticipantePersistido,
   PrioridadExpediente,
-} from "@/features/expedientes/application/case-types";
+} from '@/features/expedientes/application/case-types'
 import {
   getSupabaseBrowserClient,
   type CaseCommunicationInsert,
@@ -20,13 +20,13 @@ import {
   type CaseWorkstreamRow,
   type OpportunityPriority,
   type TaskRow,
-} from "@/shared/infrastructure/supabase";
+} from '@/shared/infrastructure/supabase'
 
 const priorityFromDatabase: Record<OpportunityPriority, PrioridadExpediente> = {
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-};
+  low: 'Baja',
+  medium: 'Media',
+  high: 'Alta',
+}
 
 export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   id: row.id,
@@ -36,7 +36,7 @@ export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   titulo: row.title,
   area: row.area,
   tipoAsunto: row.matter_type,
-  naturaleza: row.nature === "judicial" ? "Judicial" : "Extrajudicial",
+  naturaleza: row.nature === 'judicial' ? 'Judicial' : 'Extrajudicial',
   estadoGeneral: row.general_status,
   fase: row.phase,
   estadoOperativo: row.operational_status,
@@ -49,7 +49,7 @@ export const expedienteFromRow = (row: CaseRow): ExpedientePersistido => ({
   detalles: row.details,
   version: row.version,
   actualizadoEn: row.updated_at,
-});
+})
 
 export const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
   id: row.id,
@@ -68,33 +68,33 @@ export const lineaFromRow = (row: CaseWorkstreamRow): LineaPersistida => ({
   orden: row.sort_order,
   details: row.details,
   version: row.version,
-});
+})
 
 type ActuacionRow = Pick<
   TaskRow,
-  | "id"
-  | "case_id"
-  | "workstream_id"
-  | "relevance"
-  | "title"
-  | "description"
-  | "completed_at"
-  | "updated_at"
-  | "assigned_to"
-  | "completion_result"
-  | "client_visible"
-  | "client_informed"
-  | "version"
->;
+  | 'id'
+  | 'case_id'
+  | 'workstream_id'
+  | 'relevance'
+  | 'title'
+  | 'description'
+  | 'completed_at'
+  | 'updated_at'
+  | 'assigned_to'
+  | 'completion_result'
+  | 'client_visible'
+  | 'client_informed'
+  | 'version'
+>
 
 const actuacionFromRow = (row: ActuacionRow): ActuacionPersistida => {
-  const relevancia = row.relevance === "milestone" ? "milestone" : "activity";
+  const relevancia = row.relevance === 'milestone' ? 'milestone' : 'activity'
   return {
     id: row.id,
-    expedienteId: row.case_id ?? "",
+    expedienteId: row.case_id ?? '',
     lineaId: row.workstream_id,
     relevancia,
-    tipo: relevancia === "milestone" ? "Hito histórico" : "Actuación",
+    tipo: relevancia === 'milestone' ? 'Hito histórico' : 'Actuación',
     titulo: row.title,
     descripcion: row.description,
     ocurridaEn: row.completed_at ?? row.updated_at,
@@ -103,37 +103,59 @@ const actuacionFromRow = (row: ActuacionRow): ActuacionPersistida => {
     visibleCliente: row.client_visible,
     clienteInformado: row.client_informed,
     version: row.version,
-  };
-};
-
-const ACTUACION_COLUMNS =
-  "id, case_id, workstream_id, relevance, title, description, completed_at, updated_at, assigned_to, completion_result, client_visible, client_informed, version";
-
-function actuacionesQuery(firmId: string) {
-  const client = getSupabaseBrowserClient();
-  if (!client) return null;
-  return client
-    .from("crm_tasks")
-    .select(ACTUACION_COLUMNS)
-    .eq("firm_id", firmId)
-    .eq("status", "completed")
-    .in("relevance", ["activity", "milestone"])
-    .not("case_id", "is", null);
+  }
 }
 
-const participanteFromRow = (row: CaseParticipantRow): ParticipantePersistido => ({
+const ACTUACION_COLUMNS =
+  'id, case_id, workstream_id, relevance, title, description, completed_at, updated_at, assigned_to, completion_result, client_visible, client_informed, version'
+
+function actuacionesQuery(firmId: string) {
+  const client = getSupabaseBrowserClient()
+  if (!client) return null
+  return client
+    .from('crm_tasks')
+    .select(ACTUACION_COLUMNS)
+    .eq('firm_id', firmId)
+    .eq('status', 'completed')
+    .in('relevance', ['activity', 'milestone'])
+    .not('case_id', 'is', null)
+}
+
+const participanteFromRow = (
+  row: CaseParticipantRow,
+): ParticipantePersistido & { retirado: boolean } => ({
   id: row.id,
   expedienteId: row.case_id,
   contactoId: row.contact_id,
   nombre: row.name,
   rol: row.role,
   confidencialidad:
-    row.confidentiality === "confidential"
-      ? "Confidencial"
-      : row.confidentiality === "restricted"
-        ? "Restringida"
-        : "Normal",
-});
+    row.confidentiality === 'confidential'
+      ? 'Confidencial'
+      : row.confidentiality === 'restricted'
+        ? 'Restringida'
+        : 'Normal',
+  ...participantDetails(row),
+})
+
+function participantDetails(row: CaseParticipantRow) {
+  const details =
+    row.details && typeof row.details === 'object' && !Array.isArray(row.details)
+      ? (row.details as Record<string, unknown>)
+      : {}
+  const asString = (value: unknown) => (typeof value === 'string' ? value : '')
+  return {
+    ...(asString(details['tipo']) ? { tipo: asString(details['tipo']) } : {}),
+    ref: asString(details['ref']),
+    descripcion: asString(details['descripcion']),
+    orden: typeof details['orden'] === 'number' ? details['orden'] : 0,
+    titularId: asString(details['titularId']) || null,
+    miembroId: asString(details['miembroId']) || null,
+    creadoEn: row.created_at,
+    detalles: row.details,
+    retirado: Boolean(details['retiradoEn']),
+  }
+}
 
 const eventoFromRow = (row: CaseEventRow): EventoExpediente => ({
   id: row.id,
@@ -143,237 +165,240 @@ const eventoFromRow = (row: CaseEventRow): EventoExpediente => ({
   campos: row.changed_fields,
   actorId: row.actor_id,
   creadoEn: row.created_at,
-});
+})
 
 export function useExpedientesPersistentes(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["expedientes", firmId],
+    queryKey: ['expedientes', firmId],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_cases")
-        .select("*")
-        .eq("firm_id", firmId)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data.map(expedienteFromRow);
+        .from('crm_cases')
+        .select('*')
+        .eq('firm_id', firmId)
+        .order('updated_at', { ascending: false })
+      if (error) throw error
+      return data.map(expedienteFromRow)
     },
-  });
+  })
 }
 
 export function useExpedientePersistente(firmId: string | undefined, id: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, id],
+    queryKey: ['expedientes', firmId, id],
     enabled: Boolean(firmId && id),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return null;
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return null
       const { data, error } = await client
-        .from("crm_cases")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return data ? expedienteFromRow(data) : null;
+        .from('crm_cases')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('id', id)
+        .maybeSingle()
+      if (error) throw error
+      return data ? expedienteFromRow(data) : null
     },
-  });
+  })
 }
 
 export function useLineasPersistentes(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "lineas"],
+    queryKey: ['expedientes', firmId, caseId, 'lineas'],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_workstreams")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .order("sort_order");
-      if (error) throw error;
-      return data.map(lineaFromRow);
+        .from('crm_case_workstreams')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('sort_order')
+      if (error) throw error
+      return data.map(lineaFromRow)
     },
-  });
+  })
 }
 
 export function useActuacionesPersistentes(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "actuaciones"],
+    queryKey: ['expedientes', firmId, caseId, 'actuaciones'],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const query = firmId ? actuacionesQuery(firmId) : null;
-      if (!query) return [];
+      const query = firmId ? actuacionesQuery(firmId) : null
+      if (!query) return []
       const { data, error } = await query
-        .eq("case_id", caseId)
-        .order("completed_at", { ascending: false });
-      if (error) throw error;
-      return (data as ActuacionRow[]).map(actuacionFromRow);
+        .eq('case_id', caseId)
+        .order('completed_at', { ascending: false })
+      if (error) throw error
+      return (data as ActuacionRow[]).map(actuacionFromRow)
     },
-  });
+  })
 }
 
 /** Documentos vigentes del expediente, acotados en origen para la ficha operativa. */
 export function useDocumentosExpediente(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "documentos"],
+    queryKey: ['expedientes', firmId, caseId, 'documentos'],
     enabled: Boolean(firmId && caseId),
     queryFn: async (): Promise<CaseDocumentRow[]> => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_documents")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .eq("is_current", true)
-        .is("archived_at", null)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+        .from('crm_case_documents')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .eq('is_current', true)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data
     },
-  });
+  })
 }
 
 /** Actividad transversal para el panel de inicio, limitada a los últimos movimientos del despacho. */
 export function useActuacionesRecientes(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["expedientes", firmId, "actuaciones-recientes"],
+    queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const query = firmId ? actuacionesQuery(firmId) : null;
-      if (!query) return [];
-      const { data, error } = await query.order("completed_at", { ascending: false }).limit(8);
-      if (error) throw error;
-      return (data as ActuacionRow[]).map(actuacionFromRow);
+      const query = firmId ? actuacionesQuery(firmId) : null
+      if (!query) return []
+      const { data, error } = await query.order('completed_at', { ascending: false }).limit(8)
+      if (error) throw error
+      return (data as ActuacionRow[]).map(actuacionFromRow)
     },
-  });
+  })
 }
 
 /** Actividad de los expedientes del despacho para indicadores del tablero de control. */
 export function useActuacionesDespacho(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["expedientes", firmId, "actuaciones"],
+    queryKey: ['expedientes', firmId, 'actuaciones'],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const query = firmId ? actuacionesQuery(firmId) : null;
-      if (!query) return [];
-      const { data, error } = await query.order("completed_at", { ascending: false });
-      if (error) throw error;
-      return (data as ActuacionRow[]).map(actuacionFromRow);
+      const query = firmId ? actuacionesQuery(firmId) : null
+      if (!query) return []
+      const { data, error } = await query.order('completed_at', { ascending: false })
+      if (error) throw error
+      return (data as ActuacionRow[]).map(actuacionFromRow)
     },
-  });
+  })
 }
 
 export function useParticipantesPersistentes(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "participantes"],
+    queryKey: ['expedientes', firmId, caseId, 'participantes'],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_participants")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .order("created_at");
-      if (error) throw error;
-      return data.map(participanteFromRow);
+        .from('crm_case_participants')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('created_at')
+      if (error) throw error
+      return data
+        .map(participanteFromRow)
+        .filter((participant) => !participant.retirado)
+        .map(({ retirado: _retirado, ...participant }) => participant)
     },
-  });
+  })
 }
 
 export function useEventosExpediente(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "eventos"],
+    queryKey: ['expedientes', firmId, caseId, 'eventos'],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_events")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data.map(eventoFromRow);
+        .from('crm_case_events')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data.map(eventoFromRow)
     },
-  });
+  })
 }
 
 export function useComunicacionesExpediente(firmId: string | undefined, caseId: string) {
   return useQuery({
-    queryKey: ["expedientes", firmId, caseId, "comunicaciones"],
+    queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
     enabled: Boolean(firmId && caseId),
     queryFn: async (): Promise<CaseCommunicationRow[]> => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_communications")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .order("occurred_at", { ascending: false });
-      if (error) throw error;
-      return data;
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .order('occurred_at', { ascending: false })
+      if (error) throw error
+      return data
     },
-  });
+  })
 }
 
 export function useComunicacionesExpedientesDespacho(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["expedientes", firmId, "comunicaciones"],
+    queryKey: ['expedientes', firmId, 'comunicaciones'],
     enabled: Boolean(firmId),
     queryFn: async (): Promise<CaseCommunicationRow[]> => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_case_communications")
-        .select("*")
-        .eq("firm_id", firmId)
-        .not("case_id", "is", null)
-        .order("occurred_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return data;
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .not('case_id', 'is', null)
+        .order('occurred_at', { ascending: false })
+        .limit(200)
+      if (error) throw error
+      return data
     },
-  });
+  })
 }
 
 export type RegistrarComunicacionExpedienteInput = Pick<
   CaseCommunicationInsert,
-  | "contact_id"
-  | "direction"
-  | "communication_type"
-  | "channel"
-  | "subject"
-  | "content"
-  | "occurred_at"
->;
+  | 'contact_id'
+  | 'direction'
+  | 'communication_type'
+  | 'channel'
+  | 'subject'
+  | 'content'
+  | 'occurred_at'
+>
 
 export type RegistrarReporteClienteInput = {
-  contactId: string;
-  subject: string;
-  content: string;
-  channel: string;
-  occurredAt?: string;
-  activityIds: Array<{ id: string; version: number }>;
-};
+  contactId: string
+  subject: string
+  content: string
+  channel: string
+  occurredAt?: string
+  activityIds: Array<{ id: string; version: number }>
+}
 
 export function useCrearComunicacionExpediente(firmId: string | undefined, caseId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: RegistrarComunicacionExpedienteInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const content = input.content?.trim() ?? "";
-      if (!content) throw new Error("Escribe el resumen de la comunicación.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const content = input.content?.trim() ?? ''
+      if (!content) throw new Error('Escribe el resumen de la comunicación.')
       const payload: CaseCommunicationInsert = {
         firm_id: firmId,
         case_id: caseId,
@@ -381,59 +406,59 @@ export function useCrearComunicacionExpediente(firmId: string | undefined, caseI
         direction: input.direction,
         communication_type: input.communication_type,
         channel: input.channel,
-        subject: input.subject?.trim() ?? "",
+        subject: input.subject?.trim() ?? '',
         content,
         occurred_at: input.occurred_at || new Date().toISOString(),
-      };
+      }
       const { data, error } = await client
-        .from("crm_case_communications")
+        .from('crm_case_communications')
         .insert(payload)
         .select()
-        .single();
-      if (error) throw error;
-      return data;
+        .single()
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["expedientes", firmId, caseId, "comunicaciones"],
+          queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
         }),
-        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, "comunicaciones"] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'comunicaciones'] }),
       ]).then(() => undefined),
-  });
+  })
 }
 
 export function useActualizarVisibilidadActuacion(firmId: string | undefined, caseId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: ActualizarVisibilidadActuacionInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_set_task_client_visible", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_set_task_client_visible', {
         target_task_id: input.actuacionId,
         target_expected_version: input.versionEsperada,
         target_visible: input.visibleCliente,
-      });
-      if (error?.code === "40001")
-        throw new Error("La actuación cambió en otra sesión. Recarga antes de guardar.");
-      if (error) throw error;
-      return data;
+      })
+      if (error?.code === '40001')
+        throw new Error('La actuación cambió en otra sesión. Recarga antes de guardar.')
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, caseId] }),
-        queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, caseId] }),
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
       ]).then(() => undefined),
-  });
+  })
 }
 
 export function useRegistrarReporteCliente(firmId: string | undefined, caseId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: RegistrarReporteClienteInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_register_client_report", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_register_client_report', {
         target_case_id: caseId,
         target_contact_id: input.contactId,
         report_subject: input.subject,
@@ -441,17 +466,17 @@ export function useRegistrarReporteCliente(firmId: string | undefined, caseId: s
         report_channel: input.channel,
         report_occurred_at: input.occurredAt ?? new Date().toISOString(),
         reported_activities: input.activityIds,
-      });
-      if (error) throw error;
-      return data;
+      })
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, caseId] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, caseId] }),
         queryClient.invalidateQueries({
-          queryKey: ["expedientes", firmId, caseId, "comunicaciones"],
+          queryKey: ['expedientes', firmId, caseId, 'comunicaciones'],
         }),
-        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, "comunicaciones"] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'comunicaciones'] }),
       ]).then(() => undefined),
-  });
+  })
 }

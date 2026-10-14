@@ -62,7 +62,11 @@ export type Database = {
       >
       crm_cases: Table<CaseRow, CaseInsert, Partial<CaseInsert> & { id?: string; version?: number }>
       crm_case_workstreams: Table<CaseWorkstreamRow, CaseWorkstreamInsert, never>
-      crm_case_participants: Table<CaseParticipantRow, CaseParticipantInsert, never>
+      crm_case_participants: Table<
+        CaseParticipantRow,
+        CaseParticipantInsert,
+        Partial<CaseParticipantInsert>
+      >
       crm_case_communications: Table<CaseCommunicationRow, CaseCommunicationInsert>
       crm_case_events: Table<CaseEventRow, never, never>
       crm_case_documents: Table<CaseDocumentRow, never, never>

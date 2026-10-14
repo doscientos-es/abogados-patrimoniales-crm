@@ -1,152 +1,178 @@
-import type { Json } from "@/shared/infrastructure/supabase";
+import type { Json } from '@/shared/infrastructure/supabase'
 
-export type PrioridadExpediente = "Alta" | "Media" | "Baja";
+export type PrioridadExpediente = 'Alta' | 'Media' | 'Baja'
 
 export type ExpedientePersistido = {
-  id: string;
-  referencia: string;
-  contactoPrincipalId: string;
-  oportunidadId: string | null;
-  titulo: string;
-  area: string;
-  tipoAsunto: string;
-  naturaleza: "Judicial" | "Extrajudicial";
-  estadoGeneral: string;
-  fase: string;
-  estadoOperativo: string;
-  prioridad: PrioridadExpediente;
-  asignadoId: string | null;
-  fechaApertura: string;
-  fechaCierre: string | null;
-  proximaAccion: string;
-  dondeEstamos: string;
-  detalles: Json;
-  version: number;
-  actualizadoEn: string;
-};
+  id: string
+  referencia: string
+  contactoPrincipalId: string
+  oportunidadId: string | null
+  titulo: string
+  area: string
+  tipoAsunto: string
+  naturaleza: 'Judicial' | 'Extrajudicial'
+  estadoGeneral: string
+  fase: string
+  estadoOperativo: string
+  prioridad: PrioridadExpediente
+  asignadoId: string | null
+  fechaApertura: string
+  fechaCierre: string | null
+  proximaAccion: string
+  dondeEstamos: string
+  detalles: Json
+  version: number
+  actualizadoEn: string
+}
 
 export type LineaPersistida = {
-  id: string;
-  expedienteId: string;
-  parentId: string | null;
-  titulo: string;
-  tipo: string;
-  descripcion: string;
-  estado: string;
-  prioridad: PrioridadExpediente;
-  asignadoId: string | null;
-  fechaInicio: string | null;
-  fechaObjetivo: string | null;
-  fechaResolucion: string | null;
-  fechaCierre: string | null;
-  orden: number;
-  details: Json;
-  version: number;
-};
+  id: string
+  expedienteId: string
+  parentId: string | null
+  titulo: string
+  tipo: string
+  descripcion: string
+  estado: string
+  prioridad: PrioridadExpediente
+  asignadoId: string | null
+  fechaInicio: string | null
+  fechaObjetivo: string | null
+  fechaResolucion: string | null
+  fechaCierre: string | null
+  orden: number
+  details: Json
+  version: number
+}
 
-export type RelevanciaActuacion = "activity" | "milestone";
+export type RelevanciaActuacion = 'activity' | 'milestone'
 
 /** Tarea completada del expediente marcada como actuación o hito histórico. */
 export type ActuacionPersistida = {
-  id: string;
-  expedienteId: string;
-  lineaId: string | null;
-  relevancia: RelevanciaActuacion;
-  tipo: "Actuación" | "Hito histórico";
-  titulo: string;
-  descripcion: string;
-  ocurridaEn: string;
-  asignadoId: string | null;
-  resultado: string;
-  visibleCliente: boolean;
-  clienteInformado: boolean;
-  version: number;
-};
+  id: string
+  expedienteId: string
+  lineaId: string | null
+  relevancia: RelevanciaActuacion
+  tipo: 'Actuación' | 'Hito histórico'
+  titulo: string
+  descripcion: string
+  ocurridaEn: string
+  asignadoId: string | null
+  resultado: string
+  visibleCliente: boolean
+  clienteInformado: boolean
+  version: number
+}
 
 export type ParticipantePersistido = {
-  id: string;
-  expedienteId: string;
-  contactoId: string | null;
-  nombre: string;
-  rol: string;
-  confidencialidad: "Normal" | "Restringida" | "Confidencial";
-};
+  id: string
+  expedienteId: string
+  contactoId: string | null
+  nombre: string
+  rol: string
+  confidencialidad: 'Normal' | 'Restringida' | 'Confidencial'
+  /** Papel que desempeña en este expediente (modelo de intervinientes). */
+  tipo?: string
+  ref?: string
+  descripcion?: string
+  orden?: number
+  titularId?: string | null
+  miembroId?: string | null
+  creadoEn?: string
+  detalles?: Json | undefined
+}
 
 export type EventoExpediente = {
-  id: string;
-  entidad: "case" | "workstream" | "activity" | "participant";
-  entidadId: string;
-  accion: "created" | "updated" | "deleted";
-  campos: string[];
-  actorId: string | null;
-  creadoEn: string;
-};
+  id: string
+  entidad: 'case' | 'workstream' | 'activity' | 'participant'
+  entidadId: string
+  accion: 'created' | 'updated' | 'deleted'
+  campos: string[]
+  actorId: string | null
+  creadoEn: string
+}
 
 export type CrearExpedienteInput = {
-  contactoPrincipalId: string;
-  oportunidadId?: string | null;
-  titulo: string;
-  area: string;
-  tipoAsunto: string;
-  naturaleza: ExpedientePersistido["naturaleza"];
-  prioridad: PrioridadExpediente;
-  asignadoId: string | null;
-  fechaApertura: string;
-  proximaAccion: string;
-  dondeEstamos: string;
-};
+  contactoPrincipalId: string
+  oportunidadId?: string | null
+  titulo: string
+  area: string
+  tipoAsunto: string
+  naturaleza: ExpedientePersistido['naturaleza']
+  prioridad: PrioridadExpediente
+  asignadoId: string | null
+  fechaApertura: string
+  proximaAccion: string
+  dondeEstamos: string
+}
 
 export type ActualizarExpedienteInput = Omit<
   CrearExpedienteInput,
-  "contactoPrincipalId" | "oportunidadId"
+  'contactoPrincipalId' | 'oportunidadId'
 > & {
-  id: string;
-  versionEsperada: number;
-  estadoGeneral: string;
-  fase: string;
-  estadoOperativo: string;
-  fechaCierre: string | null;
-};
+  id: string
+  versionEsperada: number
+  estadoGeneral: string
+  fase: string
+  estadoOperativo: string
+  fechaCierre: string | null
+}
 
 export type CrearLineaInput = {
-  expedienteId: string;
-  titulo: string;
-  tipo: string;
-  objetivos: string;
-  estado: string;
-  asignadoId: string | null;
-  fechaObjetivo: string | null;
-};
+  expedienteId: string
+  titulo: string
+  tipo: string
+  objetivos: string
+  estado: string
+  asignadoId: string | null
+  fechaObjetivo: string | null
+}
 
 export type ActualizarLineaInput = {
-  id: string;
-  expedienteId: string;
-  versionEsperada: number;
-  parentId: string | null;
-  titulo: string;
-  tipo: string;
-  descripcion: string;
-  estado: string;
-  prioridad: PrioridadExpediente;
-  asignadoId: string | null;
-  fechaInicio: string | null;
-  fechaObjetivo: string | null;
-  fechaResolucion: string | null;
-  fechaCierre: string | null;
-  details: Json;
-};
+  id: string
+  expedienteId: string
+  versionEsperada: number
+  parentId: string | null
+  titulo: string
+  tipo: string
+  descripcion: string
+  estado: string
+  prioridad: PrioridadExpediente
+  asignadoId: string | null
+  fechaInicio: string | null
+  fechaObjetivo: string | null
+  fechaResolucion: string | null
+  fechaCierre: string | null
+  details: Json
+}
 
 export type ActualizarVisibilidadActuacionInput = {
-  actuacionId: string;
-  expedienteId: string;
-  versionEsperada: number;
-  visibleCliente: boolean;
-};
+  actuacionId: string
+  expedienteId: string
+  versionEsperada: number
+  visibleCliente: boolean
+}
 
 export type CrearParticipanteInput = {
-  expedienteId: string;
-  contactoId: string | null;
-  nombre: string;
-  rol: string;
-  confidencialidad: ParticipantePersistido["confidencialidad"];
-};
+  expedienteId: string
+  contactoId: string | null
+  nombre: string
+  rol: string
+  confidencialidad: ParticipantePersistido['confidencialidad']
+  ref?: string
+  descripcion?: string
+  orden?: number
+  titularId?: string | null
+  miembroId?: string | null
+}
+
+export type ActualizarParticipanteInput = {
+  id: string
+  expedienteId: string
+  contactoId: string | null
+  nombre: string
+  rol: string
+  ref: string
+  descripcion: string
+  miembroId: string | null
+  detallesActuales: Json
+}
