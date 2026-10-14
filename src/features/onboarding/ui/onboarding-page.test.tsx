@@ -99,6 +99,7 @@ describe('CreateOnboardingDialog', () => {
         }}
         eventos={[]}
         actorNames={new Map()}
+        lawyerNames={new Map()}
         contacto={{ nombre: 'Ana López' } as never}
         pending={false}
         onAction={vi.fn().mockResolvedValue(undefined)}
@@ -151,6 +152,7 @@ describe('CreateOnboardingDialog', () => {
         }}
         eventos={[]}
         actorNames={new Map()}
+        lawyerNames={new Map()}
         contacto={{ nombre: 'Ana López' } as never}
         pending={false}
         onAction={vi.fn().mockResolvedValue(undefined)}

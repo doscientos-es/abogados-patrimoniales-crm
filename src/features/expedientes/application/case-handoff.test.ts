@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   aceptarTraspaso,
+  contenidoVacio,
   crearTraspaso,
   nivelDemora,
   reasignarTraspaso,
   responsableEfectivo,
   solicitarAclaracion,
   tareaAsuncion,
+  textoRecibi,
   traspasoActivo,
   TAREA_ASUNCION,
 } from './case-handoff'
@@ -85,5 +87,34 @@ describe('case handoff', () => {
         new Date('2026-10-08T10:00:00.000Z'),
       ),
     ).toBe('escalar')
+  })
+})
+
+describe('formal handoff receipt and cutoff date', () => {
+  it('accepts a formal handoff without duplicating case content and preserves the signed receipt', () => {
+    const { traspaso, detalles } = crearTraspaso(
+      {},
+      {
+        ...contenidoVacio(),
+        id: 'handoff-formal',
+        expedienteId: 'case-1',
+        emisorId: 'ana',
+        receptorId: 'luis',
+        fechaCorte: '2026-10-15T08:00:00.000Z',
+      },
+      createdAt,
+    )
+    const receipt = textoRecibi({
+      receptor: 'Luis',
+      referencia: 'AP_1',
+      fechaCorte: '2026-10-15T08:00:00.000Z',
+    })
+    const result = aceptarTraspaso(detalles, traspaso, 'luis', '2026-10-15T09:00:00.000Z', receipt)
+
+    expect(result.traspaso.fechaCorte).toBe('2026-10-15T08:00:00.000Z')
+    expect(result.traspaso.recibi).toBe(receipt)
+    expect(textoRecibi({ receptor: 'Ana', referencia: 'AP_1', fechaCorte: 'x' })).toContain(
+      'RECIBÍ',
+    )
   })
 })

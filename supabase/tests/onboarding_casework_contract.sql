@@ -1,4 +1,4 @@
--- Run after 20261013154653_open_case_on_payment_or_authorized_exception.sql.
+-- Run after 20261014200212_validate_onboarding_case_assignee.sql.
 do $$
 declare
   body text;
@@ -9,6 +9,12 @@ begin
 
   if body not ilike '%current_record.payment_confirmed_on is null%' then
     raise exception 'Case opening must distinguish paid and unpaid onboarding';
+  end if;
+  if body not ilike '%new_assigned_to is not null and not exists%'
+    or body not ilike '%m.status = ''active''%'
+    or body not ilike '%m.firm_id = current_record.firm_id%'
+  then
+    raise exception 'Case assignee must be an active member of the onboarding firm';
   end if;
   if body not ilike '%Inicio sin provisión autorizado:%' then
     raise exception 'Opening without payment must require an auditable reason';
