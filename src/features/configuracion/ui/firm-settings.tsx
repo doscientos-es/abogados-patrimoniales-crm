@@ -7,9 +7,10 @@ import { UserAvatar } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { requestPasswordReset, useActiveMembership, useAuthSession } from '@/features/auth'
+import { QuoteCatalogAdmin } from '@/features/crm/ui/quote-catalog-admin'
 import {
   getSupabaseBrowserClient,
   type FirmSettingsRow,
@@ -95,7 +96,17 @@ function useConfigurationData(firmId: string | undefined, userId: string | undef
   })
 }
 
-export const SETTINGS_TABS = ['firm', 'profile', 'team', 'catalogs', 'drive', 'changelog'] as const
+export const SETTINGS_TABS = [
+  'firm',
+  'profile',
+  'team',
+  'catalogs',
+  'services',
+  'blocks',
+  'quoteTemplates',
+  'drive',
+  'changelog',
+] as const
 
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
@@ -221,12 +232,19 @@ export function FirmSettings({
           { id: 'profile', label: 'Mi perfil' },
           { id: 'team', label: 'Equipo' },
           { id: 'catalogs', label: 'Catálogos' },
+          { id: 'services', label: 'Servicios' },
+          { id: 'blocks', label: 'Bloques del encargo' },
+          { id: 'quoteTemplates', label: 'Plantillas · Presupuestos' },
           { id: 'drive', label: 'Google Drive' },
           { id: 'changelog', label: 'Novedades' },
         ]}
         value={tab}
         onChange={setTab}
       />
+
+      {tab === 'services' ? <QuoteCatalogAdmin kind="services" /> : null}
+      {tab === 'blocks' ? <QuoteCatalogAdmin kind="blocks" /> : null}
+      {tab === 'quoteTemplates' ? <QuoteCatalogAdmin kind="templates" /> : null}
 
       {tab === 'firm' ? (
         <Card className="border-border/80 shadow-sm">

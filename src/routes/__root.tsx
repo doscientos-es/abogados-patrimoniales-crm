@@ -38,9 +38,6 @@ const SECTION_LABELS = [
   ['/comunicaciones', 'Comunicaciones'],
   ['/facturacion', 'Facturación y cobros'],
   ['/configuracion', 'Configuración'],
-  ['/servicios', 'Servicios'],
-  ['/bloques-encargo', 'Bloques del encargo'],
-  ['/plantillas-presupuesto', 'Plantillas de presupuesto'],
   ['/crm', 'CRM'],
 ] as const
 

@@ -245,6 +245,7 @@ export function useAbrirExpedienteDesdeOnboarding(firmId: string | undefined) {
           'Otro usuario modificó el onboarding. Recarga antes de abrir el expediente.',
         )
       if (error) throw error
+      if (!data) throw new Error('No se pudo abrir el expediente.')
       return data
     },
     onSuccess: () => {

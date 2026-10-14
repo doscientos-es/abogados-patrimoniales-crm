@@ -12,6 +12,16 @@
 - Nuestro: rama de integración `sync/sandbox-1e24327`; los repositorios no comparten historial. El trabajo se valida aquí sin reescribir la rama publicada de Sandbox.
 - Antes de cada tanda, ejecutar `git fetch origin` en Sandbox y fijar el SHA fuente. El fetch actualizó las refs, no los archivos de trabajo.
 
+### Revisión del delta del 14/10/2026
+
+- SHA revisado: `1e243276d2d7037560bbf3de9df445a37d37f196..8ee981d` (13 commits, 12 archivos modificados/añadidos).
+- Catálogos: implementados como pestañas de Configuración (`services`, `blocks`, `quoteTemplates`) reutilizando los hooks, RPC y RLS de Nuestro. Las rutas anteriores redirigen a la pestaña correspondiente para conservar enlaces guardados.
+- Apertura de expediente: adaptado el diálogo simplificado y enlace de expediente. El botón automático al confirmar pago y la autorización con motivo para iniciar sin provisión permanecen intactos.
+- Referencia: se muestra como estimación basada en expedientes cargados y se indica que Supabase asigna la definitiva. La asignación transaccional por despacho sigue en la base de datos.
+- Compatibilidad con la BD: no se copió la transición automática `formal_start_scheduled`/`formal_start_completed` de Sandbox; Nuestro ya permite abrir con pago confirmado o excepción autorizada en `20261013154653_open_case_on_payment_or_authorized_exception.sql`.
+- Revisión histórica: los cambios funcionales anteriores de la rama `sync/sandbox-1e24327` están presentes localmente; no hay PRs abiertos, cerrados o fusionados en GitHub para `abogados-patrimoniales-crm`. La rama contiene 32 commits por encima de `origin/main`; se conserva como rama de integración hasta validar y fusionar explícitamente.
+- Los datos iniciales de servicios, bloques o plantillas no se importaron; requieren carga deliberada por el despacho.
+
 ## Rutina para cada tanda
 
 1. Acordar el commit de Sandbox que se quiere incorporar y registrar el último SHA ya revisado/incorporado.

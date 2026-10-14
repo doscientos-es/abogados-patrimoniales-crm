@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   ExternalLink,
   FilePlus2,
+  FolderOpen,
   ListPlus,
   Mail,
   Pencil,
@@ -58,6 +59,7 @@ import {
   naturalezaDefinitiva,
   type NaturalezaAsunto,
 } from '@/features/crm/application/matter-nature'
+import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   COLUMNAS_ONBOARDING,
   COLUMNA_ONBOARDING_LABEL,
@@ -81,6 +83,7 @@ import {
   type EventoOnboardingPersistido,
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
+import { siguienteReferenciaExpediente } from '@/features/onboarding/application/next-case-reference'
 import {
   PaymentEvidenceList,
   PaymentEvidencePicker,
@@ -174,6 +177,11 @@ export function OnboardingPage() {
   const comunicar = useRegistrarComunicacionOnboarding(firmId)
   const crearTarea = useCrearTarea(firmId)
   const abrirExpediente = useAbrirExpedienteDesdeOnboarding(firmId)
+  const expedientes = useExpedientesPersistentes(firmId)
+  const proximaReferencia = useMemo(
+    () => siguienteReferenciaExpediente((expedientes.data ?? []).map((item) => item.referencia)),
+    [expedientes.data],
+  )
   const guardarDetallesLead = useActualizarDetallesOportunidad(firmId)
   const navigate = useNavigate()
   const [vista, setVista] = useState('kanban')
@@ -413,6 +421,7 @@ export function OnboardingPage() {
                   leadsCompletos.data?.find((lead) => lead.id === item.oportunidadId)?.detalles,
                 )?.valor ?? null
               }
+              proximaReferencia={proximaReferencia}
               pending={isPending}
               onAction={(accion, payload) =>
                 transicionar.mutateAsync({ id: item.id, version: item.version, accion, ...payload })
@@ -464,6 +473,7 @@ export function OnboardingPage() {
                   })
                 }
                 const expediente = await abrirExpediente.mutateAsync(caseInput)
+                if (!expediente) throw new Error('No se pudo abrir el expediente.')
                 toast.success('Expediente en CASEWORK. Prepara ahora el traspaso al abogado.')
                 await navigate({
                   to: '/expedientes/$id',
@@ -493,9 +503,11 @@ export function OnboardingCard({
   onTask,
   onOpenCase,
   naturaleza = null,
+  proximaReferencia = null,
 }: {
   firmId?: string | undefined
   naturaleza?: NaturalezaAsunto | null
+  proximaReferencia?: string | null
   item: OnboardingPersistido
   eventos: EventoOnboardingPersistido[]
   actorNames: Map<string, string>
@@ -705,9 +717,9 @@ export function OnboardingCard({
             <Link
               to="/expedientes/$id"
               params={{ id: item.expedienteId }}
-              className={buttonVariants({ className: 'w-full gap-2' })}
+              className={buttonVariants({ variant: 'outline', className: 'w-full gap-2' })}
             >
-              <FilePlus2 className="h-4 w-4" />
+              <FolderOpen className="h-4 w-4" />
               {primary}
             </Link>
           ) : (
@@ -716,6 +728,7 @@ export function OnboardingCard({
               pending={pending}
               onOpen={onOpenCase}
               naturaleza={naturaleza}
+              proximaReferencia={proximaReferencia}
             />
           )
         ) : null}
@@ -1221,8 +1234,10 @@ function OpenCaseDialog({
   onOpen,
   naturaleza = null,
   sinProvision = false,
+  proximaReferencia = null,
 }: {
   sinProvision?: boolean
+  proximaReferencia?: string | null
   naturaleza?: NaturalezaAsunto | null
   item: OnboardingPersistido
   pending: boolean
@@ -1278,8 +1293,8 @@ function OpenCaseDialog({
           onboardingId: item.id,
           versionEsperada: item.version,
           titulo: text(form, 'titulo'),
-          area: text(form, 'area'),
-          tipoAsunto: text(form, 'tipo'),
+          area: '',
+          tipoAsunto: '',
           naturaleza: (naturalezaDefinitiva(naturaleza) ? naturaleza : text(form, 'naturaleza')) as
             | 'judicial'
             | 'extrajudicial',
@@ -1288,13 +1303,24 @@ function OpenCaseDialog({
             : {}),
           prioridad: text(form, 'prioridad') as 'low' | 'medium' | 'high',
           responsableId: item.responsableId,
-          siguienteAccion: text(form, 'accion'),
+          siguienteAccion: '',
           dondeEstamos: sinProvision
             ? `Inicio sin provisión autorizado: ${motivo}${detalle ? ` — ${detalle}` : ''}`
             : 'Pago de la provisión confirmado',
         })
       }}
     >
+      {proximaReferencia ? (
+        <div className="border-primary/40 bg-primary/10 rounded-md border px-3 py-2">
+          <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+            Referencia estimada del expediente
+          </p>
+          <p className="text-primary text-lg font-semibold tracking-wide">{proximaReferencia}</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            La referencia definitiva la asignará Supabase al abrirlo.
+          </p>
+        </div>
+      ) : null}
       <p className="text-muted-foreground text-sm">
         {sinProvision
           ? 'El expediente se abrirá en CASEWORK antes de recibir la provisión. El motivo quedará registrado y la proforma seguirá pendiente de cobro.'
@@ -1318,9 +1344,12 @@ function OpenCaseDialog({
           <Field label="Detalle del motivo" name="detalleSinProvision" />
         </>
       ) : null}
-      <Field label="Asunto" name="titulo" defaultValue={item.asunto} required />
-      <Field label="Área" name="area" />
-      <Field label="Tipo de asunto" name="tipo" defaultValue={item.asunto} />
+      <Field
+        label="Asunto (puedes renombrarlo)"
+        name="titulo"
+        defaultValue={item.asunto}
+        required
+      />
       {naturalezaDefinitiva(naturaleza) ? (
         <p className="text-sm">
           Naturaleza heredada del Lead:{' '}
@@ -1359,7 +1388,6 @@ function OpenCaseDialog({
           ['low', 'Baja'],
         ]}
       />
-      <Field label="Primera acción" name="accion" />
     </SmallDialog>
   )
 }
