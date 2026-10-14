@@ -19,11 +19,11 @@ import {
   Pencil,
   Plus,
   ShieldAlert,
-  UsersRound,
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
+import { TaskCreateDialog, type TaskLabelOption } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,8 +38,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
-
-import { TaskCreateDialog, type TaskLabelOption } from '@/components/tareas/task-create-dialog'
 import type { MiembroDespacho } from '@/features/crm'
 import {
   caseAlerts,
@@ -63,7 +61,11 @@ import type {
 } from '@/features/expedientes/infrastructure/supabase-expedientes'
 import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
-import { useAnadirMensajeTarea, type CrearTareaInput, type TareaPersistida } from '@/features/tareas'
+import {
+  useAnadirMensajeTarea,
+  type CrearTareaInput,
+  type TareaPersistida,
+} from '@/features/tareas'
 import { REMINDER_PREFIX, RemindAssigneeDialog } from '@/features/tareas/ui/task-detail'
 import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infrastructure/supabase'
 
@@ -72,7 +74,7 @@ import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-deta
 export type CaseDetailTab =
   | 'summary'
   | 'workstreams'
-  | 'participants'
+  | 'participants' // alias de URL anterior; ahora se muestra dentro de Resumen
   | 'activities'
   | 'documents'
   | 'economic'
@@ -84,7 +86,6 @@ export type CaseDetailTab =
 const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activity }> = [
   { id: 'summary', label: 'Resumen', Icon: Activity },
   { id: 'workstreams', label: 'Líneas de trabajo', Icon: Layers3 },
-  { id: 'participants', label: 'Intervinientes', Icon: UsersRound },
   { id: 'activities', label: 'Actuaciones', Icon: Activity },
   { id: 'documents', label: 'Documentos', Icon: FileText },
   { id: 'economic', label: 'Económico', Icon: Receipt },
@@ -133,7 +134,9 @@ export function CaseDetail({
   onOpenTask,
   currentUserId,
   onAcknowledgeNote,
+  participantsBox,
 }: {
+  participantsBox?: ReactNode
   currentUserId?: string | undefined
   onAcknowledgeNote?: ((noteId: string) => Promise<unknown>) | undefined
   onOpenTask?: ((taskId: string) => void) | undefined
@@ -182,12 +185,8 @@ export function CaseDetail({
   const deadlines = caseTasks.filter((task) => task.tipo === 'Plazo' || task.venceEn)
   const alerts = caseAlerts(item, tareas, actuaciones)
   const lastMovement = caseLastMovement(item, actuaciones)
-  const principalRegistrado = participantes.some(
-    (participant) => participant.contactoId === item.contactoPrincipalId,
-  )
   const countForTab: Partial<Record<CaseDetailTab, number>> = {
     workstreams: lineas.length,
-    participants: participantes.length + (principalRegistrado ? 0 : 1),
     activities: actuaciones.length,
     documents: documentos.length,
     economic: facturas.length,
@@ -240,6 +239,7 @@ export function CaseDetail({
             actuaciones={actuaciones}
             documentos={documentos}
             onOpenTask={onOpenTask}
+            participantsBox={participantsBox}
           />
         ) : null}
         {activeTab === 'workstreams' ? (
@@ -266,42 +266,6 @@ export function CaseDetail({
             taskLabels={taskLabels}
             onOpenTask={onOpenTask}
           />
-        ) : null}
-        {activeTab === 'participants' ? (
-          <DetailSection
-            title="Intervinientes"
-            subtitle="Personas y entidades vinculadas a este expediente."
-          >
-            <div className="grid gap-3 lg:grid-cols-2">
-              {!principalRegistrado ? (
-                <ParticipantCard
-                  isPrincipal
-                  participant={{
-                    id: `principal-${item.contactoPrincipalId}`,
-                    expedienteId: item.id,
-                    contactoId: item.contactoPrincipalId,
-                    nombre: clienteNombre,
-                    rol: 'Contacto principal',
-                    confidencialidad: 'Normal',
-                  }}
-                />
-              ) : null}
-              {[...participantes]
-                .sort(
-                  (a, b) =>
-                    Number(b.contactoId === item.contactoPrincipalId) -
-                    Number(a.contactoId === item.contactoPrincipalId),
-                )
-                .map((participant) => (
-                  <ParticipantCard
-                    key={participant.id}
-                    participant={participant}
-                    isPrincipal={participant.contactoId === item.contactoPrincipalId}
-                  />
-                ))}
-            </div>
-            {relatedForms.participant}
-          </DetailSection>
         ) : null}
         {activeTab === 'activities' ? (
           <DetailSection
@@ -346,19 +310,23 @@ export function CaseDetail({
             onRegisterClientReport={onRegisterClientReport}
           />
         ) : null}
-        {activeTab === 'tasks' ? (
-          tasksPanel ?? <TasksSection
-            firmId={firmId}
-            tasks={caseTasks}
-            expediente={item}
-            miembros={miembros}
-            labels={taskLabels}
-            pending={taskPending}
-            onCreate={onCreateTask}
-            titleTemplates={taskTitleTemplates}
-          />
+        {activeTab === 'tasks'
+          ? (tasksPanel ?? (
+              <TasksSection
+                firmId={firmId}
+                tasks={caseTasks}
+                expediente={item}
+                miembros={miembros}
+                labels={taskLabels}
+                pending={taskPending}
+                onCreate={onCreateTask}
+                titleTemplates={taskTitleTemplates}
+              />
+            ))
+          : null}
+        {activeTab === 'deadlines' ? (
+          <DeadlinesSection tasks={deadlines} firmId={firmId} miembros={miembros} />
         ) : null}
-        {activeTab === 'deadlines' ? <DeadlinesSection tasks={deadlines} firmId={firmId} miembros={miembros} /> : null}
         {activeTab === 'history' ? (
           <HistorySection events={eventos} memberNames={memberNames} />
         ) : null}
@@ -501,12 +469,13 @@ function CaseNotes({
             return (
               <article
                 key={note.id}
-                className={`nota-tono-expediente w-full max-w-sm rounded-sm border px-3 py-2.5 shadow-md ${note.critical
-                  ? 'nota-sticker nota-sticker-critica'
-                  : note.highlighted
-                    ? 'nota-sticker nota-sticker-destacada'
-                    : ''
-                  }`}
+                className={`nota-tono-expediente w-full max-w-sm rounded-sm border px-3 py-2.5 shadow-md ${
+                  note.critical
+                    ? 'nota-sticker nota-sticker-critica'
+                    : note.highlighted
+                      ? 'nota-sticker nota-sticker-destacada'
+                      : ''
+                }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -841,7 +810,9 @@ function CaseSummary({
   actuaciones,
   documentos,
   onOpenTask,
+  participantsBox,
 }: {
+  participantsBox?: ReactNode
   expediente: ExpedientePersistido
   lastMovement: string
   memberName: string | undefined
@@ -854,62 +825,73 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-      .filter((item): item is string => typeof item === 'string' && item.length > 0)
+        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Dónde estamos</CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-sm leading-6">
-            {expediente.dondeEstamos ||
-              'Actualiza la situación y el siguiente paso para orientar al equipo.'}
-          </CardContent>
-        </Card>
-        <Card className={nextAction ? undefined : 'border-rose-300 bg-rose-50'}>
-          <CardHeader>
-            <CardTitle
-              className={`flex items-center gap-1.5 text-base ${nextAction ? '' : 'text-rose-700'}`}
-            >
-              {nextAction ? null : <AlertTriangle className="size-4" aria-hidden="true" />}
-              Próxima acción
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm font-medium">
-            {nextAction ? (
-              <TaskOpenLink
-                task={nextAction}
-                onOpenTask={onOpenTask}
-                className="hover:text-primary underline-offset-4 hover:underline"
-              />
-            ) : (
-              <span role="alert" className="text-rose-700">
-                Sin siguiente acción: el expediente está parado
-              </span>
-            )}
-          </CardContent>
-        </Card>
-        {initialDocuments.length ? (
-          <Card>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+        <div className="grid content-start gap-4 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Documentación declarada en el Lead</CardTitle>
+              <CardTitle className="text-base">Dónde estamos</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
-                {initialDocuments.map((document) => (
-                  <li key={document}>{document}</li>
-                ))}
-              </ul>
-              <p className="text-muted-foreground mt-3 text-xs">
-                Estos elementos son una declaración inicial; los archivos se incorporan desde el
-                gestor documental para mantener control de versiones y permisos.
-              </p>
+            <CardContent className="text-muted-foreground text-sm leading-6">
+              {expediente.dondeEstamos ||
+                'Actualiza la situación y el siguiente paso para orientar al equipo.'}
             </CardContent>
           </Card>
+          <Card className={nextAction ? undefined : 'border-rose-300 bg-rose-50'}>
+            <CardHeader>
+              <CardTitle
+                className={`flex items-center gap-1.5 text-base ${nextAction ? '' : 'text-rose-700'}`}
+              >
+                {nextAction ? null : <AlertTriangle className="size-4" aria-hidden="true" />}
+                Próxima acción
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm font-medium">
+              {nextAction ? (
+                <TaskOpenLink
+                  task={nextAction}
+                  onOpenTask={onOpenTask}
+                  className="hover:text-primary underline-offset-4 hover:underline"
+                />
+              ) : (
+                <span role="alert" className="text-rose-700">
+                  Sin siguiente acción: el expediente está parado
+                </span>
+              )}
+            </CardContent>
+          </Card>
+          {initialDocuments.length ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Documentación declarada en el Lead</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
+                  {initialDocuments.map((document) => (
+                    <li key={document}>{document}</li>
+                  ))}
+                </ul>
+                <p className="text-muted-foreground mt-3 text-xs">
+                  Estos elementos son una declaración inicial; los archivos se incorporan desde el
+                  gestor documental para mantener control de versiones y permisos.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+        {participantsBox ? (
+          <section
+            id="intervinientes"
+            aria-label="Intervinientes"
+            className="bg-card scroll-mt-4 rounded-lg border p-3"
+          >
+            {participantsBox}
+          </section>
         ) : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -978,7 +960,10 @@ const LINE_STATUS_STYLE: Record<string, { accent: string; badge: string }> = {
   in_analysis: { accent: 'bg-violet-500', badge: 'border-violet-300 bg-violet-50 text-violet-700' },
   in_progress: { accent: 'bg-blue-500', badge: 'border-blue-300 bg-blue-50 text-blue-700' },
   on_hold: { accent: 'bg-amber-500', badge: 'border-amber-300 bg-amber-50 text-amber-700' },
-  resolved: { accent: 'bg-emerald-500', badge: 'border-emerald-300 bg-emerald-50 text-emerald-700' },
+  resolved: {
+    accent: 'bg-emerald-500',
+    badge: 'border-emerald-300 bg-emerald-50 text-emerald-700',
+  },
   closed: { accent: 'bg-emerald-700', badge: 'border-emerald-400 bg-emerald-100 text-emerald-800' },
   discarded: { accent: 'bg-zinc-300', badge: 'border-zinc-300 bg-zinc-100 text-zinc-500' },
 }
@@ -1171,9 +1156,7 @@ function WorkstreamsSection({
       return first.orden - second.orden
     })
   const memberNames = new Map(miembros.map((member) => [member.id, member.nombre]))
-  const hasActiveFilters = [status, assignee, priority].some(
-    (value) => value !== 'all',
-  )
+  const hasActiveFilters = [status, assignee, priority].some((value) => value !== 'all')
   const resetFilters = () => {
     setStatus('all')
     setAssignee('all')
@@ -1187,7 +1170,7 @@ function WorkstreamsSection({
     const ids = manualOrder.map((candidate) => candidate.id)
     const from = ids.indexOf(line.id)
     const to = ids.indexOf(neighbour.id)
-      ;[ids[from], ids[to]] = [ids[to]!, ids[from]!]
+    ;[ids[from], ids[to]] = [ids[to]!, ids[from]!]
     try {
       await onReorder(ids)
     } catch (error) {
@@ -1387,9 +1370,9 @@ function WorkstreamCard({
   const details = lineDetails(line)
   const collaborators = Array.isArray(details['colaboradores'])
     ? details['colaboradores']
-      .map((id) => miembros.find((member) => member.id === id)?.nombre)
-      .filter(Boolean)
-      .join(', ')
+        .map((id) => miembros.find((member) => member.id === id)?.nombre)
+        .filter(Boolean)
+        .join(', ')
     : ''
 
   const patchLine = async (
@@ -1423,7 +1406,9 @@ function WorkstreamCard({
   }
   const markResolved = () => {
     const today = new Date().toISOString().slice(0, 10)
-    const resolvedOn = line.fechaResolucion ?? (line.fechaInicio && line.fechaInicio > today ? line.fechaInicio : today)
+    const resolvedOn =
+      line.fechaResolucion ??
+      (line.fechaInicio && line.fechaInicio > today ? line.fechaInicio : today)
     return patchLine(
       { estado: 'resolved', fechaResolucion: resolvedOn },
       null,
@@ -1431,11 +1416,7 @@ function WorkstreamCard({
     )
   }
   const toggleArchived = () =>
-    patchLine(
-      {},
-      { archivada: !archived },
-      archived ? 'Línea restaurada.' : 'Línea archivada.',
-    )
+    patchLine({}, { archivada: !archived }, archived ? 'Línea restaurada.' : 'Línea archivada.')
 
   const updateNextAction = async (task: TareaPersistida) => {
     const enabled = !task.esSiguienteAccion
@@ -1453,16 +1434,15 @@ function WorkstreamCard({
     <Card
       className={`relative overflow-hidden transition-shadow hover:shadow-md ${archived ? 'opacity-60' : ''}`}
     >
-      <span
-        className={`absolute inset-y-0 left-0 w-1 ${statusStyle.accent}`}
-        aria-hidden="true"
-      />
+      <span className={`absolute inset-y-0 left-0 w-1 ${statusStyle.accent}`} aria-hidden="true" />
       <CardContent className="space-y-3 pt-5 pl-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-base leading-tight font-semibold">{line.titulo}</p>
-              <LineChip className={statusStyle.badge}>{workstreamStatusLabel(line.estado)}</LineChip>
+              <LineChip className={statusStyle.badge}>
+                {workstreamStatusLabel(line.estado)}
+              </LineChip>
               {archived ? <LineChip>Archivada</LineChip> : null}
             </div>
             <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
@@ -1584,7 +1564,9 @@ function WorkstreamCard({
             <LineDetail label="Objetivo" value={detailString(details, 'objetivo')} />
             <LineDetail
               label="Se dará por cumplida cuando"
-              value={detailString(details, 'criterioFinalizacion') || detailString(details, 'indicador')}
+              value={
+                detailString(details, 'criterioFinalizacion') || detailString(details, 'indicador')
+              }
             />
             <LineDetail label="Último avance" value={detailString(details, 'ultimoAvance')} />
             <LineDetail label="Bloqueo" value={detailString(details, 'bloqueo')} />
@@ -1597,14 +1579,16 @@ function WorkstreamCard({
         ) : null}
         <div
           role={!nextAction && !closedStatus ? 'alert' : undefined}
-          className={`rounded-md border px-3 py-2 ${!nextAction && !closedStatus
-            ? 'border-rose-300 bg-rose-50 text-rose-800'
-            : 'border-primary/20 bg-primary/5'
-            }`}
+          className={`rounded-md border px-3 py-2 ${
+            !nextAction && !closedStatus
+              ? 'border-rose-300 bg-rose-50 text-rose-800'
+              : 'border-primary/20 bg-primary/5'
+          }`}
         >
           <p
-            className={`flex items-center gap-1 text-xs font-semibold ${!nextAction && !closedStatus ? 'text-rose-700' : 'text-primary'
-              }`}
+            className={`flex items-center gap-1 text-xs font-semibold ${
+              !nextAction && !closedStatus ? 'text-rose-700' : 'text-primary'
+            }`}
           >
             {!nextAction && !closedStatus ? (
               <AlertTriangle className="size-3.5" aria-hidden="true" />
@@ -1717,29 +1701,6 @@ function TaskOpenLink({
     >
       {task.titulo}
     </Link>
-  )
-}
-
-function ParticipantCard({
-  participant,
-  isPrincipal = false,
-}: {
-  participant: ParticipantePersistido
-  isPrincipal?: boolean
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3 pt-5">
-        <div>
-          <p className="font-medium">{participant.nombre}</p>
-          <p className="text-muted-foreground mt-1 text-sm">{participant.rol}</p>
-        </div>
-        <div className="flex flex-wrap justify-end gap-1.5">
-          {isPrincipal ? <Badge>Contacto principal</Badge> : null}
-          <Badge variant="outline">{participant.confidencialidad}</Badge>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 
@@ -2065,7 +2026,9 @@ function RemindTaskButton({
               toast.success('Recordatorio enviado al responsable.')
             })
             .catch((error: unknown) =>
-              toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recordatorio.'),
+              toast.error(
+                error instanceof Error ? error.message : 'No se pudo enviar el recordatorio.',
+              ),
             )
         }}
       />
@@ -2208,9 +2171,7 @@ function HistorySection({
           {events.map((event) => (
             <article key={event.id} className="border-l-primary/40 border-l-2 pl-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
-                <span className="font-medium">
-                  {eventLabel(event)}
-                </span>
+                <span className="font-medium">{eventLabel(event)}</span>
                 <span className="text-muted-foreground text-xs">
                   {formatDate(event.creadoEn, true)} · Por{' '}
                   {event.actorId
@@ -2260,9 +2221,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-      'es-ES',
-      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-    )
+        'es-ES',
+        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+      )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

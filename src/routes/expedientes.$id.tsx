@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { PendingPanel } from '@/components/common'
 import { TaskWorkspace } from '@/components/tareas/task-workspace'
@@ -22,6 +22,9 @@ import {
   useCrearComunicacionExpediente,
   useCrearLinea,
   useCrearParticipante,
+  useActualizarParticipante,
+  useQuitarParticipante,
+  useReordenarParticipantes,
   useDocumentosExpediente,
   useEventosExpediente,
   useExpedientePersistente,
@@ -29,6 +32,7 @@ import {
   useParticipantesPersistentes,
 } from '@/features/expedientes'
 import { CaseHandoffBar } from '@/features/expedientes/ui/case-handoff'
+import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
 import { useFacturas } from '@/features/facturacion'
 import { useConfirmarLectura, useNotasRemotas } from '@/features/notas'
 import {
@@ -65,7 +69,18 @@ function CaseRoute() {
   const { id } = Route.useParams()
   const { tab, traspaso } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const selectedTab = isCaseTab(tab) ? tab : 'summary'
+  const selectedTab = isCaseTab(tab) && tab !== 'participants' ? tab : 'summary'
+  useEffect(() => {
+    if (tab !== 'participants') return
+    const timer = window.setTimeout(
+      () =>
+        document
+          .getElementById('intervinientes')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      300,
+    )
+    return () => window.clearTimeout(timer)
+  }, [tab])
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const selectTab = (nextTab: string) => {
     void navigate({
@@ -108,6 +123,9 @@ function CaseRoute() {
   })
   const updateCase = useActualizarExpediente(firmId)
   const createParticipant = useCrearParticipante(firmId)
+  const updateParticipant = useActualizarParticipante(firmId)
+  const removeParticipant = useQuitarParticipante(firmId)
+  const reorderParticipants = useReordenarParticipantes(firmId)
   const createWorkstream = useCrearLinea(firmId)
   const updateWorkstream = useActualizarLinea(firmId)
   const reorderWorkstreams = useReordenarLineas(firmId)
@@ -218,6 +236,31 @@ function CaseRoute() {
         onUpdateActivityVisibility={(input) => updateActivityVisibility.mutateAsync(input)}
         reportPending={registerReport.isPending}
         onRegisterClientReport={(input) => registerReport.mutateAsync(input)}
+        participantsBox={
+          <CaseParticipantsPanel
+            firmId={firmId}
+            expedienteId={expediente.id}
+            principalId={expediente.contactoPrincipalId}
+            clienteNombre={
+              contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)
+                ?.nombre ?? 'Cliente'
+            }
+            participantes={participants.data ?? []}
+            contactos={contacts.data ?? []}
+            miembros={members.data ?? []}
+            currentUserId={session.user?.id ?? null}
+            pending={
+              createParticipant.isPending ||
+              updateParticipant.isPending ||
+              removeParticipant.isPending ||
+              reorderParticipants.isPending
+            }
+            onCreateParticipant={(input) => createParticipant.mutateAsync(input)}
+            onUpdateParticipant={(input) => updateParticipant.mutateAsync(input)}
+            onRemoveParticipant={(input) => removeParticipant.mutateAsync(input)}
+            onReorderParticipants={(input) => reorderParticipants.mutateAsync(input)}
+          />
+        }
         editor={
           <CaseEditForm
             expediente={expediente}
@@ -229,17 +272,7 @@ function CaseRoute() {
           />
         }
         relatedForms={{
-          participant: (
-            <CaseRelatedForms
-              expedienteId={expediente.id}
-              contactos={contacts.data ?? []}
-              miembros={members.data ?? []}
-              pending={createParticipant.isPending}
-              section="participant"
-              onParticipant={(input) => createParticipant.mutateAsync(input)}
-              onWorkstream={(input) => createWorkstream.mutateAsync(input)}
-            />
-          ),
+          participant: null,
           workstream: (
             <CaseRelatedForms
               expedienteId={expediente.id}

@@ -32,6 +32,15 @@
 - Validación local: typecheck, build y 15 pruebas focalizadas pasan. `pnpm run quality` queda bloqueado por 144 archivos preexistentes con diferencias de formato; la base local no pudo arrancarse porque este equipo no tiene Docker/Podman.
 - Sin datos ficticios ni catálogos importados. Sandbox permanece intacto.
 
+### Intervinientes de expedientes (14/10/2026)
+
+- SHA revisado: `a0ad560d576da3c9e1e58057b945e42393e73a0e..af1bb94f4da1c79092711e2013ee27fe4141d89b` (12 paths en el delta acumulado).
+- Adaptación: panel agrupado en Resumen, clasificación de roles antiguos, contactos subordinados, alta/edición, reordenación, retirada lógica con conservación del contacto e identificación de posibles duplicados.
+- Persistencia: `crm_case_participants.details` (JSONB) guarda tipo, referencia, descripción, orden, titular/profesional y retirada; se mantiene el `role` existente para compatibilidad. No se requieren columnas ni migraciones nuevas.
+- Entorno real contrastado en `abogados-patrimoniales-crm`: RLS habilitada, política `crm_can_access_case(case_id)` para participantes y trigger `crm_case_participants_event` para dejar eventos. La UI usa el cliente Supabase autenticado y las operaciones existentes quedan acotadas a despacho y expediente.
+- Compatibilidad: `?tab=participants` lleva a Resumen y desplaza al panel; expedientes existentes conservan la clasificación y siguen mostrando contactos ya registrados.
+- Sin escrituras de prueba en producción ni cambios en Sandbox.
+
 ## Rutina para cada tanda
 
 1. Acordar el commit de Sandbox que se quiere incorporar y registrar el último SHA ya revisado/incorporado.
