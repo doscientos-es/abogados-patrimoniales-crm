@@ -9,10 +9,7 @@ import {
   CONTACT_DOCUMENT_MIME,
   uploadContactDocument,
 } from '@/features/contactos'
-import {
-  getSupabaseBrowserClient,
-  type ContactDocumentRow,
-} from '@/shared/infrastructure/supabase'
+import { getSupabaseBrowserClient, type ContactDocumentRow } from '@/shared/infrastructure/supabase'
 
 export const PAYMENT_EVIDENCE_TAG = 'justificante_pago'
 export const onboardingTag = (id: string) => `onboarding:${id}`
@@ -76,7 +73,8 @@ export function PaymentEvidencePicker({
     for (const file of Array.from(list)) {
       const reason = validatePaymentEvidenceFile(file)
       if (reason) toast.error(reason)
-      else if (!next.some((item) => item.name === file.name && item.size === file.size)) next.push(file)
+      else if (!next.some((item) => item.name === file.name && item.size === file.size))
+        next.push(file)
     }
     onChange(next)
   }
@@ -125,7 +123,10 @@ export function PaymentEvidencePicker({
       {files.length ? (
         <ul className="space-y-1">
           {files.map((file, index) => (
-            <li key={`${file.name}-${index}`} className="flex items-center gap-2 rounded border px-2 py-1 text-xs">
+            <li
+              key={`${file.name}-${index}`}
+              className="flex items-center gap-2 rounded border px-2 py-1 text-xs"
+            >
               <Paperclip className="size-3.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1 truncate">{file.name}</span>
               <span className="text-muted-foreground">{fileSize(file.size)}</span>
@@ -193,7 +194,11 @@ export function PaymentEvidenceList({
   opportunityId: string | null
   paymentDate: string | null
 }) {
-  const tag = onboardingId ? onboardingTag(onboardingId) : opportunityId ? leadTag(opportunityId) : null
+  const tag = onboardingId
+    ? onboardingTag(onboardingId)
+    : opportunityId
+      ? leadTag(opportunityId)
+      : null
   const evidence = usePaymentEvidence(firmId, tag)
   const queryClient = useQueryClient()
   const [files, setFiles] = useState<File[]>([])
@@ -225,8 +230,12 @@ export function PaymentEvidenceList({
 
   return (
     <div className="space-y-2" aria-label="Justificantes de pago">
-      <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">Justificantes de pago</p>
-      {evidence.isPending && tag ? <p className="text-muted-foreground text-xs">Cargando…</p> : null}
+      <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+        Justificantes de pago
+      </p>
+      {evidence.isPending && tag ? (
+        <p className="text-muted-foreground text-xs">Cargando…</p>
+      ) : null}
       {evidence.isError ? <p className="text-destructive text-xs">No se pudieron cargar.</p> : null}
       {evidence.data?.length ? (
         <ul className="space-y-1">
@@ -235,7 +244,12 @@ export function PaymentEvidenceList({
               <Paperclip className="size-3.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1 truncate">{document.original_name}</span>
               <span className="text-muted-foreground">{fileSize(document.size_bytes)}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => void downloadEvidence(document)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void downloadEvidence(document)}
+              >
                 <Download className="size-3.5" aria-hidden="true" />
                 <span className="sr-only">Descargar {document.original_name}</span>
               </Button>
@@ -254,10 +268,21 @@ export function PaymentEvidenceList({
         <div className="space-y-2">
           <PaymentEvidencePicker files={files} onChange={setFiles} disabled={busy} />
           <div className="flex gap-2">
-            <Button type="button" size="sm" disabled={busy || !files.length} onClick={() => void save()}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy || !files.length}
+              onClick={() => void save()}
+            >
               {busy ? 'Subiendo…' : 'Guardar justificante'}
             </Button>
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setAdding(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => setAdding(false)}
+            >
               Cancelar
             </Button>
           </div>

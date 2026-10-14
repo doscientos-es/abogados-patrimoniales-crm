@@ -37,9 +37,9 @@ describe('CaseRelatedForms', () => {
     expect((screen.getByLabelText('Tipo (opcional)') as HTMLInputElement).placeholder).toBe(
       'Ej. Análisis jurídico',
     )
-    expect(
-      (screen.getByLabelText('Objetivos (opcional)') as HTMLTextAreaElement).placeholder,
-    ).toBe('Qué se pretende conseguir y qué resultado se espera.')
+    expect((screen.getByLabelText('Objetivos (opcional)') as HTMLTextAreaElement).placeholder).toBe(
+      'Qué se pretende conseguir y qué resultado se espera.',
+    )
   })
 
   it('submits a workstream with objectives and status, without priority', async () => {

@@ -115,10 +115,10 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   title: string
   description: string
 }> = [
-    { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
-    { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
-    { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
-  ]
+  { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
+  { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
+  { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
+]
 
 const TASK_PRIORITY_CLASS: Record<TareaPersistida['prioridad'], string> = {
   Alta: 'border-destructive/30 bg-destructive/10 text-destructive',
@@ -247,9 +247,9 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
       const meetingEndsAt = reunion['endsAt']
       const actualMeetingDuration =
         task.tipo === 'Evento' &&
-          reunion['specialType'] === 'meeting' &&
-          typeof meetingStartsAt === 'string' &&
-          typeof meetingEndsAt === 'string'
+        reunion['specialType'] === 'meeting' &&
+        typeof meetingStartsAt === 'string' &&
+        typeof meetingEndsAt === 'string'
           ? (Date.parse(meetingEndsAt) - Date.parse(meetingStartsAt)) / 60_000
           : Number.NaN
       const displayDuration =
@@ -445,11 +445,11 @@ export function TaskWorkspace({
   const orderedVisible =
     view === 'kanban'
       ? [...visible].sort(
-        (a, b) =>
-          (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-          (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
-          a.titulo.localeCompare(b.titulo, 'es'),
-      )
+          (a, b) =>
+            (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
+              (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+            a.titulo.localeCompare(b.titulo, 'es'),
+        )
       : sortTasksForAgenda(visible)
   const activeFilterCount = [
     typeFilter,
@@ -811,7 +811,7 @@ export function TaskWorkspace({
                 .sort(
                   (a, b) =>
                     (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-                    (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+                      (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
                     a.titulo.localeCompare(b.titulo, 'es'),
                 )
               const taskIdsWithHidden = reorderTasksWithFilteredItems(

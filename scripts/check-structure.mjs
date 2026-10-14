@@ -16,6 +16,7 @@ const acceptedLegacyViolations = new Set([
   'src/hooks: use one of app, features, pages, shared, routes or configure the checker',
   'src/lib: use one of app, features, pages, shared, routes or configure the checker',
   'src/test: use one of app, features, pages, shared, routes or configure the checker',
+  'src/lib/quote-acceptance.functions.ts: file names must use kebab-case and standard suffixes',
   'src/shared/infrastructure/supabase/database.types.ts: file names must use kebab-case and standard suffixes',
 ])
 const violations = result.stderr

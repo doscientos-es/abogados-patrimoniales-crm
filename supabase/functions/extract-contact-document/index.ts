@@ -70,11 +70,18 @@ async function callOpenAI(payload: Record<string, unknown>, apiKey: string) {
         .clone()
         .text()
         .catch(() => '')
-      console.error(`openai_error status=${result.status} attempt=${attempt} ${detail.slice(0, 400)}`)
+      // oxlint-disable-next-line eslint/no-console -- retain failure details in Supabase logs
+      console.error(
+        `openai_error status=${result.status} attempt=${attempt} ${detail.slice(0, 400)}`,
+      )
       const noQuota = result.status === 429 && /quota|billing|insufficient/i.test(detail)
       if (noQuota || (result.status !== 429 && result.status < 500)) return result
     } catch (error) {
-      console.error(`openai_network_error attempt=${attempt}`, error instanceof Error ? error.name : error)
+      // oxlint-disable-next-line eslint/no-console -- retain cleanup errors in Supabase logs
+      console.error(
+        `openai_network_error attempt=${attempt}`,
+        error instanceof Error ? error.name : error,
+      )
     }
     if (attempt < OPENAI_ATTEMPTS) await sleep(1000 * 2 ** (attempt - 1))
   }
@@ -220,7 +227,8 @@ Deno.serve(async (req) => {
       },
       openAiKey,
     )
-    if (!result) return response({ error: 'No se ha podido contactar con OpenAI. Inténtalo de nuevo.' }, 502)
+    if (!result)
+      return response({ error: 'No se ha podido contactar con OpenAI. Inténtalo de nuevo.' }, 502)
     if (!result.ok) {
       if (result.status === 429)
         return response(

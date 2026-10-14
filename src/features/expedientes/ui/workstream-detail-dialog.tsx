@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { Children, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -213,7 +213,8 @@ export function WorkstreamDetailDialog({
   }
   const [section, setSection] = useState<Section>('ficha')
   const [draft, setDraft] = useState(() => draftFromLine(line))
-  const nextAction = tareas.find((task) => task.lineaId === line.id && task.esSiguienteAccion) ?? null
+  const nextAction =
+    tareas.find((task) => task.lineaId === line.id && task.esSiguienteAccion) ?? null
   const childLines = lineas.filter((candidate) => candidate.parentId === line.id)
   const possibleParents = lineas.filter(
     (candidate) => !candidate.parentId && candidate.id !== line.id && childLines.length === 0,
@@ -277,7 +278,12 @@ export function WorkstreamDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" aria-label={`Abrir línea: ${line.titulo}`}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-label={`Abrir línea: ${line.titulo}`}
+        >
           Ver ficha
         </Button>
       </DialogTrigger>
@@ -302,34 +308,109 @@ export function WorkstreamDetailDialog({
         >
           {section === 'ficha' ? (
             <div role="tabpanel" className="grid gap-4 py-4 sm:grid-cols-2">
-              <TextField label="Nombre" value={draft.titulo} onChange={(value) => setDraft({ ...draft, titulo: value })} required />
-              <TextField label="Tipo" value={draft.tipo} onChange={(value) => setDraft({ ...draft, tipo: value })} />
-              <TextField label="Descripción" value={draft.descripcion} onChange={(value) => setDraft({ ...draft, descripcion: value })} multiline />
-              <SelectField label="Estado" value={draft.estado} onChange={(value) => setDraft({ ...draft, estado: value })}>
-                {STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              <TextField
+                label="Nombre"
+                value={draft.titulo}
+                onChange={(value) => setDraft({ ...draft, titulo: value })}
+                required
+              />
+              <TextField
+                label="Tipo"
+                value={draft.tipo}
+                onChange={(value) => setDraft({ ...draft, tipo: value })}
+              />
+              <TextField
+                label="Descripción"
+                value={draft.descripcion}
+                onChange={(value) => setDraft({ ...draft, descripcion: value })}
+                multiline
+              />
+              <SelectField
+                label="Estado"
+                value={draft.estado}
+                onChange={(value) => setDraft({ ...draft, estado: value })}
+              >
+                {STATUS_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </SelectField>
-              <SelectField label="Situación operativa" value={draft.situacion} onChange={(value) => setDraft({ ...draft, situacion: value })}>
+              <SelectField
+                label="Situación operativa"
+                value={draft.situacion}
+                onChange={(value) => setDraft({ ...draft, situacion: value })}
+              >
                 <option>Debemos trabajo</option>
                 <option>Depende de tercero</option>
                 <option>En seguimiento</option>
                 <option>Sin acción inmediata</option>
               </SelectField>
-              <SelectField label="Prioridad" value={draft.prioridad} onChange={(value) => setDraft({ ...draft, prioridad: value as PrioridadExpediente })}>
-                <option>Alta</option><option>Media</option><option>Baja</option>
+              <SelectField
+                label="Prioridad"
+                value={draft.prioridad}
+                onChange={(value) =>
+                  setDraft({ ...draft, prioridad: value as PrioridadExpediente })
+                }
+              >
+                <option>Alta</option>
+                <option>Media</option>
+                <option>Baja</option>
               </SelectField>
-              <SelectField label="Responsable" value={draft.asignadoId} onChange={(value) => setDraft({ ...draft, asignadoId: value })}>
+              <SelectField
+                label="Responsable"
+                value={draft.asignadoId}
+                onChange={(value) => setDraft({ ...draft, asignadoId: value })}
+              >
                 <option value="">Sin asignar</option>
-                {miembros.map((member) => <option key={member.id} value={member.id}>{member.nombre}</option>)}
+                {miembros.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.nombre}
+                  </option>
+                ))}
               </SelectField>
-              <SelectField label="Depende de otra línea" value={draft.parentId} onChange={(value) => setDraft({ ...draft, parentId: value })}>
+              <SelectField
+                label="Depende de otra línea"
+                value={draft.parentId}
+                onChange={(value) => setDraft({ ...draft, parentId: value })}
+              >
                 <option value="">Línea principal</option>
-                {possibleParents.map((parent) => <option key={parent.id} value={parent.id}>Sublínea de {parent.titulo}</option>)}
+                {possibleParents.map((parent) => (
+                  <option key={parent.id} value={parent.id}>
+                    Sublínea de {parent.titulo}
+                  </option>
+                ))}
               </SelectField>
-              {childLines.length ? <p className="text-muted-foreground text-xs sm:col-span-2">Esta línea tiene sublíneas y debe mantenerse como línea principal para conservar la jerarquía de dos niveles.</p> : null}
-              <TextField label="Fecha de apertura" type="date" value={draft.fechaInicio} onChange={(value) => setDraft({ ...draft, fechaInicio: value })} />
-              <TextField label="Fecha objetivo" type="date" value={draft.fechaObjetivo} onChange={(value) => setDraft({ ...draft, fechaObjetivo: value })} />
-              <TextField label="Fecha de resolución" type="date" value={draft.fechaResolucion} onChange={(value) => setDraft({ ...draft, fechaResolucion: value })} />
-              <TextField label="Fecha de cierre" type="date" value={draft.fechaCierre} onChange={(value) => setDraft({ ...draft, fechaCierre: value })} />
+              {childLines.length ? (
+                <p className="text-muted-foreground text-xs sm:col-span-2">
+                  Esta línea tiene sublíneas y debe mantenerse como línea principal para conservar
+                  la jerarquía de dos niveles.
+                </p>
+              ) : null}
+              <TextField
+                label="Fecha de apertura"
+                type="date"
+                value={draft.fechaInicio}
+                onChange={(value) => setDraft({ ...draft, fechaInicio: value })}
+              />
+              <TextField
+                label="Fecha objetivo"
+                type="date"
+                value={draft.fechaObjetivo}
+                onChange={(value) => setDraft({ ...draft, fechaObjetivo: value })}
+              />
+              <TextField
+                label="Fecha de resolución"
+                type="date"
+                value={draft.fechaResolucion}
+                onChange={(value) => setDraft({ ...draft, fechaResolucion: value })}
+              />
+              <TextField
+                label="Fecha de cierre"
+                type="date"
+                value={draft.fechaCierre}
+                onChange={(value) => setDraft({ ...draft, fechaCierre: value })}
+              />
               <fieldset className="space-y-2 sm:col-span-2">
                 <legend className="text-sm font-medium">Colaboradores</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -338,12 +419,14 @@ export function WorkstreamDetailDialog({
                       <input
                         type="checkbox"
                         checked={draft.colaboradores.includes(member.id)}
-                        onChange={(event) => setDraft((current) => ({
-                          ...current,
-                          colaboradores: event.target.checked
-                            ? [...current.colaboradores, member.id]
-                            : current.colaboradores.filter((id) => id !== member.id),
-                        }))}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            colaboradores: event.target.checked
+                              ? [...current.colaboradores, member.id]
+                              : current.colaboradores.filter((id) => id !== member.id),
+                          }))
+                        }
                       />
                       {member.nombre}
                     </label>
@@ -363,7 +446,10 @@ export function WorkstreamDetailDialog({
           ) : null}
           {section === 'estrategia' ? (
             <div role="tabpanel" className="grid gap-4 py-4 sm:grid-cols-2">
-              <p className="text-muted-foreground text-sm sm:col-span-2">Campos opcionales para estructurar el enfoque jurídico y las decisiones de esta línea.</p>
+              <p className="text-muted-foreground text-sm sm:col-span-2">
+                Campos opcionales para estructurar el enfoque jurídico y las decisiones de esta
+                línea.
+              </p>
               {STRATEGY_FIELDS.map((field) => (
                 <TextField
                   key={field.key}
@@ -377,18 +463,50 @@ export function WorkstreamDetailDialog({
           ) : null}
           {section === 'seguimiento' ? (
             <div role="tabpanel" className="grid gap-4 py-4 sm:grid-cols-2">
-              <TextField label="Último avance" value={draft.texto.ultimoAvance} onChange={(value) => setText('ultimoAvance', value)} multiline />
-              <TextField label="Fecha del último avance" type="date" value={draft.fechaUltimoAvance} onChange={(value) => setDraft({ ...draft, fechaUltimoAvance: value })} />
-              <TextField label="Bloqueo o dependencia" value={draft.texto.bloqueo} onChange={(value) => setText('bloqueo', value)} multiline />
-              <TextField label="Persona o entidad de la que depende" value={draft.texto.dependeDe} onChange={(value) => setText('dependeDe', value)} />
-              <TextField label="Próxima revisión" type="date" value={draft.fechaSeguimiento} onChange={(value) => setDraft({ ...draft, fechaSeguimiento: value })} />
+              <TextField
+                label="Último avance"
+                value={draft.texto.ultimoAvance}
+                onChange={(value) => setText('ultimoAvance', value)}
+                multiline
+              />
+              <TextField
+                label="Fecha del último avance"
+                type="date"
+                value={draft.fechaUltimoAvance}
+                onChange={(value) => setDraft({ ...draft, fechaUltimoAvance: value })}
+              />
+              <TextField
+                label="Bloqueo o dependencia"
+                value={draft.texto.bloqueo}
+                onChange={(value) => setText('bloqueo', value)}
+                multiline
+              />
+              <TextField
+                label="Persona o entidad de la que depende"
+                value={draft.texto.dependeDe}
+                onChange={(value) => setText('dependeDe', value)}
+              />
+              <TextField
+                label="Próxima revisión"
+                type="date"
+                value={draft.fechaSeguimiento}
+                onChange={(value) => setDraft({ ...draft, fechaSeguimiento: value })}
+              />
               <div className="border-primary/20 bg-primary/5 rounded-md border p-3 sm:col-span-2">
                 <p className="text-sm font-medium">Siguiente acción</p>
                 {nextAction ? (
-                  <Link className="mt-1 inline-block text-sm underline-offset-4 hover:underline" to="/tareas/$taskId" params={{ taskId: nextAction.id }}>
+                  <Link
+                    className="mt-1 inline-block text-sm underline-offset-4 hover:underline"
+                    to="/tareas/$taskId"
+                    params={{ taskId: nextAction.id }}
+                  >
                     {nextAction.titulo}
                   </Link>
-                ) : <p className="text-muted-foreground mt-1 text-sm">Todavía no hay una tarea marcada como siguiente acción.</p>}
+                ) : (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Todavía no hay una tarea marcada como siguiente acción.
+                  </p>
+                )}
               </div>
             </div>
           ) : null}
@@ -396,19 +514,52 @@ export function WorkstreamDetailDialog({
             <div role="tabpanel" className="space-y-5 py-4">
               <LinkedGroup title={`Tareas · ${lineTasks.length}`} empty="No hay tareas vinculadas.">
                 {lineTasks.map((task) => (
-                  <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <Link to="/tareas/$taskId" params={{ taskId: task.id }} className="underline-offset-4 hover:underline">{task.titulo}</Link>
-                    <span className="text-muted-foreground">{task.estado} · {task.prioridad}</span>
+                  <div
+                    key={task.id}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                  >
+                    <Link
+                      to="/tareas/$taskId"
+                      params={{ taskId: task.id }}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {task.titulo}
+                    </Link>
+                    <span className="text-muted-foreground">
+                      {task.estado} · {task.prioridad}
+                    </span>
                   </div>
                 ))}
               </LinkedGroup>
-              <LinkedGroup title={`Actuaciones · ${lineActivities.length}`} empty="No hay actuaciones vinculadas.">
-                {lineActivities.map((activity) => <p key={activity.id} className="text-sm">{activity.titulo}<span className="text-muted-foreground"> · {formatDate(activity.ocurridaEn)}</span></p>)}
+              <LinkedGroup
+                title={`Actuaciones · ${lineActivities.length}`}
+                empty="No hay actuaciones vinculadas."
+              >
+                {lineActivities.map((activity) => (
+                  <p key={activity.id} className="text-sm">
+                    {activity.titulo}
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · {formatDate(activity.ocurridaEn)}
+                    </span>
+                  </p>
+                ))}
               </LinkedGroup>
-              <LinkedGroup title={`Documentos · ${lineDocuments.length}`} empty="No hay documentos vinculados.">
+              <LinkedGroup
+                title={`Documentos · ${lineDocuments.length}`}
+                empty="No hay documentos vinculados."
+              >
                 {lineDocuments.map((document) => (
-                  <Link key={document.id} to="/documentos" className="block text-sm underline-offset-4 hover:underline">
-                    {document.original_name}<span className="text-muted-foreground"> · {document.category || 'Documento'}</span>
+                  <Link
+                    key={document.id}
+                    to="/documentos"
+                    className="block text-sm underline-offset-4 hover:underline"
+                  >
+                    {document.original_name}
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · {document.category || 'Documento'}
+                    </span>
                   </Link>
                 ))}
               </LinkedGroup>
@@ -416,20 +567,35 @@ export function WorkstreamDetailDialog({
           ) : null}
           {section === 'historico' ? (
             <div role="tabpanel" className="space-y-3 py-4">
-              {lineEvents.length ? lineEvents.map((event) => (
-                <div key={event.id} className="border-border border-b pb-3 text-sm last:border-0">
-                  <p className="font-medium">{event.accion === 'created' ? 'Línea creada' : event.accion === 'deleted' ? 'Línea eliminada' : 'Línea actualizada'}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {formatDate(event.creadoEn)} · {memberNames.get(event.actorId ?? '') ?? 'Usuario'}
-                    {event.campos.length ? ` · ${event.campos.join(', ')}` : ''}
-                  </p>
-                </div>
-              )) : <p className="text-muted-foreground text-sm">Sin movimientos registrados todavía.</p>}
+              {lineEvents.length ? (
+                lineEvents.map((event) => (
+                  <div key={event.id} className="border-border border-b pb-3 text-sm last:border-0">
+                    <p className="font-medium">
+                      {event.accion === 'created'
+                        ? 'Línea creada'
+                        : event.accion === 'deleted'
+                          ? 'Línea eliminada'
+                          : 'Línea actualizada'}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {formatDate(event.creadoEn)} ·{' '}
+                      {memberNames.get(event.actorId ?? '') ?? 'Usuario'}
+                      {event.campos.length ? ` · ${event.campos.join(', ')}` : ''}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Sin movimientos registrados todavía.
+                </p>
+              )}
             </div>
           ) : null}
         </form>
         <DialogFooter className="bg-background/80 supports-[backdrop-filter]:bg-background/60 mx-0 mb-0 rounded-b-xl border-t px-4 py-3 backdrop-blur-md">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cerrar
+          </Button>
           {section !== 'vinculados' && section !== 'historico' ? (
             <Button type="submit" form={`workstream-form-${line.id}`} disabled={pending}>
               Guardar cambios
@@ -459,11 +625,26 @@ function TextField({
   const id = `line-field-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   return (
     <label className="block space-y-1.5 text-sm">
-      <span className="font-medium">{label}{required ? ' *' : ''}</span>
+      <span className="font-medium">
+        {label}
+        {required ? ' *' : ''}
+      </span>
       {multiline ? (
-        <Textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} rows={3} required={required} />
+        <Textarea
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          rows={3}
+          required={required}
+        />
       ) : (
-        <Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required={required}
+        />
       )}
     </label>
   )
@@ -484,19 +665,36 @@ function SelectField({
   return (
     <label className="block space-y-1.5 text-sm">
       <span className="font-medium">{label}</span>
-      <select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="border-input bg-background h-10 w-full rounded-md border px-3">
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-input bg-background h-10 w-full rounded-md border px-3"
+      >
         {children}
       </select>
     </label>
   )
 }
 
-function LinkedGroup({ title, empty, children }: { title: string; empty: string; children: ReactNode }) {
+function LinkedGroup({
+  title,
+  empty,
+  children,
+}: {
+  title: string
+  empty: string
+  children: ReactNode
+}) {
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">{title}</h3>
       <div className="space-y-2">
-        {Children.count(children) ? children : <p className="text-muted-foreground text-sm">{empty}</p>}
+        {Children.count(children) ? (
+          children
+        ) : (
+          <p className="text-muted-foreground text-sm">{empty}</p>
+        )}
       </div>
     </section>
   )

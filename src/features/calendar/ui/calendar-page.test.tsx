@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -44,6 +45,9 @@ vi.mock('@/features/crm', () => ({
     isError: false,
   }),
 }))
+vi.mock('@/shared/infrastructure/supabase', () => ({
+  getSupabaseBrowserClient: () => null,
+}))
 
 import { CalendarPage } from './calendar-page'
 
@@ -55,11 +59,20 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+function renderCalendar() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CalendarPage />
+    </QueryClientProvider>,
+  )
+}
+
 describe('CalendarPage', () => {
   it('opens an event form with the clicked day preselected', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 8, 14, 12))
-    render(<CalendarPage />)
+    renderCalendar()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Crear evento el 14 de septiembre de 2026' }),
@@ -72,6 +85,8 @@ describe('CalendarPage', () => {
   })
 
   it('opens event details, updates the shared task date, and links to its task detail', async () => {
+    const eventDate = new Date()
+    eventDate.setHours(10, 0, 0, 0)
     mocks.tasks = [
       {
         id: 'task-1',
@@ -80,7 +95,7 @@ describe('CalendarPage', () => {
         tipo: 'Evento',
         estado: 'Pendiente',
         prioridad: 'Alta',
-        venceEn: '2026-09-14T10:00:00',
+        venceEn: eventDate.toISOString(),
         recordarEn: null,
         expedienteId: 'case-1',
         oportunidadId: null,
@@ -97,7 +112,7 @@ describe('CalendarPage', () => {
         version: 1,
       },
     ]
-    render(<CalendarPage />)
+    renderCalendar()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalles de Reunión con cliente' }))
 
@@ -106,16 +121,18 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('link', { name: 'Abrir tarea' }).getAttribute('href')).toBe(
       '/tareas/$taskId',
     )
-    fireEvent.change(screen.getByLabelText('Fecha y hora'), {
-      target: { value: '2026-09-15T11:30' },
-    })
+    const updatedDate = new Date(eventDate)
+    updatedDate.setDate(updatedDate.getDate() + 1)
+    updatedDate.setHours(11, 30, 0, 0)
+    const localValue = `${updatedDate.getFullYear()}-${String(updatedDate.getMonth() + 1).padStart(2, '0')}-${String(updatedDate.getDate()).padStart(2, '0')}T11:30`
+    fireEvent.change(screen.getByLabelText('Fecha y hora'), { target: { value: localValue } })
     fireEvent.click(screen.getByRole('button', { name: 'Actualizar fecha' }))
 
     await expect.poll(() => mocks.editTask.mock.calls.length).toBe(1)
     expect(mocks.editTask).toHaveBeenCalledWith(
       expect.objectContaining({
         task: expect.objectContaining({ id: 'task-1' }),
-        venceEn: new Date('2026-09-15T11:30').toISOString(),
+        venceEn: updatedDate.toISOString(),
       }),
     )
   })

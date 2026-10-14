@@ -36,7 +36,8 @@ export function MeetingAttendeesPicker({
   const [userIds, setUserIds] = useState(defaultUserIds)
   const contactOptions: Option[] = (contacts.data ?? []).map((contact) => ({
     id: contact.id,
-    nombre: [contact.nombre, contact.apellidos].filter(Boolean).join(' ') || contact.razonSocial || '',
+    nombre:
+      [contact.nombre, contact.apellidos].filter(Boolean).join(' ') || contact.razonSocial || '',
     detalle: contact.relacion,
   }))
   const caseContacts = caseParticipants.filter((person) => person.contactoId)
@@ -78,7 +79,9 @@ export function MeetingAttendeesPicker({
                   )}
                 >
                   {person.nombre}
-                  {person.rol ? <span className="tracking-wide uppercase"> · {person.rol}</span> : null}
+                  {person.rol ? (
+                    <span className="tracking-wide uppercase"> · {person.rol}</span>
+                  ) : null}
                 </button>
               )
             })}
@@ -90,7 +93,9 @@ export function MeetingAttendeesPicker({
           <SearchMenu
             label="Añadir contacto"
             icon={<UserPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
-            itemIcon={<Building2 className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />}
+            itemIcon={
+              <Building2 className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
+            }
             placeholder="Buscar en contactos…"
             options={contactOptions}
             selected={contactIds}
@@ -109,23 +114,39 @@ export function MeetingAttendeesPicker({
       {contactIds.length || userIds.length ? (
         <div className="flex flex-wrap gap-1.5">
           {contactIds.map((id) => (
-            <Chip key={`c-${id}`} name={contactName(id)} tag="Contacto" disabled={disabled}
-              onRemove={() => setContactIds((list) => list.filter((item) => item !== id))} />
+            <Chip
+              key={`c-${id}`}
+              name={contactName(id)}
+              tag="Contacto"
+              disabled={disabled}
+              onRemove={() => setContactIds((list) => list.filter((item) => item !== id))}
+            />
           ))}
           {userIds.map((id) => (
-            <Chip key={`u-${id}`} name={members.find((member) => member.id === id)?.nombre ?? 'Compañero'}
-              tag="Despacho" disabled={disabled}
-              onRemove={() => setUserIds((list) => list.filter((item) => item !== id))} />
+            <Chip
+              key={`u-${id}`}
+              name={members.find((member) => member.id === id)?.nombre ?? 'Compañero'}
+              tag="Despacho"
+              disabled={disabled}
+              onRemove={() => setUserIds((list) => list.filter((item) => item !== id))}
+            />
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-[11px]">Todavía no hay participantes seleccionados.</p>
+        <p className="text-muted-foreground text-[11px]">
+          Todavía no hay participantes seleccionados.
+        </p>
       )}
     </div>
   )
 }
 
-function Chip({ name, tag, disabled, onRemove }: {
+function Chip({
+  name,
+  tag,
+  disabled,
+  onRemove,
+}: {
   name: string
   tag: string
   disabled: boolean
@@ -136,8 +157,12 @@ function Chip({ name, tag, disabled, onRemove }: {
       {name}
       <span className="text-muted-foreground text-[10px] tracking-wide uppercase">{tag}</span>
       {disabled ? null : (
-        <button type="button" aria-label={`Quitar ${name}`} onClick={onRemove}
-          className="text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          aria-label={`Quitar ${name}`}
+          onClick={onRemove}
+          className="text-muted-foreground hover:text-foreground"
+        >
           <X className="h-3 w-3" aria-hidden="true" />
         </button>
       )}
@@ -145,7 +170,15 @@ function Chip({ name, tag, disabled, onRemove }: {
   )
 }
 
-function SearchMenu({ label, icon, itemIcon, placeholder, options, selected, onPick }: {
+function SearchMenu({
+  label,
+  icon,
+  itemIcon,
+  placeholder,
+  options,
+  selected,
+  onPick,
+}: {
   label: string
   icon: ReactNode
   itemIcon?: ReactNode
@@ -175,8 +208,13 @@ function SearchMenu({ label, icon, itemIcon, placeholder, options, selected, onP
   )
   return (
     <div ref={ref} className="relative">
-      <Button type="button" size="sm" variant="outline" aria-expanded={open}
-        onClick={() => (open ? close() : setOpen(true))}>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      >
         {icon}
         {label}
       </Button>

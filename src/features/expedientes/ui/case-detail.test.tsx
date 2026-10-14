@@ -1,6 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -59,24 +59,26 @@ function renderDetail(
       <CaseDetail
         expediente={expediente}
         lineas={
-          [{
-            id: 'line-1',
-            expedienteId: 'case-1',
-            parentId: null,
-            titulo: 'Due diligence',
-            tipo: 'Análisis jurídico',
-            descripcion: 'Revisión de la operación',
-            estado: 'En curso',
-            prioridad: 'Alta',
-            asignadoId: 'member-1',
-            fechaInicio: '2026-08-05',
-            fechaObjetivo: '2026-09-05',
-            fechaResolucion: null,
-            fechaCierre: null,
-            orden: 0,
-            details: { colaboradores: [], customField: 'conservar' },
-            version: 2,
-          }] as never
+          [
+            {
+              id: 'line-1',
+              expedienteId: 'case-1',
+              parentId: null,
+              titulo: 'Due diligence',
+              tipo: 'Análisis jurídico',
+              descripcion: 'Revisión de la operación',
+              estado: 'En curso',
+              prioridad: 'Alta',
+              asignadoId: 'member-1',
+              fechaInicio: '2026-08-05',
+              fechaObjetivo: '2026-09-05',
+              fechaResolucion: null,
+              fechaCierre: null,
+              orden: 0,
+              details: { colaboradores: [], customField: 'conservar' },
+              version: 2,
+            },
+          ] as never
         }
         actuaciones={
           [
@@ -87,16 +89,6 @@ function renderDetail(
               tipo: 'Análisis',
               ocurridaEn: '2026-08-07T09:15:00Z',
               relevancia: 'activity',
-            },
-          ] as never
-        }
-        participantes={
-          [
-            {
-              id: 'participant-1',
-              nombre: 'Inversiones Torrelodones',
-              rol: 'Cliente',
-              confidencialidad: 'Normal',
             },
           ] as never
         }
@@ -292,17 +284,19 @@ describe('CaseDetail', () => {
     })
 
     await expect.poll(() => onUpdateWorkstream.mock.calls.length).toBe(1)
-    expect(onUpdateWorkstream).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'line-1',
-      expedienteId: 'case-1',
-      versionEsperada: 2,
-      titulo: 'Due diligence legal',
-      estado: 'in_progress',
-      details: expect.objectContaining({
-        tesis: 'Priorizar el análisis de cargas.',
-        customField: 'conservar',
+    expect(onUpdateWorkstream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'line-1',
+        expedienteId: 'case-1',
+        versionEsperada: 2,
+        titulo: 'Due diligence legal',
+        estado: 'in_progress',
+        details: expect.objectContaining({
+          tesis: 'Priorizar el análisis de cargas.',
+          customField: 'conservar',
+        }),
       }),
-    }))
+    )
   })
 
   it('marks and unmarks the next action from its workstream', async () => {

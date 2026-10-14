@@ -5,13 +5,13 @@ import {
   SelectList,
   SelectTrigger,
   SelectValue,
-} from "@doscientos/ui";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ContactRound, Pencil } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+} from '@doscientos/ui'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ContactRound, Pencil } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
 
-import { PendingPanel } from "@/components/common";
+import { PendingPanel } from '@/components/common'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -20,16 +20,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { UnderlineTabs } from "@/components/ui/underline-tabs";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useActiveMembership, useAuthSession } from "@/features/auth";
-import { useContacto, type ContactoPersistido } from "@/features/contactos";
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { UnderlineTabs } from '@/components/ui/underline-tabs'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContacto, type ContactoPersistido } from '@/features/contactos'
 import {
   OPPORTUNITY_STAGE_LABELS,
   OPPORTUNITY_TRANSITIONS,
@@ -41,114 +41,114 @@ import {
   useOportunidad,
   useTransicionarOportunidad,
   type OportunidadPersistida,
-} from "@/features/crm";
-import { LeadFirstMeetingTab } from "@/features/crm/ui/lead-first-meeting-tab";
-import { LeadParticipants } from "@/features/crm/ui/lead-participants";
-import { LeadQualificationDecision } from "@/features/crm/ui/lead-qualification-decision";
-import { LeadWorkspace } from "@/features/crm/ui/lead-workspace";
-import { QuoteAcceptancePanel } from "@/features/crm/ui/quote-acceptance-panel";
-import { QuoteEditor } from "@/features/crm/ui/quote-editor";
-import { QuoteSendPanel } from "@/features/crm/ui/quote-send-panel";
-import { useTareasPersistentes, type TareaPersistida } from "@/features/tareas";
-import type { OpportunityStage } from "@/shared/infrastructure/supabase";
+} from '@/features/crm'
+import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
+import { LeadParticipants } from '@/features/crm/ui/lead-participants'
+import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
+import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
+import { QuoteAcceptancePanel } from '@/features/crm/ui/quote-acceptance-panel'
+import { QuoteEditor } from '@/features/crm/ui/quote-editor'
+import { QuoteSendPanel } from '@/features/crm/ui/quote-send-panel'
+import { useTareasPersistentes, type TareaPersistida } from '@/features/tareas'
+import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
 export type LeadDetailTab =
-  | "summary"
-  | "contact"
-  | "qualification"
-  | "firstMeeting"
-  | "tasks"
-  | "communications"
-  | "notes"
-  | "quote"
-  | "sent"
-  | "documents"
-  | "acceptance"
-  | "history";
+  | 'summary'
+  | 'contact'
+  | 'qualification'
+  | 'firstMeeting'
+  | 'tasks'
+  | 'communications'
+  | 'notes'
+  | 'quote'
+  | 'sent'
+  | 'documents'
+  | 'acceptance'
+  | 'history'
 
 function isLeadTab(tab: unknown): tab is LeadDetailTab {
   if (typeof tab !== 'string') return false
   if (tab === 'engagement') return true
-  return LEAD_DETAIL_TABS.some((candidate) => candidate.id === tab);
+  return LEAD_DETAIL_TABS.some((candidate) => candidate.id === tab)
 }
 
 const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
-  { id: "summary", label: "Resumen" },
-  { id: "contact", label: "Contacto" },
-  { id: "qualification", label: "Cualificación" },
-  { id: "firstMeeting", label: "Primera cita" },
-  { id: "tasks", label: "Tareas" },
-  { id: "communications", label: "Comunicaciones" },
-  { id: "notes", label: "Notas internas" },
-  { id: "quote", label: "Presupuesto" },
-  { id: "sent", label: "Enviar al cliente" },
-  { id: "documents", label: "Documentación" },
-  { id: "acceptance", label: "Validación y aceptación" },
-  { id: "history", label: "Histórico" },
-];
+  { id: 'summary', label: 'Resumen' },
+  { id: 'contact', label: 'Contacto' },
+  { id: 'qualification', label: 'Cualificación' },
+  { id: 'firstMeeting', label: 'Primera cita' },
+  { id: 'tasks', label: 'Tareas' },
+  { id: 'communications', label: 'Comunicaciones' },
+  { id: 'notes', label: 'Notas internas' },
+  { id: 'quote', label: 'Presupuesto' },
+  { id: 'sent', label: 'Enviar al cliente' },
+  { id: 'documents', label: 'Documentación' },
+  { id: 'acceptance', label: 'Validación y aceptación' },
+  { id: 'history', label: 'Histórico' },
+]
 
-export const Route = createFileRoute("/oportunidades/$id")({
+export const Route = createFileRoute('/oportunidades/$id')({
   validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => {
-    const tab = search["tab"];
+    const tab = search['tab']
     if (tab === 'engagement') return { tab: 'acceptance' }
-    return isLeadTab(tab) ? { tab } : {};
+    return isLeadTab(tab) ? { tab } : {}
   },
   head: () => ({
     meta: [
-      { title: "Ficha de Lead — LEX" },
+      { title: 'Ficha de Lead — LEX' },
       {
-        name: "description",
+        name: 'description',
         content:
-          "Ficha completa del Lead: situación comercial, contacto, cualificación, tareas, notas internas e historial.",
+          'Ficha completa del Lead: situación comercial, contacto, cualificación, tareas, notas internas e historial.',
       },
-      { property: "og:title", content: "Ficha de Lead — LEX" },
+      { property: 'og:title', content: 'Ficha de Lead — LEX' },
       {
-        property: "og:description",
-        content: "Toda la información comercial del Lead en una única pantalla.",
+        property: 'og:description',
+        content: 'Toda la información comercial del Lead en una única pantalla.',
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
     ],
   }),
   component: FichaOportunidadPage,
-});
+})
 
 function FichaOportunidadPage() {
-  const { id } = Route.useParams();
-  const { tab } = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const session = useAuthSession();
+  const { id } = Route.useParams()
+  const { tab } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const session = useAuthSession()
   const membership = useActiveMembership(
-    session.status === "signed-in" ? session.user.id : undefined,
-  );
-  const firmId = membership.data?.firmId;
-  const oportunidad = useOportunidad(firmId, id);
-  const contacto = useContacto(firmId, oportunidad.data?.contactoId ?? "");
-  const miembros = useMiembrosDespacho(firmId);
-  const tareas = useTareasPersistentes(firmId);
-  const actualizar = useActualizarOportunidad(firmId);
-  const activeTab: LeadDetailTab = isLeadTab(tab) ? tab : "summary";
+    session.status === 'signed-in' ? session.user.id : undefined,
+  )
+  const firmId = membership.data?.firmId
+  const oportunidad = useOportunidad(firmId, id)
+  const contacto = useContacto(firmId, oportunidad.data?.contactoId ?? '')
+  const miembros = useMiembrosDespacho(firmId)
+  const tareas = useTareasPersistentes(firmId)
+  const actualizar = useActualizarOportunidad(firmId)
+  const activeTab: LeadDetailTab = isLeadTab(tab) ? tab : 'summary'
   const setActiveTab = (nextTab: LeadDetailTab) => {
-    void navigate({ search: { tab: nextTab === "summary" ? undefined : nextTab } });
-  };
+    void navigate({ search: { tab: nextTab === 'summary' ? undefined : nextTab } })
+  }
 
-  if (session.status === "loading") {
+  if (session.status === 'loading') {
     return (
       <PendingPanel title="Cargando oportunidad" description="Consultando el despacho activo…" />
-    );
+    )
   }
-  if (session.status !== "signed-in") {
+  if (session.status !== 'signed-in') {
     return (
       <PendingPanel
         title="Oportunidad no disponible"
         description="Necesitas una sesión y una membresía activa en un despacho."
       />
-    );
+    )
   }
   if (membership.isPending) {
     return (
       <PendingPanel title="Cargando oportunidad" description="Consultando el despacho activo…" />
-    );
+    )
   }
   if (!membership.data) {
     return (
@@ -156,12 +156,12 @@ function FichaOportunidadPage() {
         title="Oportunidad no disponible"
         description="Tu usuario no tiene una membresía activa en un despacho."
       />
-    );
+    )
   }
   if (oportunidad.isPending) {
     return (
       <PendingPanel title="Cargando oportunidad" description="Consultando datos del despacho…" />
-    );
+    )
   }
   if (oportunidad.isError) {
     return (
@@ -169,7 +169,7 @@ function FichaOportunidadPage() {
         title="No se pudo cargar la oportunidad"
         description={oportunidad.error.message}
       />
-    );
+    )
   }
   if (!oportunidad.data) {
     return (
@@ -177,18 +177,18 @@ function FichaOportunidadPage() {
         title="Oportunidad no encontrada"
         description="No existe o no pertenece al despacho activo."
       />
-    );
+    )
   }
 
-  const data = oportunidad.data;
-  const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id);
-  const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre;
+  const data = oportunidad.data
+  const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id)
+  const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
   return (
     <main className="mx-auto max-w-[1400px] space-y-6 p-6">
       <Link
         to="/oportunidades"
-        search={{ vista: "todas", abrir: "" }}
-        className={buttonVariants({ variant: "ghost", size: "sm" })}
+        search={{ vista: 'todas', abrir: '' }}
+        className={buttonVariants({ variant: 'ghost', size: 'sm' })}
       >
         <ArrowLeft className="h-4 w-4" /> Volver a Leads
       </Link>
@@ -202,14 +202,14 @@ function FichaOportunidadPage() {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold text-balance">{data.titulo}</h1>
             <p className="text-muted-foreground mt-1">
-              {data.descripcion || "Sin descripción registrada."}
+              {data.descripcion || 'Sin descripción registrada.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
               to="/contactos/$id"
               params={{ id: data.contactoId }}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
             >
               <ContactRound className="h-4 w-4" aria-hidden="true" />
               Ver contacto
@@ -228,7 +228,7 @@ function FichaOportunidadPage() {
         role="tabpanel"
         aria-labelledby={`lead-detail-tab-${activeTab}`}
       >
-        {activeTab === "summary" ? (
+        {activeTab === 'summary' ? (
           <div className="space-y-4">
             <LeadSummary
               opportunity={data}
@@ -240,13 +240,13 @@ function FichaOportunidadPage() {
             {data.archivadoEn ? (
               <Card>
                 <CardContent className="pt-6 text-sm">
-                  Lead archivado: {data.motivoArchivo || "sin motivo visible"}.
+                  Lead archivado: {data.motivoArchivo || 'sin motivo visible'}.
                 </CardContent>
               </Card>
             ) : null}
           </div>
         ) : null}
-        {activeTab === "contact" ? (
+        {activeTab === 'contact' ? (
           <div className="space-y-4">
             <LeadContactOverview
               opportunity={data}
@@ -268,47 +268,47 @@ function FichaOportunidadPage() {
                 miembrosError={miembros.isError}
                 guardando={actualizar.isPending}
                 onSave={async (input) => {
-                  await actualizar.mutateAsync(input);
+                  await actualizar.mutateAsync(input)
                 }}
               />
             ) : null}
           </div>
         ) : null}
-        {activeTab === "qualification" ? (
+        {activeTab === 'qualification' ? (
           <LeadQualificationDecision
             opportunity={data}
             firmId={membership.data.firmId}
             canEdit={!data.archivadoEn}
             currentUserId={session.user.id}
-            onOpenQuote={() => setActiveTab("quote")}
+            onOpenQuote={() => setActiveTab('quote')}
           />
         ) : null}
-        {activeTab === "firstMeeting" ? (
+        {activeTab === 'firstMeeting' ? (
           <LeadFirstMeetingTab
             opportunity={data}
             firmId={membership.data.firmId}
             members={miembros.data ?? []}
             contactId={data.contactoId}
-            contactName={contacto.data ? contactName(contacto.data) : "Contacto principal"}
+            contactName={contacto.data ? contactName(contacto.data) : 'Contacto principal'}
             currentUserId={session.user.id}
             memberRole={membership.data.role}
             canEdit={!data.archivadoEn}
           />
         ) : null}
-        {activeTab === "tasks" ? (
+        {activeTab === 'tasks' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="tasks" />
         ) : null}
-        {activeTab === "communications" ? (
+        {activeTab === 'communications' ? (
           <LeadWorkspace
             opportunity={data}
             firmId={membership.data.firmId}
             section="communications"
           />
         ) : null}
-        {activeTab === "notes" ? (
+        {activeTab === 'notes' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="notes" />
         ) : null}
-        {activeTab === "quote" ? (
+        {activeTab === 'quote' ? (
           <QuoteEditor
             firmId={membership.data.firmId}
             opportunity={data}
@@ -320,7 +320,7 @@ function FichaOportunidadPage() {
             canEdit={!data.archivadoEn}
           />
         ) : null}
-        {activeTab === "sent" ? (
+        {activeTab === 'sent' ? (
           <QuoteSendPanel
             firmId={membership.data.firmId}
             opportunity={data}
@@ -332,13 +332,13 @@ function FichaOportunidadPage() {
             canEdit={!data.archivadoEn}
           />
         ) : null}
-        {activeTab === "documents" ? (
+        {activeTab === 'documents' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="documents" />
         ) : null}
-        {activeTab === "history" ? (
+        {activeTab === 'history' ? (
           <LeadWorkspace opportunity={data} firmId={membership.data.firmId} section="history" />
         ) : null}
-        {activeTab === "acceptance" ? (
+        {activeTab === 'acceptance' ? (
           <div className="space-y-4">
             <QuoteAcceptancePanel
               firmId={membership.data.firmId}
@@ -370,7 +370,7 @@ function FichaOportunidadPage() {
         ) : null}
       </section>
     </main>
-  );
+  )
 }
 
 export function LeadHeroActions({
@@ -378,41 +378,41 @@ export function LeadHeroActions({
   canEdit = true,
   onSelectTab,
 }: {
-  stage: OpportunityStage;
-  canEdit?: boolean;
-  onSelectTab: (tab: LeadDetailTab) => void;
+  stage: OpportunityStage
+  canEdit?: boolean
+  onSelectTab: (tab: LeadDetailTab) => void
 }) {
-  const canAdvance = OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== "lost");
+  const canAdvance = OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== 'lost')
 
   return (
     <div className="flex shrink-0 flex-wrap gap-2" aria-label="Acciones rápidas del Lead">
       {canEdit ? (
         <a
           href="#lead-edit-details"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          onClick={() => onSelectTab("contact")}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          onClick={() => onSelectTab('contact')}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" /> Editar Lead
         </a>
       ) : null}
       <a
         href="#lead-new-task"
-        className={buttonVariants({ size: "sm" })}
-        onClick={() => onSelectTab("tasks")}
+        className={buttonVariants({ size: 'sm' })}
+        onClick={() => onSelectTab('tasks')}
       >
         <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Añadir tarea
       </a>
       {canAdvance ? (
         <a
           href="#lead-stage-transition"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          onClick={() => onSelectTab("acceptance")}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          onClick={() => onSelectTab('acceptance')}
         >
           Avanzar de fase <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </a>
       ) : null}
     </div>
-  );
+  )
 }
 
 export function LeadSummary({
@@ -422,14 +422,14 @@ export function LeadSummary({
   tasksLoading,
   onSelectTab,
 }: {
-  opportunity: OportunidadPersistida;
-  memberName: string | undefined;
-  tasks: TareaPersistida[];
-  tasksLoading: boolean;
-  onSelectTab: (tab: LeadDetailTab) => void;
+  opportunity: OportunidadPersistida
+  memberName: string | undefined
+  tasks: TareaPersistida[]
+  tasksLoading: boolean
+  onSelectTab: (tab: LeadDetailTab) => void
 }) {
-  const nextAction = nextLeadAction(tasks);
-  const firstMeeting = firstMeetingStatus(tasks);
+  const nextAction = nextLeadAction(tasks)
+  const firstMeeting = firstMeetingStatus(tasks)
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -440,8 +440,8 @@ export function LeadSummary({
         <CardContent>
           <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
             <LeadSummaryItem label="Fase" value={OPPORTUNITY_STAGE_LABELS[opportunity.fase]} />
-            <LeadSummaryItem label="Responsable" value={memberName ?? "Sin asignar"} />
-            <LeadSummaryItem label="Origen" value={opportunity.origen || "No indicado"} />
+            <LeadSummaryItem label="Responsable" value={memberName ?? 'Sin asignar'} />
+            <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
             <LeadSummaryItem label="Tiempo como Lead" value={leadAge(opportunity.creada)} />
           </dl>
         </CardContent>
@@ -457,7 +457,7 @@ export function LeadSummary({
             <div>
               <p className="text-sm font-medium">{nextAction.titulo}</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                {nextAction.venceEn ? `Prevista: ${formatDate(nextAction.venceEn)}` : "Sin fecha"}
+                {nextAction.venceEn ? `Prevista: ${formatDate(nextAction.venceEn)}` : 'Sin fecha'}
               </p>
             </div>
           ) : (
@@ -468,10 +468,10 @@ export function LeadSummary({
           </p>
           <a
             href="#lead-new-task"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-            onClick={() => onSelectTab("tasks")}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            onClick={() => onSelectTab('tasks')}
           >
-            {nextAction ? "Gestionar tareas" : "Definir siguiente acción"}
+            {nextAction ? 'Gestionar tareas' : 'Definir siguiente acción'}
           </a>
           <p className="text-muted-foreground text-xs">
             La siguiente acción se gestiona como una tarea ordinaria del módulo de Tareas.
@@ -491,7 +491,7 @@ export function LeadSummary({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 export function LeadContactOverview({
@@ -499,15 +499,15 @@ export function LeadContactOverview({
   contact,
   contactLoading,
 }: {
-  opportunity: OportunidadPersistida;
-  contact: ContactoPersistido | null | undefined;
-  contactLoading: boolean;
+  opportunity: OportunidadPersistida
+  contact: ContactoPersistido | null | undefined
+  contactLoading: boolean
 }) {
-  const details = asRecord(opportunity.detalles);
-  const initial = asRecord(details["informacionInicial"]);
-  const role = asRecord(details["rolContacto"]);
-  const urgency = asRecord(details["urgencia"]);
-  const participants = participantNames(details["otrosIntervinientes"]);
+  const details = asRecord(opportunity.detalles)
+  const initial = asRecord(details['informacionInicial'])
+  const role = asRecord(details['rolContacto'])
+  const urgency = asRecord(details['urgencia'])
+  const participants = participantNames(details['otrosIntervinientes'])
 
   return (
     <>
@@ -519,14 +519,14 @@ export function LeadContactOverview({
           <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
             <LeadSummaryItem
               label="Contacto principal"
-              value={contactLoading ? "Cargando contacto…" : contactName(contact)}
+              value={contactLoading ? 'Cargando contacto…' : contactName(contact)}
             />
-            <LeadSummaryItem label="Origen" value={opportunity.origen || "No indicado"} />
+            <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
             <LeadSummaryItem label="Fecha de entrada" value={formatDate(opportunity.creada)} />
             <LeadSummaryItem label="Tiempo como Lead" value={leadAgeShort(opportunity.creada)} />
             <LeadSummaryItem
               label="Rol en el Lead"
-              value={textValue(role["rol"]) || "Sin indicar"}
+              value={textValue(role['rol']) || 'Sin indicar'}
             />
           </dl>
           <div className="border-border border-t pt-5">
@@ -553,19 +553,19 @@ export function LeadContactOverview({
           <dl className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
             <LeadSummaryItem
               label="¿Qué ha ocurrido?"
-              value={textValue(initial["queHaOcurrido"]) || "—"}
+              value={textValue(initial['queHaOcurrido']) || '—'}
             />
             <LeadSummaryItem
               label="¿Qué solicita?"
-              value={textValue(initial["queSolicita"]) || "—"}
+              value={textValue(initial['queSolicita']) || '—'}
             />
             <LeadSummaryItem
               label="¿Existe algún procedimiento ya iniciado?"
-              value={textValue(initial["procedimientoIniciado"]) || "—"}
+              value={textValue(initial['procedimientoIniciado']) || '—'}
             />
             <LeadSummaryItem
               label="¿Qué documentación manifiesta tener?"
-              value={textValue(initial["documentacionManifestada"]) || "—"}
+              value={textValue(initial['documentacionManifestada']) || '—'}
             />
             <LeadSummaryItem
               label="¿Existe alguna urgencia o fecha relevante?"
@@ -575,7 +575,7 @@ export function LeadContactOverview({
         </CardContent>
       </Card>
     </>
-  );
+  )
 }
 
 function LeadSummaryItem({ label, value }: { label: string; value: string }) {
@@ -584,15 +584,15 @@ function LeadSummaryItem({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
       <dd className="mt-1 text-sm font-medium">{value}</dd>
     </div>
-  );
+  )
 }
 
 export function LeadDetailTabs({
   activeTab,
   onSelectTab,
 }: {
-  activeTab: LeadDetailTab;
-  onSelectTab: (tab: LeadDetailTab) => void;
+  activeTab: LeadDetailTab
+  onSelectTab: (tab: LeadDetailTab) => void
 }) {
   return (
     <UnderlineTabs
@@ -602,7 +602,7 @@ export function LeadDetailTabs({
       value={activeTab}
       onChange={onSelectTab}
     />
-  );
+  )
 }
 
 function OpportunityArchiveCard({
@@ -610,24 +610,24 @@ function OpportunityArchiveCard({
   version,
   firmId,
 }: {
-  opportunityId: string;
-  version: number;
-  firmId: string | undefined;
+  opportunityId: string
+  version: number
+  firmId: string | undefined
 }) {
-  const navigate = useNavigate();
-  const archive = useArchivarOportunidad(firmId);
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
+  const navigate = useNavigate()
+  const archive = useArchivarOportunidad(firmId)
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
 
   const submit = async () => {
     try {
-      await archive.mutateAsync({ id: opportunityId, versionEsperada: version, motivo: reason });
-      toast.success("Lead archivado con su historial.");
-      await navigate({ to: "/oportunidades", search: { vista: "todas", abrir: "" } });
+      await archive.mutateAsync({ id: opportunityId, versionEsperada: version, motivo: reason })
+      toast.success('Lead archivado con su historial.')
+      await navigate({ to: '/oportunidades', search: { vista: 'todas', abrir: '' } })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo archivar el Lead.");
+      toast.error(error instanceof Error ? error.message : 'No se pudo archivar el Lead.')
     }
-  };
+  }
 
   return (
     <Card>
@@ -667,13 +667,13 @@ function OpportunityArchiveCard({
               disabled={archive.isPending || !reason.trim()}
               onClick={() => void submit()}
             >
-              {archive.isPending ? "Archivando…" : "Confirmar archivo"}
+              {archive.isPending ? 'Archivando…' : 'Confirmar archivo'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </Card>
-  );
+  )
 }
 
 function OpportunityTransitionCard({
@@ -681,12 +681,12 @@ function OpportunityTransitionCard({
   firmId,
   stage,
 }: {
-  opportunityId: string;
-  firmId: string | undefined;
-  stage: OpportunityStage;
+  opportunityId: string
+  firmId: string | undefined
+  stage: OpportunityStage
 }) {
-  const destinations = OPPORTUNITY_TRANSITIONS[stage];
-  const initialTarget = destinations.find((target) => target !== "lost") ?? destinations[0];
+  const destinations = OPPORTUNITY_TRANSITIONS[stage]
+  const initialTarget = destinations.find((target) => target !== 'lost') ?? destinations[0]
 
   if (!initialTarget) {
     return (
@@ -696,7 +696,7 @@ function OpportunityTransitionCard({
           justificación.
         </CardContent>
       </Card>
-    );
+    )
   }
 
   return (
@@ -707,7 +707,7 @@ function OpportunityTransitionCard({
       destinations={destinations}
       initialTarget={initialTarget}
     />
-  );
+  )
 }
 
 function TransitionForm({
@@ -717,23 +717,23 @@ function TransitionForm({
   destinations,
   initialTarget,
 }: {
-  opportunityId: string;
-  firmId: string | undefined;
-  stage: OpportunityStage;
-  destinations: OpportunityStage[];
-  initialTarget: OpportunityStage;
+  opportunityId: string
+  firmId: string | undefined
+  stage: OpportunityStage
+  destinations: OpportunityStage[]
+  initialTarget: OpportunityStage
 }) {
-  const transition = useTransicionarOportunidad(firmId);
-  const [target, setTarget] = useState(initialTarget);
-  const [substage, setSubstage] = useState("");
-  const [reason, setReason] = useState("");
-  const needsReason = opportunityTransitionNeedsReason(stage, target);
+  const transition = useTransicionarOportunidad(firmId)
+  const [target, setTarget] = useState(initialTarget)
+  const [substage, setSubstage] = useState('')
+  const [reason, setReason] = useState('')
+  const needsReason = opportunityTransitionNeedsReason(stage, target)
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+    event.preventDefault()
     if (needsReason && !reason.trim()) {
-      toast.error("Indica el motivo del cierre o retroceso.");
-      return;
+      toast.error('Indica el motivo del cierre o retroceso.')
+      return
     }
     try {
       await transition.mutateAsync({
@@ -741,12 +741,12 @@ function TransitionForm({
         fase: target,
         subestado: substage,
         motivo: reason,
-      });
-      toast.success(`Lead movido a ${OPPORTUNITY_STAGE_LABELS[target]}.`);
+      })
+      toast.success(`Lead movido a ${OPPORTUNITY_STAGE_LABELS[target]}.`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo cambiar la fase del Lead.");
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar la fase del Lead.')
     }
-  };
+  }
 
   return (
     <Card id="lead-stage-transition">
@@ -758,7 +758,7 @@ function TransitionForm({
               aria-label="Nueva fase"
               value={target}
               onChange={(value) => {
-                if (typeof value === "string") setTarget(value as OpportunityStage);
+                if (typeof value === 'string') setTarget(value as OpportunityStage)
               }}
             >
               <SelectTrigger id="opportunity-stage">
@@ -786,7 +786,7 @@ function TransitionForm({
           </div>
           <div className="space-y-1 text-sm">
             <Label htmlFor="opportunity-transition-reason">
-              Motivo {needsReason ? "(obligatorio)" : "(opcional)"}
+              Motivo {needsReason ? '(obligatorio)' : '(opcional)'}
             </Label>
             <Input
               id="opportunity-transition-reason"
@@ -797,128 +797,124 @@ function TransitionForm({
           </div>
           <div className="md:col-span-3">
             <Button type="submit" disabled={transition.isPending}>
-              {transition.isPending ? "Cambiando fase…" : "Cambiar fase"}
+              {transition.isPending ? 'Cambiando fase…' : 'Cambiar fase'}
             </Button>
           </div>
         </form>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function nextLeadAction(tasks: TareaPersistida[]) {
   return [...tasks]
-    .filter((task) => !["Completada", "Cancelada"].includes(task.estado))
-    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0];
+    .filter((task) => !['Completada', 'Cancelada'].includes(task.estado))
+    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0]
 }
 
 function firstMeetingStatus(tasks: TareaPersistida[]) {
   const meeting = [...tasks]
     .filter(
       (task) =>
-        task.tipo === "Evento" &&
-        task.estado !== "Cancelada" &&
-        asRecord(task.reunion["primeraCita"])["estado"] !== undefined,
+        task.tipo === 'Evento' &&
+        task.estado !== 'Cancelada' &&
+        asRecord(task.reunion['primeraCita'])['estado'] !== undefined,
     )
-    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0];
-  if (!meeting) return "Sin programar";
-  const metadata = asRecord(meeting.reunion["primeraCita"]);
-  const status = textValue(metadata["estado"]);
-  const date = textValue(meeting.reunion["startsAt"]) || meeting.venceEn;
-  if (status === "No comparece" || status === "Reprogramación pendiente") return status;
-  if (status === "Celebrada" || meeting.estado === "Completada")
-    return `Celebrada${date ? ` · ${formatDate(date)}` : ""}`;
-  if (!date) return "Pendiente de programar";
-  return `Programada · ${formatDate(date)}`;
+    .sort((first, second) => taskDateValue(first.venceEn) - taskDateValue(second.venceEn))[0]
+  if (!meeting) return 'Sin programar'
+  const metadata = asRecord(meeting.reunion['primeraCita'])
+  const status = textValue(metadata['estado'])
+  const date = textValue(meeting.reunion['startsAt']) || meeting.venceEn
+  if (status === 'No comparece' || status === 'Reprogramación pendiente') return status
+  if (status === 'Celebrada' || meeting.estado === 'Completada')
+    return `Celebrada${date ? ` · ${formatDate(date)}` : ''}`
+  if (!date) return 'Pendiente de programar'
+  return `Programada · ${formatDate(date)}`
 }
 
 function quoteStatus(stage: OpportunityStage) {
-  if (stage === "quote") return "Solicitado";
-  if (stage === "validation") return "Pendiente de validar";
-  if (stage === "engagement") return "Enviado al cliente";
-  if (stage === "won") return "Aceptado";
-  if (stage === "lost") return "Cerrado sin aceptación";
-  return "No solicitado";
+  if (stage === 'quote') return 'Solicitado'
+  if (stage === 'validation') return 'Pendiente de validar'
+  if (stage === 'engagement') return 'Enviado al cliente'
+  if (stage === 'won') return 'Aceptado'
+  if (stage === 'lost') return 'Cerrado sin aceptación'
+  return 'No solicitado'
 }
 
 function acceptanceStatus(stage: OpportunityStage) {
-  if (stage === "won") return "Aceptado";
-  if (stage === "lost") return "No aceptado";
-  if (stage === "validation") return "En validación";
-  if (stage === "engagement") return "Pendiente de aceptación";
-  return "Sin aceptación";
+  if (stage === 'won') return 'Aceptado'
+  if (stage === 'lost') return 'No aceptado'
+  if (stage === 'validation') return 'En validación'
+  if (stage === 'engagement') return 'Pendiente de aceptación'
+  return 'Sin aceptación'
 }
 
 function leadAge(createdAt: string, now = new Date()) {
-  const relative = leadAgeShort(createdAt, now);
-  return relative === "Sin fecha de alta"
+  const relative = leadAgeShort(createdAt, now)
+  return relative === 'Sin fecha de alta'
     ? relative
-    : `${relative} · desde ${formatDate(createdAt)}`;
+    : `${relative} · desde ${formatDate(createdAt)}`
 }
 
 function leadAgeShort(createdAt: string, now = new Date()) {
-  const created = new Date(createdAt);
-  if (Number.isNaN(created.getTime())) return "Sin fecha de alta";
-  const dayMs = 86_400_000;
-  const createdDay = Date.UTC(
-    created.getUTCFullYear(),
-    created.getUTCMonth(),
-    created.getUTCDate(),
-  );
-  const currentDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const days = Math.max(0, Math.floor((currentDay - createdDay) / dayMs));
-  return days === 0 ? "Hoy" : days === 1 ? "Ayer" : `Hace ${days} días`;
+  const created = new Date(createdAt)
+  if (Number.isNaN(created.getTime())) return 'Sin fecha de alta'
+  const dayMs = 86_400_000
+  const createdDay = Date.UTC(created.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate())
+  const currentDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const days = Math.max(0, Math.floor((currentDay - createdDay) / dayMs))
+  return days === 0 ? 'Hoy' : days === 1 ? 'Ayer' : `Hace ${days} días`
 }
 
 function taskDateValue(value: string | null) {
-  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY;
-  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+  const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
 }
 
 function formatDate(value: string) {
-  const date = new Date(value);
+  const date = new Date(value)
   return Number.isNaN(date.getTime())
-    ? "Sin fecha"
-    : new Intl.DateTimeFormat("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(date);
+    ? 'Sin fecha'
+    : new Intl.DateTimeFormat('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(date)
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
-    : {};
+    : {}
 }
 
 function textValue(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 function participantNames(value: unknown) {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) return []
   return value
     .map((participant) => {
-      if (typeof participant === "string") return participant.trim();
-      const record = asRecord(participant);
+      if (typeof participant === 'string') return participant.trim()
+      const record = asRecord(participant)
       return (
-        textValue(record["nombre"]) ||
-        textValue(record["nombreCompleto"]) ||
-        textValue(record["name"])
-      );
+        textValue(record['nombre']) ||
+        textValue(record['nombreCompleto']) ||
+        textValue(record['name'])
+      )
     })
-    .filter(Boolean);
+    .filter(Boolean)
 }
 
 function contactName(contact: ContactoPersistido | null | undefined) {
-  if (!contact) return "Contacto no disponible";
-  return [contact.nombre, contact.apellidos].filter(Boolean).join(" ");
+  if (!contact) return 'Contacto no disponible'
+  return [contact.nombre, contact.apellidos].filter(Boolean).join(' ')
 }
 
 function urgencyValue(urgency: Record<string, unknown>) {
-  const option = textValue(urgency["opcion"]);
-  const detail = textValue(urgency["detalle"]);
-  return [option, detail].filter(Boolean).join(" · ") || "Sin indicar";
+  const option = textValue(urgency['opcion'])
+  const detail = textValue(urgency['detalle'])
+  return [option, detail].filter(Boolean).join(' · ') || 'Sin indicar'
 }

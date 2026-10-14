@@ -66,7 +66,10 @@ function ActuacionesPage() {
               <Link to="/tareas" className={buttonVariants({ size: 'sm' })}>
                 Ir a Tareas
               </Link>
-              <Link to="/expedientes" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+              <Link
+                to="/expedientes"
+                className={buttonVariants({ size: 'sm', variant: 'outline' })}
+              >
                 Ir a Expedientes
               </Link>
             </div>

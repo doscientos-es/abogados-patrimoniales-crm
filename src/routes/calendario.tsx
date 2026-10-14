@@ -8,7 +8,8 @@ import {
 
 export const Route = createFileRoute('/calendario')({
   validateSearch: (search: Record<string, unknown>): { vista?: CalendarView | undefined } => ({
-    vista: isCalendarView(search['vista']) && search['vista'] !== 'month' ? search['vista'] : undefined,
+    vista:
+      isCalendarView(search['vista']) && search['vista'] !== 'month' ? search['vista'] : undefined,
   }),
   head: () => ({
     meta: [

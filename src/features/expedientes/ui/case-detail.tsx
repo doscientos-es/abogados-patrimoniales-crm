@@ -39,6 +39,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import type { MiembroDespacho } from '@/features/crm'
+import type {
+  RegistrarComunicacionExpedienteInput,
+  RegistrarReporteClienteInput,
+} from '@/features/expedientes'
 import {
   caseAlerts,
   caseDependency,
@@ -52,13 +56,8 @@ import type {
   ActualizarLineaInput,
   ExpedientePersistido,
   LineaPersistida,
-  ParticipantePersistido,
   ActualizarVisibilidadActuacionInput,
 } from '@/features/expedientes/application/case-types'
-import type {
-  RegistrarComunicacionExpedienteInput,
-  RegistrarReporteClienteInput,
-} from '@/features/expedientes/infrastructure/supabase-expedientes'
 import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
 import {
@@ -101,7 +100,6 @@ export function CaseDetail({
   expediente: item,
   lineas,
   actuaciones,
-  participantes,
   eventos,
   comunicaciones,
   documentos,
@@ -148,7 +146,6 @@ export function CaseDetail({
   onSelectTab?: (tab: CaseDetailTab) => void
   lineas: LineaPersistida[]
   actuaciones: ActuacionPersistida[]
-  participantes: ParticipantePersistido[]
   eventos: EventoExpediente[]
   comunicaciones?: CaseCommunicationRow[]
   documentos: CaseDocumentRow[]
@@ -279,14 +276,14 @@ export function CaseDetail({
                   activity={activity}
                   memberName={memberNames.get(activity.asignadoId ?? '')}
                   visibilityPending={activityVisibilityPending}
-                  onToggleVisibility={() =>
-                    onUpdateActivityVisibility({
+                  onToggleVisibility={() => {
+                    void onUpdateActivityVisibility({
                       actuacionId: activity.id,
                       expedienteId: item.id,
                       versionEsperada: activity.version,
                       visibleCliente: !activity.visibleCliente,
                     })
-                  }
+                  }}
                 />
               ))}
             </div>
@@ -299,7 +296,6 @@ export function CaseDetail({
         {activeTab === 'economic' ? <EconomicSection invoices={facturas} /> : null}
         {activeTab === 'communications' ? (
           <CaseCommunications
-            expedienteId={item.id}
             contactId={item.contactoPrincipalId}
             comunicaciones={comunicaciones}
             actuaciones={actuaciones.filter((activity) => activity.expedienteId === item.id)}
@@ -527,7 +523,6 @@ function CaseNotes({
 }
 
 function CaseCommunications({
-  expedienteId,
   contactId,
   comunicaciones,
   actuaciones,
@@ -537,7 +532,6 @@ function CaseCommunications({
   reportPending,
   onRegisterClientReport,
 }: {
-  expedienteId: string
   contactId: string
   comunicaciones: CaseCommunicationRow[]
   actuaciones: ActuacionPersistida[]
@@ -967,7 +961,10 @@ const LINE_STATUS_STYLE: Record<string, { accent: string; badge: string }> = {
   closed: { accent: 'bg-emerald-700', badge: 'border-emerald-400 bg-emerald-100 text-emerald-800' },
   discarded: { accent: 'bg-zinc-300', badge: 'border-zinc-300 bg-zinc-100 text-zinc-500' },
 }
-const LINE_STATUS_FALLBACK = LINE_STATUS_STYLE['pending']!
+const LINE_STATUS_FALLBACK = LINE_STATUS_STYLE['pending'] ?? {
+  accent: 'bg-slate-400',
+  badge: 'border-slate-300 bg-slate-100 text-slate-700',
+}
 
 const LINE_PRIORITY_STYLE: Record<string, string> = {
   Alta: 'border-rose-300 bg-rose-50 text-rose-700',
@@ -981,7 +978,7 @@ function initials(name: string | undefined) {
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
+    .map((part) => part.slice(0, 1).toUpperCase())
     .join('')
 }
 
@@ -1170,7 +1167,10 @@ function WorkstreamsSection({
     const ids = manualOrder.map((candidate) => candidate.id)
     const from = ids.indexOf(line.id)
     const to = ids.indexOf(neighbour.id)
-    ;[ids[from], ids[to]] = [ids[to]!, ids[from]!]
+    const currentId = ids[from]
+    const targetId = ids[to]
+    if (!currentId || !targetId) return
+    ;[ids[from], ids[to]] = [targetId, currentId]
     try {
       await onReorder(ids)
     } catch (error) {
@@ -1365,8 +1365,7 @@ function WorkstreamCard({
   const doneTasks = tasks.filter((task) => ['Completada', 'Cancelada'].includes(task.estado)).length
   const overdue =
     !closedStatus &&
-    Boolean(line.fechaObjetivo) &&
-    line.fechaObjetivo! < new Date().toISOString().slice(0, 10)
+    Boolean(line.fechaObjetivo && line.fechaObjetivo < new Date().toISOString().slice(0, 10))
   const details = lineDetails(line)
   const collaborators = Array.isArray(details['colaboradores'])
     ? details['colaboradores']

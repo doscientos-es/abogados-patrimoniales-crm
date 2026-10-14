@@ -1,6 +1,6 @@
+import { Link } from '@tanstack/react-router'
 import { AlertTriangle, Plus, Star, StickyNote } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useGuardarNota, useNotasRemotas } from '@/features/notas/infrastructure/supabase-notas'
+import { useGuardarNota, useNotasRemotas } from '@/features/notas'
 import type { TareaPersistida } from '@/features/tareas'
 
 function formatDate(value: string) {

@@ -737,15 +737,15 @@ function NoteForm({
       ? contacts.map((item) => ({ id: item.id, label: contactName(item), contactIds: [item.id] }))
       : scope === 'case'
         ? cases.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-          contactIds: [item.contactoPrincipalId],
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+            contactIds: [item.contactoPrincipalId],
+          }))
         : opportunities.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-          contactIds: [item.contactoId],
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+            contactIds: [item.contactoId],
+          }))
   const selected = options.find((item) => item.id === originId)
   useEffect(() => {
     setScope(

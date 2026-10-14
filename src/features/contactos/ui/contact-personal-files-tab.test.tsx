@@ -34,6 +34,7 @@ describe('ContactPersonalFilesTab', () => {
 
   it('opens the upload dialog prefilled from a pending Lead requirement', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const memberRole = 'admin' as const
     render(
       <QueryClientProvider client={queryClient}>
         <ContactPersonalFilesTab
@@ -41,16 +42,16 @@ describe('ContactPersonalFilesTab', () => {
           contactId="contact-1"
           relationship="Lead"
           requiredDocumentRequests={['Justificante de domicilio']}
-          role="lawyer"
+          role={memberRole}
         />
       </QueryClientProvider>,
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'Subir Justificante de domicilio' }))
 
-    expect(
-      (screen.getByLabelText('Nombre o descripción') as HTMLInputElement).value,
-    ).toBe('Justificante de domicilio')
+    expect((screen.getByLabelText('Nombre o descripción') as HTMLInputElement).value).toBe(
+      'Justificante de domicilio',
+    )
     expect((screen.getByLabelText('Categoría') as HTMLSelectElement).value).toBe('other')
     expect((screen.getByLabelText('Observaciones') as HTMLTextAreaElement).value).toContain(
       'Justificante de domicilio',
