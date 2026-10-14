@@ -7,7 +7,6 @@ import { TaskWorkspace } from '@/components/tareas/task-workspace'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
-import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
 import {
   CaseEditForm,
   CaseRelatedForms,
@@ -33,6 +32,7 @@ import {
   useParticipantesPersistentes,
 } from '@/features/expedientes'
 import { CaseHandoffBar } from '@/features/expedientes/ui/case-handoff'
+import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
 import { useFacturas } from '@/features/facturacion'
 import { useConfirmarLectura, useNotasRemotas } from '@/features/notas'
 import {
@@ -73,7 +73,10 @@ function CaseRoute() {
   useEffect(() => {
     if (tab !== 'participants') return
     const timer = window.setTimeout(
-      () => document.getElementById('intervinientes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      () =>
+        document
+          .getElementById('intervinientes')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
       300,
     )
     return () => window.clearTimeout(timer)
