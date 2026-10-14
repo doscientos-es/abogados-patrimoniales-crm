@@ -43,12 +43,18 @@ import { QuotesPage } from './quotes-page'
 afterEach(cleanup)
 
 describe('QuotesPage', () => {
-  it('explains where budget proposals are prepared and that this view does not create a document', () => {
+  it('explains the Lead quote, external-send, and acceptance workflow', () => {
     render(<QuotesPage />)
 
-    expect(screen.getByRole('heading', { name: '¿Cómo se crea un presupuesto?' })).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: '¿Cómo se prepara y envía un presupuesto?' }),
+    ).toBeTruthy()
     expect(screen.getByText(/En su ficha, entra en «Presupuesto»/)).toBeTruthy()
-    expect(screen.getByText(/no genera un PDF ni envía el presupuesto/)).toBeTruthy()
+    expect(
+      screen.getByText(/«Envío» para descargar el PDF y registrar el envío externo/),
+    ).toBeTruthy()
+    expect(screen.getByText(/«Aceptación» para registrar la respuesta del cliente/)).toBeTruthy()
+    expect(screen.getByText(/El correo no se envía automáticamente desde LEX/)).toBeTruthy()
     expect(
       screen.getByRole('link', { name: 'Crear Lead para presupuestar' }).getAttribute('href'),
     ).toBe('/oportunidades/nueva')

@@ -39,7 +39,7 @@ import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import {
   useCambiarEstadoTarea,
   useCrearTarea,
-  useTareasPersistentes,
+  useTareasLead,
   type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
@@ -93,7 +93,7 @@ export function LeadWorkspace({
 }) {
   const events = useEventosOportunidad(firmId, opportunity.id)
   const members = useMiembrosDespacho(firmId)
-  const tasks = useTareasPersistentes(firmId)
+  const tasks = useTareasLead(firmId, opportunity.id)
   const notes = useNotasRemotas(firmId)
   const onboardings = useOnboardings(firmId)
   const saveDetails = useActualizarDetallesOportunidad(firmId)
@@ -179,7 +179,7 @@ export function LeadWorkspace({
   const participants = Array.isArray(details['otrosIntervinientes'])
     ? details['otrosIntervinientes']
     : []
-  const relatedTasks = (tasks.data ?? []).filter((task) => task.oportunidadId === opportunity.id)
+  const relatedTasks = tasks.data ?? []
   const relatedNotes = (notes.data ?? []).filter((note) => note.opportunity_id === opportunity.id)
   const memberNames = new Map((members.data ?? []).map((member) => [member.id, member.nombre]))
   const linkedOnboarding = (onboardings.data ?? []).find(

@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { componerDetalleEspera, entidadSugerida } from '@/features/tareas/application/task-waiting'
 
 export const TASK_HOLD_REASONS = [
   'Esperando al cliente',
@@ -37,17 +38,20 @@ export function TaskHoldDialog({
   onOpenChange,
   pending,
   taskTitle,
+  responsableNombre,
   onSubmit,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   pending: boolean
   taskTitle?: string | undefined
+  responsableNombre?: string | undefined
   onSubmit: (reason: string, reviewAt: string, detail: string) => void
 }) {
   const [reason, setReason] = useState<string>('Esperando a tercero')
   const [reviewAt, setReviewAt] = useState(defaultReviewDate)
   const [detail, setDetail] = useState('')
+  const [quien, setQuien] = useState(entidadSugerida('Esperando a tercero'))
   const [error, setError] = useState<string | null>(null)
 
   const changeOpen = (next: boolean) => {
@@ -55,6 +59,7 @@ export function TaskHoldDialog({
       setReason('Esperando a tercero')
       setReviewAt(defaultReviewDate())
       setDetail('')
+      setQuien('')
       setError(null)
     }
     onOpenChange(next)
@@ -64,8 +69,19 @@ export function TaskHoldDialog({
     event.preventDefault()
     if (!reviewAt) return setError('Indica la fecha de revisión.')
     if (reason === 'Otro' && !detail.trim()) return setError('Explica el motivo de la espera.')
+    if (
+      !['Esperando otra tarea', 'Esperando una fecha', 'Decisión interna pendiente'].includes(
+        reason,
+      ) &&
+      !quien.trim()
+    )
+      return setError('Indica de quién esperamos la respuesta.')
     setError(null)
-    onSubmit(reason, new Date(`${reviewAt}T09:00:00`).toISOString(), detail)
+    onSubmit(
+      reason,
+      new Date(`${reviewAt}T09:00:00`).toISOString(),
+      componerDetalleEspera(quien, detail),
+    )
   }
 
   return (
@@ -85,7 +101,11 @@ export function TaskHoldDialog({
               id="task-hold-reason"
               className="border-input bg-background h-9 rounded-md border px-3 text-sm"
               value={reason}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                const suggestion = entidadSugerida(event.target.value)
+                if (!quien.trim() || quien === entidadSugerida(reason)) setQuien(suggestion)
+                setReason(event.target.value)
+              }}
             >
               {TASK_HOLD_REASONS.map((option) => (
                 <option key={option} value={option}>
@@ -94,6 +114,20 @@ export function TaskHoldDialog({
               ))}
             </select>
           </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="task-hold-who">De quién esperamos respuesta</Label>
+            <Input
+              id="task-hold-who"
+              value={quien}
+              placeholder="Ej.: Cliente, Notaría Pérez, Juzgado nº 3 de Bilbao…"
+              onChange={(event) => setQuien(event.target.value)}
+            />
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Responsable interno del seguimiento:{' '}
+            <strong>{responsableNombre || 'el responsable de la tarea'}</strong>. Al llegar la
+            fecha, la tarea vuelve a pendiente.
+          </p>
           <div className="grid gap-1.5">
             <Label htmlFor="task-hold-review">Revisar el</Label>
             <Input

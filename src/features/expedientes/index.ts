@@ -1,5 +1,6 @@
 export * from './application/case-types'
 export * from './application/case-control'
+export * from './application/case-handoff'
 export * from './infrastructure/supabase-expedientes'
 export * from './infrastructure/supabase-expedientes-write'
 export * from './infrastructure/supabase-ejecuciones'

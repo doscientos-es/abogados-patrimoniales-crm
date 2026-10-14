@@ -105,9 +105,9 @@ describe('NuevoContactoPage', () => {
       'Otro',
     ])
     fireEvent.change(origin, { target: { value: 'Recomendación de cliente' } })
-    expect(screen.getByLabelText('Contacto que ha recomendado a esta persona')).toBeTruthy()
+    expect(screen.getByLabelText('Recomendado por')).toBeTruthy()
     fireEvent.change(origin, { target: { value: 'Página web' } })
-    expect(screen.queryByLabelText('Contacto que ha recomendado a esta persona')).toBeNull()
+    expect(screen.queryByLabelText('Recomendado por')).toBeNull()
 
     const postalCode = screen.getByLabelText('Código postal')
     expect(postalCode.getAttribute('inputmode')).toBe('numeric')
@@ -123,6 +123,7 @@ describe('NuevoContactoPage', () => {
   it('envía los valores normalizados y abre la ficha creada', async () => {
     render(<NuevoContactoPage />)
 
+    expect((screen.getByLabelText('NIF') as HTMLInputElement).required).toBe(false)
     fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: ' Ana ' } })
     fireEvent.change(screen.getByLabelText(/^Origen/), { target: { value: 'Página web' } })
     fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
@@ -132,7 +133,12 @@ describe('NuevoContactoPage', () => {
         expect.objectContaining({
           tipoPersona: 'Persona física',
           relacion: 'Lead',
-          valores: expect.objectContaining({ nombre: 'Ana', pais: 'España', origen: 'Página web' }),
+          valores: expect.objectContaining({
+            nombre: 'Ana',
+            documento: '',
+            pais: 'España',
+            origen: 'Página web',
+          }),
         }),
       ),
     )
@@ -162,7 +168,7 @@ describe('NuevoContactoPage', () => {
       expect((screen.getByLabelText(/^Nombre/) as HTMLInputElement).value).toBe('Ana'),
     )
     expect((screen.getByLabelText('Apellidos') as HTMLInputElement).value).toBe('López García')
-    expect((screen.getByLabelText('NIF / CIF') as HTMLInputElement).value).toBe('12345678Z')
+    expect((screen.getByLabelText('NIF') as HTMLInputElement).value).toBe('12345678Z')
     expect((screen.getByLabelText('Código postal') as HTMLInputElement).value).toBe('28013')
     expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Madrid')
     expect((screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement).value).toBe(

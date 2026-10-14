@@ -66,6 +66,9 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
+      '@doscientos/changelog':
+        specifier: ^0.1.0
+        version: 0.1.4
       '@doscientos/configs':
         specifier: ^0.1.9
         version: 0.1.9(oxlint-tsgolint@7.0.2001)(oxlint@1.80.0(oxlint-tsgolint@7.0.2001))(vitest@5.0.0(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)))
@@ -249,6 +252,11 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
+
+  '@doscientos/changelog@0.1.4':
+    resolution: {integrity: sha512-b5Wda0NPpYfiqUoZKBtOUiQN4p150B8LPBK41NXtN0XVU8IBNyPzE3Dikl3vHenpwthnoxBL3yIoIkmb09a/Ng==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@doscientos/configs@0.1.9':
     resolution: {integrity: sha512-Pp5bVaThLotBw86E1cpj1Ck5vCAKUKJgYHgfxgQpW1v687HSFPFeI4RdMX6xv/wAL8l165KjRhb1eNf+93K1Hw==}
@@ -2425,6 +2433,8 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
+
+  '@doscientos/changelog@0.1.4': {}
 
   '@doscientos/configs@0.1.9(oxlint-tsgolint@7.0.2001)(oxlint@1.80.0(oxlint-tsgolint@7.0.2001))(vitest@5.0.0(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)))':
     optionalDependencies:

@@ -26,6 +26,13 @@ const mocks = vi.hoisted(() => ({
   convertSubtask: vi.fn().mockResolvedValue(undefined),
   saveNote: vi.fn().mockResolvedValue(undefined),
   notes: [] as Array<Record<string, unknown>>,
+  waitingMode: false,
+  taskEvents: [] as Array<{
+    event_type: string
+    payload: Record<string, unknown>
+    created_at: string
+    actor_id: string | null
+  }>,
 }))
 
 vi.mock('@/features/notas/infrastructure/supabase-notas', () => ({
@@ -106,6 +113,19 @@ vi.mock('@/features/tareas', () => ({
     activity: 'Actuación',
     milestone: 'Hito histórico',
   },
+  leerDetalleEspera: () => ({
+    esperamosA: 'Notaría Pérez',
+    detalle: 'Copia simple de la escritura',
+  }),
+  historialEsperas: () => [
+    {
+      fecha: '2026-10-01T09:00:00Z',
+      tipo: 'inicio',
+      revisarEn: '2026-10-10T07:00:00Z',
+      motivo: 'Esperando al cliente',
+      actorId: 'user-2',
+    },
+  ],
   useTareasPersistentes: () => ({
     data: [
       {
@@ -115,16 +135,18 @@ vi.mock('@/features/tareas', () => ({
         tipo: 'Evento',
         titulo: 'Preparar borrador',
         descripcion: 'Revisar la documentación.',
-        estado: 'Pendiente',
+        estado: mocks.waitingMode ? 'En espera' : 'Pendiente',
         prioridad: 'Alta',
         venceEn: '2026-09-20T09:00:00Z',
         recordarEn: '2026-09-19T09:00:00Z',
         asignadoId: 'user-1',
         creadaPorId: 'user-2',
         esSiguienteAccion: true,
-        motivoEspera: null,
-        revisarEn: null,
-        detalleEspera: '',
+        motivoEspera: mocks.waitingMode ? 'Esperando al cliente' : null,
+        revisarEn: mocks.waitingMode ? '2026-10-10T07:00:00Z' : null,
+        detalleEspera: mocks.waitingMode
+          ? 'Esperamos a: Notaría Pérez\nCopia simple de la escritura'
+          : '',
         resultadoCierre: '',
         motivoCancelacion: '',
         abiertaEn: null,
@@ -153,6 +175,7 @@ vi.mock('@/features/tareas', () => ({
       },
     ],
   }),
+  useEventosTarea: () => ({ data: mocks.taskEvents }),
   useDependenciasTarea: () => ({ data: [] }),
   useDocumentosTarea: () => ({ data: [] }),
   useDocumentosExpedienteTarea: () => ({ data: [] }),
@@ -193,10 +216,32 @@ afterEach(() => {
   mocks.meetingDetails = {}
   mocks.subtasks = []
   mocks.notes = []
+  mocks.waitingMode = false
+  mocks.taskEvents = []
   mocks.role = 'paralegal'
 })
 
 describe('TaskDetail', () => {
+  it('shows who the task is waiting for and the waiting history', () => {
+    mocks.waitingMode = true
+    mocks.taskEvents = [
+      {
+        event_type: 'waiting_started',
+        payload: { review_at: '2026-10-10T07:00:00Z', reason: 'Esperando al cliente' },
+        created_at: '2026-10-01T09:00:00Z',
+        actor_id: 'user-2',
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(screen.getByText(/esperamos a Notaría Pérez/)).toBeTruthy()
+    expect(screen.getByText(/seguimiento: Ana Responsable/)).toBeTruthy()
+    fireEvent.click(screen.getByText('Historial de seguimientos (1)'))
+    expect(screen.getByText(/Puesta en espera \(Esperando al cliente\)/).textContent).toContain(
+      'Luis Encargante',
+    )
+  })
+
   it('adds a checklist item to the persistent task', async () => {
     render(<TaskDetail taskId="task-1" />)
 

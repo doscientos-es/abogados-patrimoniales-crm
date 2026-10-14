@@ -11,12 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import {
-  useContactos,
-  useCrearContacto,
-  type Naturaleza,
-  type RelacionDespacho,
-} from '@/features/contactos'
+import { useCrearContacto, type Naturaleza, type RelacionDespacho } from '@/features/contactos'
 import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
@@ -56,7 +51,7 @@ const CONTACT_FIELD_NAMES = [
   'municipio',
   'provincia',
   'pais',
-  'recommendedById',
+  'recomendadoPor',
   'fechaNacimiento',
   'telefono2',
   'email2',
@@ -99,13 +94,11 @@ export function NuevoContactoPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const createContact = useCrearContacto(firmId)
-  const contacts = useContactos(firmId)
   const createNote = useCrearNotaPersona(firmId)
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [origin, setOrigin] = useState('')
-  const [recommendedById, setRecommendedById] = useState('')
-  const [recommenderQuery, setRecommenderQuery] = useState('')
   const [notes, setNotes] = useState<
     { title: string; content: string; highlighted: boolean; critical: boolean }[]
   >([])
@@ -157,6 +150,7 @@ export function NuevoContactoPage() {
       toast.error('Indica el partido judicial.')
       return
     }
+    setSaveError(null)
     try {
       const contact = await createContact.mutateAsync({
         tipoPersona: nature,
@@ -185,7 +179,13 @@ export function NuevoContactoPage() {
       if (notesSaved) toast.success('Contacto creado correctamente.')
       await navigate({ to: '/contactos/$id', params: { id: contact.id } })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo crear el contacto.')
+      const e = error as { code?: string; message?: string }
+      const message =
+        e?.code === '23505'
+          ? 'Ya existe un contacto con este NIF/CIF en el despacho. No se ha guardado.'
+          : e?.message || 'No se pudo crear el contacto.'
+      setSaveError(message)
+      toast.error(message)
     }
   }
 
@@ -201,9 +201,9 @@ export function NuevoContactoPage() {
       />
       <form
         ref={formRef}
+        className="space-y-4 [&_input:not([type=email]):not([name^=email])]:uppercase [&_textarea]:uppercase"
         aria-busy={createContact.isPending}
         aria-label="Formulario de nuevo contacto"
-        className="space-y-4"
         onSubmit={(event) => void submit(event)}
       >
         <Card>
@@ -214,6 +214,12 @@ export function NuevoContactoPage() {
               despacho.
             </p>
           </CardHeader>
+          {nature === 'Persona física' ? (
+            <CardContent className="grid gap-4 pb-2 sm:grid-cols-2">
+              <Field name="nombre" label="Nombre" autoComplete="given-name" required large />
+              <Field name="primerApellido" label="Apellidos" autoComplete="family-name" large />
+            </CardContent>
+          ) : null}
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Choice
               name="naturaleza"
@@ -231,8 +237,6 @@ export function NuevoContactoPage() {
             />
             {nature === 'Persona física' ? (
               <>
-                <Field name="nombre" label="Nombre" autoComplete="given-name" required />
-                <Field name="primerApellido" label="Apellidos" autoComplete="family-name" />
                 <Field
                   name="fechaNacimiento"
                   label="Fecha de nacimiento"
@@ -275,7 +279,13 @@ export function NuevoContactoPage() {
             )}
             <Field
               name="documento"
-              label="NIF / CIF"
+              label={
+                nature === 'Persona física'
+                  ? 'NIF'
+                  : nature === 'Persona jurídica'
+                    ? 'CIF'
+                    : 'NIF / CIF'
+              }
               autoCapitalize="characters"
               spellCheck={false}
             />
@@ -356,13 +366,7 @@ export function NuevoContactoPage() {
                 id="contact-origen"
                 name="origen"
                 value={origin}
-                onChange={(event) => {
-                  setOrigin(event.target.value)
-                  if (!/recomend/i.test(event.target.value)) {
-                    setRecommendedById('')
-                    setRecommenderQuery('')
-                  }
-                }}
+                onChange={(event) => setOrigin(event.target.value)}
                 className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               >
                 <option value="">Seleccionar</option>
@@ -378,36 +382,9 @@ export function NuevoContactoPage() {
                 <Label htmlFor="contact-recommendedById">Recomendado por</Label>
                 <Input
                   id="contact-recommendedById"
-                  list="contact-recommenders"
-                  aria-label="Contacto que ha recomendado a esta persona"
-                  placeholder="Busca por nombre o referencia"
-                  value={recommenderQuery}
-                  onChange={(event) => {
-                    setRecommenderQuery(event.target.value)
-                    const match = (contacts.data ?? []).find(
-                      (item) =>
-                        `${item.nombre} ${item.apellidos ?? item.razonSocial ?? ''} · ${item.referencia ?? ''}` ===
-                        event.target.value,
-                    )
-                    setRecommendedById(match?.id ?? '')
-                  }}
+                  name="recomendadoPor"
+                  placeholder="Nombre de quien lo recomienda"
                   required
-                />
-                <datalist id="contact-recommenders">
-                  {(contacts.data ?? []).map((item) => (
-                    <option
-                      key={item.id}
-                      value={`${item.nombre} ${item.apellidos ?? item.razonSocial ?? ''} · ${item.referencia ?? ''}`}
-                    >
-                      {item.nombre} {item.apellidos ?? item.razonSocial ?? ''}
-                    </option>
-                  ))}
-                </datalist>
-                <input
-                  type="hidden"
-                  name="recommendedById"
-                  value={recommendedById}
-                  aria-label="Identificador del contacto recomendador"
                 />
               </div>
             ) : null}
@@ -476,6 +453,14 @@ export function NuevoContactoPage() {
           </CardContent>
         </Card>
 
+        {saveError && (
+          <div
+            role="alert"
+            className="border-destructive bg-destructive/10 text-destructive rounded-md border px-4 py-3 text-sm font-medium"
+          >
+            {saveError}
+          </div>
+        )}
         <div className="flex flex-wrap justify-end gap-2">
           <Link to="/contactos" className={buttonVariants({ variant: 'outline' })}>
             Cancelar
@@ -504,6 +489,7 @@ type FieldProps = {
   spellCheck?: boolean
   description?: string
   digitsOnly?: boolean
+  large?: boolean
 }
 
 function Field({
@@ -514,12 +500,13 @@ function Field({
   description,
   digitsOnly,
   placeholder,
+  large,
   ...props
 }: FieldProps) {
   const descriptionId = description ? `contact-${name}-description` : undefined
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`contact-${name}`}>
+      <Label htmlFor={`contact-${name}`} className={large ? 'text-base font-semibold' : ''}>
         {label}
         {required && <span aria-hidden="true"> *</span>}
         {required && <span className="sr-only"> (obligatorio)</span>}
@@ -532,6 +519,7 @@ function Field({
         type={type}
         required={required}
         placeholder={placeholder ?? CONTACT_FIELD_PLACEHOLDERS[name] ?? label}
+        className={large ? 'h-14 px-4 text-xl md:text-xl' : ''}
         onInput={(event) => {
           if (type === 'tel') sanitizePhoneInput(event)
           if (digitsOnly) sanitizeDigitsInput(event)

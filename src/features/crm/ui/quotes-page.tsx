@@ -98,15 +98,22 @@ export function QuotesPage() {
       <Card>
         <CardContent className="grid gap-4 pt-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="space-y-2">
-            <h2 className="font-semibold">¿Cómo se crea un presupuesto?</h2>
+            <h2 className="font-semibold">¿Cómo se prepara y envía un presupuesto?</h2>
             <ol className="text-muted-foreground list-inside list-decimal space-y-1 text-sm">
               <li>Abre un Lead existente o crea uno nuevo.</li>
-              <li>En su ficha, entra en «Presupuesto», completa las condiciones y guarda.</li>
-              <li>Registra allí el estado y la fecha cuando lo envíes o recibas respuesta.</li>
+              <li>
+                En su ficha, entra en «Presupuesto», prepara la propuesta y solicita revisión.
+              </li>
+              <li>
+                Tras validarla, usa «Envío» para descargar el PDF y registrar el envío externo.
+              </li>
+              <li>
+                Usa «Aceptación» para registrar la respuesta del cliente y continuar el proceso.
+              </li>
             </ol>
             <p className="text-sm">
-              Esta sección centraliza el seguimiento;{' '}
-              <strong>no genera un PDF ni envía el presupuesto</strong>.
+              El correo no se envía automáticamente desde LEX: descarga el PDF, envíalo desde tu
+              correo y registra después el envío en la ficha del Lead.
             </p>
           </div>
           <Link

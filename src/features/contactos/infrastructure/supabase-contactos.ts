@@ -57,6 +57,7 @@ export type ContactoPersistido = {
   origen: string
   canal: string
   recommendedById?: string
+  recomendadoPor?: string
   profile: ContactProfile
   creado: string
   creadoEn?: string
@@ -199,6 +200,7 @@ export function contactoFromRow(row: ContactRow): ContactoPersistido {
     origen: row.source ?? '',
     canal: details['canal'] ?? '',
     ...(details['recommendedById'] ? { recommendedById: details['recommendedById'] } : {}),
+    ...(details['recomendadoPor'] ? { recomendadoPor: details['recomendadoPor'] } : {}),
     profile: contactProfileFromJson(detailsJson['profile']),
     creado: spanishDate(row.created_at),
     creadoEn: row.created_at,
@@ -268,23 +270,42 @@ export function useActualizarContacto(firmId: string | undefined) {
     }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const normalized = {
+        ...contacto,
+        nombre: up(contacto.nombre) ?? '',
+        apellidos: up(contacto.apellidos),
+        razonSocial: up(contacto.razonSocial),
+        nif: up(contacto.nif) ?? '',
+        codigoOrgano: up(contacto.codigoOrgano),
+        partidoJudicial: up(contacto.partidoJudicial),
+        organismo: up(contacto.organismo),
+        unidadAdministrativa: up(contacto.unidadAdministrativa),
+        direccion: up(contacto.direccion) ?? '',
+        municipio: up(contacto.municipio) ?? '',
+        provincia: up(contacto.provincia) ?? '',
+        pais: up(contacto.pais) ?? '',
+        personaContacto: up(contacto.personaContacto),
+        cargoContacto: up(contacto.cargoContacto),
+        recomendadoPor: up(contacto.recomendadoPor),
+      }
       const details = {
-        fechaNacimiento: contacto.nacimiento ?? '',
-        codigoOrgano: contacto.codigoOrgano ?? '',
-        numeroOrgano: contacto.numeroOrgano ?? '',
-        partidoJudicial: contacto.partidoJudicial ?? '',
-        organismo: contacto.organismo ?? '',
-        unidadAdministrativa: contacto.unidadAdministrativa ?? '',
-        telefono2: contacto.telefono2 ?? '',
-        email2: contacto.email2 ?? '',
-        direccion: contacto.direccion,
-        codigoPostal: contacto.cp,
-        municipio: contacto.municipio,
-        provincia: contacto.provincia,
-        pais: contacto.pais,
-        personaContacto: contacto.personaContacto ?? '',
-        cargo: contacto.cargoContacto ?? '',
+        fechaNacimiento: normalized.nacimiento ?? '',
+        codigoOrgano: normalized.codigoOrgano ?? '',
+        numeroOrgano: normalized.numeroOrgano ?? '',
+        partidoJudicial: normalized.partidoJudicial ?? '',
+        organismo: normalized.organismo ?? '',
+        unidadAdministrativa: normalized.unidadAdministrativa ?? '',
+        telefono2: normalized.telefono2 ?? '',
+        email2: normalized.email2 ?? '',
+        direccion: normalized.direccion,
+        codigoPostal: normalized.cp,
+        municipio: normalized.municipio,
+        provincia: normalized.provincia,
+        pais: normalized.pais,
+        personaContacto: normalized.personaContacto ?? '',
+        cargo: normalized.cargoContacto ?? '',
         recommendedById: contacto.recommendedById ?? '',
+        recomendadoPor: normalized.recomendadoPor ?? '',
       }
       const { data: actual, error: actualError } = await client
         .from('crm_contacts')
@@ -301,15 +322,15 @@ export function useActualizarContacto(firmId: string | undefined) {
         .from('crm_contacts')
         .update({
           display_name:
-            contacto.razonSocial || `${contacto.nombre} ${contacto.apellidos ?? ''}`.trim(),
-          first_name: contacto.nombre || null,
-          last_name: contacto.apellidos || null,
-          legal_name: contacto.razonSocial || null,
-          tax_id: contacto.nif || null,
+            normalized.razonSocial || `${normalized.nombre} ${normalized.apellidos ?? ''}`.trim(),
+          first_name: normalized.nombre || null,
+          last_name: normalized.apellidos || null,
+          legal_name: normalized.razonSocial || null,
+          tax_id: normalized.nif || null,
           email: contacto.email || null,
           phone: contacto.telefono || null,
-          relationship: relationshipToDatabase[contacto.relacion],
-          source: contacto.origen || null,
+          relationship: relationshipToDatabase[normalized.relacion],
+          source: normalized.origen || null,
           details: { ...existingDetails, ...details } as Json,
           version: version + 1,
         })
@@ -330,7 +351,8 @@ export function useActualizarContacto(firmId: string | undefined) {
 }
 
 function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
-  const { tipoPersona, relacion, valores } = input
+  const { tipoPersona, relacion } = input
+  const valores = upperContactValues(input.valores)
   const legalName = valores['razonSocial'] || valores['denominacion'] || null
   const displayName =
     tipoPersona === 'Persona física'
@@ -351,6 +373,26 @@ function toInsert(firmId: string, input: NuevoContactoInput): ContactInsert {
     details: createContactDetails(valores),
   }
 }
+
+const KEEP_CASE = new Set([
+  'email',
+  'email2',
+  'origen',
+  'canal',
+  'recommendedById',
+  'fechaNacimiento',
+])
+
+export function upperContactValues(values: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      KEEP_CASE.has(key) ? value : value.toLocaleUpperCase('es-ES'),
+    ]),
+  )
+}
+
+const up = (value: string | undefined) => value?.toLocaleUpperCase('es-ES')
 
 export function useContactos(firmId: string | undefined) {
   return useQuery({

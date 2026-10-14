@@ -19,7 +19,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
 
 import type { ContactRow } from '@/shared/infrastructure/supabase'
 
-import { contactoFromRow, useContactosPaginados } from './supabase-contactos'
+import { contactoFromRow, upperContactValues, useContactosPaginados } from './supabase-contactos'
 
 const row = {
   id: 'contact-1',
@@ -72,6 +72,26 @@ describe('contactoFromRow', () => {
       modificadoEn: '2026-09-04T12:00:00Z',
       creado: '20/08/2026',
       modificado: '04/09/2026',
+    })
+  })
+})
+
+describe('upperContactValues', () => {
+  it('uppercases identity data while preserving case-sensitive fields', () => {
+    expect(
+      upperContactValues({
+        nombre: 'Ana López',
+        email: 'Ana@Example.com',
+        email2: 'ana2@example.com',
+        origen: 'Página web',
+        recomendadoPor: 'María Pérez',
+      }),
+    ).toEqual({
+      nombre: 'ANA LÓPEZ',
+      email: 'Ana@Example.com',
+      email2: 'ana2@example.com',
+      origen: 'Página web',
+      recomendadoPor: 'MARÍA PÉREZ',
     })
   })
 })

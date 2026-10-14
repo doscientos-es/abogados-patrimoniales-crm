@@ -9,6 +9,11 @@ import { Label } from '@/components/ui/label'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import {
+  CONTACT_DOCUMENT_MAX_BYTES,
+  CONTACT_DOCUMENT_MIME,
+  uploadContactDocument,
+} from '@/features/contactos/infrastructure/upload-contact-document'
+import {
   getSupabaseBrowserClient,
   type ContactDocumentType,
 } from '@/shared/infrastructure/supabase'
@@ -74,48 +79,19 @@ export function ContactDocuments() {
     const file = event.currentTarget.files?.[0]
     event.currentTarget.value = ''
     if (!file || !selected || !firmId) return
-    if (
-      !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type) ||
-      file.size > 25 * 1024 * 1024
-    ) {
+    if (!CONTACT_DOCUMENT_MIME.includes(file.type) || file.size > CONTACT_DOCUMENT_MAX_BYTES) {
       toast.error('Sube un PDF, JPG o PNG de hasta 25 MB.')
       return
     }
-    const client = getSupabaseBrowserClient()
-    if (!client) return
-    const documentId = crypto.randomUUID()
-    const path = `${firmId}/${selected.id}/${documentId}/${file.name.replace(/[\\/]/g, '_')}`
     setUploading(type)
     try {
-      const { error: storageError } = await client.storage
-        .from('contact-documents')
-        .upload(path, file, {
-          contentType: file.type,
-          upsert: false,
-        })
-      if (storageError) throw storageError
-      const { error } = await client.from('crm_contact_documents').insert({
-        id: documentId,
-        firm_id: firmId,
-        contact_id: selected.id,
-        document_type: type,
+      await uploadContactDocument({
+        firmId,
+        contactId: selected.id,
+        file,
         name: label,
-        original_name: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-        document_status: 'current',
-        document_number: '',
-        issued_on: null,
-        expires_on: null,
-        signed_on: null,
-        observations: '',
-        tags: [],
+        type,
       })
-      if (error) {
-        await client.storage.from('contact-documents').remove([path])
-        throw error
-      }
       await queryClient.invalidateQueries({ queryKey: ['contact-documents', firmId, selected.id] })
       toast.success('Documento guardado en el despacho.')
     } catch (error) {

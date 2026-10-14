@@ -38,6 +38,23 @@ const asObject = (value: Json): Record<string, Json | undefined> =>
   value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 const asStrings = (value: Json | undefined): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+const NOTE_ID_CHUNK_SIZE = 80
+
+async function inChunks<T>(
+  ids: string[],
+  run: (chunk: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const chunks: string[][] = []
+  for (let index = 0; index < ids.length; index += NOTE_ID_CHUNK_SIZE)
+    chunks.push(ids.slice(index, index + NOTE_ID_CHUNK_SIZE))
+  const results = await Promise.all(chunks.map((chunk) => run(chunk)))
+  const rows: T[] = []
+  for (const result of results) {
+    if (result.error) throw result.error
+    rows.push(...(result.data ?? []))
+  }
+  return rows
+}
 
 export function notaDesdeRemota(nota: NotaRemota): NotaInterna {
   const details = asObject(nota.details)
@@ -126,32 +143,39 @@ export function useNotasRemotas(firmId: string | undefined) {
       if (error) throw error
       if (!data.length) return []
       const noteIds = data.map((note) => note.id)
-      const [contacts, permissions, acknowledgements, events] = await Promise.all([
-        client
-          .from('crm_note_contacts')
-          .select('note_id, contact_id')
-          .eq('firm_id', firmId)
-          .in('note_id', noteIds),
-        client
-          .from('crm_note_permissions')
-          .select('note_id, user_id')
-          .eq('firm_id', firmId)
-          .in('note_id', noteIds),
-        client
-          .from('crm_note_acknowledgements')
-          .select('note_id, user_id, acknowledged_at')
-          .in('note_id', noteIds),
-        client
-          .from('crm_note_events')
-          .select('id, note_id, event_type, detail, actor_id, created_at')
-          .eq('firm_id', firmId)
-          .in('note_id', noteIds)
-          .order('created_at', { ascending: false }),
+      const [contactRows, permissionRows, acknowledgementRows, eventRows] = await Promise.all([
+        inChunks(noteIds, (chunk) =>
+          client
+            .from('crm_note_contacts')
+            .select('note_id, contact_id')
+            .eq('firm_id', firmId)
+            .in('note_id', chunk),
+        ),
+        inChunks(noteIds, (chunk) =>
+          client
+            .from('crm_note_permissions')
+            .select('note_id, user_id')
+            .eq('firm_id', firmId)
+            .in('note_id', chunk),
+        ),
+        inChunks(noteIds, (chunk) =>
+          client
+            .from('crm_note_acknowledgements')
+            .select('note_id, user_id, acknowledged_at')
+            .in('note_id', chunk),
+        ),
+        inChunks(noteIds, (chunk) =>
+          client
+            .from('crm_note_events')
+            .select('id, note_id, event_type, detail, actor_id, created_at')
+            .eq('firm_id', firmId)
+            .in('note_id', chunk)
+            .order('created_at', { ascending: false }),
+        ),
       ])
-      if (contacts.error) throw contacts.error
-      if (permissions.error) throw permissions.error
-      if (acknowledgements.error) throw acknowledgements.error
-      if (events.error) throw events.error
+      const eventRowsSorted = [...eventRows].sort((first, second) =>
+        second.created_at.localeCompare(first.created_at),
+      )
       const actorIds = Array.from(
         new Set(
           [
@@ -161,13 +185,18 @@ export function useNotasRemotas(firmId: string | undefined) {
               note.resolved_by,
               note.archived_by,
             ]),
-            ...events.data.map((event) => event.actor_id),
-            ...acknowledgements.data.map((acknowledgement) => acknowledgement.user_id),
+            ...eventRowsSorted.map((event) => event.actor_id),
+            ...acknowledgementRows.map((acknowledgement) => acknowledgement.user_id),
           ].filter((id): id is string => Boolean(id)),
         ),
       )
       const actors = actorIds.length
-        ? await client.from('crm_profiles').select('id, display_name').in('id', actorIds)
+        ? {
+            data: await inChunks(actorIds, (chunk) =>
+              client.from('crm_profiles').select('id, display_name').in('id', chunk),
+            ),
+            error: null,
+          }
         : { data: [], error: null }
       if (actors.error) throw actors.error
       const actorNames = Object.fromEntries(
@@ -175,19 +204,19 @@ export function useNotasRemotas(firmId: string | undefined) {
       )
       return data.map((note) => ({
         ...note,
-        contactIds: contacts.data
+        contactIds: contactRows
           .filter((item) => item.note_id === note.id)
           .map((item) => item.contact_id),
-        permittedUserIds: permissions.data
+        permittedUserIds: permissionRows
           .filter((item) => item.note_id === note.id)
           .map((item) => item.user_id),
-        acknowledgedUserIds: acknowledgements.data
+        acknowledgedUserIds: acknowledgementRows
           .filter((item) => item.note_id === note.id)
           .map((item) => item.user_id),
-        acknowledgements: acknowledgements.data
+        acknowledgements: acknowledgementRows
           .filter((item) => item.note_id === note.id)
           .map((item) => ({ userId: item.user_id, acknowledgedAt: item.acknowledged_at })),
-        events: events.data.filter((event) => event.note_id === note.id),
+        events: eventRowsSorted.filter((event) => event.note_id === note.id),
         actorNames,
       }))
     },
@@ -285,8 +314,8 @@ export function useCrearNotaPersona(firmId: string | undefined) {
         event_detail: 'Nota interna creada al dar de alta un contacto.',
         target_payload: {
           scope: input.scope ?? 'person',
-          origin_id: input.originId ?? input.contactoId,
-          origin_label: input.originLabel ?? input.etiquetaOrigen,
+          origin_id: input.originId || input.contactoId,
+          origin_label: input.originLabel || input.etiquetaOrigen,
           title: input.titulo.trim(),
           content: input.contenido.trim(),
           case_id: input.caseId ?? '',
@@ -304,7 +333,7 @@ export function useCrearNotaPersona(firmId: string | undefined) {
           snoozed_until: '',
           visibility: input.visibility ?? 'team',
           details: { triggers: input.triggers ?? ['abrir-contacto'] },
-          contact_ids: input.contactIds ?? [input.contactoId],
+          contact_ids: Array.from(new Set([input.contactoId, ...(input.contactIds ?? [])])),
           permitted_user_ids: input.permittedUserIds ?? [],
         },
       })

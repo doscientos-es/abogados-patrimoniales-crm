@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     version: task.version + 1,
   })),
   complete: vi.fn().mockResolvedValue(undefined),
+  markNext: vi.fn().mockResolvedValue({}),
 }))
 
 vi.mock('@/features/tareas', () => ({
@@ -19,6 +20,11 @@ vi.mock('@/features/tareas', () => ({
   useEditarTarea: () => ({ mutateAsync: mocks.edit, isPending: false }),
   useActualizarReunionTarea: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
   useCompletarTarea: () => ({ mutateAsync: mocks.complete, isPending: false }),
+  useMarcarSiguienteAccion: () => ({ mutateAsync: mocks.markNext, isPending: false }),
+  MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
+}))
+vi.mock('@/features/tareas/ui/task-meeting-notes', () => ({
+  MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
 }))
 
 import { LeadFirstMeetingTab } from './lead-first-meeting-tab'
@@ -102,6 +108,36 @@ function renderTab() {
 }
 
 describe('LeadFirstMeetingTab', () => {
+  it('shows and starts the operational assistant through the persistent meeting mutation', async () => {
+    mocks.appointments = [scheduledTask()]
+
+    renderTab()
+    fireEvent.click(screen.getByRole('button', { name: /Comenzar primera cita/i }))
+
+    await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
+    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
+      status: 'in_progress',
+      primeraCita: { estado: 'En curso' },
+    })
+  })
+
+  it('records a no-show and creates a linked follow-up reminder', async () => {
+    mocks.appointments = [scheduledTask()]
+
+    renderTab()
+    fireEvent.click(screen.getByRole('button', { name: /No ha acudido/i }))
+
+    await waitFor(() => expect(mocks.markNext).toHaveBeenCalledOnce())
+    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
+      status: 'not_held',
+      primeraCita: { estado: 'No comparece' },
+    })
+    expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
+      oportunidadId: 'lead-1',
+      titulo: 'REVISAR / CERRAR LEAD POR FALTA DE RESPUESTA',
+    })
+  })
+
   it('shows indicators derived from the saved appointment status and result', () => {
     mocks.appointments = [scheduledTask({ resultado: 'Solicitar documentación' })]
 

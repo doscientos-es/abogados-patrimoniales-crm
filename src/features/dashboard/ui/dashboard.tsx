@@ -36,6 +36,9 @@ import {
 } from '@/features/tareas'
 import { isOverdue } from '@/shared/lib/time-status'
 
+import { PendingHandoffs } from './pending-handoffs'
+import { RequiresAttention } from './requires-attention'
+
 const openTask = (status: string) => !['Completada', 'Cancelada'].includes(status)
 const PENDING_INVOICE_STATUSES = ['draft', 'cancelled', 'paid']
 const UPCOMING_WINDOW_MS = 14 * 86_400_000
@@ -292,6 +295,15 @@ export function Dashboard() {
           </Link>
         ))}
       </section>
+      <RequiresAttention
+        firmId={firmId}
+        userId={session.user?.id ?? null}
+        tasks={tasksQuery.data ?? []}
+        cases={casesQuery.data ?? []}
+        opportunities={opportunitiesQuery.data ?? []}
+        now={dashboardTime}
+      />
+      <PendingHandoffs firmId={firmId} userId={session.user?.id ?? null} />
       <TodayActionInbox
         actions={todayActions}
         relatedRecords={relatedRecords}

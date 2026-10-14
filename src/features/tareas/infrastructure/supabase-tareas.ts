@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
+import { combinarTareasLead, leerTodasLasPaginas } from '@/features/tareas/application/task-scopes'
 import type {
   CompletarTareaInput,
   CrearTareaInput,
@@ -160,6 +161,14 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
 })
 
 type LabelAssignment = { task_id: string; label_id: string }
+const TASK_ID_CHUNK_SIZE = 80
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let index = 0; index < items.length; index += size)
+    result.push(items.slice(index, index + size))
+  return result
+}
 
 function labelsByTask(
   labels: TaskLabelRow[],
@@ -176,53 +185,114 @@ function labelsByTask(
   return result
 }
 
+async function cargarTareas(firmId: string, opportunityId?: string): Promise<TareaPersistida[]> {
+  const client = getSupabaseBrowserClient()
+  if (!client) return []
+  const rows = await leerTodasLasPaginas<TaskRow>(async (from, to) => {
+    let query = client.from('crm_tasks').select('*').eq('firm_id', firmId)
+    if (opportunityId) query = query.eq('opportunity_id', opportunityId)
+    const result = await query
+      .order('board_position', { ascending: true, nullsFirst: false })
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, to)
+    return { data: result.data as TaskRow[] | null, error: result.error }
+  })
+  const taskIds = rows.map((task) => task.id)
+  const assignmentPages = await Promise.all(
+    chunks(taskIds, TASK_ID_CHUNK_SIZE).map(async (taskIdChunk) => {
+      const result = await client
+        .from('crm_task_label_assignments')
+        .select('task_id,label_id')
+        .in('task_id', taskIdChunk)
+      if (result.error) throw result.error
+      return (result.data ?? []) as LabelAssignment[]
+    }),
+  )
+  const [labels, dependencies] = await Promise.all([
+    leerTodasLasPaginas<TaskLabelRow>(async (from, to) => {
+      const result = await client
+        .from('crm_task_labels')
+        .select('id,name,color,firm_id,archived,created_at,updated_at')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('name')
+        .range(from, to)
+      return { data: result.data as TaskLabelRow[] | null, error: result.error }
+    }),
+    leerTodasLasPaginas<{
+      predecessor_task_id: string
+      successor_task_id: string
+    }>(async (from, to) => {
+      const result = await client
+        .from('crm_task_dependencies')
+        .select('predecessor_task_id,successor_task_id')
+        .eq('firm_id', firmId)
+        .order('predecessor_task_id')
+        .order('successor_task_id')
+        .range(from, to)
+      return { data: result.data, error: result.error }
+    }),
+  ])
+  const assignments = assignmentPages.flat()
+  const taskLabels = labelsByTask(labels, assignments)
+  const statusById = new Map(rows.map((task) => [task.id, task.status]))
+  const blockedTaskIds = new Set(
+    dependencies
+      .filter(
+        (dependency) =>
+          statusById.has(dependency.successor_task_id) &&
+          statusById.get(dependency.predecessor_task_id) !== 'completed',
+      )
+      .map((dependency) => dependency.successor_task_id),
+  )
+  return rows.map((row) => ({
+    ...fromRow(row, blockedTaskIds.has(row.id)),
+    etiquetas: taskLabels.get(row.id) ?? [],
+  }))
+}
+
 export function useTareasPersistentes(firmId: string | undefined) {
   return useQuery({
     queryKey: ['tareas', firmId],
     enabled: Boolean(firmId),
+    queryFn: async () => (firmId ? cargarTareas(firmId) : []),
+  })
+}
+
+export function useTareasLead(firmId: string | undefined, leadId: string | undefined) {
+  const queryClient = useQueryClient()
+  const direct = useQuery({
+    queryKey: ['tareas', firmId, 'lead', leadId],
+    enabled: Boolean(firmId && leadId),
+    queryFn: async () => (firmId && leadId ? cargarTareas(firmId, leadId) : []),
+  })
+  const global = useQuery({
+    queryKey: ['tareas', firmId],
+    enabled: false,
+    queryFn: async () => queryClient.getQueryData<TareaPersistida[]>(['tareas', firmId]) ?? [],
+  })
+  return {
+    ...direct,
+    data: direct.data ? combinarTareasLead(direct.data, global.data, leadId ?? '') : undefined,
+  }
+}
+
+export function useTareaPorId(firmId: string | undefined, taskId: string | undefined) {
+  return useQuery({
+    queryKey: ['tareas', firmId, 'byId', taskId],
+    enabled: Boolean(firmId && taskId),
     queryFn: async () => {
       const client = getSupabaseBrowserClient()
-      if (!client || !firmId) return []
+      if (!client || !firmId || !taskId) return null
       const { data, error } = await client
         .from('crm_tasks')
         .select('*')
         .eq('firm_id', firmId)
-        .order('board_position', { ascending: true, nullsFirst: false })
-        .order('updated_at', { ascending: false })
+        .eq('id', taskId)
+        .maybeSingle()
       if (error) throw error
-      const [
-        { data: assignments, error: assignmentsError },
-        { data: labels, error: labelsError },
-        { data: dependencies, error: dependenciesError },
-      ] = await Promise.all([
-        client.from('crm_task_label_assignments').select('task_id,label_id'),
-        client
-          .from('crm_task_labels')
-          .select('id,name,color')
-          .eq('firm_id', firmId)
-          .eq('archived', false),
-        client
-          .from('crm_task_dependencies')
-          .select('predecessor_task_id,successor_task_id')
-          .eq('firm_id', firmId),
-      ])
-      if (assignmentsError) throw assignmentsError
-      if (labelsError) throw labelsError
-      if (dependenciesError) throw dependenciesError
-      const taskLabels = labelsByTask(
-        (labels ?? []) as TaskLabelRow[],
-        (assignments ?? []) as LabelAssignment[],
-      )
-      const statusById = new Map(data.map((task) => [task.id, task.status]))
-      const blockedTaskIds = new Set(
-        (dependencies ?? [])
-          .filter((dependency) => statusById.get(dependency.predecessor_task_id) !== 'completed')
-          .map((dependency) => dependency.successor_task_id),
-      )
-      return data.map((row) => ({
-        ...fromRow(row, blockedTaskIds.has(row.id)),
-        etiquetas: taskLabels.get(row.id) ?? [],
-      }))
+      return data ? { ...fromRow(data as TaskRow), etiquetas: [] } : null
     },
   })
 }
@@ -355,8 +425,20 @@ export function useCrearTarea(firmId: string | undefined) {
         task,
         ...(items ?? []),
       ])
+      queryClient.setQueryData(['tareas', firmId, 'byId', task.id], task)
+      if (task.oportunidadId) {
+        queryClient.setQueryData<TareaPersistida[]>(
+          ['tareas', firmId, 'lead', task.oportunidadId],
+          (items) => (items ? [task, ...items.filter((item) => item.id !== task.id)] : items),
+        )
+        void queryClient.invalidateQueries({
+          queryKey: ['tareas', firmId, 'lead', task.oportunidadId],
+        })
+      }
       if (task.asignadoId && task.asignadoId === task.creadaPorId) {
-        void queryClient.invalidateQueries({ queryKey: ['tareas', firmId, task.asignadoId, 'inbox'] })
+        void queryClient.invalidateQueries({
+          queryKey: ['tareas', firmId, task.asignadoId, 'inbox'],
+        })
       }
     },
   })

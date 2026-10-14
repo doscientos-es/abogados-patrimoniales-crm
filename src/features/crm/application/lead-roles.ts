@@ -1,0 +1,17 @@
+export const DEFAULT_LEAD_ROLES = [
+  'Interesado principal',
+  'Representante',
+  'Familiar o persona de contacto',
+  'Propietario',
+  'Arrendador',
+  'Arrendatario',
+  'Comprador',
+  'Vendedor',
+  'Heredero',
+  'Legatario',
+  'Comunero',
+  'Administrador',
+  'Acreedor',
+  'Deudor',
+  'Otro rol',
+] as const

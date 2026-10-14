@@ -58,7 +58,7 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
         is: () => builder,
         order: () => {
           orderCalls += 1
-          return table === 'crm_task_labels' || orderCalls === 2
+          return table === 'crm_task_labels' || table === 'crm_lead_roles' || orderCalls === 2
             ? Promise.resolve(response)
             : builder
         },

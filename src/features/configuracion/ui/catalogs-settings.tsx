@@ -6,7 +6,9 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
+import { getSupabaseBrowserClient, type MemberRole } from '@/shared/infrastructure/supabase'
+
+import { LeadRolesCatalog } from './lead-roles-catalog'
 
 type CatalogRow = {
   id: string
@@ -18,7 +20,13 @@ type CatalogRow = {
 }
 const colors = ['gray', 'blue', 'amber', 'rose', 'green', 'purple', 'teal'] as const
 
-export function CatalogsSettings({ firmId }: { firmId: string }) {
+export function CatalogsSettings({
+  firmId,
+  actorRole = 'paralegal',
+}: {
+  firmId: string
+  actorRole?: MemberRole
+}) {
   const client = getSupabaseBrowserClient()
   const queryClient = useQueryClient()
   const [label, setLabel] = useState('')
@@ -274,6 +282,10 @@ export function CatalogsSettings({ firmId }: { firmId: string }) {
           busy={toggle.isPending}
         />
       </CatalogSection>
+      <LeadRolesCatalog
+        firmId={firmId}
+        canManage={['owner', 'admin', 'lawyer'].includes(actorRole)}
+      />
     </div>
   )
 }

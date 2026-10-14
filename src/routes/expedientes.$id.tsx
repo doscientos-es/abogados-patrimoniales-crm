@@ -1,13 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 
-import { PendingPanel } from "@/components/common";
-import { TaskWorkspace } from "@/components/tareas/task-workspace";
-import { useActiveMembership, useAuthSession } from "@/features/auth";
-import { useContactos } from "@/features/contactos";
-import { useMiembrosDespacho } from "@/features/crm";
-import { useFacturas } from "@/features/facturacion";
+import { PendingPanel } from '@/components/common'
+import { TaskWorkspace } from '@/components/tareas/task-workspace'
+import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { useContactos } from '@/features/contactos'
+import { useMiembrosDespacho } from '@/features/crm'
 import {
   CaseEditForm,
   CaseRelatedForms,
@@ -28,84 +27,95 @@ import {
   useExpedientePersistente,
   useLineasPersistentes,
   useParticipantesPersistentes,
-} from "@/features/expedientes";
-import { useConfirmarLectura, useNotasRemotas } from "@/features/notas";
+} from '@/features/expedientes'
+import { CaseHandoffBar } from '@/features/expedientes/ui/case-handoff'
+import { useFacturas } from '@/features/facturacion'
+import { useConfirmarLectura, useNotasRemotas } from '@/features/notas'
 import {
   useCrearTarea,
   useEtiquetasTarea,
   useMarcarSiguienteAccion,
   useTareasPersistentes,
-} from "@/features/tareas";
-import { TaskDetailDialog } from "@/features/tareas/ui/task-detail-dialog";
-import { getSupabaseBrowserClient } from "@/shared/infrastructure/supabase";
+  tareasDelExpediente,
+} from '@/features/tareas'
+import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
-export const Route = createFileRoute("/expedientes/$id")({
-  validateSearch: (search: Record<string, unknown>): { tab?: CaseDetailTab | undefined } => ({
+export const Route = createFileRoute('/expedientes/$id')({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): {
+    tab?: CaseDetailTab | undefined
+    traspaso?: boolean
+  } => ({
     ...(isCaseTab(search['tab']) ? { tab: search['tab'] } : {}),
+    ...(search['traspaso'] === true ? { traspaso: true } : {}),
   }),
   head: ({ params }) => ({
     meta: [
       { title: `Expediente ${params.id} — LEX` },
-      { name: "description", content: "Ficha persistente y trazabilidad del expediente." },
-      { name: "robots", content: "noindex, nofollow, noarchive" },
+      { name: 'description', content: 'Ficha persistente y trazabilidad del expediente.' },
+      { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
   component: CaseRoute,
-});
+})
 
 function CaseRoute() {
-  const { id } = Route.useParams();
-  const { tab } = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const selectedTab = isCaseTab(tab) ? tab : "summary";
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const { id } = Route.useParams()
+  const { tab, traspaso } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const selectedTab = isCaseTab(tab) ? tab : 'summary'
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const selectTab = (nextTab: string) => {
-    void navigate({ search: { tab: nextTab === "summary" ? undefined : (nextTab as CaseDetailTab) } });
-  };
-  const session = useAuthSession();
-  const membership = useActiveMembership(session.user?.id);
-  const firmId = membership.data?.firmId;
-  const caseQuery = useExpedientePersistente(firmId, id);
-  const workstreams = useLineasPersistentes(firmId, id);
-  const activities = useActuacionesPersistentes(firmId, id);
-  const participants = useParticipantesPersistentes(firmId, id);
-  const events = useEventosExpediente(firmId, id);
-  const communications = useComunicacionesExpediente(firmId, id);
-  const documents = useDocumentosExpediente(firmId, id);
-  const invoices = useFacturas(firmId);
-  const tasks = useTareasPersistentes(firmId);
-  const notes = useNotasRemotas(firmId);
-  const acknowledgeNote = useConfirmarLectura(firmId);
-  const contacts = useContactos(firmId);
-  const members = useMiembrosDespacho(firmId);
-  const taskLabels = useEtiquetasTarea(firmId);
+    void navigate({
+      search: { tab: nextTab === 'summary' ? undefined : (nextTab as CaseDetailTab) },
+    })
+  }
+  const session = useAuthSession()
+  const membership = useActiveMembership(session.user?.id)
+  const firmId = membership.data?.firmId
+  const caseQuery = useExpedientePersistente(firmId, id)
+  const workstreams = useLineasPersistentes(firmId, id)
+  const activities = useActuacionesPersistentes(firmId, id)
+  const participants = useParticipantesPersistentes(firmId, id)
+  const events = useEventosExpediente(firmId, id)
+  const communications = useComunicacionesExpediente(firmId, id)
+  const documents = useDocumentosExpediente(firmId, id)
+  const invoices = useFacturas(firmId)
+  const tasks = useTareasPersistentes(firmId)
+  const notes = useNotasRemotas(firmId)
+  const acknowledgeNote = useConfirmarLectura(firmId)
+  const contacts = useContactos(firmId)
+  const members = useMiembrosDespacho(firmId)
+  const taskLabels = useEtiquetasTarea(firmId)
   const titleTemplates = useQuery({
-    queryKey: ["task-title-templates", firmId],
+    queryKey: ['task-title-templates', firmId],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const supabase = getSupabaseBrowserClient();
-      if (!supabase || !firmId) return [];
+      const supabase = getSupabaseBrowserClient()
+      if (!supabase || !firmId) return []
       const { data, error } = await supabase
-        .from("crm_task_title_templates")
-        .select("title")
-        .eq("firm_id", firmId)
-        .eq("archived", false)
-        .order("sort_order")
-        .order("title");
-      if (error) throw error;
-      return data.map((row) => row.title);
+        .from('crm_task_title_templates')
+        .select('title')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('sort_order')
+        .order('title')
+      if (error) throw error
+      return data.map((row) => row.title)
     },
-  });
-  const updateCase = useActualizarExpediente(firmId);
-  const createParticipant = useCrearParticipante(firmId);
-  const createWorkstream = useCrearLinea(firmId);
-  const updateWorkstream = useActualizarLinea(firmId);
-  const reorderWorkstreams = useReordenarLineas(firmId);
-  const createCommunication = useCrearComunicacionExpediente(firmId, id);
-  const updateActivityVisibility = useActualizarVisibilidadActuacion(firmId, id);
-  const registerReport = useRegistrarReporteCliente(firmId, id);
-  const createTask = useCrearTarea(firmId);
-  const setNextAction = useMarcarSiguienteAccion(firmId);
+  })
+  const updateCase = useActualizarExpediente(firmId)
+  const createParticipant = useCrearParticipante(firmId)
+  const createWorkstream = useCrearLinea(firmId)
+  const updateWorkstream = useActualizarLinea(firmId)
+  const reorderWorkstreams = useReordenarLineas(firmId)
+  const createCommunication = useCrearComunicacionExpediente(firmId, id)
+  const updateActivityVisibility = useActualizarVisibilidadActuacion(firmId, id)
+  const registerReport = useRegistrarReporteCliente(firmId, id)
+  const createTask = useCrearTarea(firmId)
+  const setNextAction = useMarcarSiguienteAccion(firmId)
   const queries = [
     caseQuery,
     workstreams,
@@ -118,37 +128,44 @@ function CaseRoute() {
     tasks,
     contacts,
     members,
-  ];
+  ]
 
-  if (session.status === "loading" || membership.isPending)
-    return <PendingPanel title="Cargando expediente" description="Consultando tu despacho…" />;
-  if (session.status !== "signed-in" || !firmId)
+  if (session.status === 'loading' || membership.isPending)
+    return <PendingPanel title="Cargando expediente" description="Consultando tu despacho…" />
+  if (session.status !== 'signed-in' || !firmId)
     return (
       <PendingPanel
         title="Expediente no disponible"
         description="Necesitas una sesión y una membresía activa."
       />
-    );
+    )
   if (queries.some((query) => query.isPending))
-    return <PendingPanel title="Cargando expediente" description="Consultando datos operativos…" />;
+    return <PendingPanel title="Cargando expediente" description="Consultando datos operativos…" />
   if (queries.some((query) => query.isError))
     return (
       <PendingPanel
         title="No se pudo cargar el expediente"
         description="Reintenta en unos instantes."
       />
-    );
+    )
   if (!caseQuery.data)
     return (
       <PendingPanel
         title="Expediente no encontrado"
         description="No existe o no pertenece a tu despacho."
       />
-    );
-  const expediente = caseQuery.data;
+    )
+  const expediente = caseQuery.data
 
   return (
     <>
+      <CaseHandoffBar
+        firmId={firmId}
+        expediente={expediente}
+        currentUserId={session.user?.id ?? null}
+        onUpdateCase={updateCase.mutateAsync}
+        autoOpen={traspaso ?? false}
+      />
       <CaseDetail
         activeTab={selectedTab}
         onSelectTab={selectTab}
@@ -161,7 +178,7 @@ function CaseRoute() {
         comunicaciones={communications.data ?? []}
         documentos={documents.data ?? []}
         facturas={(invoices.data ?? []).filter((invoice) => invoice.asuntoId === id)}
-        tareas={tasks.data ?? []}
+        tareas={tareasDelExpediente(tasks.data ?? [], id, expediente.oportunidadId)}
         notas={notes.data ?? []}
         taskTitleTemplates={titleTemplates.data ?? []}
         miembros={members.data ?? []}
@@ -179,21 +196,21 @@ function CaseRoute() {
         }
         clienteNombre={
           contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
-          "Contacto principal"
+          'Contacto principal'
         }
         taskPending={createTask.isPending}
         onCreateTask={(input) => createTask.mutateAsync(input)}
         onSetNextAction={(task, enabled) => setNextAction.mutateAsync({ task, enabled })}
         onUpdateWorkstream={(input) => updateWorkstream.mutateAsync(input)}
         workstreamPending={updateWorkstream.isPending}
-        onReorderWorkstreams={(ids) =>
-          reorderWorkstreams.mutateAsync({ expedienteId: id, ids })
-        }
+        onReorderWorkstreams={(ids) => reorderWorkstreams.mutateAsync({ expedienteId: id, ids })}
         reorderPending={reorderWorkstreams.isPending}
-        canManageNextAction={(task) => Boolean(
-          task.creadaPorId === session.user?.id ||
-          ["owner", "admin", "lawyer"].includes(membership.data?.role ?? ""),
-        )}
+        canManageNextAction={(task) =>
+          Boolean(
+            task.creadaPorId === session.user?.id ||
+            ['owner', 'admin', 'lawyer'].includes(membership.data?.role ?? ''),
+          )
+        }
         nextActionPending={setNextAction.isPending}
         communicationPending={createCommunication.isPending}
         onCreateCommunication={(input) => createCommunication.mutateAsync(input)}
@@ -207,7 +224,7 @@ function CaseRoute() {
             miembros={members.data ?? []}
             pending={updateCase.isPending}
             onSave={async (input) => {
-              await updateCase.mutateAsync(input);
+              await updateCase.mutateAsync(input)
             }}
           />
         }
@@ -239,15 +256,26 @@ function CaseRoute() {
       <TaskDetailDialog
         taskId={openTaskId}
         onOpenChange={(open) => {
-          if (!open) setOpenTaskId(null);
+          if (!open) setOpenTaskId(null)
         }}
         onOpenTask={setOpenTaskId}
       />
     </>
-  );
+  )
 }
 
 function isCaseTab(tab: unknown): tab is CaseDetailTab {
-  if (typeof tab !== "string") return false;
-  return ["summary", "workstreams", "participants", "activities", "documents", "economic", "communications", "tasks", "deadlines", "history"].includes(tab);
+  if (typeof tab !== 'string') return false
+  return [
+    'summary',
+    'workstreams',
+    'participants',
+    'activities',
+    'documents',
+    'economic',
+    'communications',
+    'tasks',
+    'deadlines',
+    'history',
+  ].includes(tab)
 }
