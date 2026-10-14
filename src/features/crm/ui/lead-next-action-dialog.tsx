@@ -185,14 +185,14 @@ export function LeadNextActionDialog({
                 onChange={(event) => setAssigneeId(event.target.value)}
                 disabled={locked}
               >
-                {currentUserId ? (
-                  <option value={currentUserId}>Asignarme a mí mismo</option>
-                ) : null}
-                {(members.data ?? []).filter((member) => member.id !== currentUserId).map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.nombre}
-                  </option>
-                ))}
+                {currentUserId ? <option value={currentUserId}>Asignarme a mí mismo</option> : null}
+                {(members.data ?? [])
+                  .filter((member) => member.id !== currentUserId)
+                  .map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.nombre}
+                    </option>
+                  ))}
                 <option value="">Sin asignar</option>
               </select>
             </div>

@@ -4,7 +4,10 @@ import type { ReactElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/features/auth', () => ({
-  useAuthSession: () => ({ status: 'signed-in', user: { id: 'me', email: null, displayName: null } }),
+  useAuthSession: () => ({
+    status: 'signed-in',
+    user: { id: 'me', email: null, displayName: null },
+  }),
 }))
 
 import { TaskCreateDialog } from './task-create-dialog'

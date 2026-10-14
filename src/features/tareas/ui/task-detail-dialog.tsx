@@ -12,7 +12,7 @@ export function TaskDetailDialog({
 }) {
   return (
     <Dialog open={Boolean(taskId)} onOpenChange={onOpenChange}>
-      <DialogContent size="5xl" className="w-[96vw] max-h-[92vh]">
+      <DialogContent size="5xl" className="max-h-[92vh] w-[96vw]">
         <DialogTitle className="sr-only">Ficha de la tarea</DialogTitle>
         <DialogDescription className="sr-only">
           Detalle, acciones, conversación e histórico de la tarea.

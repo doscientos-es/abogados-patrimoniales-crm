@@ -10,8 +10,6 @@ import { useMiembrosDespacho } from '@/features/crm'
 import {
   CaseEditForm,
   CaseRelatedForms,
-  CaseDetail,
-  type CaseDetailTab,
   useComunicacionesExpediente,
   useActualizarVisibilidadActuacion,
   useActualizarLinea,
@@ -31,6 +29,7 @@ import {
   useLineasPersistentes,
   useParticipantesPersistentes,
 } from '@/features/expedientes'
+import { CaseDetail, type CaseDetailTab } from '@/features/expedientes/ui/case-detail'
 import { CaseHandoffBar } from '@/features/expedientes/ui/case-handoff'
 import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
 import { useFacturas } from '@/features/facturacion'
@@ -191,7 +190,6 @@ function CaseRoute() {
         expediente={expediente}
         lineas={workstreams.data ?? []}
         actuaciones={activities.data ?? []}
-        participantes={participants.data ?? []}
         eventos={events.data ?? []}
         comunicaciones={communications.data ?? []}
         documentos={documents.data ?? []}

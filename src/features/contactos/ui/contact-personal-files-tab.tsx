@@ -18,12 +18,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import type { RelacionDespacho } from '@/features/contactos'
 import {
   CONTACT_DOCUMENT_MAX_BYTES,
   CONTACT_DOCUMENT_MIME,
+  type RelacionDespacho,
   uploadContactDocument,
-} from '@/features/contactos/infrastructure/upload-contact-document'
+} from '@/features/contactos'
 import {
   categoriesForRequirement,
   ensureRequiredLeadDocumentRequests,

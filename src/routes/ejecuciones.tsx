@@ -304,7 +304,12 @@ function EjecucionesPage() {
                   No hay ejecuciones {filter === 'judicial' ? 'judiciales' : 'extrajudiciales'}.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setFilter('all')}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFilter('all')}
+                  >
                     Ver todas ({executions.data.length})
                   </Button>
                   <Button type="button" size="sm" onClick={() => setShowForm(true)}>
@@ -348,7 +353,7 @@ function EjecucionesPage() {
                       ))}
                     </select>
                     {execution.modality === 'extrajudicial' &&
-                      execution.status !== 'Derivado a ejecución judicial' ? (
+                    execution.status !== 'Derivado a ejecución judicial' ? (
                       <Button
                         type="button"
                         size="sm"

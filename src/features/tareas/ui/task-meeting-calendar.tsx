@@ -124,7 +124,9 @@ export function MeetingCalendarPanel({
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            {selected ? 'Sin compromisos ese día: hueco disponible.' : 'Elige un día en el calendario.'}
+            {selected
+              ? 'Sin compromisos ese día: hueco disponible.'
+              : 'Elige un día en el calendario.'}
           </p>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
+import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants, Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   buildMonthGrid,

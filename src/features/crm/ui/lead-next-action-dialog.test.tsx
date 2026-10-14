@@ -19,7 +19,10 @@ vi.mock('sonner', () => ({
   toast: { error: mocks.toastError, success: mocks.toastSuccess },
 }))
 vi.mock('@/features/auth', () => ({
-  useAuthSession: () => ({ status: 'signed-in', user: { id: 'me', email: null, displayName: null } }),
+  useAuthSession: () => ({
+    status: 'signed-in',
+    user: { id: 'me', email: null, displayName: null },
+  }),
 }))
 vi.mock('@/features/crm', () => ({ useMiembrosDespacho: () => ({ data: mocks.members }) }))
 vi.mock('@/features/tareas', () => ({

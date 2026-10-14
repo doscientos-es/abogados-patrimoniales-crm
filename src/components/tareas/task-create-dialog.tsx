@@ -3,6 +3,7 @@ import { CalendarClock, ChevronDown, ListOrdered, MessageSquare, Plus } from 'lu
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
+import { MeetingAttendeesPicker } from '@/components/tareas/meeting-attendees-picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,7 +17,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { MeetingAttendeesPicker } from '@/components/tareas/meeting-attendees-picker'
 import { useAuthSession } from '@/features/auth'
 import { useParticipantesPersistentes } from '@/features/expedientes/infrastructure/supabase-expedientes'
 import type { CrearTareaInput, DetallesReunion } from '@/features/tareas/application/task-types'
@@ -147,7 +147,9 @@ export function TaskCreateDialog({
         ? `Reunión: ${details?.subject?.trim() ?? ''}`.trim()
         : text(data, 'title').trim()
     if (!titulo || titulo === 'Reunión:') {
-      toast.error(special === 'meeting' ? 'Indica el objeto de la reunión.' : 'Indica al menos un título.')
+      toast.error(
+        special === 'meeting' ? 'Indica el objeto de la reunión.' : 'Indica al menos un título.',
+      )
       return
     }
     const issue = details?.specialType === 'meeting' ? specialMeetingCreationIssue(details) : null
@@ -179,7 +181,7 @@ export function TaskCreateDialog({
       })
       toast.success(
         successMessage ??
-        (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
+          (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
       )
       form.reset()
       reset()
@@ -281,9 +283,7 @@ export function TaskCreateDialog({
                     label="Asignada a"
                     defaultValue={defaultAssigneeId ?? currentUserId ?? ''}
                     options={[
-                      ...(currentUserId
-                        ? [[currentUserId, 'Asignarme a mí mismo'] as const]
-                        : []),
+                      ...(currentUserId ? [[currentUserId, 'Asignarme a mí mismo'] as const] : []),
                       ...members
                         .filter((member) => member.id !== currentUserId)
                         .map((member) => [member.id, member.nombre] as const),
@@ -303,7 +303,12 @@ export function TaskCreateDialog({
                     required={kind === 'Plazo'}
                     defaultValue={defaultDueDate}
                   />
-                  <Field name="dueTime" label="Hora límite" type="time" defaultValue={defaultDueTime} />
+                  <Field
+                    name="dueTime"
+                    label="Hora límite"
+                    type="time"
+                    defaultValue={defaultDueTime}
+                  />
                   <LabelPicker
                     labels={labels}
                     value={labelIds}
@@ -404,7 +409,7 @@ export function TaskCreateDialog({
           </form>
         )}
       </DialogContent>
-    </Dialog >
+    </Dialog>
   )
 }
 
@@ -437,9 +442,7 @@ function LabelPicker({
                 type="button"
                 aria-pressed={selected}
                 onClick={() =>
-                  onChange(
-                    selected ? value.filter((id) => id !== label.id) : [...value, label.id],
-                  )
+                  onChange(selected ? value.filter((id) => id !== label.id) : [...value, label.id])
                 }
                 className={cn(
                   'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
@@ -548,7 +551,9 @@ function MeetingFields({
             name="meetingDuration"
             label="Duración estimada"
             defaultValue="60"
-            options={['15', '30', '45', '60', '90'].map((value) => [value, `${value} minutos`] as const)}
+            options={['15', '30', '45', '60', '90'].map(
+              (value) => [value, `${value} minutos`] as const,
+            )}
           />
           <SelectField
             name="meetingDatePreference"
@@ -565,7 +570,7 @@ function MeetingFields({
             ].map((value) => [value, value] as const)}
           />
           {datePreference === 'Antes de una fecha' ||
-            datePreference === 'Fecha concreta preferente' ? (
+          datePreference === 'Fecha concreta preferente' ? (
             <Field
               name="meetingPreferredDate"
               label={datePreference === 'Antes de una fecha' ? 'Fecha límite' : 'Fecha preferente'}
@@ -592,12 +597,17 @@ function MeetingFields({
           {meetingMode === 'outside_office' ? (
             <Field name="meetingPreferredLocation" label="Dirección" />
           ) : null}
-          <Field name="meetingInstructions" label="Indicaciones internas" multiline className="sm:col-span-2" />
+          <Field
+            name="meetingInstructions"
+            label="Indicaciones internas"
+            multiline
+            className="sm:col-span-2"
+          />
         </div>
       </section>
       <p className="text-muted-foreground text-[11px]">
-        Las notas internas se añaden desde la ficha de la reunión. Las fechas definitivas se
-        guardan al agendarla.
+        Las notas internas se añaden desde la ficha de la reunión. Las fechas definitivas se guardan
+        al agendarla.
       </p>
     </div>
   )
@@ -626,8 +636,8 @@ function CommunicationFields() {
         className="sm:col-span-2"
       />
       <p className="text-muted-foreground text-xs sm:col-span-2">
-        La tarea se cerrará al marcarla como contestada. Si aparece trabajo jurídico adicional,
-        crea otra tarea.
+        La tarea se cerrará al marcarla como contestada. Si aparece trabajo jurídico adicional, crea
+        otra tarea.
       </p>
     </div>
   )
@@ -752,11 +762,11 @@ export function PresetPicker({
   const filtered = presets.filter((preset) => preset.toLowerCase().includes(needle))
   const specials = onSpecial
     ? (
-      [
-        ['meeting', 'Reunión', CalendarClock],
-        ['communication', 'Comunicación', MessageSquare],
-      ] as const
-    ).filter(([, name]) => name.toLowerCase().includes(needle))
+        [
+          ['meeting', 'Reunión', CalendarClock],
+          ['communication', 'Comunicación', MessageSquare],
+        ] as const
+      ).filter(([, name]) => name.toLowerCase().includes(needle))
     : []
   const close = () => {
     setOpen(false)
@@ -950,4 +960,3 @@ function values(data: FormData, name: string) {
 function iso(value: string) {
   return value ? new Date(value).toISOString() : null
 }
-

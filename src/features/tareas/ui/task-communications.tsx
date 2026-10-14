@@ -135,7 +135,11 @@ function CommunicationDialog({
   const register = useRegistrarComunicacionTarea(firmId, task)
   const isCall = channel === 'phone'
   const title =
-    channel === 'email' ? 'Nuevo email' : channel === 'whatsapp' ? 'Nuevo WhatsApp' : 'Registrar llamada'
+    channel === 'email'
+      ? 'Nuevo email'
+      : channel === 'whatsapp'
+        ? 'Nuevo WhatsApp'
+        : 'Registrar llamada'
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -229,7 +233,11 @@ function CommunicationDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={register.isPending}>
-              {register.isPending ? 'Guardando…' : isCall ? 'Registrar llamada' : 'Guardar borrador'}
+              {register.isPending
+                ? 'Guardando…'
+                : isCall
+                  ? 'Registrar llamada'
+                  : 'Guardar borrador'}
             </Button>
           </DialogFooter>
         </form>

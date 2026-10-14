@@ -15,12 +15,9 @@ import type { TareaPersistida } from '@/features/tareas'
 import { TaskCommunications } from '@/features/tareas/ui/task-communications'
 
 describe('barrel @/features/tareas', () => {
-  it.each(['useComunicacionesTarea', 'useRegistrarComunicacionTarea'])(
-    'exporta %s',
-    (name) => {
-      expect(typeof (tareas as Record<string, unknown>)[name]).toBe('function')
-    },
-  )
+  it.each(['useComunicacionesTarea', 'useRegistrarComunicacionTarea'])('exporta %s', (name) => {
+    expect(typeof (tareas as Record<string, unknown>)[name]).toBe('function')
+  })
 })
 
 describe('TaskCommunications (sin mocks del barrel)', () => {
