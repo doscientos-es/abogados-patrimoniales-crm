@@ -184,28 +184,36 @@ function FichaOportunidadPage() {
   const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id)
   const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
   return (
-    <main className="mx-auto max-w-[1400px] space-y-6 p-6">
-      <Link
-        to="/oportunidades"
-        search={{ vista: 'todas', abrir: '' }}
-        className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-      >
-        <ArrowLeft className="h-4 w-4" /> Volver a Leads
-      </Link>
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">{data.referencia}</Badge>
-          <Badge>{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
-          <Badge variant="secondary">{data.subestado}</Badge>
+    <main className="mx-auto max-w-[1400px] space-y-5 p-6">
+      <header className="rounded-xl border bg-card px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <Link
+            to="/oportunidades"
+            search={{ vista: 'todas', abrir: '' }}
+            className={buttonVariants({
+              variant: 'ghost',
+              size: 'sm',
+              className: 'h-7 px-2 text-xs',
+            })}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Volver a Leads
+          </Link>
+          <Badge variant="outline" className="font-mono text-xs">
+            {data.referencia}
+          </Badge>
+          <Badge className="text-xs">{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
+          <Badge variant="secondary" className="text-xs">
+            {data.subestado}
+          </Badge>
         </div>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-balance">{data.titulo}</h1>
-            <p className="text-muted-foreground mt-1">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t pt-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl leading-tight font-semibold text-balance">{data.titulo}</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">
               {data.descripcion || 'Sin descripción registrada.'}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Link
               to="/contactos/$id"
               params={{ id: data.contactoId }}
@@ -876,11 +884,11 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? 'Sin fecha'
     : new Intl.DateTimeFormat('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }).format(date)
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date)
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
