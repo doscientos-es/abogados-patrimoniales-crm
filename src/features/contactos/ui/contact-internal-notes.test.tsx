@@ -11,14 +11,6 @@ function renderNotes(onCreate = vi.fn().mockResolvedValue(undefined)) {
       notes={[]}
       loading={false}
       error={false}
-      contactId="contact-1"
-      contactOptions={[{ id: 'contact-1', tipoPersona: 'Persona física', nombre: 'Ana' } as never]}
-      caseOptions={[]}
-      opportunityOptions={[]}
-      memberOptions={[]}
-      casesLoading={false}
-      opportunitiesLoading={false}
-      membersLoading={false}
       creating={false}
       onCreate={onCreate}
       onCreated={vi.fn()}
@@ -29,29 +21,31 @@ function renderNotes(onCreate = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe('ContactInternalNotes', () => {
-  it('keeps the note editor closed until the create action is selected', () => {
+  it('shows the post-it editor directly without a dialog', () => {
     renderNotes()
 
-    expect(screen.queryByLabelText('Contenido (obligatorio)')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear nota interna' }))
-
-    expect(screen.getByRole('dialog', { name: 'Nueva nota interna' })).toBeTruthy()
-    expect(screen.getByLabelText('Contenido (obligatorio)')).toBeTruthy()
+    expect(screen.getByLabelText('Título de nota interna')).toBeTruthy()
+    expect(screen.getByLabelText('Contenido de nota interna')).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('saves a note from the dialog and closes it after success', async () => {
+  it('saves the post-it note with its flags', async () => {
     const onCreate = renderNotes()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear nota interna' }))
-    fireEvent.change(screen.getByLabelText('Contenido (obligatorio)'), {
+    fireEvent.change(screen.getByLabelText('Título de nota interna'), {
+      target: { value: 'Preferencias' },
+    })
+    fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
       target: { value: 'Información relevante' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar nota' }))
+    fireEvent.click(screen.getByLabelText('Destacada'))
+    fireEvent.click(screen.getByLabelText('Advertencia crítica'))
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
 
-    await waitFor(() =>
-      expect(onCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ content: 'Información relevante' }),
-      ),
-    )
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({
+      title: 'Preferencias',
+      content: 'Información relevante',
+      highlighted: true,
+      critical: true,
+    }))
   })
 })

@@ -54,6 +54,7 @@ import { requiredDocumentsForContact } from '../application/lead-document-requir
 import { ContactBankingTab } from './contact-banking-tab'
 import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 import { ContactProfileTab } from './contact-profile-tab'
+import { DraftNote } from './draft-note'
 
 export const CONTACT_TABS = ['summary', 'general', 'banking', 'profile', 'files', 'notes'] as const
 
@@ -807,44 +808,17 @@ export function ContactDetail({
           notes={notes}
           loading={notesQuery.isPending}
           error={notesQuery.isError}
-          contactId={contact.id}
-          contactOptions={contactsQuery.data ?? [contact]}
-          caseOptions={cases}
-          opportunityOptions={opportunities}
-          memberOptions={membersQuery.data ?? []}
-          casesLoading={casesQuery.isPending}
-          opportunitiesLoading={opportunitiesQuery.isPending}
-          membersLoading={membersQuery.isPending}
           creating={createNote.isPending}
-          onCreate={(input) => {
-            const scopes = {
-              persona: 'person',
-              expediente: 'case',
-              oportunidad: 'opportunity',
-            } as const
-            return createNote.mutateAsync({
+          onCreate={(input) =>
+            createNote.mutateAsync({
               contactoId: contact.id,
               etiquetaOrigen: displayName(contact),
               titulo: input.title,
               contenido: input.content,
               destacada: input.highlighted,
               critica: input.critical,
-              scope: scopes[input.scope],
-              originId: input.originId,
-              originLabel: input.originLabel,
-              caseId: input.scope === 'expediente' ? input.originId : '',
-              opportunityId: input.scope === 'oportunidad' ? input.originId : '',
-              contactIds: input.contactIds,
-              requiresAcknowledgement: input.requiresAcknowledgement,
-              validity: input.validity,
-              reviewOn: input.reviewOn,
-              expiresOn: input.expiresOn,
-              expiryAction: input.expiryAction,
-              triggers: input.triggers,
-              visibility: input.visibility,
-              permittedUserIds: input.permittedUserIds,
             })
-          }}
+          }
           onCreated={() => toast.success('Nota interna guardada.')}
           onError={(error) =>
             toast.error(error instanceof Error ? error.message : 'No se pudo guardar la nota.')
@@ -918,7 +892,7 @@ const NOTE_TRIGGERS: Array<{ id: DisparadorNota; label: string }> = [
   { id: 'siempre', label: 'Siempre mientras esté activa' },
 ]
 
-export function ContactInternalNotes({
+export function LegacyContactInternalNotes({
   notes,
   loading,
   error,
@@ -1351,6 +1325,69 @@ export function ContactInternalNotes({
           </CardContent>
         </Card>
       )}
+    </section>
+  )
+}
+
+export function ContactInternalNotes({
+  notes,
+  loading,
+  error,
+  creating,
+  onCreate,
+  onCreated,
+  onError,
+}: {
+  notes: ReturnType<typeof notaDesdeRemota>[]
+  loading: boolean
+  error: boolean
+  creating: boolean
+  onCreate: (input: {
+    title: string
+    content: string
+    highlighted: boolean
+    critical: boolean
+  }) => Promise<unknown>
+  onCreated: () => void
+  onError: (error: unknown) => void
+}) {
+  return (
+    <section
+      id="contact-panel-notes"
+      role="tabpanel"
+      aria-labelledby="contact-tab-notes"
+      className="space-y-4"
+    >
+      <div>
+        <h2 className="text-base font-semibold">Notas internas</h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Información de contexto para el equipo, no visible para el cliente ni terceros.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <DraftNote
+          disabled={creating}
+          onAdd={async (note) => {
+            await onCreate(note)
+            onCreated()
+          }}
+          onError={onError}
+        />
+        {loading ? (
+          <div className="sm:col-span-2 xl:col-span-2">
+            <PendingPanel title="Cargando notas" description="Consultando las notas internas…" />
+          </div>
+        ) : error ? (
+          <div className="sm:col-span-2 xl:col-span-2">
+            <PendingPanel
+              title="No se pudieron cargar las notas"
+              description="Vuelve a intentarlo más tarde."
+            />
+          </div>
+        ) : (
+          notes.map((note) => <ContactNotePostit key={note.id} note={note} />)
+        )}
+      </div>
     </section>
   )
 }

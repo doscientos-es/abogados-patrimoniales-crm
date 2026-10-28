@@ -8,12 +8,11 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Check, UserPlus } from 'lucide-react'
+import { ArrowLeft, Check, Plus, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
-import { PresetPicker } from '@/components/tareas/task-create-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,16 +21,22 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
-import { useCrearOportunidad } from '@/features/crm'
+import {
+  useAvanzarLeadPorHito,
+  useCrearOportunidad,
+  useLeadRoles,
+  useTransicionarOportunidad,
+} from '@/features/crm'
 import {
   contactosParaAutocompletado,
   type ContactAutocompleteOption,
 } from '@/features/crm/application/contact-autocomplete'
 import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
-import { useLeadRoles } from '@/features/crm/infrastructure/supabase-lead-roles'
-import { LeadNextActionDialog } from '@/features/crm/ui/lead-next-action-dialog'
-import { useCrearNotaOportunidad } from '@/features/notas'
-import { useCrearTarea } from '@/features/tareas'
+import {
+  VIABILIDAD_OPCIONES,
+  type ViabilidadInicial,
+} from '@/features/crm/application/initial-viability'
+import { LeadCreatedDialog } from '@/features/crm/ui/lead-created-dialog'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/nueva')({
@@ -60,9 +65,12 @@ export function NuevaOportunidadPage() {
   const firmId = membership.data?.firmId
   const contacts = useContactos(firmId)
   const createOpportunity = useCrearOportunidad(firmId)
-  const createTask = useCrearTarea(firmId)
-  const createNote = useCrearNotaOportunidad(firmId)
-  const [initialTask, setInitialTask] = useState('')
+  const transition = useTransicionarOportunidad(firmId)
+  const avanzarHito = useAvanzarLeadPorHito(firmId)
+  const [viability, setViability] = useState<ViabilidadInicial | ''>('')
+  const [viabilityReason, setViabilityReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [documents, setDocuments] = useState<string[]>([])
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
   const [hasChangedContact, setHasChangedContact] = useState(false)
@@ -72,6 +80,11 @@ export function NuevaOportunidadPage() {
   const [createdOpportunity, setCreatedOpportunity] = useState<{
     id: string
     reference: string
+    contactId: string
+    contactName: string
+    viability: ViabilidadInicial
+    closeSucceeded?: boolean
+    closeError?: string
   } | null>(null)
   const preselectedContact = useMemo(
     () => (contacts.data ?? []).find((item) => item.id === search.contactId),
@@ -147,6 +160,16 @@ export function NuevaOportunidadPage() {
       toast.error('Selecciona un contacto e indica un título.')
       return
     }
+    if (!viability) {
+      toast.error('Indica la viabilidad inicial del Lead.')
+      return
+    }
+    const reason = viabilityReason.trim()
+    if (viability === 'no_apto' && !reason) {
+      toast.error('Indica el motivo por el que el Lead no es apto o no es atendible.')
+      return
+    }
+    setSaving(true)
     try {
       const opportunity = await createOpportunity.mutateAsync({
         contactId: selectedContactId,
@@ -165,8 +188,7 @@ export function NuevaOportunidadPage() {
             queHaOcurrido: formText(form, 'situation'),
             otrasPersonas: formText(form, 'people'),
             procedimientoIniciado: formText(form, 'procedure'),
-            documentacionManifestada: formText(form, 'documents'),
-            observacionesInternas: formText(form, 'observations'),
+            documentacionManifestada: documents.join('\n'),
           },
           otrosIntervinientes: participantIds.map((id) => {
             const contact = (contacts.data ?? []).find((item) => item.id === id)
@@ -176,46 +198,69 @@ export function NuevaOportunidadPage() {
               rol: 'Interviniente',
             }
           }),
-          documentosIniciales: formText(form, 'initialDocuments')
-            .split('\n')
-            .map((value) => value.trim())
-            .filter(Boolean)
-            .map((nombre) => ({ nombre, estado: 'declarado' })),
+          documentosIniciales: documents.map((nombre) => ({ nombre, estado: 'declarado' })),
+          viabilidadInicial: {
+            resultado: viability,
+            ...(viability === 'no_apto' ? { motivo: reason } : {}),
+            decididaEn: new Date().toISOString(),
+          },
         },
       })
-      const initialTaskTitle = formText(form, 'initialTask')
-      if (initialTaskTitle) {
-        await createTask.mutateAsync({
-          expedienteId: null,
-          oportunidadId: opportunity.id,
-          tipo: 'Tarea',
-          titulo: initialTaskTitle,
-          descripcion: '',
-          prioridad: 'Media',
-          venceEn: formText(form, 'initialTaskDate')
-            ? `${formText(form, 'initialTaskDate')}T09:00:00`
-            : null,
-          recordarEn: null,
-          clasePlazo: null,
-          critico: false,
-          asignadoId: null,
+
+      if (viability === 'no_apto') {
+        let closeError: string | undefined
+        try {
+          await transition.mutateAsync({
+            id: opportunity.id,
+            fase: 'lost',
+            subestado: 'No apto / no atendible',
+            motivo: `Viabilidad inicial: NO APTO / NO ATENDIBLE. Motivo: ${reason}`,
+          })
+          toast.success('Lead guardado y cerrado como no apto.')
+        } catch (error) {
+          closeError = error instanceof Error ? error.message : 'Error desconocido.'
+          toast.warning(
+            `Lead creado, pero no se pudo cerrar: ${closeError}`,
+          )
+        }
+        setCreatedOpportunity({
+          id: opportunity.id,
+          reference: opportunity.referencia,
+          contactId: selectedContactId,
+          contactName: contactName(
+            (contacts.data ?? []).find((item) => item.id === selectedContactId),
+          ),
+          viability,
+          closeSucceeded: !closeError,
+          closeError,
         })
+        return
       }
-      const initialNote = formText(form, 'initialNote')
-      if (initialNote) {
-        await createNote.mutateAsync({
-          oportunidadId: opportunity.id,
-          contactoId: selectedContactId,
-          etiquetaOrigen: `${opportunity.referencia} · ${title}`,
-          titulo: formText(form, 'initialNoteTitle'),
-          contenido: initialNote,
-          destacada: false,
+
+      try {
+        await avanzarHito.mutateAsync({
+          id: opportunity.id,
+          hito: viability === 'apto' ? 'viabilidad_apta' : 'viabilidad_pendiente',
         })
+      } catch (error) {
+        toast.warning(
+          `Lead guardado, pero el tablero no avanzó: ${error instanceof Error ? error.message : ''}`,
+        )
       }
-      toast.success('Lead guardado en la fase Entrada.')
-      setCreatedOpportunity({ id: opportunity.id, reference: opportunity.referencia })
+      toast.success('Lead guardado.')
+      setCreatedOpportunity({
+        id: opportunity.id,
+        reference: opportunity.referencia,
+        contactId: selectedContactId,
+        contactName: contactName(
+          (contacts.data ?? []).find((item) => item.id === selectedContactId),
+        ),
+        viability,
+      })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el Lead.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -422,18 +467,22 @@ export function NuevaOportunidadPage() {
                 placeholder="Recomendación, web, llamada…"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField name="situation" label="¿Qué ha ocurrido?" />
+            <div className="space-y-6">
+              <TextField
+                name="situation"
+                label="¿Qué ha ocurrido?"
+                hint="Relato inicial del contacto, sin valoración jurídica."
+                rows={8}
+              />
               <TextField name="request" label="¿Qué solicita al despacho?" />
               <TextField name="people" label="Otras personas o entidades relacionadas" />
-              <TextField name="procedure" label="Procedimiento, reclamación o actuación iniciada" />
-              <TextField name="documents" label="Documentación que manifiesta tener o aporta" />
-              <TextField name="observations" label="Observaciones internas del primer contacto" />
               <TextField
-                name="initialDocuments"
-                label="Documentación inicial conocida (una por línea)"
+                name="procedure"
+                label="Procedimiento, reclamación o actuación iniciada"
+                hint="Procedimiento judicial, demanda, requerimiento, expediente administrativo, ejecución…"
               />
             </div>
+            <DocumentList items={documents} onChange={setDocuments} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="lead-urgency">Urgencia</Label>
@@ -455,10 +504,6 @@ export function NuevaOportunidadPage() {
                 maxLength={500}
               />
             </div>
-            <div className="border-warning/30 bg-warning/10 text-warning-foreground rounded-md border px-3 py-2 text-sm">
-              Si indicas una posible urgencia, el equipo deberá revisarla antes de comprometer
-              fechas.
-            </div>
           </CardContent>
         </Card>
 
@@ -466,36 +511,41 @@ export function NuevaOportunidadPage() {
           <CardContent className="space-y-5 pt-6">
             <BlockHeading
               step="03"
-              title="Seguimiento inicial"
-              description="Puedes dejar preparada la primera acción y una nota interna."
+              title="Viabilidad inicial"
+              description="¿Este Lead puede pasar a una Primera Cita?"
             />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-end gap-1.5">
-                <div className="flex-1">
-                  <Field
-                    name="initialTask"
-                    label="Primera tarea (opcional)"
-                    maxLength={240}
-                    placeholder="Llamar al contacto"
-                    value={initialTask}
-                    onChange={setInitialTask}
+            <fieldset className="grid gap-2 sm:grid-cols-3" aria-label="Viabilidad inicial">
+              {VIABILIDAD_OPCIONES.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-3 text-sm font-semibold ${viability === option.value ? 'border-primary bg-primary/5' : 'border-input'
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name="viability"
+                    value={option.value}
+                    required
+                    checked={viability === option.value}
+                    onChange={() => setViability(option.value)}
                   />
-                </div>
-                <PresetPicker firmId={firmId} onPick={setInitialTask} />
-              </div>
-              <Field name="initialTaskDate" label="Fecha prevista" type="date" maxLength={10} />
-              <Field name="initialNoteTitle" label="Título de la nota" maxLength={300} />
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="lead-initial-note">Nota interna</Label>
+                  {option.label}
+                </label>
+              ))}
+            </fieldset>
+            {viability === 'no_apto' ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="lead-viability-reason">Motivo *</Label>
                 <Textarea
-                  id="lead-initial-note"
-                  name="initialNote"
-                  rows={4}
-                  maxLength={20_000}
-                  placeholder="Contexto que debe conservar el despacho…"
+                  id="lead-viability-reason"
+                  value={viabilityReason}
+                  maxLength={1000}
+                  required
+                  rows={3}
+                  onChange={(event) => setViabilityReason(event.target.value)}
                 />
               </div>
-            </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -510,22 +560,24 @@ export function NuevaOportunidadPage() {
           <Button
             type="submit"
             disabled={
-              createOpportunity.isPending ||
-              createTask.isPending ||
-              createNote.isPending ||
+              saving ||
               !selectedContactId
             }
           >
-            {createOpportunity.isPending ? 'Guardando…' : 'Crear Lead'}
+            {saving ? 'Guardando…' : 'Crear Lead'}
           </Button>
         </div>
       </form>
       {createdOpportunity ? (
-        <LeadNextActionDialog
-          open
+        <LeadCreatedDialog
           firmId={firmId}
           opportunityId={createdOpportunity.id}
           reference={createdOpportunity.reference}
+          contactId={createdOpportunity.contactId}
+          contactName={createdOpportunity.contactName}
+          viability={createdOpportunity.viability}
+          closeSucceeded={createdOpportunity.closeSucceeded}
+          closeError={createdOpportunity.closeError}
           onFinish={() => {
             const { id } = createdOpportunity
             setCreatedOpportunity(null)
@@ -565,17 +617,26 @@ function Field({
   )
 }
 
-function TextField({ name, label }: { name: string; label: string }) {
+function TextField({
+  name,
+  label,
+  hint,
+  rows = 3,
+}: {
+  name: string
+  label: string
+  hint?: string
+  rows?: number
+}) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={`lead-${name}`}>{label}</Label>
-      <Textarea
-        id={`lead-${name}`}
-        name={name}
-        rows={4}
-        maxLength={20_000}
-        placeholder="Añade el contexto disponible…"
-      />
+    <div className="space-y-2">
+      <div className="space-y-0.5">
+        <Label htmlFor={`lead-${name}`} className="text-base font-semibold">
+          {label}
+        </Label>
+        {hint ? <p className="text-muted-foreground text-sm">{hint}</p> : null}
+      </div>
+      <Textarea id={`lead-${name}`} name={name} rows={rows} maxLength={20_000} />
     </div>
   )
 }
@@ -676,5 +737,90 @@ function ContactOption({
         ) : null}
       </span>
     </ComboboxItem>
+  )
+}
+
+function DocumentList({
+  items,
+  onChange,
+}: {
+  items: string[]
+  onChange: (items: string[]) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const [error, setError] = useState('')
+
+  const add = () => {
+    const value = draft.trim().toUpperCase()
+    if (!value) {
+      setError('Escribe el nombre del documento.')
+      return
+    }
+    if (value.length > 200) {
+      setError('Máximo 200 caracteres.')
+      return
+    }
+    if (items.includes(value)) {
+      setError('Ese documento ya está en la lista.')
+      return
+    }
+    onChange([...items, value])
+    setDraft('')
+    setError('')
+  }
+
+  return (
+    <div className="border-primary/40 bg-primary/5 space-y-3 rounded-lg border-2 p-4">
+      <div>
+        <p className="text-base font-semibold">Documentación que manifiesta tener</p>
+        <p className="text-muted-foreground text-xs">
+          Escribe un documento y pulsa Añadir (o Intro). Aparecerá otro campo debajo.
+        </p>
+      </div>
+      {items.length ? (
+        <ol className="space-y-2" aria-label="Documentos declarados">
+          {items.map((item, index) => (
+            <li
+              key={item}
+              className="bg-background flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+            >
+              <Check className="text-primary size-4 shrink-0" />
+              <span className="flex-1">
+                {index + 1}. {item}
+              </span>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-destructive text-xs"
+                onClick={() => onChange(items.filter((value) => value !== item))}
+              >
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      <div className="flex gap-2">
+        <Input
+          aria-label="Nuevo documento"
+          value={draft}
+          maxLength={200}
+          placeholder="Ej.: TESTAMENTO, ESCRITURA, CONTRATO DE ARRENDAMIENTO…"
+          onChange={(event) => {
+            setDraft(event.target.value)
+            if (error) setError('')
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              add()
+            }
+          }}
+        />
+        <Button type="button" onClick={add}>
+          <Plus className="size-4" /> Añadir
+        </Button>
+      </div>
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+    </div>
   )
 }

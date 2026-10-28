@@ -26,6 +26,13 @@ import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 export type TaskLabelOption = { id: string; nombre: string; color: string }
 type SpecialTask = 'none' | 'meeting' | 'communication'
 
+export type MeetingPreset = {
+  meetingType: string
+  subject: string
+  contactIds: string[]
+  contactLabel?: string
+}
+
 export type TaskCreateDialogProps = {
   firmId?: string | undefined
   expedienteId?: string | null
@@ -51,6 +58,7 @@ export type TaskCreateDialogProps = {
   pending: boolean
   successMessage?: string
   onCreate: (input: CrearTareaInput) => Promise<unknown>
+  meetingPreset?: MeetingPreset | undefined
 }
 
 export function specialMeetingCreationIssue(details: DetallesReunion): string | null {
@@ -103,6 +111,7 @@ export function TaskCreateDialog({
   pending,
   successMessage,
   onCreate,
+  meetingPreset,
 }: TaskCreateDialogProps) {
   const session = useAuthSession()
   const currentUserId = session.user?.id
@@ -114,18 +123,19 @@ export function TaskCreateDialog({
     onOpenChange?.(next)
   }
   const [kind, setKind] = useState<CrearTareaInput['tipo']>(defaultKind)
-  const [special, setSpecial] = useState<SpecialTask>('none')
+  const [special, setSpecial] = useState<SpecialTask>(meetingPreset ? 'meeting' : 'none')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [caseId, setCaseId] = useState(expedienteId ?? '')
   const [labelIds, setLabelIds] = useState<string[]>([])
   const [titleValue, setTitleValue] = useState(defaultTitle)
+  const firstMeeting = meetingPreset?.meetingType === 'Primera cita'
   const selectCase = !expedienteId && !oportunidadId && cases !== undefined
   const allowsDeadline = Boolean(expedienteId) || selectCase
   const showAdvanced = advancedOpen || kind !== 'Tarea' || special !== 'none'
 
   const reset = () => {
     setKind(defaultKind)
-    setSpecial('none')
+    setSpecial(meetingPreset ? 'meeting' : 'none')
     setAdvancedOpen(false)
     setCaseId(expedienteId ?? '')
     setLabelIds([])
@@ -136,23 +146,30 @@ export function TaskCreateDialog({
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
-    const details =
-      special === 'meeting'
+    const details = firstMeeting
+      ? firstMeetingDetails(data)
+      : special === 'meeting'
         ? meetingDetails(data)
         : special === 'communication'
           ? communicationDetails(data)
           : undefined
     const titulo =
-      special === 'meeting'
+      firstMeeting || special === 'meeting'
         ? `Reunión: ${details?.subject?.trim() ?? ''}`.trim()
         : text(data, 'title').trim()
     if (!titulo || titulo === 'Reunión:') {
       toast.error(
-        special === 'meeting' ? 'Indica el objeto de la reunión.' : 'Indica al menos un título.',
+        firstMeeting || special === 'meeting'
+          ? 'Indica el objeto de la reunión.'
+          : 'Indica al menos un título.',
       )
       return
     }
-    const issue = details?.specialType === 'meeting' ? specialMeetingCreationIssue(details) : null
+    const issue = firstMeeting
+      ? firstMeetingCreationIssue(data)
+      : details?.specialType === 'meeting'
+        ? specialMeetingCreationIssue(details)
+        : null
     if (issue) {
       toast.error(issue)
       return
@@ -174,14 +191,20 @@ export function TaskCreateDialog({
             ? ((text(data, 'deadlineClass') || 'Judicial') as CrearTareaInput['clasePlazo'])
             : null,
         critico: data.get('critical') === 'on',
-        asignadoId: text(data, 'assignee') || null,
+        asignadoId: firstMeeting
+          ? (members.find((member) =>
+            member.nombre
+              .toLowerCase()
+              .startsWith(text(data, 'firstMeetingLawyer').toLowerCase()),
+          )?.id ?? currentUserId ?? null)
+          : text(data, 'assignee') || null,
         mensajeInicial: text(data, 'initialMessage'),
         etiquetaIds: labelIds,
         ...(details ? { detallesReunion: details } : {}),
       })
       toast.success(
         successMessage ??
-          (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
+        (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
       )
       form.reset()
       reset()
@@ -210,7 +233,7 @@ export function TaskCreateDialog({
           )}
         </DialogTrigger>
       ) : null}
-      <DialogContent size={special === 'meeting' ? '2xl' : 'xl'}>
+      <DialogContent size={firstMeeting ? 'xl' : special === 'meeting' ? '2xl' : 'xl'}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -226,7 +249,9 @@ export function TaskCreateDialog({
           </p>
         ) : (
           <form className="space-y-4" aria-busy={pending} onSubmit={(event) => void submit(event)}>
-            {special === 'meeting' ? (
+            {firstMeeting && meetingPreset ? (
+              <FirstMeetingFields preset={meetingPreset} contextLabel={contextLabel} />
+            ) : special === 'meeting' ? (
               <MeetingFields
                 firmId={firmId}
                 caseId={caseId}
@@ -403,7 +428,13 @@ export function TaskCreateDialog({
                 Cancelar
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? 'Creando…' : special === 'meeting' ? 'Crear reunión' : 'Crear tarea'}
+                {pending
+                  ? 'Creando…'
+                  : firstMeeting
+                    ? 'CREAR PRIMERA CITA'
+                    : special === 'meeting'
+                      ? 'Crear reunión'
+                      : 'Crear tarea'}
               </Button>
             </DialogFooter>
           </form>
@@ -570,7 +601,7 @@ function MeetingFields({
             ].map((value) => [value, value] as const)}
           />
           {datePreference === 'Antes de una fecha' ||
-          datePreference === 'Fecha concreta preferente' ? (
+            datePreference === 'Fecha concreta preferente' ? (
             <Field
               name="meetingPreferredDate"
               label={datePreference === 'Antes de una fecha' ? 'Fecha límite' : 'Fecha preferente'}
@@ -762,11 +793,11 @@ export function PresetPicker({
   const filtered = presets.filter((preset) => preset.toLowerCase().includes(needle))
   const specials = onSpecial
     ? (
-        [
-          ['meeting', 'Reunión', CalendarClock],
-          ['communication', 'Comunicación', MessageSquare],
-        ] as const
-      ).filter(([, name]) => name.toLowerCase().includes(needle))
+      [
+        ['meeting', 'Reunión', CalendarClock],
+        ['communication', 'Comunicación', MessageSquare],
+      ] as const
+    ).filter(([, name]) => name.toLowerCase().includes(needle))
     : []
   const close = () => {
     setOpen(false)
@@ -921,6 +952,113 @@ function meetingDetails(data: FormData): DetallesReunion {
     preferredTimeSlot: text(data, 'meetingTimeSlot'),
     preferredLocation: text(data, 'meetingPreferredLocation'),
     internalInstructions: text(data, 'meetingInstructions'),
+  }
+}
+
+const FIRST_MEETING_LAWYERS = ['Igor', 'Jon', 'David'] as const
+
+function FirstMeetingFields({
+  preset,
+  contextLabel,
+}: {
+  preset: MeetingPreset
+  contextLabel?: string | undefined
+}) {
+  return (
+    <div className="space-y-5">
+      <input type="hidden" name="meetingType" value={preset.meetingType} />
+      <input type="hidden" name="meetingSubject" value={preset.subject} />
+      {preset.contactIds.map((id) => (
+        <input key={id} type="hidden" name="meetingContacts" value={id} />
+      ))}
+      <div className="bg-muted/40 rounded-md border px-4 py-3">
+        <p className="text-sm font-bold tracking-wide uppercase">Primera cita</p>
+        <p className="text-muted-foreground text-sm">
+          {[contextLabel, preset.contactLabel].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Abogado de la Primera Cita *</legend>
+        <div className="flex flex-wrap gap-2">
+          {FIRST_MEETING_LAWYERS.map((name, index) => (
+            <label
+              key={name}
+              className="has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm"
+            >
+              <input type="radio" name="firstMeetingLawyer" value={name} required={index === 0} />
+              {name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field name="firstMeetingDate" label="Fecha de la cita *" type="date" required />
+        <div className="space-y-1.5">
+          <Label htmlFor="task-create-firstMeetingTime">Hora *</Label>
+          <Input
+            id="task-create-firstMeetingTime"
+            name="firstMeetingTime"
+            type="time"
+            step={60}
+            required
+          />
+        </div>
+        <SelectField
+          name="meetingDuration"
+          label="Duración"
+          defaultValue="30"
+          options={['30', '45', '60'].map((value) => [value, `${value} minutos`] as const)}
+        />
+        <SelectField
+          name="meetingMode"
+          label="Modalidad / lugar"
+          defaultValue="office_bilbao"
+          className="sm:col-span-3"
+          options={[
+            ['office_bilbao', 'Despacho Bilbao'],
+            ['office_recalde', 'Despacho Rekalde'],
+            ['phone', 'Telefónica'],
+          ]}
+        />
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Las anotaciones de la Primera cita se registran en las Notas internas de LEX, desde la ficha
+        de la cita o del Lead, y quedan vinculadas a ellos.
+      </p>
+    </div>
+  )
+}
+
+function firstMeetingCreationIssue(data: FormData): string | null {
+  if (!text(data, 'firstMeetingLawyer')) return 'Elige el abogado de la Primera Cita.'
+  if (!text(data, 'firstMeetingDate')) return 'Indica la fecha de la cita.'
+  if (!text(data, 'firstMeetingTime')) return 'Indica la hora de la cita.'
+  return null
+}
+
+function firstMeetingDetails(data: FormData): DetallesReunion {
+  const duration = Number(text(data, 'meetingDuration')) || 30
+  const date = text(data, 'firstMeetingDate')
+  const time = text(data, 'firstMeetingTime')
+  const start = date && time ? new Date(`${date}T${time}`) : null
+  const valid = start && !Number.isNaN(start.getTime())
+  return {
+    startsAt: valid ? start.toISOString() : '',
+    endsAt: valid ? new Date(start.getTime() + duration * 60_000).toISOString() : '',
+    mode: (text(data, 'meetingMode') || 'office_bilbao') as DetallesReunion['mode'],
+    location: '',
+    meetingUrl: '',
+    preparation: '',
+    attendeeContactIds: values(data, 'meetingContacts'),
+    attendeeUserIds: [],
+    specialType: 'meeting',
+    status: 'preparation',
+    meetingType: text(data, 'meetingType'),
+    subject: text(data, 'meetingSubject'),
+    durationMinutes: duration,
+    preferredDateType: 'Fecha concreta preferente',
+    preferredDate: date,
+    abogadoPrimeraCita: text(data, 'firstMeetingLawyer'),
   }
 }
 
