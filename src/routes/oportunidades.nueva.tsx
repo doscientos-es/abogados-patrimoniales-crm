@@ -27,6 +27,8 @@ import {
   contactosParaAutocompletado,
   type ContactAutocompleteOption,
 } from '@/features/crm/application/contact-autocomplete'
+import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
+import { useLeadRoles } from '@/features/crm/infrastructure/supabase-lead-roles'
 import { LeadNextActionDialog } from '@/features/crm/ui/lead-next-action-dialog'
 import { useCrearNotaOportunidad } from '@/features/notas'
 import { useCrearTarea } from '@/features/tareas'
@@ -90,6 +92,7 @@ export function NuevaOportunidadPage() {
       ),
     [contacts.data, participantSearch, selectedContactId],
   )
+  const leadRoles = useLeadRoles(firmId)
   const areas = useQuery({
     queryKey: ['crm', 'practice-areas', firmId],
     enabled: Boolean(firmId),
@@ -367,37 +370,6 @@ export function NuevaOportunidadPage() {
               </p>
             </div>
             <input type="hidden" name="contact" value={selectedContactId} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field name="title" label="Título del Lead" maxLength={300} required />
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-area">Materia</Label>
-                <Input
-                  id="lead-area"
-                  name="area"
-                  list="lead-area-options"
-                  placeholder="Ej. Sucesiones"
-                />
-                <datalist id="lead-area-options">
-                  {(areas.data ?? []).map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-              <Field
-                name="role"
-                label="Rol en el Lead"
-                maxLength={120}
-                placeholder="Interesado principal"
-              />
-              <Field
-                name="source"
-                label="Origen"
-                maxLength={160}
-                placeholder="Recomendación, web, llamada…"
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -406,8 +378,50 @@ export function NuevaOportunidadPage() {
             <BlockHeading
               step="02"
               title="Información inicial"
-              description="Todo es opcional; conserva la versión del primer contacto para el equipo."
+              description="Datos del asunto y versión del primer contacto para el equipo."
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field name="title" label="Título del Lead" maxLength={300} required />
+              <div className="space-y-1.5">
+                <Label htmlFor="lead-area">Materia</Label>
+                <select id="lead-area" name="area" className={selectClassName} defaultValue="">
+                  <option value="">Selecciona una materia…</option>
+                  {(areas.data?.length ? areas.data : DEFAULT_AREAS).map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-muted-foreground text-xs">
+                  Puedes editar la lista en Configuración → Catálogos → Materias.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lead-role">Rol en el Lead</Label>
+                <Input
+                  id="lead-role"
+                  name="role"
+                  list="lead-role-options"
+                  maxLength={120}
+                  autoComplete="off"
+                  placeholder="Elige de la lista o escribe otro rol"
+                />
+                <datalist id="lead-role-options">
+                  {(leadRoles.data ?? DEFAULT_LEAD_ROLES).map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
+                <p className="text-muted-foreground text-xs">
+                  Puedes editar la lista en Configuración → Catálogos → Roles en el Lead.
+                </p>
+              </div>
+              <Field
+                name="source"
+                label="Origen"
+                maxLength={160}
+                placeholder="Recomendación, web, llamada…"
+              />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField name="situation" label="¿Qué ha ocurrido?" />
               <TextField name="request" label="¿Qué solicita al despacho?" />
@@ -587,6 +601,24 @@ function BlockHeading({
     </div>
   )
 }
+
+const DEFAULT_AREAS = [
+  'CIVIL GENERAL',
+  'SUCESIONES Y HERENCIAS',
+  'ARRENDAMIENTOS',
+  'DESAHUCIOS',
+  'COMPRAVENTAS E INMUEBLES',
+  'DIVISIÓN DE COSA COMÚN',
+  'RECLAMACIÓN DE CANTIDAD',
+  'PROPIEDAD HORIZONTAL',
+  'CONTRATOS E INCUMPLIMIENTOS',
+  'FAMILIA Y DIVORCIOS',
+  'LIQUIDACIÓN DE GANANCIALES',
+  'RESPONSABILIDAD CIVIL Y DAÑOS',
+  'DERECHO BANCARIO',
+  'EJECUCIONES',
+  'VALORACIÓN Y PERITAJES',
+]
 
 const selectClassName =
   'border-input bg-background h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'

@@ -94,11 +94,19 @@ describe('NuevaOportunidadPage', () => {
     fireEvent.change(screen.getByLabelText('Título del Lead'), {
       target: { value: 'Consulta inicial' },
     })
+    fireEvent.change(screen.getByLabelText('Materia'), {
+      target: { value: 'SUCESIONES Y HERENCIAS' },
+    })
 
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
 
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS' }),
+      ),
+    )
     expect(await screen.findByText(/El Lead LD-1 ya está guardado/)).toBeTruthy()
     expect(mocks.navigate).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Ahora no procede' }))

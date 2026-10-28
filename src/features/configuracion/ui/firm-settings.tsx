@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { requestPasswordReset, useActiveMembership, useAuthSession } from '@/features/auth'
 import { QuoteCatalogAdmin } from '@/features/crm/ui/quote-catalog-admin'
+import { DocumentTypesCatalog } from '@/features/configuracion/ui/document-types-catalog'
 import {
   getSupabaseBrowserClient,
   type FirmSettingsRow,
@@ -408,7 +409,13 @@ export function FirmSettings({
       ) : null}
 
       {tab === 'catalogs' ? (
-        <CatalogsSettings firmId={firmId ?? ''} actorRole={membership.data?.role ?? 'paralegal'} />
+        <div className="grid gap-4">
+          <CatalogsSettings firmId={firmId ?? ''} actorRole={membership.data?.role ?? 'paralegal'} />
+          <DocumentTypesCatalog
+            firmId={firmId ?? ''}
+            canManage={membership.data?.role === 'owner' || membership.data?.role === 'admin'}
+          />
+        </div>
       ) : null}
 
       {tab === 'drive' ? (

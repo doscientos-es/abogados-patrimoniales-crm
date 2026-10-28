@@ -56,7 +56,7 @@ export function ContactProfileTab({
 
   const savePreferences = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    void persist(profile, 'Preferencias de atención guardadas.')
+    void persist(profile, 'Categoría de atención guardada.')
   }
 
   const addRating = () => {
@@ -127,83 +127,38 @@ export function ContactProfileTab({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">Preferencias de atención</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Indicaciones para comunicarse y atender a este contacto.
-          </p>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={savePreferences}>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <ProfileInput
-                label="Idioma"
-                value={profile.language}
+          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={savePreferences}>
+            <div className="w-full max-w-sm space-y-1.5">
+              <Label htmlFor="contact-attention">Categoría de atención</Label>
+              <select
+                id="contact-attention"
+                value={profile.attention}
                 disabled={!canManage || update.isPending}
-                onChange={(language) => setProfile({ ...profile, language })}
-              />
-              <ProfileInput
-                label="Horario preferido"
-                value={profile.preferredHours}
-                disabled={!canManage || update.isPending}
-                onChange={(preferredHours) => setProfile({ ...profile, preferredHours })}
-              />
-              <div className="space-y-1.5">
-                <Label htmlFor="contact-attention">Categoría de atención</Label>
-                <select
-                  id="contact-attention"
-                  value={profile.attention}
-                  disabled={!canManage || update.isPending}
-                  onChange={(event) =>
-                    setProfile({
-                      ...profile,
-                      attention: event.target.value as ContactProfile['attention'],
-                    })
-                  }
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm disabled:opacity-60"
-                >
-                  {ATTENTION_CATEGORIES.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <ProfileInput
-                label="Tratamiento"
-                value={profile.treatment}
-                disabled={!canManage || update.isPending}
-                onChange={(treatment) => setProfile({ ...profile, treatment })}
-              />
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="contact-profile-instructions">Indicaciones internas</Label>
-                <Textarea
-                  id="contact-profile-instructions"
-                  rows={3}
-                  value={profile.instructions}
-                  disabled={!canManage || update.isPending}
-                  onChange={(event) => setProfile({ ...profile, instructions: event.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
-                <Label htmlFor="contact-treatment-notes">Observaciones de trato</Label>
-                <Textarea
-                  id="contact-treatment-notes"
-                  rows={3}
-                  value={profile.treatmentNotes}
-                  disabled={!canManage || update.isPending}
-                  onChange={(event) =>
-                    setProfile({ ...profile, treatmentNotes: event.target.value })
-                  }
-                />
-              </div>
+                onChange={(event) =>
+                  setProfile({
+                    ...profile,
+                    attention: event.target.value as ContactProfile['attention'],
+                  })
+                }
+                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm disabled:opacity-60"
+              >
+                {ATTENTION_CATEGORIES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
             {canManage ? (
-              <Button type="submit" disabled={update.isPending}>
-                {update.isPending ? 'Guardando…' : 'Guardar preferencias'}
+              <Button type="submit" className="sm:shrink-0" disabled={update.isPending}>
+                {update.isPending ? 'Guardando…' : 'Guardar categoría'}
               </Button>
             ) : (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-xs sm:self-center">
                 Tu perfil puede consultar las preferencias, pero no modificarlas.
               </p>
             )}
@@ -365,13 +320,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                    ...item,
-                                    resolution: (
-                                      document.getElementById(
-                                        `incident-resolution-${incident.id}`,
-                                      ) as HTMLTextAreaElement
-                                    ).value,
-                                  }
+                                  ...item,
+                                  resolution: (
+                                    document.getElementById(
+                                      `incident-resolution-${incident.id}`,
+                                    ) as HTMLTextAreaElement
+                                  ).value,
+                                }
                                 : item,
                             ),
                           }
@@ -404,13 +359,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                    ...item,
-                                    observations: (
-                                      document.getElementById(
-                                        `incident-notes-${incident.id}`,
-                                      ) as HTMLTextAreaElement
-                                    ).value,
-                                  }
+                                  ...item,
+                                  observations: (
+                                    document.getElementById(
+                                      `incident-notes-${incident.id}`,
+                                    ) as HTMLTextAreaElement
+                                  ).value,
+                                }
                                 : item,
                             ),
                           }
@@ -431,31 +386,6 @@ export function ContactProfileTab({
   )
 }
 
-function ProfileInput({
-  label,
-  value,
-  disabled,
-  onChange,
-}: {
-  label: string
-  value: string
-  disabled: boolean
-  onChange: (value: string) => void
-}) {
-  const id = `profile-${label.toLowerCase().replaceAll(' ', '-')}`
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
-  )
-}
-
 function ProfileValue({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -470,9 +400,9 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : new Intl.DateTimeFormat('es-ES', {
-        dateStyle: 'medium',
-        ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
-      }).format(date)
+      dateStyle: 'medium',
+      ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
+    }).format(date)
 }
 
 function profileErrorMessage(error: unknown) {

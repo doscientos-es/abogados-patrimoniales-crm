@@ -1,4 +1,4 @@
-import { LoaderCircle, Sparkles, Upload, X } from 'lucide-react'
+import { FileText, LoaderCircle, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
+import { LexiaIcon } from '@/shared/ui/lexia'
 
 const MIME_BY_EXTENSION: Record<string, string> = {
   pdf: 'application/pdf',
@@ -57,7 +58,6 @@ export function ContactAIIntake({
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
-  const [consented, setConsented] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [fields, setFields] = useState<ExtractedField[]>([])
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
@@ -66,7 +66,6 @@ export function ContactAIIntake({
     if (!nextOpen && processing) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setConsented(false)
       setFields([])
       setSelected(new Set())
       if (fileInput.current) fileInput.current.value = ''
@@ -77,11 +76,6 @@ export function ContactAIIntake({
     if (!files?.length) return
     if (files.length > 5) {
       toast.error('Puedes procesar como máximo 5 documentos a la vez.')
-      if (fileInput.current) fileInput.current.value = ''
-      return
-    }
-    if (!consented) {
-      toast.error('Confirma primero que autorizas la lectura del documento con IA.')
       if (fileInput.current) fileInput.current.value = ''
       return
     }
@@ -132,6 +126,11 @@ export function ContactAIIntake({
             { ...item, id: `${file.name}-${crypto.randomUUID()}-${index}`, source: file.name },
           ]
         })
+        const replacedIds = new Set(
+          nextFields
+            .filter((item) => extracted.some((entry) => entry.field === item.field))
+            .map((item) => item.id),
+        )
         nextFields = [
           ...nextFields.filter((item) => !extracted.some((entry) => entry.field === item.field)),
           ...extracted,
@@ -139,7 +138,8 @@ export function ContactAIIntake({
         setFields(nextFields)
         setSelected((current) => {
           const next = new Set(current)
-          for (const item of extracted) next.delete(item.id)
+          for (const id of replacedIds) next.delete(id)
+          for (const item of extracted) next.add(item.id)
           return next
         })
         toast.success(
@@ -182,95 +182,156 @@ export function ContactAIIntake({
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
         <Button type="button" className="gap-2">
-          <Sparkles className="h-4 w-4" /> Dar de alta con IA
+          <LexiaIcon /> Dar de alta con LEXIA
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Leer documentos para el contacto</DialogTitle>
-          <DialogDescription>
-            Añade el DNI por una o ambas caras, u otro PDF o imagen. La IA propondrá solo datos del
-            formulario; no creará ni guardará el contacto.
-          </DialogDescription>
+      <DialogContent
+        size="5xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden p-0 sm:max-w-[min(92vw,68rem)]"
+      >
+        <DialogHeader className="shrink-0 border-b px-5 py-3.5 pr-12 text-left sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <LexiaIcon className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-sm font-semibold normal-case tracking-normal">
+                Datos del contacto
+              </DialogTitle>
+              <DialogDescription className="mt-0.5 text-xs">
+                Sube documentos y confirma los datos que quieras añadir.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <label className="flex items-start gap-2 text-sm">
+        <div className="grid min-h-0 gap-5 overflow-y-auto bg-muted/10 p-4 sm:p-6 md:min-h-[26rem] md:grid-cols-[minmax(17rem,0.9fr)_minmax(0,1.1fr)]">
+          <section className="space-y-3" aria-label="Carga de documentos">
             <input
-              type="checkbox"
-              checked={consented}
-              onChange={(event) => setConsented(event.target.checked)}
-              className="mt-1"
+              ref={fileInput}
+              aria-label="Seleccionar documentos PDF o imágenes"
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
+              multiple
+              className="sr-only"
+              onChange={(event) => void readFiles(event.currentTarget.files)}
             />
-            <span>
-              La aplicación no guardará los archivos, pero los enviará a OpenAI, un servicio externo
-              de IA, para extraer los datos. Autorizo su lectura.
-            </span>
-          </label>
-          <input
-            ref={fileInput}
-            aria-label="Seleccionar documentos PDF o imágenes"
-            type="file"
-            accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
-            multiple
-            className="sr-only"
-            onChange={(event) => void readFiles(event.currentTarget.files)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={processing || !consented}
-            onClick={() => fileInput.current?.click()}
-          >
-            {processing ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            {processing ? 'Leyendo documentos…' : 'Añadir PDF o imagen'}
-          </Button>
+            <div className="from-primary/[0.06] via-background to-muted/40 flex h-full min-h-[21rem] flex-col items-center justify-center rounded-2xl border bg-gradient-to-br p-6 text-center shadow-sm">
+              <span className="bg-background text-primary mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border shadow-sm">
+                <FileText className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <h3 className="text-base font-semibold">Añade documentos</h3>
+              <p className="text-muted-foreground mt-1.5 max-w-xs text-sm leading-relaxed">
+                Identificación o documentación para completar los datos del contacto.
+              </p>
+              <Button
+                type="button"
+                className="mt-5 h-11 w-full max-w-xs"
+                disabled={processing}
+                onClick={() => fileInput.current?.click()}
+              >
+                {processing ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {processing ? 'Leyendo documentos…' : 'Añadir PDF o imagen'}
+              </Button>
+              <p className="text-muted-foreground mt-4 text-xs">
+                Hasta 5 archivos <span className="px-1">·</span> PDF, JPG, PNG o WEBP
+                <span className="px-1">·</span> máximo 4 MB
+              </p>
+              {processing ? (
+                <p
+                  role="status"
+                  className="text-primary mt-4 flex items-center gap-2 rounded-full bg-primary/5 px-3 py-2 text-xs"
+                >
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  LEXIA está leyendo los documentos…
+                </p>
+              ) : null}
+            </div>
+          </section>
 
-          {fields.length > 0 && (
-            <section aria-label="Datos propuestos" className="space-y-3">
-              <h3 className="text-sm font-semibold">Revisa y confirma cada dato</h3>
-              {fields.map((field) => (
-                <label key={field.id} className="flex gap-3 rounded-md border p-3 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(field.id)}
-                    onChange={() => toggleField(field)}
-                    className="mt-1"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{field.label}</span>
-                    <span className="block break-words">{field.value}</span>
-                    {field.excerpt && (
-                      <span className="text-muted-foreground mt-1 block">«{field.excerpt}»</span>
-                    )}
-                    <span className="text-muted-foreground mt-1 block text-xs">
-                      Fuente: {field.source}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`Quitar propuesta de ${field.label}`}
-                    className="text-muted-foreground self-start"
-                    onClick={() => {
-                      setFields((current) => current.filter((item) => item.id !== field.id))
-                      setSelected(
-                        (current) => new Set([...current].filter((id) => id !== field.id)),
-                      )
-                    }}
+          <section aria-label="Datos propuestos" className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold">Propuestas encontradas</h3>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Selecciona qué datos quieres completar.
+                </p>
+              </div>
+              <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-medium">
+                {selected.size} seleccionados
+              </span>
+            </div>
+            {fields.length ? (
+              <div className="space-y-2">
+                {fields.map((field) => (
+                  <div
+                    key={field.id}
+                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2.5 rounded-xl border p-3 text-sm shadow-sm transition-colors ${selected.has(field.id)
+                        ? 'border-primary/30 bg-primary/5'
+                        : 'bg-background hover:border-primary/30'
+                      }`}
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                </label>
-              ))}
-            </section>
-          )}
+                    <label className="contents">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(field.id)}
+                        onChange={() => toggleField(field)}
+                        className="border-input accent-primary mt-0.5 h-4 w-4 rounded"
+                      />
+                      <span className="min-w-0 cursor-pointer">
+                        <span className="block font-medium leading-snug">{field.label}</span>
+                        <span className="mt-0.5 block break-words">{field.value}</span>
+                        {field.excerpt ? (
+                          <span className="text-muted-foreground mt-1 block text-xs leading-snug">
+                            «{field.excerpt}»
+                          </span>
+                        ) : null}
+                        <span className="text-muted-foreground mt-1.5 inline-flex max-w-full truncate rounded bg-muted px-1.5 py-0.5 text-[11px]">
+                          Fuente: {field.source}
+                        </span>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      aria-label={`Quitar propuesta de ${field.label}`}
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground self-start rounded-md p-1 transition-colors"
+                      onClick={() => {
+                        setFields((current) => current.filter((item) => item.id !== field.id))
+                        setSelected(
+                          (current) => new Set([...current].filter((id) => id !== field.id)),
+                        )
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-background flex min-h-[21rem] flex-col items-center justify-center rounded-2xl border px-6 py-8 text-center shadow-sm">
+                <span className="bg-primary/10 text-primary mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
+                  <LexiaIcon className="h-5 w-5" />
+                </span>
+                <p className="text-sm font-semibold">Tus propuestas aparecerán aquí</p>
+                <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">
+                  Al añadir un documento, LEXIA encontrará los datos del contacto para que elijas
+                  cuáles completar.
+                </p>
+              </div>
+            )}
+          </section>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t bg-background/95 px-5 py-3 backdrop-blur sm:px-6">
+          {selected.size ? (
+            <p className="text-muted-foreground mr-auto self-center text-xs">
+              {selected.size} {selected.size === 1 ? 'dato seleccionado' : 'datos seleccionados'}
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="outline"

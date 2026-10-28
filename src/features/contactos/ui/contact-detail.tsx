@@ -197,7 +197,7 @@ export function ContactDetail({
         ← Volver a contactos
       </Link>
       <Card>
-        <CardContent className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-5 xl:flex xl:p-6">
+        <CardContent className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-5 lg:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:p-6">
           <div
             aria-hidden="true"
             className="bg-primary text-primary-foreground flex h-14 w-14 shrink-0 items-center justify-center rounded-lg font-serif text-lg font-semibold"
@@ -209,7 +209,7 @@ export function ContactDetail({
               .join('')
               .toLocaleUpperCase('es')}
           </div>
-          <div className="min-w-0 space-y-2 xl:flex-1">
+          <div className="min-w-0 space-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <h1 className="min-w-0 font-serif text-xl font-semibold tracking-tight sm:text-2xl">
                 {displayName(contact)}
@@ -255,7 +255,7 @@ export function ContactDetail({
               )}
             </div>
           </div>
-          <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 xl:col-span-1 xl:ml-auto">
+          <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap lg:col-span-1 lg:ml-auto">
             {contact.relacion === 'Lead' ? (
               opportunitiesQuery.isPending ? (
                 <Button type="button" size="sm" className="whitespace-nowrap" disabled>
@@ -970,9 +970,9 @@ export function ContactInternalNotes({
       : scope === 'expediente'
         ? caseOptions.map((item) => ({ id: item.id, label: `${item.referencia} · ${item.titulo}` }))
         : opportunityOptions.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+        }))
   const selectedRelated = relatedOptions.find((item) => item.id === originId)
 
   const changeScope = (next: ContactNoteScope) => {

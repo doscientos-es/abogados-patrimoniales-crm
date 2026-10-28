@@ -44,6 +44,27 @@ function renderProfile() {
 }
 
 describe('ContactProfileTab', () => {
+  it('solo muestra y guarda la categoría de atención en las preferencias', async () => {
+    mocks.mutateAsync.mockResolvedValueOnce(undefined)
+    renderProfile()
+
+    const category = screen.getByLabelText('Categoría de atención') as HTMLSelectElement
+    expect(screen.queryByLabelText('Idioma')).toBeNull()
+    expect(screen.queryByLabelText('Horario preferido')).toBeNull()
+    expect(screen.queryByLabelText('Tratamiento')).toBeNull()
+    expect(screen.queryByLabelText('Indicaciones internas')).toBeNull()
+    expect(screen.queryByLabelText('Observaciones de trato')).toBeNull()
+
+    fireEvent.change(category, { target: { value: 'Preferente' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }))
+
+    await waitFor(() =>
+      expect(mocks.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ profile: expect.objectContaining({ attention: 'Preferente' }) }),
+      ),
+    )
+  })
+
   it('preserva la observación de satisfacción si falla el guardado', async () => {
     mocks.mutateAsync.mockRejectedValueOnce({ message: 'Fallo de PostgREST' })
     renderProfile()

@@ -20,6 +20,7 @@ import {
   type DocumentTaskLinkRow,
   type TaskRow,
 } from '@/shared/infrastructure/supabase'
+import { DocumentNamingPanel } from '@/features/documentos/ui/document-naming-panel'
 
 type DocumentTaskKind = Extract<TaskRow['kind'], 'task' | 'deadline'>
 
@@ -27,6 +28,7 @@ export function DocumentDetailSheet({
   document,
   firmId,
   caseReference,
+  caseStage,
   folderLabel,
   uploading,
   changingWorkflow,
@@ -40,6 +42,7 @@ export function DocumentDetailSheet({
   document: CaseDocumentRow | null
   firmId: string | undefined
   caseReference: string | undefined
+  caseStage: string | null | undefined
   folderLabel: string
   uploading: boolean
   changingWorkflow: boolean
@@ -334,6 +337,9 @@ export function DocumentDetailSheet({
                   </div>
                 ) : null}
               </section>
+              {firmId ? (
+                <DocumentNamingPanel document={document} firmId={firmId} stage={caseStage ?? null} />
+              ) : null}
               <section aria-labelledby="document-detail-versions">
                 <div className="flex items-center gap-2">
                   <FileClock className="text-muted-foreground h-4 w-4" aria-hidden="true" />
