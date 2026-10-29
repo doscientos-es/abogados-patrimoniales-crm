@@ -166,6 +166,21 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
     }
   }
 
+  /** Loads the bundled standard catalog through the same importer; existing codes are never overwritten. */
+  const loadStandardCatalog = async () => {
+    try {
+      const { default: rows } = await import('@/features/crm/data/servicios-catalogo.json')
+      const result = await importServices.mutateAsync(rows as unknown)
+      toast.success(
+        result.inserted
+          ? `Catálogo estándar cargado: ${result.inserted} servicios nuevos; ${result.skipped} ya existían.`
+          : 'El catálogo estándar ya estaba cargado: no se ha añadido ni modificado nada.',
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se ha podido cargar el catálogo.')
+    }
+  }
+
   const importBlockFile = async (file: File) => {
     try {
       const result = await importBlocks.mutateAsync(JSON.parse(await file.text()) as unknown)
@@ -219,6 +234,13 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
             />
             {canManage ? (
               <>
+                <Button
+                  variant="outline"
+                  disabled={importServices.isPending}
+                  onClick={() => void loadStandardCatalog()}
+                >
+                  {importServices.isPending ? 'Cargando…' : 'Cargar catálogo estándar'}
+                </Button>
                 <label className="border-input hover:bg-accent inline-flex h-9 cursor-pointer items-center rounded-md border px-3 text-sm">
                   Importar JSON de Holded
                   <input

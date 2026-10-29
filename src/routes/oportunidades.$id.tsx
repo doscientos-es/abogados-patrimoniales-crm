@@ -30,6 +30,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContacto, type ContactoPersistido } from '@/features/contactos'
+import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
+import { estadoAsistente, pickFirstMeeting } from '@/features/crm/application/first-meeting-cycle'
 import {
   OPPORTUNITY_STAGE_LABELS,
   OPPORTUNITY_TRANSITIONS,
@@ -42,6 +44,7 @@ import {
   useTransicionarOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
+import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import { LeadParticipants } from '@/features/crm/ui/lead-participants'
 import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
@@ -75,15 +78,15 @@ function isLeadTab(tab: unknown): tab is LeadDetailTab {
 const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: 'summary', label: 'Resumen' },
   { id: 'contact', label: 'Contacto' },
-  { id: 'qualification', label: 'Cualificación' },
   { id: 'firstMeeting', label: 'Primera cita' },
+  { id: 'qualification', label: 'Cualificación' },
+  { id: 'quote', label: 'Presupuesto' },
+  { id: 'sent', label: 'Enviar al cliente' },
+  { id: 'acceptance', label: 'Validación y aceptación' },
   { id: 'tasks', label: 'Tareas' },
   { id: 'communications', label: 'Comunicaciones' },
   { id: 'notes', label: 'Notas internas' },
-  { id: 'quote', label: 'Presupuesto' },
-  { id: 'sent', label: 'Enviar al cliente' },
   { id: 'documents', label: 'Documentación' },
-  { id: 'acceptance', label: 'Validación y aceptación' },
   { id: 'history', label: 'Histórico' },
 ]
 
@@ -128,6 +131,7 @@ function FichaOportunidadPage() {
   const tareas = useTareasPersistentes(firmId)
   const actualizar = useActualizarOportunidad(firmId)
   const activeTab: LeadDetailTab = isLeadTab(tab) ? tab : 'summary'
+  const [autoQuote, setAutoQuote] = useState(false)
   const setActiveTab = (nextTab: LeadDetailTab) => {
     void navigate({ search: { tab: nextTab === 'summary' ? undefined : nextTab } })
   }
@@ -182,7 +186,24 @@ function FichaOportunidadPage() {
 
   const data = oportunidad.data
   const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id)
+  const firstMeetingTask = pickFirstMeeting(tareas.data ?? [], data.id)
   const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
+  const initialViability = asRecord(asRecord(data.detalles)['viabilidadInicial'])['resultado']
+  const viabilityAllowsMeeting = permitePrimeraCita(
+    initialViability === 'apto' || initialViability === 'pendiente' || initialViability === 'no_apto'
+      ? initialViability
+      : undefined,
+  )
+  const showFirstMeetingAssistant = Boolean(
+    firstMeetingTask &&
+    viabilityAllowsMeeting &&
+    estadoAsistente(firstMeetingTask.reunion) !== 'finalizada' &&
+    !['Completada', 'Cancelada'].includes(firstMeetingTask.estado) &&
+    ['entry', 'qualification', 'first_meeting'].includes(data.fase) &&
+    !asRecord(data.detalles)['presupuesto'] &&
+    !asRecord(data.detalles)['aceptacion'] &&
+    !asRecord(data.detalles)['contratacion'],
+  )
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
       <header className="rounded-xl border bg-card px-4 py-3 sm:px-5">
@@ -230,6 +251,15 @@ function FichaOportunidadPage() {
           </div>
         </div>
       </header>
+      {showFirstMeetingAssistant && firstMeetingTask ? (
+        <FirstMeetingAssistant
+          firmId={membership.data.firmId}
+          task={firstMeetingTask}
+          reference={data.referencia}
+          contactName={contacto.data ? contactName(contacto.data) : ''}
+          canEdit={!data.archivadoEn}
+        />
+      ) : null}
       <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       <section
         id={`lead-detail-panel-${activeTab}`}
@@ -238,13 +268,27 @@ function FichaOportunidadPage() {
       >
         {activeTab === 'summary' ? (
           <div className="space-y-4">
-            <LeadSummary
-              opportunity={data}
-              memberName={memberName}
-              tasks={relatedTasks}
-              tasksLoading={tareas.isPending}
-              onSelectTab={setActiveTab}
-            />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] xl:items-start">
+              <LeadSummary
+                opportunity={data}
+                memberName={memberName}
+                tasks={relatedTasks}
+                tasksLoading={tareas.isPending}
+                onSelectTab={setActiveTab}
+              />
+              <aside aria-label="Personas del asunto" className="space-y-4">
+                <LeadPrimaryContactCard
+                  opportunity={data}
+                  contact={contacto.data}
+                  contactLoading={contacto.isPending}
+                />
+                <LeadParticipants
+                  firmId={membership.data.firmId}
+                  opportunity={data}
+                  canEdit={!data.archivadoEn}
+                />
+              </aside>
+            </div>
             {data.archivadoEn ? (
               <Card>
                 <CardContent className="pt-6 text-sm">
@@ -260,11 +304,6 @@ function FichaOportunidadPage() {
               opportunity={data}
               contact={contacto.data}
               contactLoading={contacto.isPending}
-            />
-            <LeadParticipants
-              firmId={membership.data.firmId}
-              opportunity={data}
-              canEdit={!data.archivadoEn}
             />
             {!data.archivadoEn ? (
               <OpportunityEditForm
@@ -288,7 +327,10 @@ function FichaOportunidadPage() {
             firmId={membership.data.firmId}
             canEdit={!data.archivadoEn}
             currentUserId={session.user.id}
-            onOpenQuote={() => setActiveTab('quote')}
+            onOpenQuote={() => {
+              setAutoQuote(true)
+              setActiveTab('quote')
+            }}
           />
         ) : null}
         {activeTab === 'firstMeeting' ? (
@@ -318,6 +360,7 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === 'quote' ? (
           <QuoteEditor
+            key={data.id}
             firmId={membership.data.firmId}
             opportunity={data}
             cliente={{
@@ -325,7 +368,9 @@ function FichaOportunidadPage() {
               email: contacto.data?.email ?? '',
               ...(contacto.data?.nif ? { nif: contacto.data.nif } : {}),
             }}
-            canEdit={!data.archivadoEn}
+            canEdit={!data.archivadoEn && data.fase !== 'lost'}
+            autoCrear={autoQuote}
+            onAutoCrearHecho={() => setAutoQuote(false)}
           />
         ) : null}
         {activeTab === 'sent' ? (
@@ -486,6 +531,7 @@ export function LeadSummary({
           </p>
         </CardContent>
       </Card>
+      <LeadContextSummary opportunity={opportunity} />
       <Card className="lg:col-span-3">
         <CardHeader>
           <CardTitle className="text-base">Hitos del Lead</CardTitle>
@@ -502,6 +548,82 @@ export function LeadSummary({
   )
 }
 
+export function LeadContextSummary({ opportunity }: { opportunity: OportunidadPersistida }) {
+  const details = asRecord(opportunity.detalles)
+  const initial = asRecord(details['informacionInicial'])
+  const urgency = asRecord(details['urgencia'])
+
+  return (
+    <Card className="lg:col-span-3">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Contexto del Lead</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+          <LeadSummaryItem label="Asunto" value={opportunity.titulo || '—'} />
+          <LeadSummaryItem label="Área jurídica" value={opportunity.area || '—'} />
+          <LeadSummaryItem
+            label="Qué ha ocurrido"
+            value={contextValue(initial['queHaOcurrido'])}
+          />
+          <LeadSummaryItem label="Qué solicita" value={contextValue(initial['queSolicita'])} />
+          <LeadSummaryItem
+            label="Procedimiento iniciado"
+            value={contextValue(initial['procedimientoIniciado'])}
+          />
+          <LeadSummaryItem
+            label="Documentación manifestada"
+            value={contextValue(initial['documentacionManifestada'])}
+          />
+          <LeadSummaryItem label="Urgencia / fecha relevante" value={urgencyValue(urgency)} />
+        </dl>
+      </CardContent>
+    </Card>
+  )
+}
+
+function LeadPrimaryContactCard({
+  opportunity,
+  contact,
+  contactLoading,
+}: {
+  opportunity: OportunidadPersistida
+  contact: ContactoPersistido | null | undefined
+  contactLoading: boolean
+}) {
+  const role = textValue(asRecord(asRecord(opportunity.detalles)['rolContacto'])['rol'])
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Cliente principal</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
+            <ContactRound className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">
+              {contactLoading ? 'Cargando contacto…' : contactName(contact)}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {role ? `Rol en el Lead · ${role}` : 'Contacto principal'}
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/contactos/$id"
+          params={{ id: opportunity.contactoId }}
+          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-full' })}
+        >
+          Ver ficha de contacto
+        </Link>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function LeadContactOverview({
   opportunity,
   contact,
@@ -512,77 +634,26 @@ export function LeadContactOverview({
   contactLoading: boolean
 }) {
   const details = asRecord(opportunity.detalles)
-  const initial = asRecord(details['informacionInicial'])
   const role = asRecord(details['rolContacto'])
-  const urgency = asRecord(details['urgencia'])
-  const participants = participantNames(details['otrosIntervinientes'])
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Contacto principal</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-            <LeadSummaryItem
-              label="Contacto principal"
-              value={contactLoading ? 'Cargando contacto…' : contactName(contact)}
-            />
-            <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
-            <LeadSummaryItem label="Fecha de entrada" value={formatDate(opportunity.creada)} />
-            <LeadSummaryItem label="Tiempo como Lead" value={leadAgeShort(opportunity.creada)} />
-            <LeadSummaryItem
-              label="Rol en el Lead"
-              value={textValue(role['rol']) || 'Sin indicar'}
-            />
-          </dl>
-          <div className="border-border border-t pt-5">
-            <h3 className="text-sm font-medium">Otros intervinientes</h3>
-            {participants.length ? (
-              <ul className="text-muted-foreground mt-2 space-y-1 text-sm">
-                {participants.map((participant) => (
-                  <li key={participant}>{participant}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground mt-2 text-sm">
-                No hay otros intervinientes vinculados a este Lead.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Información inicial</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
-            <LeadSummaryItem
-              label="¿Qué ha ocurrido?"
-              value={textValue(initial['queHaOcurrido']) || '—'}
-            />
-            <LeadSummaryItem
-              label="¿Qué solicita?"
-              value={textValue(initial['queSolicita']) || '—'}
-            />
-            <LeadSummaryItem
-              label="¿Existe algún procedimiento ya iniciado?"
-              value={textValue(initial['procedimientoIniciado']) || '—'}
-            />
-            <LeadSummaryItem
-              label="¿Qué documentación manifiesta tener?"
-              value={textValue(initial['documentacionManifestada']) || '—'}
-            />
-            <LeadSummaryItem
-              label="¿Existe alguna urgencia o fecha relevante?"
-              value={urgencyValue(urgency)}
-            />
-          </dl>
-        </CardContent>
-      </Card>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Contacto principal</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+          <LeadSummaryItem
+            label="Contacto principal"
+            value={contactLoading ? 'Cargando contacto…' : contactName(contact)}
+          />
+          <LeadSummaryItem label="Origen" value={opportunity.origen || 'No indicado'} />
+          <LeadSummaryItem label="Fecha de entrada" value={formatDate(opportunity.creada)} />
+          <LeadSummaryItem label="Tiempo como Lead" value={leadAgeShort(opportunity.creada)} />
+          <LeadSummaryItem label="Rol en el Lead" value={textValue(role['rol']) || 'Sin indicar'} />
+        </dl>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -590,7 +661,9 @@ function LeadSummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
+      <dd className="mt-1 text-sm leading-relaxed font-medium break-words whitespace-pre-wrap">
+        {value}
+      </dd>
     </div>
   )
 }
@@ -901,19 +974,15 @@ function textValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function participantNames(value: unknown) {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((participant) => {
-      if (typeof participant === 'string') return participant.trim()
-      const record = asRecord(participant)
-      return (
-        textValue(record['nombre']) ||
-        textValue(record['nombreCompleto']) ||
-        textValue(record['name'])
-      )
-    })
-    .filter(Boolean)
+function contextValue(value: unknown) {
+  if (typeof value === 'string') return value.trim() || '—'
+  if (Array.isArray(value)) {
+    const entries = value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+    return entries.filter(Boolean).join('\n') || '—'
+  }
+  return '—'
 }
 
 function contactName(contact: ContactoPersistido | null | undefined) {

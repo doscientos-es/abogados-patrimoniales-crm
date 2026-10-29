@@ -31,11 +31,13 @@ describe('notas privadas del presupuesto', () => {
         contactId="contact-1"
       />,
     )
-    fireEvent.change(screen.getByLabelText('Título (opcional)'), { target: { value: 'Riesgo' } })
-    fireEvent.change(screen.getByLabelText('Nota privada'), {
+    fireEvent.change(screen.getByLabelText('Título de nota interna'), {
+      target: { value: 'Riesgo' },
+    })
+    fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
       target: { value: 'Revisar alcance.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar nota privada' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
 
     await waitFor(() => expect(mocks.save).toHaveBeenCalledOnce())
     expect(mocks.save.mock.calls[0]?.[0]).toMatchObject({

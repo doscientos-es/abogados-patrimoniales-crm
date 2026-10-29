@@ -73,9 +73,9 @@ export function LeadParticipants({
             {participants.map((participant) => (
               <li
                 key={participant.contactoId || participant.nombre}
-                className="flex items-center gap-3 px-3 py-2 text-sm"
+                className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm"
               >
-                <span className="flex-1">
+                <span className="min-w-0 flex-1 break-words">
                   <span className="font-medium">{participant.nombre}</span>
                   <span className="text-muted-foreground">
                     {' '}

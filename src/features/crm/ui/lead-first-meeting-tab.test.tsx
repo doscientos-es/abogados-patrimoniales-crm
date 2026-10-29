@@ -4,26 +4,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   appointments: [] as Array<Record<string, unknown>>,
   create: vi.fn().mockResolvedValue({ id: 'new-event' }),
-  edit: vi.fn(),
   updateMeeting: vi.fn().mockImplementation(async ({ task, details }) => ({
     ...task,
     reunion: details,
     version: task.version + 1,
   })),
-  complete: vi.fn().mockResolvedValue(undefined),
-  markNext: vi.fn().mockResolvedValue({}),
 }))
 
 vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: mocks.appointments, isPending: false, isError: false }),
   useCrearTarea: () => ({ mutateAsync: mocks.create, isPending: false }),
-  useEditarTarea: () => ({ mutateAsync: mocks.edit, isPending: false }),
-  useActualizarReunionTarea: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
-  useCompletarTarea: () => ({ mutateAsync: mocks.complete, isPending: false }),
-  useMarcarSiguienteAccion: () => ({ mutateAsync: mocks.markNext, isPending: false }),
-  MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
-}))
-vi.mock('@/features/tareas/ui/task-meeting-notes', () => ({
+  useActualizarReunionEspecial: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
   MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
 }))
 
@@ -44,52 +35,27 @@ const opportunity = {
   archivadoEn: null,
 } as never
 
-const scheduledTask = (appointmentChanges: Record<string, unknown> = {}) =>
+const meeting = (reunion: Record<string, unknown> = {}) =>
   ({
     id: 'event-1',
-    expedienteId: null,
     oportunidadId: 'lead-1',
     tipo: 'Evento',
-    titulo: 'Primera cita · Consulta patrimonial',
-    descripcion: '',
     estado: 'Pendiente',
-    prioridad: 'Media',
-    venceEn: '2026-10-20T09:00:00.000Z',
-    recordarEn: null,
     asignadoId: 'user-1',
     creadaPorId: 'user-1',
-    esSiguienteAccion: false,
-    motivoEspera: null,
-    revisarEn: null,
-    detalleEspera: '',
-    resultadoCierre: '',
-    motivoCancelacion: '',
-    abiertaEn: null,
-    abiertaPorId: null,
-    motivoRechazo: '',
-    rechazadaEn: null,
-    tareaPadreId: null,
-    origenSubtareaDeId: null,
+    venceEn: '2026-10-20T09:00:00.000Z',
+    version: 1,
     reunion: {
       startsAt: '2026-10-20T09:00:00.000Z',
-      endsAt: '2026-10-20T10:00:00.000Z',
-      mode: 'office_bilbao',
-      primeraCita: {
-        estado: 'Programada',
-        duracion: '60 minutos',
-        asistentesAdicionales: '',
-        resumen: '',
-        documentacionAportada: '',
-        resultado: '',
-        observaciones: '',
-        autorizadaPresupuesto: false,
-        tipoServicioPreliminar: '',
-        ...appointmentChanges,
-      },
+      endsAt: '2026-10-20T09:30:00.000Z',
+      durationMinutes: 30,
+      mode: 'office_recalde',
+      abogadoPrimeraCita: 'Ana Responsable',
+      specialType: 'meeting',
+      status: 'scheduled',
+      primeraCita: { estado: 'Programada' },
+      ...reunion,
     },
-    bloqueada: false,
-    etiquetas: [],
-    version: 1,
   }) as Record<string, unknown>
 
 function renderTab() {
@@ -108,102 +74,60 @@ function renderTab() {
 }
 
 describe('LeadFirstMeetingTab', () => {
-  it('shows and starts the operational assistant through the persistent meeting mutation', async () => {
-    mocks.appointments = [scheduledTask()]
-
+  it('shows a compact appointment summary and the transcript workspace, without the long form', () => {
+    mocks.appointments = [meeting()]
     renderTab()
-    fireEvent.click(screen.getByRole('button', { name: /Comenzar primera cita/i }))
+
+    const block = screen.getByRole('region', { name: 'Datos de la cita' })
+    for (const text of ['Ana Responsable', 'Despacho Rekalde', '30 min', 'Agendada'])
+      expect(block.textContent).toContain(text)
+    expect(screen.getByText('Transcripción de la Primera cita')).toBeTruthy()
+    expect(screen.queryByText('Resultado y siguientes pasos')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Comenzar primera cita/i })).toBeNull()
+  })
+
+  it('reschedules with any minute and keeps the meeting lifecycle status', async () => {
+    mocks.appointments = [meeting()]
+    renderTab()
+    fireEvent.click(screen.getByRole('button', { name: /Editar \/ reprogramar cita/ }))
+    fireEvent.change(screen.getByLabelText('Fecha'), { target: { value: '2026-10-22' } })
+    fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '10:37' } })
+    fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cita' }))
 
     await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
-    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
-      status: 'in_progress',
-      primeraCita: { estado: 'En curso' },
+    const details = mocks.updateMeeting.mock.calls[0]?.[0].details
+    expect(details).toMatchObject({
+      specialType: 'meeting',
+      status: 'scheduled',
+      durationMinutes: 45,
+      abogadoPrimeraCita: 'Ana Responsable',
+      primeraCita: { estado: 'Programada', duracion: '45 minutos' },
     })
+    expect(Date.parse(details.startsAt)).toBe(new Date('2026-10-22T10:37').getTime())
+    expect(Date.parse(details.endsAt) - Date.parse(details.startsAt)).toBe(45 * 60_000)
   })
 
-  it('records a no-show and creates a linked follow-up reminder', async () => {
-    mocks.appointments = [scheduledTask()]
-
+  it('hides the edit action once the meeting is finished', () => {
+    mocks.appointments = [meeting({ status: 'finished', primeraCita: { estado: 'Celebrada' } })]
     renderTab()
-    fireEvent.click(screen.getByRole('button', { name: /No ha acudido/i }))
-
-    await waitFor(() => expect(mocks.markNext).toHaveBeenCalledOnce())
-    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
-      status: 'not_held',
-      primeraCita: { estado: 'No comparece' },
-    })
-    expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
-      oportunidadId: 'lead-1',
-      titulo: 'REVISAR / CERRAR LEAD POR FALTA DE RESPUESTA',
-    })
+    expect(screen.queryByRole('button', { name: /Editar \/ reprogramar cita/ })).toBeNull()
   })
 
-  it('shows indicators derived from the saved appointment status and result', () => {
-    mocks.appointments = [scheduledTask({ resultado: 'Solicitar documentación' })]
-
+  it('offers to schedule a linked first meeting when none exists', async () => {
     renderTab()
-
-    const indicators = screen.getByLabelText('Indicadores de la cita').textContent
-    expect(indicators).toContain('CITA PROGRAMADA')
-    expect(indicators).toContain('DOCUMENTACIÓN SOLICITADA')
-  })
-
-  it('creates a persistent appointment event with its meeting details and calendar date', async () => {
-    renderTab()
-    fireEvent.change(screen.getByLabelText('Inicio'), {
-      target: { value: '2026-10-20T09:00' },
-    })
-    fireEvent.change(screen.getByLabelText('Fin'), {
-      target: { value: '2026-10-20T10:00' },
-    })
-    fireEvent.change(screen.getByLabelText('Notas previas y preparación'), {
-      target: { value: 'Revisar los antecedentes.' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar programación' }))
+    fireEvent.click(screen.getByRole('button', { name: /Programar primera cita/i }))
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce())
-    const created = mocks.create.mock.calls[0]?.[0]
-    expect(created).toMatchObject({
+    expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
       tipo: 'Evento',
       oportunidadId: 'lead-1',
-      titulo: 'Primera cita · Consulta patrimonial',
       detallesReunion: {
-        mode: 'office_bilbao',
-        preparation: 'Revisar los antecedentes.',
-        primeraCita: { estado: 'Programada' },
+        specialType: 'meeting',
+        meetingType: 'Primera cita',
+        status: 'scheduled',
+        attendeeContactIds: ['contact-1'],
       },
     })
-    expect(Date.parse(created.detallesReunion.startsAt)).toBe(Date.parse(created.venceEn))
-  })
-
-  it('records the meeting outcome and completes the scheduled event', async () => {
-    mocks.appointments = [scheduledTask()]
-    renderTab()
-    fireEvent.change(screen.getByLabelText('Resultado'), {
-      target: { value: 'Solicitar presupuesto' },
-    })
-    fireEvent.change(screen.getByLabelText('Resumen de la cita'), {
-      target: { value: 'Se revisó el asunto con el contacto.' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar resultado' }))
-
-    await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
-    expect(mocks.updateMeeting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        details: expect.objectContaining({
-          primeraCita: expect.objectContaining({
-            estado: 'Celebrada',
-            resultado: 'Solicitar presupuesto',
-            resumen: 'Se revisó el asunto con el contacto.',
-          }),
-        }),
-      }),
-    )
-    await waitFor(() => expect(mocks.complete).toHaveBeenCalledOnce())
-    expect(mocks.complete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        resultado: 'Solicitar presupuesto · Se revisó el asunto con el contacto.',
-      }),
-    )
   })
 })

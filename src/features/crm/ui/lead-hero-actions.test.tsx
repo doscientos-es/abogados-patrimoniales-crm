@@ -2,6 +2,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import type { TareaPersistida } from '@/features/tareas'
+
+vi.mock('@/features/tareas/ui/task-detail-dialog', () => ({
+  TaskDetailDialog: ({
+    taskId,
+    onOpenChange,
+  }: {
+    taskId: string | null
+    onOpenChange: (open: boolean) => void
+  }) =>
+    taskId ? (
+      <div role="dialog" aria-label="Ficha completa de tarea">
+        <p>Detalle de la tarea {taskId}</p>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cerrar detalle
+        </button>
+      </div>
+    ) : null,
+}))
+
 import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
 import {
   LeadNoteDialog,
@@ -65,7 +85,7 @@ describe('LeadHeroActions', () => {
     expect(onSelectTab).toHaveBeenCalledWith('tasks')
   })
 
-  it('shows the initial action and commercial milestones when none are registered', () => {
+  it('shows the action, clear matter context and milestones when none are registered', () => {
     render(
       <LeadSummary
         opportunity={
@@ -89,7 +109,14 @@ describe('LeadHeroActions', () => {
             fechaObjetivo: null,
             archivadoEn: null,
             motivoArchivo: null,
-            detalles: {},
+            detalles: {
+              informacionInicial: {
+                queHaOcurrido: 'División de cosa común.',
+                queSolicita: 'División de herencia.',
+                documentacionManifestada: 'Testamento\nNota simple',
+              },
+              urgencia: { opcion: 'Alta', detalle: 'Vence el 5 de junio' },
+            },
             version: 1,
           } as never
         }
@@ -107,9 +134,14 @@ describe('LeadHeroActions', () => {
     expect(screen.getByText('Sin programar')).toBeTruthy()
     expect(screen.getByText('No solicitado')).toBeTruthy()
     expect(screen.getByText('Sin aceptación')).toBeTruthy()
+    expect(screen.getByText('Contexto del Lead')).toBeTruthy()
+    expect(screen.getByText('División de cosa común.')).toBeTruthy()
+    expect(screen.getByText('División de herencia.')).toBeTruthy()
+    expect(screen.getByText(/Nota simple/)).toBeTruthy()
+    expect(screen.getByText('Alta · Vence el 5 de junio')).toBeTruthy()
   })
 
-  it('shows the contact, initial information and empty participant state', () => {
+  it('shows the principal contact details without duplicating summary context', () => {
     render(
       <LeadContactOverview
         opportunity={
@@ -129,10 +161,9 @@ describe('LeadHeroActions', () => {
 
     expect(screen.getByText('Ramón Iglesias Peña')).toBeTruthy()
     expect(screen.getByText('Rol en el Lead')).toBeTruthy()
-    expect(screen.getAllByText('Sin indicar')).toHaveLength(2)
-    expect(screen.getByText('No hay otros intervinientes vinculados a este Lead.')).toBeTruthy()
-    expect(screen.getByText('División de cosa común.')).toBeTruthy()
-    expect(screen.getAllByText('—')).toHaveLength(3)
+    expect(screen.getByText('Sin indicar')).toBeTruthy()
+    expect(screen.queryByText('Información inicial')).toBeNull()
+    expect(screen.queryByText('Otros intervinientes')).toBeNull()
   })
 
   it('presents accessible qualification questions and suggested additions', () => {
@@ -269,6 +300,37 @@ describe('LeadHeroActions', () => {
         }),
       ),
     )
+  })
+
+  it('opens the selected task details and gives priority a clear visual indicator', () => {
+    const task = {
+      id: 'task-1',
+      titulo: 'Llamar al contacto',
+      descripcion: 'Confirmar el alcance completo de la consulta.',
+      estado: 'Pendiente',
+      prioridad: 'Media',
+      critico: false,
+      asignadoId: 'member-1',
+      venceEn: null,
+    } as TareaPersistida
+    render(
+      <LeadTasksTable
+        tasks={[task]}
+        memberNames={new Map([['member-1', 'Ana Torregrosa']])}
+        pending={false}
+        loading={false}
+        onComplete={vi.fn()}
+        createDialog={null}
+      />,
+    )
+
+    expect(screen.getByLabelText('Prioridad Media').className).toContain('bg-warning/10')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ver detalles de la tarea: Llamar al contacto' }),
+    )
+
+    expect(screen.getByRole('dialog', { name: 'Ficha completa de tarea' })).toBeTruthy()
+    expect(screen.getByText('Detalle de la tarea task-1')).toBeTruthy()
   })
 
   it('opens dedicated accessible communication forms and saves their multiline summaries', async () => {

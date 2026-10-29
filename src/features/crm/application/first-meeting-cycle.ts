@@ -71,6 +71,7 @@ function withPrimeraCita(
 ) {
   return {
     ...(reunion as unknown as DetallesReunion),
+    specialType: 'meeting',
     ...extra,
     primeraCita: { ...record(reunion['primeraCita']), ...patch },
   } as DetallesReunion

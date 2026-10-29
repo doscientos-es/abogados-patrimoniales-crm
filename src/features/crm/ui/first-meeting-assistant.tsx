@@ -27,10 +27,11 @@ import {
 } from '@/features/crm/application/first-meeting-cycle'
 import { FirstMeetingClosingDialog } from '@/features/crm/ui/first-meeting-closing-dialog'
 import {
-  useActualizarReunionTarea,
+  useActualizarReunionEspecial,
   useCrearTarea,
   useMarcarSiguienteAccion,
   useTareasPersistentes,
+  type DetallesReunion,
   type TareaPersistida,
 } from '@/features/tareas'
 
@@ -67,7 +68,7 @@ export function FirstMeetingAssistant({
   contactName: string
   canEdit: boolean
 }) {
-  const updateMeeting = useActualizarReunionTarea(firmId)
+  const updateMeeting = useActualizarReunionEspecial(firmId)
   const createTask = useCrearTarea(firmId)
   const markNextAction = useMarcarSiguienteAccion(firmId)
   const tasks = useTareasPersistentes(firmId)
@@ -88,9 +89,20 @@ export function FirstMeetingAssistant({
 
   const start = async () => {
     try {
+      let currentTask = task
+      if (!reunion['status'] || reunion['status'] === 'preparation') {
+        currentTask = await updateMeeting.mutateAsync({
+          task: currentTask,
+          details: {
+            ...(reunion as unknown as DetallesReunion),
+            specialType: 'meeting',
+            status: 'scheduled',
+          },
+        })
+      }
       await updateMeeting.mutateAsync({
-        task,
-        details: comenzar(reunion, new Date().toISOString()),
+        task: currentTask,
+        details: comenzar(currentTask.reunion, new Date().toISOString()),
       })
       toast.success('Primera cita en curso.')
     } catch (error) {

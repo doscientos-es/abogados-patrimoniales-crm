@@ -166,6 +166,9 @@ export function parseEuros(value: string): number | null {
   return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null
 }
 
+/** Editable price text in Spanish format, e.g. 180000 → «1800,00». */
+export const formatoPrecio = (cents: number) => (cents / 100).toFixed(2).replace('.', ',')
+
 export const lineaDesdeServicio = (service: ServicioCatalogo): LineaPresupuesto => ({
   ...service,
   id: uid(),

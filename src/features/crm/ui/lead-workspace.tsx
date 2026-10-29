@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowDown, ArrowUp, Check, ClipboardCheck, NotebookPen, Plus, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ClipboardCheck,
+  Eye,
+  Flag,
+  NotebookPen,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
@@ -36,6 +46,7 @@ import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-d
 import { LeadCommunicationsTimeline } from '@/features/crm/ui/lead-communications-timeline'
 import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
+import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 import {
   useCambiarEstadoTarea,
   useCrearTarea,
@@ -49,6 +60,11 @@ const today = () => new Date().toISOString().slice(0, 10)
 const asRecord = (value: Json | undefined): Record<string, Json | undefined> =>
   value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 const text = (value: Json | undefined) => (typeof value === 'string' ? value : '')
+const LEAD_TASK_PRIORITY_STYLES: Record<TareaPersistida['prioridad'], string> = {
+  Alta: 'border-destructive/30 bg-destructive/10 text-destructive',
+  Media: 'border-warning/30 bg-warning/10 text-warning-foreground',
+  Baja: 'border-border bg-secondary text-secondary-foreground',
+}
 const dateText = (value: string) =>
   new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
     new Date(value),
@@ -167,8 +183,8 @@ export function LeadWorkspace({
   const requestedDocuments = ensureRequiredLeadDocumentRequests(
     Array.isArray(details['documentacionSolicitada'])
       ? details['documentacionSolicitada'].filter(
-          (value): value is string => typeof value === 'string',
-        )
+        (value): value is string => typeof value === 'string',
+      )
       : [],
   )
   const reconciledDocuments = reconcileRequestedLeadDocuments(
@@ -288,19 +304,19 @@ export function LeadWorkspace({
             condiciones: formText(form, 'quoteConditions'),
             ...(status === 'Validado' && canReviewQuote
               ? {
-                  validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
-                  fechaValidacion: new Date().toISOString(),
-                  validadoVersion: version,
-                }
+                validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
+                fechaValidacion: new Date().toISOString(),
+                validadoVersion: version,
+              }
               : {}),
             ...(version !== previousVersion
               ? { validadoVersion: null, validadoPor: null, fechaValidacion: null }
               : {}),
             historial: historyChanged
               ? [
-                  ...history,
-                  { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
-                ]
+                ...history,
+                { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+              ]
               : history,
           },
         },
@@ -335,11 +351,11 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'validation'
           ? {
-              transicionContratacion: {
-                fase: 'engagement' as const,
-                subestado: 'Pendiente de aceptación',
-              },
-            }
+            transicionContratacion: {
+              fase: 'engagement' as const,
+              subestado: 'Pendiente de aceptación',
+            },
+          }
           : {}),
         detalles: {
           ...details,
@@ -498,12 +514,12 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'engagement'
           ? {
-              transicionContratacion: {
-                fase: 'validation' as const,
-                subestado: 'Rectificación solicitada',
-                motivo: revisionRequest,
-              },
-            }
+            transicionContratacion: {
+              fase: 'validation' as const,
+              subestado: 'Rectificación solicitada',
+              motivo: revisionRequest,
+            },
+          }
           : {}),
         detalles: {
           ...details,
@@ -1364,7 +1380,7 @@ export function LeadWorkspace({
               </div>
             </form>
             {text(quote['estado']) !== 'Validado' ||
-            quote['validadoVersion'] !== quote['version'] ? (
+              quote['validadoVersion'] !== quote['version'] ? (
               <p className="text-destructive text-xs">
                 La versión actual del presupuesto debe estar validada antes de registrar el envío.
               </p>
@@ -1797,6 +1813,8 @@ export function LeadTasksTable({
   createDialog: ReactNode
   onComplete: (task: TareaPersistida) => Promise<unknown>
 }) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+
   return (
     <section aria-labelledby="lead-tasks-heading" className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -1857,24 +1875,46 @@ export function LeadTasksTable({
                   <td className="px-4 py-3">
                     {task.venceEn ? dateText(task.venceEn) : 'Sin fecha'}
                   </td>
-                  <td className="px-4 py-3">{task.prioridad}</td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      role="img"
+                      aria-label={`Prioridad ${task.critico ? 'crítica' : task.prioridad}`}
+                      title={`Prioridad ${task.critico ? 'crítica' : task.prioridad}`}
+                      className={`h-6 w-6 justify-center rounded-full border p-0 ${LEAD_TASK_PRIORITY_STYLES[task.critico ? 'Alta' : task.prioridad]}`}
+                    >
+                      <Flag className="h-3 w-3" aria-hidden="true" />
+                    </Badge>
+                  </td>
                   <td className="px-4 py-3">
                     <Badge variant={task.estado === 'Completada' ? 'secondary' : 'outline'}>
                       {task.estado}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {task.estado !== 'Completada' ? (
+                    <div className="flex items-center justify-end gap-1">
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() => void onComplete(task)}
+                        variant="ghost"
+                        className="h-8 gap-1 px-2 text-xs"
+                        aria-label={`Ver detalles de la tarea: ${task.titulo}`}
+                        title="Ver detalles"
+                        onClick={() => setSelectedTaskId(task.id)}
                       >
-                        <Check className="h-4 w-4" aria-hidden="true" /> Completar
+                        <Eye className="h-4 w-4" aria-hidden="true" /> Detalles
                       </Button>
-                    ) : null}
+                      {task.estado !== 'Completada' ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() => void onComplete(task)}
+                        >
+                          <Check className="h-4 w-4" aria-hidden="true" /> Completar
+                        </Button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1886,6 +1926,13 @@ export function LeadTasksTable({
           Todavía no hay tareas vinculadas a este Lead.
         </p>
       )}
+      <TaskDetailDialog
+        taskId={selectedTaskId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTaskId(null)
+        }}
+        onOpenTask={setSelectedTaskId}
+      />
     </section>
   )
 }
@@ -2058,16 +2105,16 @@ function qualificationQuestions(value: Json | undefined): QualificationQuestion[
     const questionText = text(record['texto']) || text(record['text']) || text(question)
     return questionText
       ? [
-          {
-            id: text(record['id']) || `question-${index}`,
-            text: questionText,
-            response:
-              record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
-                ? record['respuesta']
-                : 'Pendiente',
-            observation: text(record['observacion']),
-          },
-        ]
+        {
+          id: text(record['id']) || `question-${index}`,
+          text: questionText,
+          response:
+            record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
+              ? record['respuesta']
+              : 'Pendiente',
+          observation: text(record['observacion']),
+        },
+      ]
       : []
   })
 }

@@ -69,12 +69,24 @@ describe('administración del catálogo de servicios', () => {
     })
   })
 
+  it('carga el catálogo estándar de servicios a través del importador', async () => {
+    render(<QuoteCatalogAdmin kind="services" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar catálogo estándar' }))
+
+    await waitFor(() => expect(mocks.importServices).toHaveBeenCalledOnce())
+    const rows = mocks.importServices.mock.calls[0]?.[0] as string[][]
+    expect(rows).toHaveLength(59)
+    expect(rows.every((row) => row.length >= 11)).toBe(true)
+    expect(rows.some((row) => row[4] === 'SD1' && row[6] === '170,00€')).toBe(true)
+  })
+
   it('permite consultar el catálogo a miembros sin permisos de edición', () => {
     mocks.role = 'paralegal'
     render(<QuoteCatalogAdmin kind="services" />)
 
     expect(screen.getByText('Contrato de arrendamiento')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Nuevo servicio' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Cargar catálogo estándar' })).toBeNull()
     expect(screen.getByText(/Solo propietarios, administradores y abogados/)).toBeTruthy()
   })
 })

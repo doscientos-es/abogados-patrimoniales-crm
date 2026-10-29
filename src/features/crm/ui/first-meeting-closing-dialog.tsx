@@ -21,7 +21,8 @@ import { terminar } from '@/features/crm/application/first-meeting-cycle'
 import { nextLeadAction } from '@/features/crm/application/lead-next-action'
 import { useGuardarNota, useNotasRemotas } from '@/features/notas'
 import {
-  useActualizarReunionTarea,
+  useActualizarReunionEspecial,
+  useCompletarTarea,
   useCrearTarea,
   useMarcarSiguienteAccion,
   useTareasPersistentes,
@@ -50,7 +51,8 @@ export function FirstMeetingClosingDialog({
   const members = useMiembrosDespacho(firmId)
   const createTask = useCrearTarea(firmId)
   const markNextAction = useMarcarSiguienteAccion(firmId)
-  const updateMeeting = useActualizarReunionTarea(firmId)
+  const updateMeeting = useActualizarReunionEspecial(firmId)
+  const completeTask = useCompletarTarea(firmId)
   const saveNote = useGuardarNota(firmId)
   const [noteContent, setNoteContent] = useState('')
   const [uploadedNames, setUploadedNames] = useState<string[]>([])
@@ -134,6 +136,10 @@ export function FirstMeetingClosingDialog({
   }
 
   const finish = async () => {
+    if (pendingDocs.length) {
+      toast.error('Hay archivos sin añadir. Pulsa «Añadir documentos» o quítalos antes de finalizar.')
+      return
+    }
     const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
     setFinishing(true)
     try {
@@ -161,10 +167,16 @@ export function FirstMeetingClosingDialog({
           extraDetails: { taskId: task.id, cierrePrimeraCita: 'true' },
         })
       }
-      await updateMeeting.mutateAsync({
+      const finished = await updateMeeting.mutateAsync({
         task: liveMeeting,
         details: terminar(liveMeeting.reunion, new Date().toISOString()),
       })
+      try {
+        if (finished.estado !== 'Completada')
+          await completeTask.mutateAsync({ task: finished, resultado: 'Primera cita celebrada.' })
+      } catch {
+        toast.error('La Primera cita quedó finalizada, pero el evento del calendario no se pudo cerrar.')
+      }
       toast.success('Primera cita finalizada.')
       onClose()
     } catch (error) {
