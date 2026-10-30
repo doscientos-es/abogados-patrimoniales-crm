@@ -83,8 +83,8 @@ export function NuevaOportunidadPage() {
     contactId: string
     contactName: string
     viability: ViabilidadInicial
-    closeSucceeded?: boolean
-    closeError?: string
+    closeSucceeded?: boolean | undefined
+    closeError?: string | undefined
   } | null>(null)
   const preselectedContact = useMemo(
     () => (contacts.data ?? []).find((item) => item.id === search.contactId),

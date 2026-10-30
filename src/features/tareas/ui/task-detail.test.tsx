@@ -693,13 +693,10 @@ describe('TaskDetail', () => {
     const cards = screen.getAllByRole('article').map((card) => card.textContent ?? '')
     expect(cards[0]).toContain('Nota destacada')
 
-    fireEvent.click(screen.getByRole('button', { name: /Nueva nota interna/ }))
-    const dialog = screen.getByRole('dialog')
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Contenido' }), {
+    fireEvent.change(screen.getByLabelText('Contenido de nota interna'), {
       target: { value: 'Acordamos revisar la escritura.' },
     })
-    fireEvent.click(within(dialog).getByLabelText('Requiere confirmación de lectura'))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar nota' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
 
     await vi.waitFor(() =>
       expect(mocks.saveNote).toHaveBeenCalledWith(
@@ -707,7 +704,7 @@ describe('TaskDetail', () => {
           scope: 'case',
           caseId: 'case-1',
           content: 'Acordamos revisar la escritura.',
-          requiresAcknowledgement: true,
+          requiresAcknowledgement: false,
           extraDetails: { taskId: 'task-1' },
         }),
       ),

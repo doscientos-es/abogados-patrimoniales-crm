@@ -46,6 +46,7 @@ import {
 } from '@/features/crm'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
+import { NoNextActionWarning } from '@/features/crm/ui/no-next-action-warning'
 import { LeadParticipants } from '@/features/crm/ui/lead-participants'
 import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
@@ -259,6 +260,14 @@ function FichaOportunidadPage() {
           contactName={contacto.data ? contactName(contacto.data) : ''}
           canEdit={!data.archivadoEn}
         />
+      ) : null}
+      {!data.archivadoEn &&
+        data.fase !== 'lost' &&
+        !tareas.isPending &&
+        !relatedTasks.some(
+          (task) => task.esSiguienteAccion && !['Completada', 'Cancelada'].includes(task.estado),
+        ) ? (
+        <NoNextActionWarning onDefine={() => setActiveTab('tasks')} />
       ) : null}
       <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       <section

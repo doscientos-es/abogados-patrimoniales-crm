@@ -3,6 +3,13 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
@@ -122,6 +129,15 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
     const costCents = parseEuros(serviceCost)
     if (priceCents === null || costCents === null) {
       toast.error('Indica importes válidos en euros.')
+      return
+    }
+    const code = serviceDraft.code.trim().toLocaleLowerCase('es')
+    if (
+      (services.data ?? []).some(
+        (item) => item.id !== serviceDraft.id && item.code.trim().toLocaleLowerCase('es') === code,
+      )
+    ) {
+      toast.error(`Ya existe un servicio con el código ${serviceDraft.code.trim()}.`)
       return
     }
     try {
@@ -336,11 +352,14 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
             </CardContent>
           </Card>
           {serviceDraft ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>{serviceDraft.id ? 'Editar servicio' : 'Nuevo servicio'}</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Dialog open onOpenChange={(open) => !open && setServiceDraft(null)}>
+              <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{serviceDraft.id ? 'Editar servicio' : 'Nuevo servicio'}</DialogTitle>
+                  <DialogDescription>
+                    Los cambios no modifican presupuestos ya guardados.
+                  </DialogDescription>
+                </DialogHeader>
                 <form
                   className="grid gap-3 sm:grid-cols-2"
                   onSubmit={(event) => void onServiceSubmit(event)}
@@ -367,11 +386,19 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
                   </Field>
                   <Field label="Familia">
                     <Input
+                      list="quote-service-families"
                       value={serviceDraft.family}
                       onChange={(event) =>
                         setServiceDraft({ ...serviceDraft, family: event.target.value })
                       }
                     />
+                    <datalist id="quote-service-families">
+                      {[...new Set((services.data ?? []).map((item) => item.family))]
+                        .sort((a, b) => a.localeCompare(b, 'es'))
+                        .map((family) => (
+                          <option key={family} value={family} />
+                        ))}
+                    </datalist>
                   </Field>
                   <Field label="Precio base (€)">
                     <Input
@@ -437,8 +464,8 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
                     </Button>
                   </div>
                 </form>
-              </CardContent>
-            </Card>
+              </DialogContent>
+            </Dialog>
           ) : null}
         </section>
       ) : null}

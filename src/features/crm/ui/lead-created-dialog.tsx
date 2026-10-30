@@ -40,8 +40,8 @@ export function LeadCreatedDialog({
   contactId: string
   contactName: string
   viability: ViabilidadInicial
-  closeSucceeded?: boolean
-  closeError?: string
+  closeSucceeded?: boolean | undefined
+  closeError?: string | undefined
   onFinish: () => void
 }) {
   const [step, setStep] = useState<Step>(viability === 'pendiente' ? 'task' : 'summary')
@@ -67,23 +67,23 @@ export function LeadCreatedDialog({
         oportunidadId: opportunityId,
         ...(isFirstMeeting && details
           ? {
-              tipo: 'Evento',
-              venceEn: details.startsAt || input.venceEn,
-              detallesReunion: {
-                ...details,
-                primeraCita: {
-                  estado: 'Programada',
-                  duracion: `${details.durationMinutes ?? 60} minutos`,
-                  asistentesAdicionales: '',
-                  resumen: '',
-                  documentacionAportada: '',
-                  resultado: '',
-                  observaciones: '',
-                  autorizadaPresupuesto: false,
-                  tipoServicioPreliminar: '',
-                },
+            tipo: 'Evento',
+            venceEn: details.startsAt || input.venceEn,
+            detallesReunion: {
+              ...details,
+              primeraCita: {
+                estado: 'Programada',
+                duracion: `${details.durationMinutes ?? 60} minutos`,
+                asistentesAdicionales: '',
+                resumen: '',
+                documentacionAportada: '',
+                resultado: '',
+                observaciones: '',
+                autorizadaPresupuesto: false,
+                tipoServicioPreliminar: '',
               },
-            }
+            },
+          }
           : {}),
       }
       task = await createTask.mutateAsync(taskInput)
