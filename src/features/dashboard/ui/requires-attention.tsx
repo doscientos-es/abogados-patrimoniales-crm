@@ -168,7 +168,7 @@ export function RequiresAttention({
             {allIncidents.length ? 'Nada con estos filtros.' : 'Todo en orden: no hay incidencias.'}
           </p>
         ) : (
-          <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+          <div className="space-y-2">
             {incidents.map((incident) => (
               <Destino key={incident.id} incidencia={incident}>
                 <span className="min-w-0 space-y-0.5">
