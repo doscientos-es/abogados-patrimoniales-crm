@@ -1,7 +1,8 @@
 import { IconButton } from '@doscientos/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, FileText, FolderOpen, Search } from 'lucide-react'
-import { useState } from 'react'
+import { ExternalLink, FilePlus2, FileText, FolderOpen, LoaderCircle, Search } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +18,12 @@ import {
   formatFileSize,
   type DocumentSort,
 } from '@/features/expedientes/application/case-documents-list'
-import { abrirJustificante } from '@/features/expedientes/infrastructure/case-economic-documents'
+import {
+  CASE_DOCUMENT_MIME,
+  abrirJustificante,
+  subirNuevaVersion,
+  validateCaseDocumentFile,
+} from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
 import { CaseDocumentUpload } from './case-document-upload'
@@ -46,6 +52,44 @@ export function CaseDocumentsSection({
   const categories = documentCategories(documents)
   const confidential = documents.filter((document) => document.confidentiality !== 'normal').length
   const pendingReview = documents.filter((document) => document.content_status === 'pending').length
+
+  const versionInput = useRef<HTMLInputElement>(null)
+  const versionTarget = useRef<CaseDocumentRow | null>(null)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const pickVersionFor = (document: CaseDocumentRow) => {
+    versionTarget.current = document
+    versionInput.current?.click()
+  }
+
+  const uploadVersion = async (file: File) => {
+    const target = versionTarget.current
+    versionTarget.current = null
+    if (!target) return
+    const problem = validateCaseDocumentFile(file)
+    if (problem) {
+      toast.error(problem)
+      return
+    }
+    setUploadingId(target.id)
+    try {
+      await subirNuevaVersion(target, file)
+      await queryClient.invalidateQueries({
+        queryKey: ['expedientes', firmId, expedienteId, 'documentos'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['documents', firmId] })
+      toast.success(`Nueva versión de «${target.original_name}» guardada (v${target.version + 1}).`)
+    } catch (failure) {
+      const message =
+        failure && typeof failure === 'object' && 'message' in failure
+          ? String(failure.message)
+          : 'No se pudo subir la nueva versión.'
+      toast.error(message)
+    } finally {
+      setUploadingId(null)
+    }
+  }
 
   const open = (document: CaseDocumentRow) =>
     abrirJustificante({
@@ -153,6 +197,22 @@ export function CaseDocumentsSection({
                   >
                     <ExternalLink className="size-4" aria-hidden="true" />
                   </IconButton>
+                  <IconButton
+                    label={
+                      uploadingId === document.id
+                        ? 'Subiendo nueva versión…'
+                        : `Subir nueva versión (actual: v${document.version})`
+                    }
+                    variant="ghost"
+                    isDisabled={uploadingId !== null}
+                    onClick={() => pickVersionFor(document)}
+                  >
+                    {uploadingId === document.id ? (
+                      <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <FilePlus2 className="size-4" aria-hidden="true" />
+                    )}
+                  </IconButton>
                   <Link
                     to="/documentos"
                     search={{ case: expedienteId, doc: document.id }}
@@ -173,6 +233,18 @@ export function CaseDocumentsSection({
           </CardContent>
         </Card>
       </CaseDocumentUpload>
+      <input
+        ref={versionInput}
+        type="file"
+        hidden
+        aria-label="Seleccionar la nueva versión del documento"
+        accept={CASE_DOCUMENT_MIME.join(',')}
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          event.target.value = ''
+          if (file) void uploadVersion(file)
+        }}
+      />
     </section>
   )
 }
