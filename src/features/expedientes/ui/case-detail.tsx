@@ -72,6 +72,7 @@ import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infra
 import { NoteAuthor } from '@/shared/ui/note-author'
 
 import { AgendaSection, NextAgendaBanner } from './case-agenda'
+import { CaseDocumentsSection } from './case-documents-section'
 import { ExpensesBlock } from './case-expenses-block'
 import { ExtraWorkBlock, useEconomiaTotals } from './case-extra-work-block'
 import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
@@ -325,7 +326,7 @@ export function CaseDetail({
                 <CaseOriginals firmId={firmId} caseId={item.id} />
               </div>
             ) : null}
-            <DocumentsSection documents={documentos} expedienteId={item.id} />
+            <CaseDocumentsSection documents={documentos} expedienteId={item.id} firmId={firmId} />
           </>
         ) : null}
         {activeTab === 'economic' ? (
@@ -1802,46 +1803,6 @@ function ActivityCard({
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-function DocumentsSection({
-  documents,
-  expedienteId,
-}: {
-  documents: CaseDocumentRow[]
-  expedienteId: string
-}) {
-  return (
-    <DetailSection title="Documentos" subtitle="Versiones vigentes incorporadas a este expediente.">
-      <div className="flex justify-end">
-        <Link
-          to="/documentos"
-          search={{ case: expedienteId }}
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
-        >
-          Abrir gestor documental
-        </Link>
-      </div>
-      <Card>
-        <CardContent className="divide-y pt-2">
-          {documents.map((document) => (
-            <div key={document.id} className="flex items-center gap-3 py-3">
-              <FileText className="text-muted-foreground h-5 w-5" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{document.original_name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {document.category} · v{document.version} ·{' '}
-                  {formatDate(document.updated_at, true)}
-                </p>
-              </div>
-              <Badge variant="outline">{document.confidentiality}</Badge>
-            </div>
-          ))}
-          {!documents.length ? <EmptyState message="No hay documentos incorporados." /> : null}
-        </CardContent>
-      </Card>
-    </DetailSection>
   )
 }
 
