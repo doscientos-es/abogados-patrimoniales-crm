@@ -1,9 +1,22 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { CircleAlert, CircleCheck, LoaderCircle, RotateCw, Upload, X } from 'lucide-react'
+import {
+  CircleAlert,
+  CircleCheck,
+  FolderPlus,
+  LoaderCircle,
+  RotateCw,
+  Upload,
+  X,
+} from 'lucide-react'
 import { useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  useCaseFolders,
+  useCreateCaseFolder,
+} from '@/features/expedientes/infrastructure/case-document-folders'
 import {
   CASE_DOCUMENT_MIME,
   subirJustificante,
@@ -12,7 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
-import { CONFIDENTIALITY_LABEL } from '../application/case-documents-list'
+import { CONFIDENTIALITY_LABEL, folderOptions } from '../application/case-documents-list'
 
 const DEFAULT_CATEGORIES = ['General', 'Escritos', 'Resoluciones', 'Poderes', 'Contratos']
 const selectClass =
@@ -47,7 +60,28 @@ export function CaseDocumentUpload({
   const [confidentiality, setConfidentiality] =
     useState<CaseDocumentRow['confidentiality']>('normal')
   const [items, setItems] = useState<Item[]>([])
+  const [folderId, setFolderId] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [newFolder, setNewFolder] = useState('')
+  const folders = useCaseFolders(firmId, caseId)
+  const createFolder = useCreateCaseFolder(firmId, caseId)
+  const folderChoices = folderOptions(folders.data ?? [])
   const options = [...new Set([...DEFAULT_CATEGORIES, ...categories])]
+
+  const addFolder = async () => {
+    try {
+      const name = await createFolder(newFolder, folderId || null)
+      toast.success(`Carpeta «${name}» creada.`)
+      setNewFolder('')
+      setCreatingFolder(false)
+    } catch (failure) {
+      toast.error(
+        failure && typeof failure === 'object' && 'message' in failure
+          ? String(failure.message)
+          : 'No se pudo crear la carpeta.',
+      )
+    }
+  }
   const patch = (id: string, change: Partial<Item>) =>
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...change } : item)))
   const busy = items.some((item) => item.status === 'uploading')
@@ -59,7 +93,7 @@ export function CaseDocumentUpload({
     }
     patch(item.id, { status: 'uploading' })
     try {
-      await subirJustificante(firmId, caseId, item.file, category, confidentiality)
+      await subirJustificante(firmId, caseId, item.file, category, confidentiality, folderId || null)
       patch(item.id, { status: 'done' })
       await queryClient.invalidateQueries({
         queryKey: ['expedientes', firmId, caseId, 'documentos'],
@@ -146,6 +180,27 @@ export function CaseDocumentUpload({
             </option>
           ))}
         </select>
+        <select
+          aria-label="Carpeta donde guardar los documentos"
+          className={selectClass}
+          value={folderId}
+          onChange={(event) => setFolderId(event.target.value)}
+        >
+          <option value="">Sin carpeta</option>
+          {folderChoices.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {folder.path}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setCreatingFolder((current) => !current)}
+          aria-expanded={creatingFolder}
+        >
+          <FolderPlus className="size-4" aria-hidden="true" /> Nueva carpeta
+        </Button>
         <input
           ref={input}
           type="file"
@@ -162,6 +217,33 @@ export function CaseDocumentUpload({
           <Upload className="size-4" aria-hidden="true" /> Subir documentos
         </Button>
       </div>
+
+      {creatingFolder ? (
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void addFolder()
+          }}
+        >
+          <Input
+            autoFocus
+            aria-label="Nombre de la nueva carpeta"
+            className="h-8 max-w-64"
+            placeholder={
+              folderId
+                ? `Subcarpeta de «${folderChoices.find((f) => f.id === folderId)?.path ?? ''}»`
+                : 'Nombre de la carpeta'
+            }
+            value={newFolder}
+            maxLength={80}
+            onChange={(event) => setNewFolder(event.target.value)}
+          />
+          <Button type="submit" size="sm" disabled={!newFolder.trim()}>
+            Crear
+          </Button>
+        </form>
+      ) : null}
 
       {items.length ? (
         <ul className="space-y-1 text-sm" aria-live="polite">
