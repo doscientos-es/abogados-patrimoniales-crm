@@ -100,14 +100,14 @@ export function sanitizeSuggestion(
   const match = raw.typeName
     ? catalog.find((type) => normalizeTypeName(type.name) === normalizeTypeName(raw.typeName ?? ''))
     : undefined
-  const identified = Boolean(match && confidence >= MIN_CONFIDENCE)
+  const identified = match !== undefined && confidence >= MIN_CONFIDENCE
   const date = raw.documentDate ?? ''
   const validDate =
     /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`))
 
   return {
-    typeId: identified ? match!.id : null,
-    typeName: identified ? match!.name : null,
+    typeId: identified ? match.id : null,
+    typeName: identified ? match.name : null,
     confidence,
     description: identified ? cleanDescription(raw.description ?? '') : '',
     documentDate: validDate ? date : null,

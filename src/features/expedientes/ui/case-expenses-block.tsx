@@ -223,7 +223,7 @@ function ExpenseDialog({
   miembros: MiembroDespacho[]
   pending: boolean
   onClose: () => void
-  onSave: (gasto: Gasto) => void
+  onSave: (gasto: Gasto) => void | Promise<void>
 }) {
   const [gasto, setGasto] = useState(initial)
   const set = <K extends keyof Gasto>(key: K, value: Gasto[K]) =>
@@ -235,7 +235,7 @@ function ExpenseDialog({
     event.preventDefault()
     const error = validarGasto(gasto)
     if (error) return void toast.error(error)
-    onSave({
+    void onSave({
       ...gasto,
       concepto: gasto.concepto.trim(),
       proveedor: gasto.proveedor.trim(),

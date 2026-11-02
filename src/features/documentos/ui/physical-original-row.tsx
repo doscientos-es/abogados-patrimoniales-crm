@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { subirJustificante } from '@/features/expedientes/infrastructure/case-economic-documents'
+import { uploadCaseDocument } from '@/features/expedientes'
 
 import { ORIGINAL_STATUS_LABEL, type OriginalStatus } from '../physical-originals'
 import {
@@ -44,7 +44,12 @@ export function PhysicalOriginalRow({
     setBusy(true)
     try {
       const named = new File([file], `${original.reference} - ${file.name}`, { type: file.type })
-      const document = await subirJustificante(firmId, original.case_id, named, 'Archivo único')
+      const document = await uploadCaseDocument({
+        firmId,
+        caseId: original.case_id,
+        file: named,
+        category: 'Archivo único',
+      })
       await linkOriginalDocument(original.id, document.documentId)
       toast.success(`PDF vinculado a ${original.reference}.`)
       await onChanged()

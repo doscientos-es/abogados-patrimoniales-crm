@@ -236,7 +236,7 @@ function ExtraWorkDialog({
   miembros: MiembroDespacho[]
   pending: boolean
   onClose: () => void
-  onSave: (trabajo: Trabajo) => void
+  onSave: (trabajo: Trabajo) => void | Promise<void>
 }) {
   const [trabajo, setTrabajo] = useState(initial)
   const set = <K extends keyof Trabajo>(key: K, value: Trabajo[K]) =>
@@ -245,7 +245,7 @@ function ExtraWorkDialog({
     event.preventDefault()
     const error = validarTrabajo(trabajo)
     if (error) return void toast.error(error)
-    onSave({ ...trabajo, concepto: trabajo.concepto.trim() })
+    void onSave({ ...trabajo, concepto: trabajo.concepto.trim() })
   }
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

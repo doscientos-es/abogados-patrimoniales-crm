@@ -11,13 +11,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import type { Adjunto } from '@/features/expedientes/application/case-economics'
 import {
-  abrirJustificante,
-  subirJustificante,
-} from '@/features/expedientes/infrastructure/case-economic-documents'
-import { useGuardarEconomiaExpediente } from '@/features/expedientes/infrastructure/supabase-expedientes-write'
+  openCaseDocument,
+  uploadCaseDocument,
+  useGuardarEconomiaExpediente,
+} from '@/features/expedientes'
+import type { Adjunto } from '@/features/expedientes/application/case-economics'
 import type { Json } from '@/shared/infrastructure/supabase'
+import { errorMessage } from '@/shared/lib/error-message'
 
 export const eur = (n: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
@@ -112,7 +113,7 @@ export function ConfirmDelete({
   text: string
   pending: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
 }) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -125,7 +126,7 @@ export function ConfirmDelete({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="destructive" disabled={pending} onClick={onConfirm}>
+          <Button variant="destructive" disabled={pending} onClick={() => void onConfirm()}>
             Eliminar
           </Button>
         </DialogFooter>
@@ -135,8 +136,8 @@ export function ConfirmDelete({
 }
 
 function openAttachment(attachment: Adjunto) {
-  abrirJustificante(attachment).catch((error: unknown) =>
-    toast.error(error instanceof Error ? error.message : 'No se pudo abrir.'),
+  openCaseDocument(attachment).catch((error: unknown) =>
+    toast.error(errorMessage(error, 'No se pudo abrir.')),
   )
 }
 
@@ -179,7 +180,7 @@ export function AttachmentEditor({
     const added: Adjunto[] = []
     for (const file of files) {
       try {
-        added.push(await subirJustificante(firmId, expedienteId, file))
+        added.push(await uploadCaseDocument({ firmId, caseId: expedienteId, file }))
       } catch (error) {
         toast.error(`${file.name}: ${error instanceof Error ? error.message : 'no se pudo subir.'}`)
       }

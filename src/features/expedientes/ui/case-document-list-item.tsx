@@ -14,24 +14,20 @@ import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
+import { openCaseDocument, useDocumentVersions } from '@/features/expedientes'
 import {
   CONFIDENTIALITY_LABEL,
   CONTENT_STATUS_LABEL,
   formatFileSize,
 } from '@/features/expedientes/application/case-documents-list'
-import { useDocumentVersions } from '@/features/expedientes/infrastructure/case-document-folders'
-import { abrirJustificante } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
+import { errorMessage } from '@/shared/lib/error-message'
 
 const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' })
 
 function openFile(document: CaseDocumentRow) {
-  abrirJustificante({
-    documentId: document.id,
-    nombre: document.original_name,
-    storagePath: document.storage_path,
-  }).catch((error: unknown) =>
-    toast.error(error instanceof Error ? error.message : 'No se pudo abrir el documento.'),
+  openCaseDocument({ storagePath: document.storage_path }).catch((error: unknown) =>
+    toast.error(errorMessage(error, 'No se pudo abrir el documento.')),
   )
 }
 

@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
-
 import { BUILTIN_DOCUMENT_TYPES, type DocumentType } from './document-naming'
+import { looseClient, requireTable, type Listing } from './loose-supabase'
 
 export type DocumentNaming = {
   logical_document_id: string
@@ -21,13 +20,9 @@ export type DocumentNaming = {
 }
 
 export type NamingRule = { id: string; rule: string; active: boolean }
-export type Listing<T> = { available: boolean; rows: T[] }
 
 function table(name: string) {
-  const client = getSupabaseBrowserClient() as unknown as {
-    from: (tableName: string) => any
-  } | null
-  return client?.from(name) ?? null
+  return looseClient()?.from(name) ?? null
 }
 
 export const documentTypesKey = (firmId: string | undefined) => ['crm', 'document-types', firmId]
@@ -121,7 +116,7 @@ async function run(query: PromiseLike<{ error: unknown }>) {
 export const documentTypesApi = {
   create: (firmId: string, name: string, sortOrder: number, suggestions: string[]) =>
     run(
-      table('crm_document_types')!.insert({
+      requireTable('crm_document_types').insert({
         firm_id: firmId,
         name,
         sort_order: sortOrder,
@@ -133,12 +128,12 @@ export const documentTypesApi = {
     patch: Partial<Pick<DocumentType, 'name' | 'suggestions' | 'sort_order' | 'active'>>,
   ) =>
     run(
-      table('crm_document_types')!
+      requireTable('crm_document_types')
         .update({ ...patch, updated_at: new Date().toISOString() })
         .eq('id', id),
     ),
   addRule: (firmId: string, rule: string) =>
-    run(table('crm_document_naming_rules')!.insert({ firm_id: firmId, rule })),
+    run(requireTable('crm_document_naming_rules').insert({ firm_id: firmId, rule })),
   setRuleActive: (id: string, active: boolean) =>
-    run(table('crm_document_naming_rules')!.update({ active }).eq('id', id)),
+    run(requireTable('crm_document_naming_rules').update({ active }).eq('id', id)),
 }

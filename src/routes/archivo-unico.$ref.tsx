@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button'
 import {
   ORIGINAL_STATUS_LABEL,
   parseAuReference,
+  printAuLabel,
+  useOriginalByReference,
   type OriginalStatus,
-} from '@/features/documentos/physical-originals'
-import { useOriginalByReference } from '@/features/documentos/physical-originals-data'
-import { printAuLabel } from '@/features/documentos/ui/au-label'
-import { abrirJustificante } from '@/features/expedientes/infrastructure/case-economic-documents'
+} from '@/features/documentos'
+import { openCaseDocument } from '@/features/expedientes'
 
 export const Route = createFileRoute('/archivo-unico/$ref')({
   head: () => ({
@@ -73,13 +73,7 @@ function AuRecordPage() {
             <button
               type="button"
               className="underline"
-              onClick={() =>
-                void abrirJustificante({
-                  documentId: document.id,
-                  nombre: document.original_name,
-                  storagePath: document.storage_path,
-                })
-              }
+              onClick={() => void openCaseDocument({ storagePath: document.storage_path })}
             >
               {document.original_name}
             </button>

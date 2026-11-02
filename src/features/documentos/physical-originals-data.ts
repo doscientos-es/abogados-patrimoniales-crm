@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
-
+import { looseClient, type Listing } from './loose-supabase'
 import type { OriginalStatus } from './physical-originals'
 
 export type PhysicalOriginal = {
@@ -25,26 +24,8 @@ export type OriginalEvent = {
   note: string | null
   created_at: string
 }
-/** available=false: the tables are not there yet. Data is never simulated. */
-export type Listing<T> = { available: boolean; rows: T[] }
-
 const COLUMNS =
   'id,firm_id,case_id,au_number,reference,description,storage_note,status,document_id,created_at,updated_at'
-
-type Loose = {
-  from: (table: string) => {
-    select: (columns: string) => any
-  }
-  rpc: (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message: string } | null }>
-}
-
-// The tables arrived after the generated types; typed locally until they are regenerated.
-function client() {
-  return getSupabaseBrowserClient() as unknown as Loose | null
-}
 
 export const caseOriginalsKey = (caseId: string | null | undefined) => [
   'crm',
@@ -57,7 +38,7 @@ export function useCaseOriginals(caseId: string | null | undefined) {
     queryKey: caseOriginalsKey(caseId),
     enabled: Boolean(caseId),
     queryFn: async (): Promise<Listing<PhysicalOriginal>> => {
-      const db = client()
+      const db = looseClient()
       if (!db || !caseId) return { available: false, rows: [] }
       const { data, error } = await db
         .from('crm_physical_originals')
@@ -75,7 +56,7 @@ export function useOriginalByReference(reference: string | null) {
     queryKey: ['crm', 'physical-original', reference],
     enabled: Boolean(reference),
     queryFn: async () => {
-      const db = client()
+      const db = looseClient()
       if (!db || !reference) return { available: false as const }
       const { data, error } = await db
         .from('crm_physical_originals')
@@ -116,7 +97,7 @@ export function useOriginalByReference(reference: string | null) {
 }
 
 async function call(fn: string, args: Record<string, unknown>) {
-  const db = client()
+  const db = looseClient()
   if (!db) throw new Error('Sin conexión.')
   const { data, error } = await db.rpc(fn, args)
   if (error) throw new Error(error.message)

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateCaseDocumentFile } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
+import { validateCaseDocumentFile } from './case-document-rules'
 import {
   documentCategories,
   filterDocuments,
