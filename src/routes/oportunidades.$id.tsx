@@ -47,7 +47,7 @@ import {
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import { NoNextActionWarning } from '@/features/crm/ui/no-next-action-warning'
-import { LeadParticipants } from '@/features/crm/ui/lead-participants'
+import { LeadParticipantsTree } from '@/features/crm/ui/lead-participants-tree'
 import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
 import { QuoteAcceptancePanel } from '@/features/crm/ui/quote-acceptance-panel'
@@ -291,10 +291,11 @@ function FichaOportunidadPage() {
                   contact={contacto.data}
                   contactLoading={contacto.isPending}
                 />
-                <LeadParticipants
+                <LeadParticipantsTree
                   firmId={membership.data.firmId}
                   opportunity={data}
-                  canEdit={!data.archivadoEn}
+                  clienteNombre={contactName(contacto.data)}
+                  currentUserId={session.status === 'signed-in' ? session.user.id : null}
                 />
               </aside>
             </div>
