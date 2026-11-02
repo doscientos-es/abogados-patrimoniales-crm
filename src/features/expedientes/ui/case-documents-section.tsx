@@ -20,6 +20,8 @@ import {
 import { abrirJustificante } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
+import { CaseDocumentUpload } from './case-document-upload'
+
 const selectClass =
   'border-input bg-background h-9 rounded-md border px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' })
@@ -76,99 +78,101 @@ export function CaseDocumentsSection({
         </Link>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <Search
-            className="text-muted-foreground absolute top-2.5 left-2.5 size-4"
-            aria-hidden="true"
-          />
-          <Input
-            aria-label="Buscar documentos"
-            className="pl-8"
-            placeholder="Buscar por nombre o categoría…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+      <CaseDocumentUpload firmId={firmId} caseId={expedienteId} categories={categories}>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-56 flex-1">
+            <Search
+              className="text-muted-foreground absolute top-2.5 left-2.5 size-4"
+              aria-hidden="true"
+            />
+            <Input
+              aria-label="Buscar documentos"
+              className="pl-8"
+              placeholder="Buscar por nombre o categoría…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <select
+            aria-label="Filtrar por categoría"
+            className={selectClass}
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            <option value="all">Todas las categorías</option>
+            {categories.map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Ordenar documentos"
+            className={selectClass}
+            value={sort}
+            onChange={(event) => setSort(event.target.value as DocumentSort)}
+          >
+            <option value="recent">Más recientes</option>
+            <option value="name">Nombre</option>
+            <option value="category">Categoría</option>
+          </select>
         </div>
-        <select
-          aria-label="Filtrar por categoría"
-          className={selectClass}
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        >
-          <option value="all">Todas las categorías</option>
-          {categories.map((name) => (
-            <option key={name}>{name}</option>
-          ))}
-        </select>
-        <select
-          aria-label="Ordenar documentos"
-          className={selectClass}
-          value={sort}
-          onChange={(event) => setSort(event.target.value as DocumentSort)}
-        >
-          <option value="recent">Más recientes</option>
-          <option value="name">Nombre</option>
-          <option value="category">Categoría</option>
-        </select>
-      </div>
 
-      <Card>
-        <CardContent className="divide-y pt-2">
-          {visible.map((document) => {
-            const name = displayName(document)
-            return (
-              <div key={document.id} className="flex flex-wrap items-center gap-3 py-3">
-                <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
-                <div className="min-w-48 flex-1">
-                  <p className="truncate text-sm font-medium">{name}</p>
-                  {name !== document.original_name ? (
-                    <p className="text-muted-foreground truncate text-xs">
-                      Original: {document.original_name}
+        <Card>
+          <CardContent className="divide-y pt-2">
+            {visible.map((document) => {
+              const name = displayName(document)
+              return (
+                <div key={document.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
+                  <div className="min-w-48 flex-1">
+                    <p className="truncate text-sm font-medium">{name}</p>
+                    {name !== document.original_name ? (
+                      <p className="text-muted-foreground truncate text-xs">
+                        Original: {document.original_name}
+                      </p>
+                    ) : null}
+                    <p className="text-muted-foreground text-xs">
+                      {document.category} · v{document.version} ·{' '}
+                      {formatFileSize(document.size_bytes)} ·{' '}
+                      {dateTime.format(new Date(document.updated_at))}
                     </p>
+                  </div>
+                  {document.content_status !== 'validated' ? (
+                    <Badge
+                      variant={document.content_status === 'rejected' ? 'destructive' : 'secondary'}
+                    >
+                      {CONTENT_STATUS_LABEL[document.content_status]}
+                    </Badge>
                   ) : null}
-                  <p className="text-muted-foreground text-xs">
-                    {document.category} · v{document.version} ·{' '}
-                    {formatFileSize(document.size_bytes)} ·{' '}
-                    {dateTime.format(new Date(document.updated_at))}
-                  </p>
-                </div>
-                {document.content_status !== 'validated' ? (
-                  <Badge
-                    variant={document.content_status === 'rejected' ? 'destructive' : 'secondary'}
-                  >
-                    {CONTENT_STATUS_LABEL[document.content_status]}
+                  <Badge variant={document.confidentiality === 'normal' ? 'outline' : 'default'}>
+                    {CONFIDENTIALITY_LABEL[document.confidentiality]}
                   </Badge>
-                ) : null}
-                <Badge variant={document.confidentiality === 'normal' ? 'outline' : 'default'}>
-                  {CONFIDENTIALITY_LABEL[document.confidentiality]}
-                </Badge>
-                <IconButton
-                  label="Abrir documento"
-                  variant="ghost"
-                  onClick={() => void open(document)}
-                >
-                  <ExternalLink className="size-4" aria-hidden="true" />
-                </IconButton>
-                <Link
-                  to="/documentos"
-                  search={{ case: expedienteId, doc: document.id }}
-                  className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                >
-                  Detalle
-                </Link>
-              </div>
-            )
-          })}
-          {!visible.length ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">
-              {documents.length
-                ? 'Ningún documento coincide con la búsqueda.'
-                : 'No hay documentos incorporados.'}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+                  <IconButton
+                    label="Abrir documento"
+                    variant="ghost"
+                    onClick={() => void open(document)}
+                  >
+                    <ExternalLink className="size-4" aria-hidden="true" />
+                  </IconButton>
+                  <Link
+                    to="/documentos"
+                    search={{ case: expedienteId, doc: document.id }}
+                    className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                  >
+                    Detalle
+                  </Link>
+                </div>
+              )
+            })}
+            {!visible.length ? (
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                {documents.length
+                  ? 'Ningún documento coincide con la búsqueda.'
+                  : 'No hay documentos incorporados.'}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </CaseDocumentUpload>
     </section>
   )
 }

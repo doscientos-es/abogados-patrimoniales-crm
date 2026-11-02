@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { validateCaseDocumentFile } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
 import { documentCategories, filterDocuments, formatFileSize } from './case-documents-list'
@@ -78,6 +79,19 @@ describe('lista de documentos del expediente', () => {
         displayName: same,
       }),
     ).toHaveLength(1)
+  })
+
+  it('valida los archivos a subir con las mismas reglas que el gestor documental', () => {
+    const file = (name: string, type: string, size: number) =>
+      ({ name, type, size }) as unknown as File
+    expect(validateCaseDocumentFile(file('a.pdf', 'application/pdf', 1000))).toBeNull()
+    expect(validateCaseDocumentFile(file('a.exe', 'application/x-msdownload', 1000))).toMatch(
+      /formato/,
+    )
+    expect(
+      validateCaseDocumentFile(file('grande.pdf', 'application/pdf', 26 * 1024 * 1024)),
+    ).toMatch(/25 MB/)
+    expect(validateCaseDocumentFile(file('vacio.pdf', 'application/pdf', 0))).toMatch(/vacío/)
   })
 
   it('lista categorías únicas y formatea tamaños', () => {

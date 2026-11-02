@@ -20,6 +20,7 @@ export async function subirJustificante(
   caseId: string,
   file: File,
   category = 'Económico',
+  confidentiality: 'normal' | 'restricted' | 'confidential' = 'normal',
 ): Promise<AdjuntoEconomico> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Sin conexión.')
@@ -32,7 +33,7 @@ export async function subirJustificante(
     original_file_name: file.name,
     content_mime_type: file.type || 'application/octet-stream',
     content_size_bytes: file.size,
-    document_confidentiality: 'normal',
+    document_confidentiality: confidentiality,
   })
   if (error) throw error
   if (!data) throw new Error('No se pudo preparar el documento.')
@@ -54,7 +55,41 @@ export async function subirJustificante(
     await client.rpc('crm_abort_document_version', { target_document_id: data.id })
     throw failure
   }
+  void queueDriveSync(data.id)
   return { documentId: data.id, nombre: file.name, storagePath: data.storage_path }
+}
+
+/** Same optional Drive hand-off as the Documents page; the CRM works without it. */
+async function queueDriveSync(documentId: string) {
+  const client = getSupabaseBrowserClient()
+  if (!client) return
+  try {
+    const { data, error } = await client.rpc('crm_queue_drive_sync', {
+      target_document_id: documentId,
+      target_operation: 'upload',
+    })
+    if (!error && data?.id)
+      void client.functions.invoke('sync-drive-document', { body: { jobId: data.id } })
+  } catch {
+    // Drive is optional.
+  }
+}
+
+export const CASE_DOCUMENT_MIME = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/png',
+]
+
+/** Same rules as the Documents page: PDF, DOCX, XLSX, JPG or PNG, up to 25 MB. */
+export function validateCaseDocumentFile(file: File): string | null {
+  if (!CASE_DOCUMENT_MIME.includes(file.type))
+    return `«${file.name}»: formato no permitido (PDF, DOCX, XLSX, JPG o PNG).`
+  if (file.size > MAX_BYTES) return `«${file.name}» supera el límite de 25 MB.`
+  if (file.size === 0) return `«${file.name}» está vacío.`
+  return null
 }
 
 export async function abrirJustificante(attachment: AdjuntoEconomico) {
