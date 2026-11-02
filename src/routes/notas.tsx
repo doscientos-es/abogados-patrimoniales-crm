@@ -52,6 +52,7 @@ import {
   useNotasRemotas,
   type NotaRemota,
 } from '@/features/notas/infrastructure/supabase-notas'
+import { NoteAuthor } from '@/shared/ui/note-author'
 
 export const Route = createFileRoute('/notas')({
   head: () => ({
@@ -641,10 +642,10 @@ function NoteCard({
         </div>
       ) : null}
       <footer className="text-muted-foreground mt-3 space-y-1 border-t border-current/15 pt-2 text-[11px]">
-        <p>
-          {note.autor} · {note.creada}
-          {note.modificada ? ' · Editada' : ''}
-        </p>
+        <NoteAuthor
+          name={note.autor}
+          date={`${note.creada}${note.modificada ? ' · Editada' : ''}`}
+        />
         <p className="truncate">
           Procedencia:{' '}
           {note.ambito === 'expediente' ? (
@@ -737,15 +738,15 @@ function NoteForm({
       ? contacts.map((item) => ({ id: item.id, label: contactName(item), contactIds: [item.id] }))
       : scope === 'case'
         ? cases.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-            contactIds: [item.contactoPrincipalId],
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+          contactIds: [item.contactoPrincipalId],
+        }))
         : opportunities.map((item) => ({
-            id: item.id,
-            label: `${item.referencia} · ${item.titulo}`,
-            contactIds: [item.contactoId],
-          }))
+          id: item.id,
+          label: `${item.referencia} · ${item.titulo}`,
+          contactIds: [item.contactoId],
+        }))
   const selected = options.find((item) => item.id === originId)
   useEffect(() => {
     setScope(

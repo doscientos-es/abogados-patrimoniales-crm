@@ -60,6 +60,13 @@ const toLocalInput = (date: Date) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+/** Supabase errors are plain objects with a `message`, not `Error` instances. */
+function readMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error) return String(error.message)
+  return ''
+}
+
 /** Entregar no transfiere la responsabilidad hasta que el receptor firme el RECIBÍ. */
 export function CaseHandoffBar({
   firmId,
@@ -218,14 +225,14 @@ function CaseHandoffDialog({
   )
   const content: ContenidoTraspaso = active
     ? {
-        resumen: active.resumen,
-        antecedentes: active.antecedentes,
-        alcance: active.alcance,
-        actuaciones: active.actuaciones,
-        documentos: active.documentos,
-        plazos: active.plazos,
-        provision: active.provision,
-      }
+      resumen: active.resumen,
+      antecedentes: active.antecedentes,
+      alcance: active.alcance,
+      actuaciones: active.actuaciones,
+      documentos: active.documentos,
+      plazos: active.plazos,
+      provision: active.provision,
+    }
     : contenidoVacio()
   const cutoffIso = () => {
     const value = new Date(cutoffDate)
@@ -246,7 +253,7 @@ function CaseHandoffDialog({
       await run()
       toast.success(success)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el traspaso.')
+      toast.error(readMessage(error) || 'No se pudo guardar el traspaso.')
     } finally {
       setBusy(false)
     }
@@ -310,10 +317,10 @@ function CaseHandoffDialog({
 
   const recibi = active
     ? textoRecibi({
-        receptor: name(active.receptorId),
-        referencia: expediente.referencia,
-        fechaCorte: active.fechaCorte ?? new Date().toISOString(),
-      })
+      receptor: name(active.receptorId),
+      referencia: expediente.referencia,
+      fechaCorte: active.fechaCorte ?? new Date().toISOString(),
+    })
     : ''
 
   const acceptHandoff = () =>
@@ -361,18 +368,32 @@ function CaseHandoffDialog({
         reason,
         new Date().toISOString(),
       )
+      const openTask = task && task.estado !== 'Completada' && task.estado !== 'Cancelada'
+      // Move the acceptance task first: if it is refused (only its requester or an admin can
+      // edit it) nothing has changed yet; if saving the handoff fails afterwards, retrying is safe.
+      if (openTask) {
+        try {
+          await editTask.mutateAsync({
+            task,
+            titulo: task.titulo,
+            descripcion: task.descripcion,
+            estado: task.estado,
+            prioridad: task.prioridad,
+            venceEn: task.venceEn,
+            recordarEn: task.recordarEn,
+            asignadoId: recipientId,
+          })
+        } catch (error) {
+          const text = error instanceof Error ? error.message : readMessage(error)
+          throw new Error(
+            /only the requester/i.test(text)
+              ? 'No se puede reasignar la tarea de asunción: solo quien la creó o un administrador puede cambiarla.'
+              : text || 'No se pudo reasignar la tarea de asunción.',
+          )
+        }
+      }
       const saved = await saveLeadDetails(result.detalles)
-      if (task && task.estado !== 'Completada' && task.estado !== 'Cancelada') {
-        await editTask.mutateAsync({
-          task,
-          titulo: task.titulo,
-          descripcion: task.descripcion,
-          estado: task.estado,
-          prioridad: task.prioridad,
-          venceEn: task.venceEn,
-          recordarEn: task.recordarEn,
-          asignadoId: recipientId,
-        })
+      if (openTask) {
         await message.mutateAsync(`Traspaso reasignado a ${name(recipientId)}: ${reason.trim()}`)
       } else {
         await createAcceptanceTask(result.traspaso, saved.detalles, saved.version)

@@ -1,8 +1,10 @@
+import { IconButton } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
   Bell,
   CalendarClock,
   ClipboardCheck,
+  Ellipsis,
   ExternalLink,
   FilePlus2,
   FolderOpen,
@@ -14,11 +16,10 @@ import {
   UserRound,
 } from 'lucide-react'
 import {
-  forwardRef,
   useMemo,
   useState,
   type ChangeEvent,
-  type ComponentPropsWithoutRef,
+  type ComponentProps,
   type FormEvent,
   type ReactNode,
 } from 'react'
@@ -41,6 +42,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import {
@@ -93,9 +95,8 @@ import { useCrearTarea } from '@/features/tareas'
 import { cn } from '@/lib/utils'
 import type { Json } from '@/shared/infrastructure/supabase'
 
+const LEGACY_NEXT_ACTION = 'Programar inicio formal'
 const today = () => new Date().toISOString().slice(0, 10)
-const nowForInput = () =>
-  new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 const contactName = (contacto: ContactoPersistido | undefined) =>
   contacto?.razonSocial || `${contacto?.nombre ?? 'Contacto'} ${contacto?.apellidos ?? ''}`.trim()
 const currency = (amount: number | null) =>
@@ -113,9 +114,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-          typeof error === 'object' &&
-          'message' in error &&
-          typeof error.message === 'string'
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -484,11 +485,10 @@ export function OnboardingPage() {
                 }
                 const expediente = await abrirExpediente.mutateAsync(caseInput)
                 if (!expediente) throw new Error('No se pudo abrir el expediente.')
-                toast.success('Expediente en CASEWORK. Prepara ahora el traspaso al abogado.')
+                toast.success('Expediente en CASEWORK.')
                 await navigate({
                   to: '/expedientes/$id',
                   params: { id: expediente.id },
-                  search: { traspaso: true },
                 })
               }}
             />
@@ -562,16 +562,12 @@ export function OnboardingCard({
         : item.fase === 'formal_start'
           ? `Inicio previsto: ${date(item.inicioProgramado)}`
           : `Finalizado: ${date(item.inicioRealizado)}`
-  const primary =
-    item.fase === 'proforma'
-      ? 'Marcar pago confirmado'
-      : item.fase === 'payment'
-        ? 'Programar inicio formal'
-        : item.fase === 'formal_start'
-          ? 'Completar inicio formal'
-          : item.expedienteId
-            ? 'Abrir expediente vinculado'
-            : 'Abrir expediente'
+  // The database still writes «Programar inicio formal» when the payment is confirmed, but the
+  // formal start step was retired: the next step is opening the case.
+  const nextStep =
+    !item.expedienteId && item.fase === 'payment' && item.siguienteAccion === LEGACY_NEXT_ACTION
+      ? 'Abrir expediente'
+      : item.siguienteAccion || PROXIMO_PASO[item.fase]
   return (
     <Card className="fase-tarjeta bg-card overflow-hidden shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <CardContent className="space-y-3 p-3.5">
@@ -625,9 +621,7 @@ export function OnboardingCard({
               <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                 Ahora toca
               </p>
-              <p className="text-sm font-medium">
-                {item.siguienteAccion || PROXIMO_PASO[item.fase]}
-              </p>
+              <p className="text-sm font-medium">{nextStep}</p>
             </div>
             <NextActionDialog item={item} pending={pending} onSave={onNextAction} />
           </div>
@@ -705,65 +699,50 @@ export function OnboardingCard({
             />
           </div>
         ) : null}
-        {item.fase === 'payment' ? (
-          <FormalStartDialog
+        {item.expedienteId ? (
+          <Link
+            to="/expedientes/$id"
+            params={{ id: item.expedienteId }}
+            className={buttonVariants({ variant: 'outline', className: 'w-full gap-2' })}
+          >
+            <FolderOpen className="h-4 w-4" />
+            Ver expediente
+          </Link>
+        ) : item.fase === 'proforma' ? null : (
+          <OpenCaseDialog
+            item={item}
             pending={pending}
-            onConfirm={(programado, modalidad) =>
-              onAction('formal_start_scheduled', { programado, modalidad })
-            }
+            onOpen={onOpenCase}
+            naturaleza={naturaleza}
+            proximaReferencia={proximaReferencia}
+            miembros={lawyerNames}
           />
-        ) : null}
-        {item.fase === 'formal_start' ? (
-          <CompleteStartDialog
-            pending={pending}
-            onConfirm={(fecha) =>
-              onAction('formal_start_completed', {
-                fecha,
-                programado: `${fecha}T${new Date().toTimeString().slice(0, 8)}`,
-              })
-            }
-          />
-        ) : null}
-        {item.fase === 'completed' ? (
-          item.expedienteId ? (
-            <Link
-              to="/expedientes/$id"
-              params={{ id: item.expedienteId }}
-              className={buttonVariants({ variant: 'outline', className: 'w-full gap-2' })}
-            >
-              <FolderOpen className="h-4 w-4" />
-              {primary}
-            </Link>
-          ) : (
-            <OpenCaseDialog
-              item={item}
-              pending={pending}
-              onOpen={onOpenCase}
-              naturaleza={naturaleza}
-              proximaReferencia={proximaReferencia}
-              miembros={lawyerNames}
-            />
-          )
-        ) : null}
+        )}
         <div
           className="border-border/70 flex items-center justify-between gap-2 border-t pt-2"
           aria-label="Acciones rápidas"
         >
           <div className="flex items-center gap-1">
             {item.oportunidadId ? (
-              <Link
-                to="/oportunidades/$id"
-                params={{ id: item.oportunidadId }}
-                className={buttonVariants({
-                  variant: 'ghost',
-                  size: 'icon-sm',
-                  className: 'size-8',
-                })}
-                aria-label="Ver Lead"
-                title="Ver Lead"
-              >
-                <ExternalLink className="size-3.5" aria-hidden="true" />
-              </Link>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to="/oportunidades/$id"
+                      params={{ id: item.oportunidadId }}
+                      className={buttonVariants({
+                        variant: 'ghost',
+                        size: 'icon-sm',
+                        className: 'size-8',
+                      })}
+                      aria-label="Ver Lead"
+                    >
+                      <ExternalLink className="size-3.5" aria-hidden="true" />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Ver Lead</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : null}
             {!item.expedienteId && item.fase === 'proforma' ? (
               <OpenCaseDialog
@@ -1068,82 +1047,6 @@ function PaymentDialog({
   )
 }
 
-function FormalStartDialog({
-  pending,
-  onConfirm,
-}: {
-  pending: boolean
-  onConfirm: (dateTime: string, mode: string) => Promise<unknown>
-}) {
-  return (
-    <SmallDialog
-      trigger={
-        <Button type="button" variant="outline" className="w-full justify-center">
-          <CalendarClock className="size-4" aria-hidden="true" />
-          Programar inicio formal
-        </Button>
-      }
-      title="Programar inicio formal"
-      pending={pending}
-      primary="Programar inicio"
-      onSubmit={(form) => onConfirm(text(form, 'fecha'), text(form, 'modalidad'))}
-    >
-      <Field
-        label="Fecha y hora"
-        name="fecha"
-        type="datetime-local"
-        defaultValue={nowForInput()}
-        required
-      />
-      <Field
-        select
-        label="Modalidad"
-        name="modalidad"
-        options={[
-          ['in_person', 'Presencial'],
-          ['video_call', 'Videollamada'],
-          ['phone_call', 'Llamada telefónica'],
-        ]}
-        required
-      />
-    </SmallDialog>
-  )
-}
-
-function CompleteStartDialog({
-  pending,
-  onConfirm,
-}: {
-  pending: boolean
-  onConfirm: (date: string) => Promise<unknown>
-}) {
-  return (
-    <SmallDialog
-      trigger={
-        <Button type="button" variant="outline" className="w-full justify-center">
-          <ClipboardCheck className="size-4" aria-hidden="true" />
-          Completar inicio formal
-        </Button>
-      }
-      title="Completar inicio formal"
-      pending={pending}
-      primary="Marcar como completado"
-      onSubmit={(form) => onConfirm(text(form, 'fecha'))}
-    >
-      <p className="text-muted-foreground text-sm">
-        Confirma que el inicio formal se ha realizado y documentado con el cliente.
-      </p>
-      <Field
-        label="Fecha de realización"
-        name="fecha"
-        type="date"
-        defaultValue={today()}
-        required
-      />
-    </SmallDialog>
-  )
-}
-
 function CommunicationDialog({
   type,
   item,
@@ -1276,18 +1179,12 @@ function OpenCaseDialog({
     <SmallDialog
       trigger={
         sinProvision ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="text-muted-foreground size-8"
-            aria-label="Más acciones: iniciar sin provisión (excepción)"
-            title="Iniciar sin provisión (excepción)"
+          <OnboardingIconButton
+            label="Iniciar sin provisión (excepción)"
+            className="text-muted-foreground"
           >
-            <span aria-hidden="true" className="text-base leading-none">
-              ···
-            </span>
-          </Button>
+            <Ellipsis className="size-4" aria-hidden="true" />
+          </OnboardingIconButton>
         ) : (
           <Button type="button" className="w-full justify-center">
             <FilePlus2 className="size-4" aria-hidden="true" />
@@ -1420,24 +1317,19 @@ function OpenCaseDialog({
   )
 }
 
-const OnboardingIconButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ComponentPropsWithoutRef<typeof Button>, 'children'> & { label: string; children: ReactNode }
->(({ label, children, className, ...props }, ref) => (
-  <Button
-    ref={ref}
-    {...props}
-    type="button"
-    variant="ghost"
-    size="icon-sm"
-    className={cn('size-8', className)}
-    aria-label={label}
-    title={label}
-  >
-    {children}
-  </Button>
-))
-OnboardingIconButton.displayName = 'OnboardingIconButton'
+/** Icon-only action from @doscientos/ui: accessible name plus tooltip, sized for the card footer. */
+function OnboardingIconButton({
+  label,
+  children,
+  className,
+  ...props
+}: ComponentProps<typeof IconButton>) {
+  return (
+    <IconButton label={label} variant="ghost" className={cn('size-8', className)} {...props}>
+      {children}
+    </IconButton>
+  )
+}
 
 function SmallDialog({
   trigger,

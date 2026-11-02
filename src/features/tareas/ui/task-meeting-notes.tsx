@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useGuardarNota, useNotasRemotas } from '@/features/notas'
 import type { TareaPersistida } from '@/features/tareas'
 import { DraftNote } from '@/shared/ui/internal-note-draft'
+import { NoteAuthor } from '@/shared/ui/note-author'
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
@@ -101,10 +102,11 @@ export function MeetingInternalNotes({
               </span>
             </div>
             <p className="whitespace-pre-wrap">{note.content}</p>
-            <p className="text-xs text-amber-950/70">
-              {note.created_by ? (note.actorNames[note.created_by] ?? '') : 'Sistema'} ·{' '}
-              {formatDate(note.created_at)}
-            </p>
+            <NoteAuthor
+              className="border-t border-amber-950/15 pt-2 text-amber-950"
+              name={note.created_by ? (note.actorNames[note.created_by] ?? 'Equipo') : 'Sistema'}
+              date={formatDate(note.created_at)}
+            />
           </article>
         ))}
         {canWork ? <DraftNote onAdd={(note) => void addNote(note)} /> : null}

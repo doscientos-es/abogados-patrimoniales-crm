@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { useGuardarNota, useNotasRemotas } from '@/features/notas'
 import { DraftNote } from '@/shared/ui/internal-note-draft'
+import { NoteAuthor } from '@/shared/ui/note-author'
 
 /**
  * Internal notes of the budget: general notes system, linked to the Lead and marked as
@@ -58,13 +59,14 @@ export function QuoteInternalNotes({
               </span>
             </div>
             <p className="whitespace-pre-wrap">{note.content}</p>
-            <p className="text-xs text-amber-950/70">
-              {note.created_by ? (note.actorNames[note.created_by] ?? 'Equipo') : 'Sistema'} ·{' '}
-              {new Date(note.created_at).toLocaleString('es-ES', {
+            <NoteAuthor
+              className="border-t border-amber-950/15 pt-2 text-amber-950"
+              name={note.created_by ? (note.actorNames[note.created_by] ?? 'Equipo') : 'Sistema'}
+              date={new Date(note.created_at).toLocaleString('es-ES', {
                 dateStyle: 'short',
                 timeStyle: 'short',
               })}
-            </p>
+            />
           </article>
         ))}
         <DraftNote
