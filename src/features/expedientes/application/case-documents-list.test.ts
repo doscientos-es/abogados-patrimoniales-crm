@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { validateCaseDocumentFile } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
-import { documentCategories, filterDocuments, formatFileSize } from './case-documents-list'
+import {
+  documentCategories,
+  filterDocuments,
+  folderOptions,
+  folderPath,
+  formatFileSize,
+} from './case-documents-list'
 
 const doc = (patch: Partial<CaseDocumentRow>) =>
   ({

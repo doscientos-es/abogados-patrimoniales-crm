@@ -21,6 +21,7 @@ export async function subirJustificante(
   file: File,
   category = 'Económico',
   confidentiality: 'normal' | 'restricted' | 'confidential' = 'normal',
+  folderId: string | null = null,
 ): Promise<AdjuntoEconomico> {
   const client = getSupabaseBrowserClient()
   if (!client) throw new Error('Sin conexión.')
