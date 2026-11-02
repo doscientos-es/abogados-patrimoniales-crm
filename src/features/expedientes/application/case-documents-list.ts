@@ -33,13 +33,21 @@ export function filterDocuments(
   options: {
     query: string
     category: string
+    /** 'all', 'none' (no folder) or a folder id. */
+    folder?: string
     sort: DocumentSort
     displayName: (document: CaseDocumentRow) => string
   },
 ) {
   const query = normalize(options.query.trim())
+  const folder = options.folder ?? 'all'
   return documents
     .filter((document) => options.category === 'all' || document.category === options.category)
+    .filter(
+      (document) =>
+        folder === 'all' ||
+        (folder === 'none' ? document.folder_id === null : document.folder_id === folder),
+    )
     .filter(
       (document) =>
         !query ||
@@ -59,6 +67,29 @@ export function filterDocuments(
         )
       return second.created_at.localeCompare(first.created_at)
     })
+}
+
+export type FolderNode = { id: string; parent_id: string | null; name: string }
+
+/** «Escritos / Demanda» for a folder id; empty when the document is not in a folder. */
+export function folderPath(folders: FolderNode[], folderId: string | null | undefined) {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]))
+  const names: string[] = []
+  const seen = new Set<string>()
+  let current = folderId ? byId.get(folderId) : undefined
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id)
+    names.unshift(current.name)
+    current = current.parent_id ? byId.get(current.parent_id) : undefined
+  }
+  return names.join(' / ')
+}
+
+/** All folders of a case with their full path, sorted alphabetically by path. */
+export function folderOptions(folders: FolderNode[]) {
+  return folders
+    .map((folder) => ({ id: folder.id, path: folderPath(folders, folder.id) }))
+    .sort((first, second) => first.path.localeCompare(second.path, 'es'))
 }
 
 export function documentCategories(documents: CaseDocumentRow[]) {

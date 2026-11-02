@@ -94,6 +94,37 @@ describe('lista de documentos del expediente', () => {
     expect(validateCaseDocumentFile(file('vacio.pdf', 'application/pdf', 0))).toMatch(/vacío/)
   })
 
+  it('construye la ruta de carpetas anidadas y resiste ciclos', () => {
+    const folders = [
+      { id: 'a', parent_id: null, name: 'Escritos' },
+      { id: 'b', parent_id: 'a', name: 'Demanda' },
+      { id: 'x', parent_id: 'y', name: 'X' },
+      { id: 'y', parent_id: 'x', name: 'Y' },
+    ]
+    expect(folderPath(folders, 'b')).toBe('Escritos / Demanda')
+    expect(folderPath(folders, null)).toBe('')
+    expect(folderPath(folders, 'x')).toBe('Y / X')
+    expect(folderOptions(folders).map((option) => option.path)).toEqual([
+      'Escritos',
+      'Escritos / Demanda',
+      'X / Y',
+      'Y / X',
+    ])
+  })
+
+  it('filtra por carpeta, sin carpeta o todas', () => {
+    const inFolder = [
+      doc({ id: '1', folder_id: 'a' }),
+      doc({ id: '2', folder_id: null }),
+      doc({ id: '3', folder_id: 'b' }),
+    ]
+    const ids = (folder: string) =>
+      filterDocuments(inFolder, { query: '', category: 'all', folder, sort: 'recent', displayName: same }).map((item) => item.id).sort()
+    expect(ids('all')).toEqual(['1', '2', '3'])
+    expect(ids('none')).toEqual(['2'])
+    expect(ids('a')).toEqual(['1'])
+  })
+
   it('lista categorías únicas y formatea tamaños', () => {
     expect(documentCategories(documents)).toEqual(['Escritos', 'Poderes'])
     expect(formatFileSize(500)).toBe('500 B')
