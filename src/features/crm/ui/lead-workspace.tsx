@@ -48,7 +48,7 @@ import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 import {
-  useCambiarEstadoTarea,
+  useCompletarTarea,
   useCrearTarea,
   useTareasLead,
   type CrearTareaInput,
@@ -114,7 +114,7 @@ export function LeadWorkspace({
   const onboardings = useOnboardings(firmId)
   const saveDetails = useActualizarDetallesOportunidad(firmId)
   const createTask = useCrearTarea(firmId)
-  const completeTask = useCambiarEstadoTarea(firmId)
+  const completeTask = useCompletarTarea(firmId)
   const createNote = useCrearNotaOportunidad(firmId)
   const logCommunication = useRegistrarComunicacionOportunidad(firmId)
   const createOnboarding = useCrearOnboarding(firmId)
@@ -838,9 +838,15 @@ export function LeadWorkspace({
           memberNames={memberNames}
           onComplete={(task) =>
             completeTask
-              .mutateAsync({ task, estado: 'Completada' })
+              .mutateAsync({ task, resultado: 'Completada desde la ficha del Lead.' })
               .then(() => toast.success('Tarea completada.'))
-              .catch(() => toast.error('No se pudo completar la tarea.'))
+              .catch((error: unknown) =>
+                toast.error(
+                  error instanceof Error && error.message
+                    ? error.message
+                    : 'No se pudo completar la tarea.',
+                ),
+              )
           }
           createDialog={
             <LeadTaskCreateDialog

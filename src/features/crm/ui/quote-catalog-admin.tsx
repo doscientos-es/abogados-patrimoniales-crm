@@ -206,6 +206,21 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
     }
   }
 
+  /** Loads the bundled standard blocks through the same importer; existing blocks are never overwritten. */
+  const loadStandardBlocks = async () => {
+    try {
+      const { default: rows } = await import('@/features/crm/data/bloques-encargo.json')
+      const result = await importBlocks.mutateAsync(rows as unknown)
+      toast.success(
+        result.inserted
+          ? `Bloques estándar cargados: ${result.inserted} nuevos; ${result.skipped} ya existían.`
+          : 'Los bloques estándar ya estaban cargados: no se ha añadido ni modificado nada.',
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se han podido cargar los bloques.')
+    }
+  }
+
   const importTemplateFile = async (file: File) => {
     try {
       const result = await importTemplates.mutateAsync(JSON.parse(await file.text()) as unknown)
@@ -474,6 +489,13 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
         <section className="space-y-3">
           {canManage ? (
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                disabled={importBlocks.isPending}
+                onClick={() => void loadStandardBlocks()}
+              >
+                {importBlocks.isPending ? 'Cargando…' : 'Cargar bloques estándar'}
+              </Button>
               <ImportJsonButton
                 label="Importar bloques JSON"
                 ariaLabel="Importar bloques JSON"

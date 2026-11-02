@@ -115,10 +115,10 @@ const TASK_BOARD_COLUMNS: ReadonlyArray<{
   title: string
   description: string
 }> = [
-  { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
-  { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
-  { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
-]
+    { id: 'pending', title: 'Pendiente', description: 'Trabajo por iniciar' },
+    { id: 'in-progress', title: 'En curso', description: 'Trabajo activo' },
+    { id: 'waiting', title: 'En espera', description: 'Pendientes de una respuesta o revisión' },
+  ]
 
 const TASK_PRIORITY_CLASS: Record<TareaPersistida['prioridad'], string> = {
   Alta: 'border-destructive/30 bg-destructive/10 text-destructive',
@@ -247,9 +247,9 @@ export function layoutCalendarEvents(tasks: TareaPersistida[]): CalendarEventLay
       const meetingEndsAt = reunion['endsAt']
       const actualMeetingDuration =
         task.tipo === 'Evento' &&
-        reunion['specialType'] === 'meeting' &&
-        typeof meetingStartsAt === 'string' &&
-        typeof meetingEndsAt === 'string'
+          reunion['specialType'] === 'meeting' &&
+          typeof meetingStartsAt === 'string' &&
+          typeof meetingEndsAt === 'string'
           ? (Date.parse(meetingEndsAt) - Date.parse(meetingStartsAt)) / 60_000
           : Number.NaN
       const displayDuration =
@@ -445,11 +445,11 @@ export function TaskWorkspace({
   const orderedVisible =
     view === 'kanban'
       ? [...visible].sort(
-          (a, b) =>
-            (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-              (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
-            a.titulo.localeCompare(b.titulo, 'es'),
-        )
+        (a, b) =>
+          (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
+          (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+          a.titulo.localeCompare(b.titulo, 'es'),
+      )
       : sortTasksForAgenda(visible)
   const activeFilterCount = [
     typeFilter,
@@ -811,7 +811,7 @@ export function TaskWorkspace({
                 .sort(
                   (a, b) =>
                     (a.boardPosition ?? Number.MAX_SAFE_INTEGER) -
-                      (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
+                    (b.boardPosition ?? Number.MAX_SAFE_INTEGER) ||
                     a.titulo.localeCompare(b.titulo, 'es'),
                 )
               const taskIdsWithHidden = reorderTasksWithFilteredItems(
@@ -883,6 +883,7 @@ export function TaskInbox({
   onCapture,
   onMove,
   onOpenTask,
+  defaultOpen = false,
 }: {
   items: TaskInboxItemRow[]
   tasks: TareaPersistida[]
@@ -890,7 +891,10 @@ export function TaskInbox({
   onCapture: (captureText: string, taskId: string | null) => Promise<void>
   onMove: (itemId: string, stage: TaskInboxItemRow['stage']) => Promise<void>
   onOpenTask?: (taskId: string) => void
+  /** The stage board is folded by default so it does not push the task board down. */
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const [dropStage, setDropStage] = useState<TaskInboxItemRow['stage'] | null>(null)
   const [captureOpen, setCaptureOpen] = useState(false)
@@ -913,15 +917,27 @@ export function TaskInbox({
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="min-w-0">
-            <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold uppercase">
-              <InboxIcon className="h-4 w-4" /> INBOX personal
-            </h2>
-            <p className="text-muted-foreground text-xs">
-              {items.length} captura{items.length === 1 ? '' : 's'} en proceso. Las etapas son
-              tuyas: no cambian el estado de la tarea.
-            </p>
-          </div>
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls="task-inbox-board"
+            onClick={() => setOpen((current) => !current)}
+            className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-none focus-visible:ring-2"
+          >
+            <ChevronRight
+              className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+              aria-hidden="true"
+            />
+            <span className="min-w-0">
+              <span className="text-foreground flex items-center gap-2 text-sm font-semibold uppercase">
+                <InboxIcon className="h-4 w-4" /> INBOX personal
+              </span>
+              <span className="text-muted-foreground block text-xs">
+                {items.length} captura{items.length === 1 ? '' : 's'} en proceso. Las etapas son
+                tuyas: no cambian el estado de la tarea.
+              </span>
+            </span>
+          </button>
           <Button type="button" size="sm" className="gap-1.5" onClick={() => setCaptureOpen(true)}>
             <Plus className="h-4 w-4" /> Captura rápida
           </Button>
@@ -970,8 +986,8 @@ export function TaskInbox({
       <p id="task-inbox-drag-help" className="sr-only">
         Arrastra una entrada a otra etapa o utiliza su selector para cambiarla.
       </p>
-      <div className="-mx-1 overflow-x-auto pb-3">
-        <div className="flex flex-col gap-3 px-1 lg:min-w-max lg:flex-row">
+      <div id="task-inbox-board" hidden={!open} className="-mx-1 overflow-x-auto pb-3">
+        <div className="flex min-w-max flex-row items-start gap-3 px-1">
           {(Object.keys(INBOX_STAGE_LABELS) as TaskInboxItemRow['stage'][]).map((stage) => {
             const stageItems = items.filter((item) => item.stage === stage)
             return (
@@ -997,7 +1013,7 @@ export function TaskInbox({
                   if (itemId && items.some((item) => item.id === itemId && item.stage !== stage))
                     void onMove(itemId, stage)
                 }}
-                className={`border-border/70 bg-muted/70 shrink-0 rounded-lg border p-2 transition-colors lg:w-72 ${dropStage === stage ? 'bg-primary/10 ring-primary/40 ring-1' : ''}`}
+                className={`border-border/70 bg-muted/70 shrink-0 rounded-lg border p-2 transition-colors w-64 ${dropStage === stage ? 'bg-primary/10 ring-primary/40 ring-1' : ''}`}
               >
                 <header className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
                   <span className="truncate text-[11px] font-semibold tracking-wide uppercase">

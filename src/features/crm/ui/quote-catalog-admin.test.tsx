@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   saveService: vi.fn().mockResolvedValue(undefined),
   importServices: vi.fn().mockResolvedValue({ inserted: 1, skipped: 0 }),
   toggleService: vi.fn(),
+  importBlocks: vi.fn().mockResolvedValue({ inserted: 7, skipped: 0 }),
 }))
 
 vi.mock('@/features/auth', () => ({
@@ -34,7 +35,7 @@ vi.mock('@/features/crm', () => ({
     isError: false,
     refetch: vi.fn(),
   }),
-  useImportEngagementBlocks: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useImportEngagementBlocks: () => ({ isPending: false, mutateAsync: mocks.importBlocks }),
   useImportQuoteEmailTemplates: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useQuoteBlocks: () => ({ data: [], isPending: false, isError: false, refetch: vi.fn() }),
   useQuoteEmailTemplates: () => ({ data: [], isPending: false, isError: false, refetch: vi.fn() }),
@@ -78,6 +79,23 @@ describe('administración del catálogo de servicios', () => {
     expect(rows).toHaveLength(59)
     expect(rows.every((row) => row.length >= 11)).toBe(true)
     expect(rows.some((row) => row[4] === 'SD1' && row[6] === '170,00€')).toBe(true)
+  })
+
+  it('carga los bloques estándar del encargo a través del importador', async () => {
+    render(<QuoteCatalogAdmin kind="blocks" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar bloques estándar' }))
+
+    await waitFor(() => expect(mocks.importBlocks).toHaveBeenCalledOnce())
+    const rows = mocks.importBlocks.mock.calls[0]?.[0] as Array<{ title: string; order: number }>
+    expect(rows.map((row) => row.title)).toEqual([
+      'ENCARGO JURIDICO',
+      'HONORARIOS',
+      'EXCLUSIONES',
+      'ADVERTENCIAS',
+      'DERECHO DE DESISTIMIENTO Y FINALIZACIÓN ANTICIPADA DEL ENCARGO PROFESIONAL',
+      'PROTECCIÓN DE DATOS',
+      'FORMA DE PAGO',
+    ])
   })
 
   it('permite consultar el catálogo a miembros sin permisos de edición', () => {

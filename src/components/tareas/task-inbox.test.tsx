@@ -28,7 +28,14 @@ describe('TaskInbox', () => {
     } as unknown as DataTransfer
 
     render(
-      <TaskInbox items={[item]} tasks={[]} pending={false} onCapture={vi.fn()} onMove={onMove} />,
+      <TaskInbox
+        items={[item]}
+        tasks={[]}
+        pending={false}
+        onCapture={vi.fn()}
+        onMove={onMove}
+        defaultOpen
+      />,
     )
 
     const dragHandle = screen.getByRole('button', {

@@ -146,11 +146,11 @@ export function QuoteSendPanel({
         detalles: conEditor(opportunity.detalles, result.editor, result.extra),
         ...(stage === 'validation'
           ? {
-              transicionContratacion: {
-                fase: 'engagement' as const,
-                subestado: 'Pendiente de aceptación',
-              },
-            }
+            transicionContratacion: {
+              fase: 'engagement' as const,
+              subestado: 'Pendiente de aceptación',
+            },
+          }
           : {}),
       })
       setSending(false)
@@ -386,6 +386,7 @@ export function QuoteSendPanel({
         <SendDialog
           key={`${prepared.version}-${opportunity.version}`}
           version={prepared}
+          firmName={prepared.instantanea?.despacho ?? firmName}
           cliente={prepared.instantanea?.cliente ?? cliente}
           templates={templates.data ?? []}
           userId={userId}
@@ -410,6 +411,7 @@ export function QuoteSendPanel({
 
 function SendDialog({
   version,
+  firmName,
   cliente,
   templates,
   userId,
@@ -421,7 +423,14 @@ function SendDialog({
   onPrint,
   onRegister,
 }: {
-  version: { version: number; referencia: string; asunto: string; borradorEnvio?: BorradorEnvio }
+  version: {
+    version: number
+    referencia: string
+    asunto: string
+    borradorEnvio?: BorradorEnvio
+    instantanea?: { totales: { total: number } }
+  }
+  firmName: string
   cliente: Cliente
   templates: Array<{
     id: string
@@ -445,19 +454,20 @@ function SendDialog({
   const initial = borrador?.plantilla?.id
     ? activeTemplates.find((item) => item.id === borrador.plantilla?.id)
     : defaultTemplate
-  const vars = {
+  const vars: Record<string, string> = {
     nombre_cliente: cliente.nombre,
+    nombre_despacho: firmName,
     asunto: version.asunto,
     referencia_presupuesto: `${version.referencia} (v${version.version})`,
+    total_presupuesto: version.instantanea ? euros(version.instantanea.totales.total) : '',
     fecha: new Date().toLocaleDateString('es-ES'),
     responsable: userId ? (memberNames.get(userId) ?? '') : '',
   }
+  /** Unknown or missing variables resolve to empty text: nothing is invented. */
   const resolve = (value: string) =>
-    Object.entries(vars).reduce(
-      (result, [key, replacement]) =>
-        result.replaceAll(`{{${key}}}`, replacement).replaceAll(`{${key}}`, replacement),
-      value,
-    )
+    value
+      .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, key: string) => vars[key]?.trim() ?? '')
+      .replace(/[ \t]+([,.:;])/g, '$1')
   const [templateId, setTemplateId] = useState(borrador?.plantilla?.id ?? initial?.id ?? '')
   const [recipient, setRecipient] = useState(borrador?.destinatario ?? cliente.email)
   const [subject, setSubject] = useState(

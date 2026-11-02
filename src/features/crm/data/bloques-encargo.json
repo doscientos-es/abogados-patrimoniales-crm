@@ -1,0 +1,58 @@
+[
+  {
+    "title": "ENCARGO JURIDICO",
+    "text": "----------------------------ENCARGO JURIDICO----------------------------",
+    "order": 1,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "HONORARIOS",
+    "text": "HONORARIOS: El encargo se hace en régimen de arrendamiento de servicios, con estricta sujeción a las Normas deontológicas de la Abogacía .  Para la determinación de tales honorarios se ha tenido en cuenta los usos y normas forenses, atendiendo a la expresada cuantía del asunto, complejidad de su desarrollo, esfuerzo profesional y especialización. Por los recursos de reposición e incidentes que pudieran tramitarse en primera instancia se facturarán 350€ mas IVA por cada uno de ellos. ",
+    "order": 2,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "EXCLUSIONES",
+    "text": "EXCLUSIONES: En caso de ser necesaria la realización de cualquier actuación no comprendida en el presente encargo deberá ser previamente convenida sus correspondientes honorarios.  Los honorarios presupuestados no incluyen los correspondientes al Procurador ni a los Peritos u otros profesionales que deban intervenir en su caso para el buen fin del encargo. Tampoco incluyen los gastos por salida de despacho ,impuestos, aranceles notariales, aranceles de procurador , legalización de documentos y análogos.",
+    "order": 3,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "ADVERTENCIAS",
+    "text": "ADVERTENCIAS:  1.-Que el ejercicio de la acción pueda ser sea infructuoso.  2.-Que El CLIENTE  autoriza a entregar copia de la documentación facilitada para cumplimentar el expediente (identificación, domicilio, actividad profesional) a otros terceros intervinientes o necesarios para la realización del encargo, asesores fiscales, agentes inmobiliarios o entidades bancarias, caso de que dicha información sea requerida.  3.- Que EL LETRADO podrá delegar, a su criterio, todas o parte de las tareas del presente encargo profesional, en los Abogados colaboradores de su despacho profesional, y pueda valerse de otros auxiliares y colaboradores sin que tal hecho incremente necesariamente el importe de sus honorarios.   4.-Que para los casos en que se judicialicen, el cliente tiene la posibilidad de ser condenado en costas.  ",
+    "order": 4,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "DERECHO DE DESISTIMIENTO Y FINALIZACIÓN ANTICIPADA DEL ENCARGO PROFESIONAL",
+    "text": "DERECHO DE DESISTIMIENTO Y FINALIZACIÓN ANTICIPADA DEL ENCARGO PROFESIONAL:  El CLIENTE puede ejercer, en cualquier momento y por escrito, su derecho a desistir de este contrato de manera libre y prescindir de los servicios del LETRADO, si bien tendrá la obligación de abonar la contraprestación económica por los servicios profesionales realizados. De igual forma, el LETRADO tiene derecho a desistir del contrato preavisando a EL CLIENTE con 15 días de anticipación.",
+    "order": 5,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "PROTECCIÓN DE DATOS",
+    "text": "PROTECCIÓN DE DATOS   EL CLIENTE  autoriza expresamente al Letrado a la inclusión en sus ficheros y tratamiento de todos los datos de carácter personal que le fueran facilitados para el mantenimiento de la futura relación contractual, la elaboración de estudios estadísticos. Dichos datos permanecerán en los ficheros del Letrado y estarán sujetos, mediante solicitud escrita del interesado, a los derechos de acceso, rectificación, cancelación y oposición de acuerdo con la legislación vigente. El cliente autoriza a recibir comunicaciones por los medios que facilite al letrado, incluido email y Whastapp. ",
+    "order": 6,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  },
+  {
+    "title": "FORMA DE PAGO",
+    "text": "FORMA DE PAGO: Para dar inicio al presente encargo, será necesario el abono del 60% del presupuesto. El 40% restante se abonará en un segundo pago, cuya exigibilidad se determinará según el desarrollo del encargo, si bien deberá ser abonado,  antes de la vista, la sentencia u otro hito procesal relevante, en un plazo máximo de 18 meses.",
+    "order": 7,
+    "active": true,
+    "includeByDefault": true,
+    "reviewed": false
+  }
+]

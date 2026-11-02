@@ -68,6 +68,7 @@ import {
 } from '@/features/crm/ui/quote-editor-dialogs'
 import { documentoHtml, imprimir } from '@/features/crm/ui/quote-document'
 import { QuoteInternalNotes } from '@/features/crm/ui/quote-internal-notes'
+import { QuoteReviewPanel } from '@/features/crm/ui/quote-review-panel'
 import {
   estadoTareaRevision,
   useCrearTarea,
@@ -237,8 +238,8 @@ export function QuoteEditor({
                 Ya hay un presupuesto manual enviado o aceptado (versión{' '}
                 {String(
                   record(record(opportunity.detalles)['presupuesto'])['versionEnviada'] ??
-                    record(record(opportunity.detalles)['presupuesto'])['version'] ??
-                    '—',
+                  record(record(opportunity.detalles)['presupuesto'])['version'] ??
+                  '—',
                 )}
                 ). Se conservará íntegro, con su importe y evidencia, y el borrador será una
                 versión nueva superior.
@@ -324,7 +325,7 @@ export function QuoteEditor({
       const list = [...current.bloques]
       const target = index + direction
       if (target < 0 || target >= list.length) return current
-      ;[list[index], list[target]] = [list[target]!, list[index]!]
+        ;[list[index], list[target]] = [list[target]!, list[index]!]
       return { ...current, bloques: list }
     })
 
@@ -617,6 +618,14 @@ export function QuoteEditor({
             </Link>
           ) : null}
         </div>
+      ) : null}
+      {revision?.estado === 'pendiente' &&
+        version.estado === 'en_revision' &&
+        userId &&
+        revisionTask.data &&
+        revisionTask.data.asignadoId === userId &&
+        !['Completada', 'Cancelada'].includes(revisionTask.data.estado) ? (
+        <QuoteReviewPanel task={revisionTask.data} firmId={firmId} />
       ) : null}
       {version.estado === 'validado' ? (
         <p className="border-primary/40 bg-primary/5 rounded-md border px-4 py-3 text-sm">
@@ -924,9 +933,9 @@ export function QuoteEditor({
           existente={
             cachedReviewTask
               ? {
-                  asignadoNombre: memberName(cachedReviewTask.asignadoId ?? ''),
-                  venceEn: cachedReviewTask.venceEn,
-                }
+                asignadoNombre: memberName(cachedReviewTask.asignadoId ?? ''),
+                venceEn: cachedReviewTask.venceEn,
+              }
               : null
           }
           tareasListas={tasks.isSuccess}

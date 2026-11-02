@@ -83,17 +83,16 @@ export function AppSidebar({ open }: { open: boolean }) {
     >
       <div className="flex h-full w-(--sidebar-width) flex-col">
         <SidebarHeader className="border-sidebar-border border-b">
-          <Link to="/" className="flex items-center gap-2 px-2 py-1.5">
-            <span className="bg-sidebar-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-1.5">
-              <img src="/logo-lex.svg" alt="LEX" className="h-full w-full object-contain" />
+          <Link
+            to="/"
+            aria-label="LEX.EUS · Inicio"
+            className="flex items-center gap-3 rounded-md px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          >
+            <span className="bg-sidebar-primary ring-sidebar-foreground/10 flex size-11 shrink-0 items-center justify-center rounded-xl p-2 shadow-sm ring-1">
+              <img src="/logo-lex.svg" alt="" className="h-full w-full object-contain" />
             </span>
-            <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <span className="text-sidebar-foreground block truncate font-serif text-sm font-semibold tracking-wide">
-                LEX CRM
-              </span>
-              <span className="text-sidebar-foreground/60 block truncate text-[11px]">
-                Gestión integral del despacho
-              </span>
+            <span className="text-sidebar-foreground min-w-0 truncate font-serif text-xl font-semibold tracking-wider group-data-[collapsible=icon]:hidden">
+              LEX.EUS
             </span>
           </Link>
         </SidebarHeader>
