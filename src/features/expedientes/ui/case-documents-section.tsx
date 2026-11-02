@@ -46,9 +46,11 @@ export function CaseDocumentsSection({
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState<DocumentSort>('recent')
+  const [folder, setFolder] = useState('all')
+  const folderRows = useCaseFolders(firmId, expedienteId).data ?? []
   const displayName = (document: CaseDocumentRow) =>
     namings.data?.byLogicalId[document.logical_document_id]?.display_name ?? document.original_name
-  const visible = filterDocuments(documents, { query, category, sort, displayName })
+  const visible = filterDocuments(documents, { query, category, folder, sort, displayName })
   const categories = documentCategories(documents)
   const confidential = documents.filter((document) => document.confidentiality !== 'normal').length
   const pendingReview = documents.filter((document) => document.content_status === 'pending').length
@@ -90,15 +92,6 @@ export function CaseDocumentsSection({
       setUploadingId(null)
     }
   }
-
-  const open = (document: CaseDocumentRow) =>
-    abrirJustificante({
-      documentId: document.id,
-      nombre: document.original_name,
-      storagePath: document.storage_path,
-    }).catch((error: unknown) =>
-      toast.error(error instanceof Error ? error.message : 'No se pudo abrir el documento.'),
-    )
 
   return (
     <section className="space-y-3" aria-label="Documentos del expediente">
@@ -148,6 +141,22 @@ export function CaseDocumentsSection({
               <option key={name}>{name}</option>
             ))}
           </select>
+          {folderRows.length ? (
+            <select
+              aria-label="Filtrar por carpeta"
+              className={selectClass}
+              value={folder}
+              onChange={(event) => setFolder(event.target.value)}
+            >
+              <option value="all">Todas las carpetas</option>
+              <option value="none">Sin carpeta</option>
+              {folderOptions(folderRows).map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.path}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <select
             aria-label="Ordenar documentos"
             className={selectClass}
@@ -162,67 +171,18 @@ export function CaseDocumentsSection({
 
         <Card>
           <CardContent className="divide-y pt-2">
-            {visible.map((document) => {
-              const name = displayName(document)
-              return (
-                <div key={document.id} className="flex flex-wrap items-center gap-3 py-3">
-                  <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
-                  <div className="min-w-48 flex-1">
-                    <p className="truncate text-sm font-medium">{name}</p>
-                    {name !== document.original_name ? (
-                      <p className="text-muted-foreground truncate text-xs">
-                        Original: {document.original_name}
-                      </p>
-                    ) : null}
-                    <p className="text-muted-foreground text-xs">
-                      {document.category} · v{document.version} ·{' '}
-                      {formatFileSize(document.size_bytes)} ·{' '}
-                      {dateTime.format(new Date(document.updated_at))}
-                    </p>
-                  </div>
-                  {document.content_status !== 'validated' ? (
-                    <Badge
-                      variant={document.content_status === 'rejected' ? 'destructive' : 'secondary'}
-                    >
-                      {CONTENT_STATUS_LABEL[document.content_status]}
-                    </Badge>
-                  ) : null}
-                  <Badge variant={document.confidentiality === 'normal' ? 'outline' : 'default'}>
-                    {CONFIDENTIALITY_LABEL[document.confidentiality]}
-                  </Badge>
-                  <IconButton
-                    label="Abrir documento"
-                    variant="ghost"
-                    onClick={() => void open(document)}
-                  >
-                    <ExternalLink className="size-4" aria-hidden="true" />
-                  </IconButton>
-                  <IconButton
-                    label={
-                      uploadingId === document.id
-                        ? 'Subiendo nueva versión…'
-                        : `Subir nueva versión (actual: v${document.version})`
-                    }
-                    variant="ghost"
-                    isDisabled={uploadingId !== null}
-                    onClick={() => pickVersionFor(document)}
-                  >
-                    {uploadingId === document.id ? (
-                      <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <FilePlus2 className="size-4" aria-hidden="true" />
-                    )}
-                  </IconButton>
-                  <Link
-                    to="/documentos"
-                    search={{ case: expedienteId, doc: document.id }}
-                    className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                  >
-                    Detalle
-                  </Link>
-                </div>
-              )
-            })}
+            {visible.map((document) => (
+              <CaseDocumentListItem
+                key={document.id}
+                document={document}
+                displayName={displayName(document)}
+                folderPath={folderPath(folderRows, document.folder_id)}
+                firmId={firmId}
+                expedienteId={expedienteId}
+                uploadingId={uploadingId}
+                onPickVersion={pickVersionFor}
+              />
+            ))}
             {!visible.length ? (
               <p className="text-muted-foreground py-6 text-center text-sm">
                 {documents.length
