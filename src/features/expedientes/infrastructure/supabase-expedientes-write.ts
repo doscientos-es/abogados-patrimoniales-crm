@@ -110,6 +110,50 @@ export function useActualizarExpediente(firmId: string | undefined) {
   })
 }
 
+/**
+ * Saves one economics key (gastos / trabajosExtras) in crm_cases.details. The row is re-read right
+ * before writing and the update is guarded by its version, so keys written by other users in the
+ * meantime are never overwritten; on a version clash it re-reads once and retries.
+ */
+export function useGuardarEconomiaExpediente(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      expedienteId: string
+      clave: 'gastos' | 'trabajosExtras'
+      valor: Json
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const { data: current, error: readError } = await client
+          .from('crm_cases')
+          .select('details, version')
+          .eq('id', input.expedienteId)
+          .eq('firm_id', firmId)
+          .single()
+        if (readError) throw readError
+        const details = { ...asObject(current.details), [input.clave]: input.valor }
+        const { data, error } = await client
+          .from('crm_cases')
+          .update({ details: details as Json })
+          .eq('id', input.expedienteId)
+          .eq('firm_id', firmId)
+          .eq('version', current.version)
+          .select('*')
+          .maybeSingle()
+        if (error) throw error
+        if (data) return expedienteFromRow(data)
+      }
+      throw new Error('Otro usuario modificó el expediente. Recarga antes de guardar.')
+    },
+    onSuccess: (expediente) => {
+      queryClient.setQueryData(['expedientes', firmId, expediente.id], expediente)
+      void queryClient.invalidateQueries({ queryKey: ['expedientes', firmId] })
+    },
+  })
+}
+
 export function useCrearLinea(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({

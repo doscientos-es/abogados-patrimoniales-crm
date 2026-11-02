@@ -65,11 +65,15 @@ import {
   type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
+import { CaseOriginals } from '@/features/documentos/ui/case-physical-originals'
 import { PaymentEvidenceList } from '@/features/onboarding/ui/payment-evidence'
 import { REMINDER_PREFIX, RemindAssigneeDialog } from '@/features/tareas/ui/task-detail'
 import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infrastructure/supabase'
 import { NoteAuthor } from '@/shared/ui/note-author'
 
+import { AgendaSection, NextAgendaBanner } from './case-agenda'
+import { ExpensesBlock } from './case-expenses-block'
+import { ExtraWorkBlock, useEconomiaTotals } from './case-extra-work-block'
 import { WorkstreamDetailDialog, workstreamStatusLabel } from './workstream-detail-dialog'
 
 export type CaseDetailTab =
@@ -92,7 +96,7 @@ const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activ
   { id: 'economic', label: 'Económico', Icon: Receipt },
   { id: 'communications', label: 'Comunicaciones', Icon: MessageSquareText },
   { id: 'tasks', label: 'Tareas', Icon: CheckSquare2 },
-  { id: 'deadlines', label: 'Fechas y plazos', Icon: CalendarClock },
+  { id: 'deadlines', label: 'Agenda', Icon: CalendarClock },
   { id: 'history', label: 'Histórico', Icon: History },
 ]
 
@@ -229,6 +233,17 @@ export function CaseDetail({
         aria-labelledby={`case-detail-tab-${activeTab}`}
       >
         {activeTab === 'summary' ? (
+          <div className="mb-4">
+            <NextAgendaBanner
+              tasks={caseTasks}
+              onOpen={() => {
+                setLocalTab('deadlines')
+                onSelectTab?.('deadlines')
+              }}
+            />
+          </div>
+        ) : null}
+        {activeTab === 'summary' ? (
           <CaseSummary
             expediente={item}
             lastMovement={lastMovement}
@@ -305,10 +320,23 @@ export function CaseDetail({
                 />
               </div>
             ) : null}
+            {firmId ? (
+              <div className="mb-4 space-y-4">
+                <CaseOriginals firmId={firmId} caseId={item.id} />
+              </div>
+            ) : null}
             <DocumentsSection documents={documentos} expedienteId={item.id} />
           </>
         ) : null}
-        {activeTab === 'economic' ? <EconomicSection invoices={facturas} /> : null}
+        {activeTab === 'economic' ? (
+          <EconomicSection
+            invoices={facturas}
+            firmId={firmId}
+            expedienteId={item.id}
+            details={item.detalles}
+            miembros={miembros}
+          />
+        ) : null}
         {activeTab === 'communications' ? (
           <CaseCommunications
             contactId={item.contactoPrincipalId}
@@ -336,7 +364,16 @@ export function CaseDetail({
           ))
           : null}
         {activeTab === 'deadlines' ? (
-          <DeadlinesSection tasks={deadlines} firmId={firmId} miembros={miembros} />
+          <AgendaSection
+            tasks={deadlines}
+            firmId={firmId}
+            expedienteId={item.id}
+            asignadoId={item.asignadoId}
+            members={miembros}
+            pending={taskPending}
+            onCreate={onCreateTask}
+            rowAction={(task) => <RemindTaskButton firmId={firmId} task={task} miembros={miembros} />}
+          />
         ) : null}
         {activeTab === 'history' ? (
           <HistorySection events={eventos} memberNames={memberNames} />
@@ -1808,7 +1845,20 @@ function DocumentsSection({
   )
 }
 
-function EconomicSection({ invoices }: { invoices: FacturaPersistida[] }) {
+function EconomicSection({
+  invoices,
+  firmId,
+  expedienteId,
+  details,
+  miembros,
+}: {
+  invoices: FacturaPersistida[]
+  firmId: string | undefined
+  expedienteId: string
+  details: Json
+  miembros: MiembroDespacho[]
+}) {
+  const extras = useEconomiaTotals(details)
   const issuedInvoices = invoices.filter((invoice) => invoice.estado !== 'draft')
   const total = issuedInvoices.reduce((sum, invoice) => sum + invoice.importeTotal, 0)
   const collected = issuedInvoices.reduce((sum, invoice) => sum + invoice.importeCobrado, 0)
@@ -1818,13 +1868,30 @@ function EconomicSection({ invoices }: { invoices: FacturaPersistida[] }) {
   return (
     <DetailSection
       title="Situación económica"
-      subtitle="Facturas y cobros vinculados a este expediente."
+      subtitle="Facturas, trabajos extras y gastos adelantados de este expediente."
     >
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <Metric label="Facturado" amount={money(total, invoices[0]?.moneda ?? 'EUR')} />
         <Metric label="Cobrado" amount={money(collected, invoices[0]?.moneda ?? 'EUR')} />
-        <Metric label="Pendiente" amount={money(pending, invoices[0]?.moneda ?? 'EUR')} />
+        <Metric label="Pendiente de cobro" amount={money(pending, invoices[0]?.moneda ?? 'EUR')} />
+        <Metric
+          label="Trabajos extras por facturar"
+          amount={money(extras.trabajos.pendiente, 'EUR')}
+        />
+        <Metric label="Suplidos por recuperar" amount={money(extras.gastos.pendiente, 'EUR')} />
       </div>
+      <ExpensesBlock
+        firmId={firmId}
+        expedienteId={expedienteId}
+        details={details}
+        miembros={miembros}
+      />
+      <ExtraWorkBlock
+        firmId={firmId}
+        expedienteId={expedienteId}
+        details={details}
+        miembros={miembros}
+      />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="text-base">Facturas del expediente</CardTitle>
@@ -2045,40 +2112,6 @@ function RemindTaskButton({
         }}
       />
     </>
-  )
-}
-
-function DeadlinesSection({
-  tasks,
-  firmId,
-  miembros,
-}: {
-  tasks: TareaPersistida[]
-  firmId?: string | undefined
-  miembros: MiembroDespacho[]
-}) {
-  const ordered = [...tasks].sort(
-    (first, second) => dateValue(first.venceEn) - dateValue(second.venceEn),
-  )
-  return (
-    <DetailSection
-      title="Fechas y plazos"
-      subtitle="Compromisos temporales y plazos profesionales del expediente."
-    >
-      <Card>
-        <CardContent className="divide-y pt-2">
-          {ordered.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              showValidation
-              action={<RemindTaskButton firmId={firmId} task={task} miembros={miembros} />}
-            />
-          ))}
-          {!ordered.length ? <EmptyState message="No hay fechas ni plazos registrados." /> : null}
-        </CardContent>
-      </Card>
-    </DetailSection>
   )
 }
 

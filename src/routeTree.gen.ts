@@ -31,6 +31,7 @@ import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AceptarTokenRouteImport } from './routes/aceptar.$token'
+import { Route as ArchivoUnicoRefRouteImport } from './routes/archivo-unico.$ref'
 import { Route as ContactosIndexRouteImport } from './routes/contactos.index'
 import { Route as ContactosIdRouteImport } from './routes/contactos.$id'
 import { Route as ContactosNuevoRouteImport } from './routes/contactos.nuevo'
@@ -152,6 +153,11 @@ const AceptarTokenRoute = AceptarTokenRouteImport.update({
   path: '/aceptar/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArchivoUnicoRefRoute = ArchivoUnicoRefRouteImport.update({
+  id: '/archivo-unico/$ref',
+  path: '/archivo-unico/$ref',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactosIndexRoute = ContactosIndexRouteImport.update({
   id: '/contactos/',
   path: '/contactos/',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
+  '/archivo-unico/$ref': typeof ArchivoUnicoRefRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
+  '/archivo-unico/$ref': typeof ArchivoUnicoRefRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/tareas': typeof TareasRouteWithChildren
   '/terminos': typeof TerminosRoute
   '/aceptar/$token': typeof AceptarTokenRoute
+  '/archivo-unico/$ref': typeof ArchivoUnicoRefRoute
   '/contactos/$id': typeof ContactosIdRoute
   '/contactos/nuevo': typeof ContactosNuevoRoute
   '/expedientes/$id': typeof ExpedientesIdRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
+    | '/archivo-unico/$ref'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
+    | '/archivo-unico/$ref'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/tareas'
     | '/terminos'
     | '/aceptar/$token'
+    | '/archivo-unico/$ref'
     | '/contactos/$id'
     | '/contactos/nuevo'
     | '/expedientes/$id'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   TareasRoute: typeof TareasRouteWithChildren
   TerminosRoute: typeof TerminosRoute
   AceptarTokenRoute: typeof AceptarTokenRoute
+  ArchivoUnicoRefRoute: typeof ArchivoUnicoRefRoute
   ContactosIdRoute: typeof ContactosIdRoute
   ContactosNuevoRoute: typeof ContactosNuevoRoute
   ExpedientesIdRoute: typeof ExpedientesIdRoute
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AceptarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/archivo-unico/$ref': {
+      id: '/archivo-unico/$ref'
+      path: '/archivo-unico/$ref'
+      fullPath: '/archivo-unico/$ref'
+      preLoaderRoute: typeof ArchivoUnicoRefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contactos/': {
       id: '/contactos/'
       path: '/contactos'
@@ -708,6 +728,7 @@ const rootRouteChildren: RootRouteChildren = {
   TareasRoute: TareasRouteWithChildren,
   TerminosRoute: TerminosRoute,
   AceptarTokenRoute: AceptarTokenRoute,
+  ArchivoUnicoRefRoute: ArchivoUnicoRefRoute,
   ContactosIdRoute: ContactosIdRoute,
   ContactosNuevoRoute: ContactosNuevoRoute,
   ExpedientesIdRoute: ExpedientesIdRoute,

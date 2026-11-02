@@ -35,7 +35,10 @@ type Loose = {
   from: (table: string) => {
     select: (columns: string) => any
   }
-  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
 }
 
 // The tables arrived after the generated types; typed locally until they are regenerated.

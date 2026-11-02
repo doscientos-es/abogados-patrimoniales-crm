@@ -32,7 +32,11 @@ function table(name: string) {
 
 export const documentTypesKey = (firmId: string | undefined) => ['crm', 'document-types', firmId]
 export const documentNamingKey = (firmId: string | undefined) => ['crm', 'document-naming', firmId]
-export const namingRulesKey = (firmId: string | undefined) => ['crm', 'document-naming-rules', firmId]
+export const namingRulesKey = (firmId: string | undefined) => [
+  'crm',
+  'document-naming-rules',
+  firmId,
+]
 
 const builtins: DocumentType[] = BUILTIN_DOCUMENT_TYPES.map((name, index) => ({
   id: name,
@@ -95,7 +99,9 @@ export function useNamingRules(firmId: string | undefined) {
         .select('id,rule,active')
         .eq('firm_id', firmId)
         .order('created_at')
-      return error ? { available: false, rows: [] } : { available: true, rows: data as NamingRule[] }
+      return error
+        ? { available: false, rows: [] }
+        : { available: true, rows: data as NamingRule[] }
     },
   })
 }
@@ -122,7 +128,10 @@ export const documentTypesApi = {
         suggestions,
       }),
     ),
-  update: (id: string, patch: Partial<Pick<DocumentType, 'name' | 'suggestions' | 'sort_order' | 'active'>>) =>
+  update: (
+    id: string,
+    patch: Partial<Pick<DocumentType, 'name' | 'suggestions' | 'sort_order' | 'active'>>,
+  ) =>
     run(
       table('crm_document_types')!
         .update({ ...patch, updated_at: new Date().toISOString() })

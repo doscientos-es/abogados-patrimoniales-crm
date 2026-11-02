@@ -47,7 +47,7 @@ export function DocumentTypesCatalog({
 
   const addType = async () => {
     const validation = validateTypeName(name, rows)
-    if (validation) return toast.error(validation)
+    if (validation) return void toast.error(validation)
     const order = rows.reduce((max, type) => Math.max(max, type.sort_order), 0) + 10
     const suggestedDescriptions = suggestions
       .split(';')
@@ -63,7 +63,7 @@ export function DocumentTypesCatalog({
   const saveType = async () => {
     if (!editing) return
     const validation = validateTypeName(editing.name, rows, editing.id)
-    if (validation) return toast.error(validation)
+    if (validation) return void toast.error(validation)
     const list = editing.suggestions.split(';').map((item) => item.trim()).filter(Boolean).slice(0, 20)
     if (await act(() => documentTypesApi.update(editing.id, { name: normalizeTypeName(editing.name), suggestions: list }), 'Tipo actualizado.'))
       setEditing(null)

@@ -96,15 +96,14 @@ export function sanitizeSuggestion(
   raw: RawAiSuggestion,
   catalog: { id: string; name: string }[],
 ): AiSuggestion {
-  const confidence = Number.isFinite(raw.confidence)
-    ? Math.min(1, Math.max(0, raw.confidence))
-    : 0
+  const confidence = Number.isFinite(raw.confidence) ? Math.min(1, Math.max(0, raw.confidence)) : 0
   const match = raw.typeName
     ? catalog.find((type) => normalizeTypeName(type.name) === normalizeTypeName(raw.typeName ?? ''))
     : undefined
   const identified = Boolean(match && confidence >= MIN_CONFIDENCE)
   const date = raw.documentDate ?? ''
-  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`))
+  const validDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`))
 
   return {
     typeId: identified ? match!.id : null,
@@ -113,10 +112,16 @@ export function sanitizeSuggestion(
     description: identified ? cleanDescription(raw.description ?? '') : '',
     documentDate: validDate ? date : null,
     parties: Array.isArray(raw.parties)
-      ? raw.parties.filter((party) => typeof party === 'string').map((party) => party.trim()).filter(Boolean).slice(0, 6)
+      ? raw.parties
+          .filter((party) => typeof party === 'string')
+          .map((party) => party.trim())
+          .filter(Boolean)
+          .slice(0, 6)
       : [],
     court: typeof raw.court === 'string' ? raw.court.trim().slice(0, 200) || null : null,
     procedureNumber:
-      typeof raw.procedureNumber === 'string' ? raw.procedureNumber.trim().slice(0, 120) || null : null,
+      typeof raw.procedureNumber === 'string'
+        ? raw.procedureNumber.trim().slice(0, 120) || null
+        : null,
   }
 }
