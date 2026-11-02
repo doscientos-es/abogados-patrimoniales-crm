@@ -38,6 +38,17 @@ export async function subirJustificante(
   })
   if (error) throw error
   if (!data) throw new Error('No se pudo preparar el documento.')
+  if (folderId) {
+    // Same order as the Documents page: place the pending document before uploading its bytes.
+    const move = await client.rpc('crm_move_case_document', {
+      target_document_id: data.id,
+      target_folder_id: folderId,
+    })
+    if (move.error) {
+      await client.rpc('crm_abort_document_version', { target_document_id: data.id })
+      throw move.error
+    }
+  }
   await uploadPrepared(client, data, file)
   return { documentId: data.id, nombre: file.name, storagePath: data.storage_path }
 }
