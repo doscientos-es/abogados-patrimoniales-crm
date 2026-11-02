@@ -125,7 +125,15 @@ describe('lista de documentos del expediente', () => {
       doc({ id: '3', folder_id: 'b' }),
     ]
     const ids = (folder: string) =>
-      filterDocuments(inFolder, { query: '', category: 'all', folder, sort: 'recent', displayName: same }).map((item) => item.id).sort()
+      filterDocuments(inFolder, {
+        query: '',
+        category: 'all',
+        folder,
+        sort: 'recent',
+        displayName: same,
+      })
+        .map((item) => item.id)
+        .sort()
     expect(ids('all')).toEqual(['1', '2', '3'])
     expect(ids('none')).toEqual(['2'])
     expect(ids('a')).toEqual(['1'])

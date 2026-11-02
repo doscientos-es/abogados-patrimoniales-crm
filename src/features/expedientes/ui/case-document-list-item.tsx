@@ -143,11 +143,10 @@ export function CaseDocumentListItem({
               <Badge variant={version.is_current ? 'default' : 'outline'}>v{version.version}</Badge>
               <span className="min-w-0 flex-1 truncate">{version.original_name}</span>
               <span className="text-muted-foreground">
-                {formatFileSize(version.size_bytes)} · {dateTime.format(new Date(version.created_at))}
+                {formatFileSize(version.size_bytes)} ·{' '}
+                {dateTime.format(new Date(version.created_at))}
               </span>
-              {version.is_current ? (
-                <span className="text-muted-foreground">vigente</span>
-              ) : null}
+              {version.is_current ? <span className="text-muted-foreground">vigente</span> : null}
               <IconButton
                 label={`Abrir la versión ${version.version}`}
                 variant="ghost"

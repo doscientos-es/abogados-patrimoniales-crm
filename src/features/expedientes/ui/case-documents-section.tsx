@@ -1,31 +1,30 @@
 import { IconButton } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, FilePlus2, FileText, FolderOpen, LoaderCircle, Search } from 'lucide-react'
+import { FolderOpen, Search } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useDocumentNamings } from '@/features/documentos/document-naming-data'
 import {
-  CONFIDENTIALITY_LABEL,
-  CONTENT_STATUS_LABEL,
   documentCategories,
   filterDocuments,
-  formatFileSize,
+  folderOptions,
+  folderPath,
   type DocumentSort,
 } from '@/features/expedientes/application/case-documents-list'
+import { useCaseFolders } from '@/features/expedientes/infrastructure/case-document-folders'
 import {
   CASE_DOCUMENT_MIME,
-  abrirJustificante,
   subirNuevaVersion,
   validateCaseDocumentFile,
 } from '@/features/expedientes/infrastructure/case-economic-documents'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
+import { CaseDocumentListItem } from './case-document-list-item'
 import { CaseDocumentUpload } from './case-document-upload'
 
 const selectClass =

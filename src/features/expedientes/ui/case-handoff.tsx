@@ -225,14 +225,14 @@ function CaseHandoffDialog({
   )
   const content: ContenidoTraspaso = active
     ? {
-      resumen: active.resumen,
-      antecedentes: active.antecedentes,
-      alcance: active.alcance,
-      actuaciones: active.actuaciones,
-      documentos: active.documentos,
-      plazos: active.plazos,
-      provision: active.provision,
-    }
+        resumen: active.resumen,
+        antecedentes: active.antecedentes,
+        alcance: active.alcance,
+        actuaciones: active.actuaciones,
+        documentos: active.documentos,
+        plazos: active.plazos,
+        provision: active.provision,
+      }
     : contenidoVacio()
   const cutoffIso = () => {
     const value = new Date(cutoffDate)
@@ -317,10 +317,10 @@ function CaseHandoffDialog({
 
   const recibi = active
     ? textoRecibi({
-      receptor: name(active.receptorId),
-      referencia: expediente.referencia,
-      fechaCorte: active.fechaCorte ?? new Date().toISOString(),
-    })
+        receptor: name(active.receptorId),
+        referencia: expediente.referencia,
+        fechaCorte: active.fechaCorte ?? new Date().toISOString(),
+      })
     : ''
 
   const acceptHandoff = () =>

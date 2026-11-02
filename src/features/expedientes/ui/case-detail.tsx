@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import type { MiembroDespacho } from '@/features/crm'
+import { CaseOriginals } from '@/features/documentos/ui/case-physical-originals'
 import type {
   RegistrarComunicacionExpedienteInput,
   RegistrarReporteClienteInput,
@@ -60,13 +61,12 @@ import type {
 } from '@/features/expedientes/application/case-types'
 import type { FacturaPersistida } from '@/features/facturacion/application/factura-types'
 import type { NotaRemota } from '@/features/notas'
+import { PaymentEvidenceList } from '@/features/onboarding/ui/payment-evidence'
 import {
   useAnadirMensajeTarea,
   type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
-import { CaseOriginals } from '@/features/documentos/ui/case-physical-originals'
-import { PaymentEvidenceList } from '@/features/onboarding/ui/payment-evidence'
 import { REMINDER_PREFIX, RemindAssigneeDialog } from '@/features/tareas/ui/task-detail'
 import type { CaseCommunicationRow, CaseDocumentRow, Json } from '@/shared/infrastructure/supabase'
 import { NoteAuthor } from '@/shared/ui/note-author'
@@ -352,17 +352,17 @@ export function CaseDetail({
         ) : null}
         {activeTab === 'tasks'
           ? (tasksPanel ?? (
-            <TasksSection
-              firmId={firmId}
-              tasks={caseTasks}
-              expediente={item}
-              miembros={miembros}
-              labels={taskLabels}
-              pending={taskPending}
-              onCreate={onCreateTask}
-              titleTemplates={taskTitleTemplates}
-            />
-          ))
+              <TasksSection
+                firmId={firmId}
+                tasks={caseTasks}
+                expediente={item}
+                miembros={miembros}
+                labels={taskLabels}
+                pending={taskPending}
+                onCreate={onCreateTask}
+                titleTemplates={taskTitleTemplates}
+              />
+            ))
           : null}
         {activeTab === 'deadlines' ? (
           <AgendaSection
@@ -373,7 +373,9 @@ export function CaseDetail({
             members={miembros}
             pending={taskPending}
             onCreate={onCreateTask}
-            rowAction={(task) => <RemindTaskButton firmId={firmId} task={task} miembros={miembros} />}
+            rowAction={(task) => (
+              <RemindTaskButton firmId={firmId} task={task} miembros={miembros} />
+            )}
           />
         ) : null}
         {activeTab === 'history' ? (
@@ -518,12 +520,13 @@ function CaseNotes({
             return (
               <article
                 key={note.id}
-                className={`nota-tono-expediente w-full max-w-sm rounded-sm border px-3 py-2.5 shadow-md ${note.critical
-                  ? 'nota-sticker nota-sticker-critica'
-                  : note.highlighted
-                    ? 'nota-sticker nota-sticker-destacada'
-                    : ''
-                  }`}
+                className={`nota-tono-expediente w-full max-w-sm rounded-sm border px-3 py-2.5 shadow-md ${
+                  note.critical
+                    ? 'nota-sticker nota-sticker-critica'
+                    : note.highlighted
+                      ? 'nota-sticker nota-sticker-destacada'
+                      : ''
+                }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -872,8 +875,8 @@ function CaseSummary({
   const commercialIntake = asRecord(asRecord(expediente.detalles)['commercialIntake'])
   const initialDocuments = Array.isArray(commercialIntake['documentosIniciales'])
     ? commercialIntake['documentosIniciales']
-      .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
-      .filter((item): item is string => typeof item === 'string' && item.length > 0)
+        .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
   const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
   return (
@@ -1223,7 +1226,7 @@ function WorkstreamsSection({
     const currentId = ids[from]
     const targetId = ids[to]
     if (!currentId || !targetId) return
-      ;[ids[from], ids[to]] = [targetId, currentId]
+    ;[ids[from], ids[to]] = [targetId, currentId]
     try {
       await onReorder(ids)
     } catch (error) {
@@ -1422,9 +1425,9 @@ function WorkstreamCard({
   const details = lineDetails(line)
   const collaborators = Array.isArray(details['colaboradores'])
     ? details['colaboradores']
-      .map((id) => miembros.find((member) => member.id === id)?.nombre)
-      .filter(Boolean)
-      .join(', ')
+        .map((id) => miembros.find((member) => member.id === id)?.nombre)
+        .filter(Boolean)
+        .join(', ')
     : ''
 
   const patchLine = async (
@@ -1631,14 +1634,16 @@ function WorkstreamCard({
         ) : null}
         <div
           role={!nextAction && !closedStatus ? 'alert' : undefined}
-          className={`rounded-md border px-3 py-2 ${!nextAction && !closedStatus
-            ? 'border-rose-300 bg-rose-50 text-rose-800'
-            : 'border-primary/20 bg-primary/5'
-            }`}
+          className={`rounded-md border px-3 py-2 ${
+            !nextAction && !closedStatus
+              ? 'border-rose-300 bg-rose-50 text-rose-800'
+              : 'border-primary/20 bg-primary/5'
+          }`}
         >
           <p
-            className={`flex items-center gap-1 text-xs font-semibold ${!nextAction && !closedStatus ? 'text-rose-700' : 'text-primary'
-              }`}
+            className={`flex items-center gap-1 text-xs font-semibold ${
+              !nextAction && !closedStatus ? 'text-rose-700' : 'text-primary'
+            }`}
           >
             {!nextAction && !closedStatus ? (
               <AlertTriangle className="size-3.5" aria-hidden="true" />
@@ -2227,9 +2232,9 @@ function formatDate(value: string | null, includeTime = false) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString(
-      'es-ES',
-      includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
-    )
+        'es-ES',
+        includeTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+      )
 }
 function dateValue(value: string | null) {
   const timestamp = value ? Date.parse(value) : Number.POSITIVE_INFINITY

@@ -93,7 +93,14 @@ export function CaseDocumentUpload({
     }
     patch(item.id, { status: 'uploading' })
     try {
-      await subirJustificante(firmId, caseId, item.file, category, confidentiality, folderId || null)
+      await subirJustificante(
+        firmId,
+        caseId,
+        item.file,
+        category,
+        confidentiality,
+        folderId || null,
+      )
       patch(item.id, { status: 'done' })
       await queryClient.invalidateQueries({
         queryKey: ['expedientes', firmId, caseId, 'documentos'],
