@@ -1,9 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, ChevronRight } from 'lucide-react'
+import {
+  AlertTriangle,
+  ChevronRight,
+  Clock,
+  FileCheck,
+  FileSearch,
+  Hourglass,
+  Route,
+  Send,
+  UserX,
+  type LucideIcon,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMiembrosDespacho, type OportunidadResumen } from '@/features/crm'
 import type { ExpedientePersistido } from '@/features/expedientes'
@@ -11,13 +23,45 @@ import type { TareaPersistida } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 import {
-  MOTIVO_LABEL,
   filtrarIncidencias,
   incidenciasAtencion,
   type DocumentoPendiente,
   type FiltroAtencion,
   type Incidencia,
+  type MotivoAtencion,
 } from '../application/requires-attention'
+
+const PAGE_SIZE = 8
+
+const MOTIVO_STYLE: Record<MotivoAtencion, { icon: LucideIcon; tone: string; short: string }> = {
+  tarea_vencida: { icon: Clock, tone: 'bg-destructive/10 text-destructive', short: 'Vencida' },
+  espera_vencida: { icon: Hourglass, tone: 'bg-amber-100 text-amber-700', short: 'Espera vencida' },
+  tarea_sin_responsable: {
+    icon: UserX,
+    tone: 'bg-amber-100 text-amber-700',
+    short: 'Sin responsable',
+  },
+  sin_siguiente_accion: {
+    icon: Route,
+    tone: 'bg-blue-100 text-blue-700',
+    short: 'Sin siguiente acción',
+  },
+  revision_presupuesto: {
+    icon: FileCheck,
+    tone: 'bg-violet-100 text-violet-700',
+    short: 'Revisar presupuesto',
+  },
+  presupuesto_sin_seguimiento: {
+    icon: Send,
+    tone: 'bg-violet-100 text-violet-700',
+    short: 'Presupuesto sin seguimiento',
+  },
+  documento_por_comprobar: {
+    icon: FileSearch,
+    tone: 'bg-slate-100 text-slate-700',
+    short: 'Documento por comprobar',
+  },
+}
 
 const selectClass =
   'border-input bg-background h-8 rounded-md border px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -50,7 +94,7 @@ function useDocumentosPorComprobar(firmId: string) {
 
 function Destino({ incidencia, children }: { incidencia: Incidencia; children: ReactNode }) {
   const className =
-    'hover:bg-muted/50 flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm transition-colors'
+    'hover:bg-muted/50 flex items-center gap-3 rounded-md border px-3 py-1.5 text-sm transition-colors'
   const destination = incidencia.destino
   if (destination.tipo === 'tarea')
     return (
@@ -110,6 +154,14 @@ export function RequiresAttention({
     now,
   )
   const incidents = filtrarIncidencias(allIncidents, filters, userId)
+  const [page, setPage] = useState(0)
+  const pageCount = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const visible = incidents.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+  const updateFilters = (next: FiltroAtencion) => {
+    setFilters(next)
+    setPage(0)
+  }
   const name = (id: string | null) =>
     id
       ? (members.data?.find((member) => member.id === id)?.nombre ?? 'Otro miembro')
@@ -127,7 +179,7 @@ export function RequiresAttention({
             aria-label="Responsable"
             className={selectClass}
             value={filters.responsableId}
-            onChange={(event) => setFilters({ ...filters, responsableId: event.target.value })}
+            onChange={(event) => updateFilters({ ...filters, responsableId: event.target.value })}
           >
             <option value="all">Todos los responsables</option>
             <option value="none">Sin responsable</option>
@@ -141,7 +193,7 @@ export function RequiresAttention({
             <input
               type="checkbox"
               checked={filters.misTareas}
-              onChange={(event) => setFilters({ ...filters, misTareas: event.target.checked })}
+              onChange={(event) => updateFilters({ ...filters, misTareas: event.target.checked })}
             />
             Mis tareas
           </label>
@@ -150,7 +202,7 @@ export function RequiresAttention({
               type="checkbox"
               checked={filters.siguientesAcciones}
               onChange={(event) =>
-                setFilters({ ...filters, siguientesAcciones: event.target.checked })
+                updateFilters({ ...filters, siguientesAcciones: event.target.checked })
               }
             />
             Siguientes acciones
@@ -169,25 +221,62 @@ export function RequiresAttention({
           </p>
         ) : (
           <div className="space-y-2">
-            {incidents.map((incident) => (
+            {visible.map((incident) => (
               <Destino key={incident.id} incidencia={incident}>
-                <span className="min-w-0 space-y-0.5">
-                  <span className="text-muted-foreground block text-xs uppercase">
-                    {MOTIVO_LABEL[incident.motivo]}
-                  </span>
-                  <span className="block truncate font-medium">{incident.titulo}</span>
-                  <span className="text-muted-foreground block text-xs">
-                    {incident.explicacion} · {name(incident.responsableId)}
+                <span
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-full ${MOTIVO_STYLE[incident.motivo].tone}`}
+                  aria-hidden="true"
+                >
+                  {(() => {
+                    const Icon = MOTIVO_STYLE[incident.motivo].icon
+                    return <Icon className="size-3.5" />
+                  })()}
+                </span>
+                <span className="min-w-0 flex-1" title={incident.explicacion}>
+                  <span className="block truncate text-sm font-medium">{incident.titulo}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {MOTIVO_STYLE[incident.motivo].short} · {name(incident.responsableId)}
                   </span>
                 </span>
-                <ChevronRight
-                  className="text-muted-foreground mt-1 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
+                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
               </Destino>
             ))}
           </div>
         )}
+        {incidents.length > PAGE_SIZE ? (
+          <nav
+            aria-label="Paginación de incidencias"
+            className="flex items-center justify-between gap-3 pt-2 text-sm"
+          >
+            <span className="text-muted-foreground text-xs">
+              {currentPage * PAGE_SIZE + 1}–{currentPage * PAGE_SIZE + visible.length} de{' '}
+              {incidents.length}
+            </span>
+            <span className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Anterior
+              </Button>
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {currentPage + 1} / {pageCount}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={currentPage >= pageCount - 1}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Siguiente
+              </Button>
+            </span>
+          </nav>
+        ) : null}
       </CardContent>
     </Card>
   )

@@ -152,6 +152,15 @@
     border-color: var(--color-border);
   }
 
+  /* Con la app autenticada, el scroll vive en <main>; el documento nunca debe desplazarse.
+     Las páginas públicas y el acceso siguen usando el scroll normal del documento. */
+  html:has(.app-shell),
+  html:has(.app-shell) body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
