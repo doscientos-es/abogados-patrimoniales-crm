@@ -1,0 +1,33 @@
+{
+  "name": "@lex/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env.local src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file-if-exists=.env.local dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.112.4",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@doscientos/configs": "0.1.9",
+    "@types/node": "22.20.1",
+    "oxlint": "1.80.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

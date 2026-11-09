@@ -1,6 +1,18 @@
-# LEX CRM · Abogados Patrimoniales
+# LEX · Abogados Patrimoniales
 
 Aplicación web operativa para la gestión comercial y operativa de despachos de abogados patrimoniales. El producto evoluciona por fases, pero no es una maqueta ni un prototipo solo navegable.
+
+## Repositorio y aplicaciones
+
+Un único repositorio y lockfile, con dos aplicaciones desplegables por separado:
+
+- `apps/crm`: web React/TanStack; conserva sus features y la vinculación privada con ChatGPT.
+- `apps/mcp`: servicio Node independiente, sin React, Vite, Nitro ni imports del CRM.
+- `supabase`: migraciones, funciones y pruebas de la base compartida. No se duplican por app.
+- `docs` y `CHANGELOG.md`: documentación y novedades compartidas.
+
+Se conserva el nombre local `nuestro`; no se cambia la raíz Git ni se crea otro repositorio.
+No hay paquetes compartidos artificiales: se extraerán únicamente cuando exista una necesidad real.
 
 ## Alcance actual
 
@@ -18,7 +30,7 @@ Los datos de demostración deben identificarse de forma inequívoca y mantenerse
 
 ## Novedades del producto
 
-`CHANGELOG.md` es la fuente editorial; `src/features/configuracion/changelog.json` es el artefacto que consume la pestaña **Novedades** de Configuración. Se regenera automáticamente al ejecutar `pnpm dev`, `pnpm build` o `pnpm build:dev`; también puedes ejecutar `pnpm run changelog:sync` a mano. Para revisar el siguiente intervalo de commits, ejecutar `pnpm run changelog:plan`; tras redactar y añadir una entrada con `pnpm exec changelog add <sha-destino> <fecha-UTC> <título> <borrador.json>`, verifica el resultado con `pnpm run changelog:check`. Las entradas describen cambios del repositorio y no implican por sí mismas que estén desplegados.
+`CHANGELOG.md` es la fuente editorial; `apps/crm/src/features/configuracion/changelog.json` es el artefacto que consume la pestaña **Novedades** de Configuración. Se regenera automáticamente al ejecutar `pnpm dev`, `pnpm build` o `pnpm build:dev`; también puedes ejecutar `pnpm run changelog:sync` a mano. Para revisar el siguiente intervalo de commits, ejecutar `pnpm run changelog:plan`; tras redactar y añadir una entrada con `pnpm exec changelog add <sha-destino> <fecha-UTC> <título> <borrador.json>`, verifica el resultado con `pnpm run changelog:check`. Las entradas describen cambios del repositorio y no implican por sí mismas que estén desplegados.
 
 ## Modelo funcional
 
@@ -228,9 +240,43 @@ La plataforma debe conservar una interfaz profesional, sobria y ampliable, con e
 
 ## Development
 
-Para trabajar en local necesitas Node.js y pnpm.
+### MCP de solo lectura
 
-```sh
-pnpm install
-pnpm dev
-```
+Base remota desactivada por defecto, con claves personales y permisos por despacho/registro.
+Arquitectura y fases en [docs/mcp-project.md](docs/mcp-project.md); validación, publicación y
+conexión en [docs/mcp-runbook.md](docs/mcp-runbook.md). La migración y la suite SQL requieren
+validación aislada antes de habilitarlo; no incluye todavía UI de claves ni OAuth.
+
+### Desarrollo local
+
+Node.js >=22.18 y pnpm 11.25.0. Ejecutar todos los comandos desde la raíz del repositorio.
+Instalar dependencias con `pnpm install --frozen-lockfile`.
+
+| Comando                             | Acción                                                           |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `pnpm dev`                          | CRM (8080) y MCP (3001), con salida identificada por aplicación. |
+| `pnpm dev:crm` / `pnpm dev:mcp`     | Solo una aplicación.                                             |
+| `pnpm test`                         | Pruebas de ambas aplicaciones.                                   |
+| `pnpm test:crm` / `pnpm test:mcp`   | Pruebas de una aplicación.                                       |
+| `pnpm build`                        | Builds independientes de ambas aplicaciones.                     |
+| `pnpm build:crm` / `pnpm build:mcp` | Build de una aplicación.                                         |
+| `pnpm typecheck` / `pnpm lint`      | Comprobaciones de ambas aplicaciones.                            |
+
+Cada aplicación carga únicamente su `apps/<app>/.env.local`. Los archivos de entorno existentes
+del CRM se trasladan con la aplicación; no se copian al MCP. Su `/health` funciona sin claves,
+pero `/mcp` permanece desactivado por defecto. Para habilitar el piloto, seguir el runbook.
+
+### Despliegues separados
+
+- CRM: conservar su plataforma actual. Usar el workspace raíz para instalar y ejecutar
+  `pnpm build:crm`; el resultado está en `apps/crm/.output` (antes `.output`). Si la plataforma
+  usa raíz de proyecto, apuntarla a `apps/crm` y permitir acceso a la raíz del workspace.
+  El nombre del Worker de Cloudflare se conserva explícitamente en `apps/crm/vite.config.ts`.
+  Revisar las rutas y variables del proyecto de hosting **antes de publicar** este cambio.
+- MCP: Docker opcional, preparado en `apps/mcp/Dockerfile` y `compose.mcp.yaml`. También puede
+  ejecutarse con Node mediante `pnpm build:mcp` y `pnpm --filter @lex/mcp start`.
+  No necesita otro servidor físico: puede convivir con la web detrás de un proxy HTTPS.
+- La autenticación PAT actual no garantiza compatibilidad con ChatGPT; OAuth sigue pendiente.
+
+Preparación del contenedor, proxy, límites y conexión en [docs/mcp-runbook.md](docs/mcp-runbook.md).
+La separación del código no aplica migraciones ni publica servicios automáticamente.

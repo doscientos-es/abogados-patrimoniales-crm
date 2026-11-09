@@ -1,0 +1,19 @@
+services:
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - apps/mcp/.env.local
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+    ports:
+      - '127.0.0.1:3001:3001'
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

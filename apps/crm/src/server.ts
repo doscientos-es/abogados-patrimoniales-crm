@@ -87,6 +87,7 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // MCP runs in apps/mcp; this entry point only serves the web application.
       const handler = await getServerEntry()
       const response = await handler.fetch(request, env, ctx)
       return withPrivateAppHeaders(await normalizeCatastrophicSsrResponse(response), request)

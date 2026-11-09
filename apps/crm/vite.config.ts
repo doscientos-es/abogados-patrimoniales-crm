@@ -17,7 +17,11 @@ export default defineConfig({
       },
       server: { entry: 'server' },
     }),
-    nitro({ defaultPreset: 'cloudflare-module' }),
+    nitro({
+      defaultPreset: 'cloudflare-module',
+      // Keep the existing deployment identity when moving into apps/crm.
+      cloudflare: { wrangler: { name: 'doscientos-es-abogados-patrimoniales-crm' } },
+    }),
     react(),
   ],
   resolve: {

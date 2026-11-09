@@ -76,7 +76,9 @@ describe('ContactAIIntake', () => {
     expect(onApply).not.toHaveBeenCalled()
 
     const proposalCheckbox = screen.getAllByRole('checkbox')[0]
-    if (!proposalCheckbox) throw new Error('No se encontró la casilla para confirmar el dato.')
+    if (!(proposalCheckbox instanceof HTMLInputElement)) {
+      throw new Error('No se encontró la casilla para confirmar el dato.')
+    }
     expect(proposalCheckbox.checked).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar datos confirmados' }))
 

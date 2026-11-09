@@ -12,7 +12,7 @@ dist
 dist-ssr
 .output
 .vinxi
-.tanstack/**
+.tanstack/
 .nitro
 *.local
 .env
@@ -34,4 +34,4 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
-.env*
+!.env.example
