@@ -114,6 +114,17 @@ export type Database = {
         Partial<OpportunityInsert> & { id?: string; version?: number }
       >
       crm_opportunity_events: Table<OpportunityEventRow, never, never>
+      crm_lead_chatgpt_links: Table<
+        {
+          opportunity_id: string
+          user_id: string
+          conversation_url: string
+          created_at: string
+          updated_at: string
+        },
+        { opportunity_id: string; user_id: string; conversation_url: string },
+        { opportunity_id?: string; user_id?: string; conversation_url?: string }
+      >
       crm_onboardings: Table<OnboardingRow, OnboardingInsert, never>
       crm_onboarding_events: Table<OnboardingEventRow, never, never>
       crm_task_labels: Table<

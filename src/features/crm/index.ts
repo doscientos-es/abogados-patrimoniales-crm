@@ -2,6 +2,7 @@
 export * from './application'
 export * from './infrastructure/supabase-oportunidades'
 export * from './infrastructure/supabase-lead-roles'
+export * from './infrastructure/supabase-lead-chatgpt-link'
 export * from './infrastructure/supabase-quote-catalogs'
 export * from './infrastructure/quote-review-tasks'
 export * from './ui/opportunity-edit-form'

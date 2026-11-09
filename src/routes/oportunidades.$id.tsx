@@ -30,8 +30,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContacto, type ContactoPersistido } from '@/features/contactos'
-import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
-import { estadoAsistente, pickFirstMeeting } from '@/features/crm/application/first-meeting-cycle'
 import {
   OPPORTUNITY_STAGE_LABELS,
   OPPORTUNITY_TRANSITIONS,
@@ -44,12 +42,15 @@ import {
   useTransicionarOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
+import { estadoAsistente, pickFirstMeeting } from '@/features/crm/application/first-meeting-cycle'
+import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
+import { LeadChatgptAction } from '@/features/crm/ui/lead-chatgpt-action'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
-import { NoNextActionWarning } from '@/features/crm/ui/no-next-action-warning'
 import { LeadParticipantsTree } from '@/features/crm/ui/lead-participants-tree'
 import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
+import { NoNextActionWarning } from '@/features/crm/ui/no-next-action-warning'
 import { QuoteAcceptancePanel } from '@/features/crm/ui/quote-acceptance-panel'
 import { QuoteEditor } from '@/features/crm/ui/quote-editor'
 import { QuoteSendPanel } from '@/features/crm/ui/quote-send-panel'
@@ -191,7 +192,9 @@ function FichaOportunidadPage() {
   const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
   const initialViability = asRecord(asRecord(data.detalles)['viabilidadInicial'])['resultado']
   const viabilityAllowsMeeting = permitePrimeraCita(
-    initialViability === 'apto' || initialViability === 'pendiente' || initialViability === 'no_apto'
+    initialViability === 'apto' ||
+      initialViability === 'pendiente' ||
+      initialViability === 'no_apto'
       ? initialViability
       : undefined,
   )
@@ -207,7 +210,7 @@ function FichaOportunidadPage() {
   )
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
-      <header className="rounded-xl border bg-card px-4 py-3 sm:px-5">
+      <header className="bg-card rounded-xl border px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <Link
             to="/oportunidades"
@@ -236,6 +239,10 @@ function FichaOportunidadPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
+            <LeadChatgptAction
+              key={`${membership.data.firmId}:${data.id}:${session.user.id}`}
+              scope={{ firmId: membership.data.firmId, leadId: data.id, userId: session.user.id }}
+            />
             <Link
               to="/contactos/$id"
               params={{ id: data.contactoId }}
@@ -262,11 +269,11 @@ function FichaOportunidadPage() {
         />
       ) : null}
       {!data.archivadoEn &&
-        data.fase !== 'lost' &&
-        !tareas.isPending &&
-        !relatedTasks.some(
-          (task) => task.esSiguienteAccion && !['Completada', 'Cancelada'].includes(task.estado),
-        ) ? (
+      data.fase !== 'lost' &&
+      !tareas.isPending &&
+      !relatedTasks.some(
+        (task) => task.esSiguienteAccion && !['Completada', 'Cancelada'].includes(task.estado),
+      ) ? (
         <NoNextActionWarning onDefine={() => setActiveTab('tasks')} />
       ) : null}
       <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
@@ -572,10 +579,7 @@ export function LeadContextSummary({ opportunity }: { opportunity: OportunidadPe
         <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
           <LeadSummaryItem label="Asunto" value={opportunity.titulo || '—'} />
           <LeadSummaryItem label="Área jurídica" value={opportunity.area || '—'} />
-          <LeadSummaryItem
-            label="Qué ha ocurrido"
-            value={contextValue(initial['queHaOcurrido'])}
-          />
+          <LeadSummaryItem label="Qué ha ocurrido" value={contextValue(initial['queHaOcurrido'])} />
           <LeadSummaryItem label="Qué solicita" value={contextValue(initial['queSolicita'])} />
           <LeadSummaryItem
             label="Procedimiento iniciado"
@@ -967,11 +971,11 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? 'Sin fecha'
     : new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(date)
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(date)
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
