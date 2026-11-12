@@ -2,12 +2,23 @@ import { describe, expect, it } from 'vitest'
 
 import {
   PARTICIPANT_TYPES,
+  participantRoleOptions,
   participantTypeFromRole,
   possibleDuplicates,
   reorderParticipants,
 } from './participant-groups'
 
 describe('participant types', () => {
+  it('permite archivar tipos por defecto y añadir roles propios sin duplicados', () => {
+    const roles = participantRoleOptions([
+      { name: 'Letrado', archived: true },
+      { name: 'Mediador', archived: false },
+      { name: 'cliente', archived: false },
+    ])
+    expect(roles).not.toContain('Letrado')
+    expect(roles).toContain('Mediador')
+    expect(roles.filter((role) => role.toLowerCase() === 'cliente')).toHaveLength(1)
+  })
   it('offers exactly the Infolex intervention types', () => {
     expect(PARTICIPANT_TYPES).toEqual([
       'Cliente',

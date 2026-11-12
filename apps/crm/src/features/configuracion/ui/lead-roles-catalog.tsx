@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
+import { PARTICIPANT_TYPES } from '@/features/expedientes/application/participant-groups'
 import { getSupabaseBrowserClient, type LeadRoleRow } from '@/shared/infrastructure/supabase'
 
 export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canManage: boolean }) {
@@ -31,13 +32,34 @@ export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canMan
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: key })
     void queryClient.invalidateQueries({ queryKey: ['crm', 'lead-roles', firmId] })
+    void queryClient.invalidateQueries({ queryKey: ['crm', 'participant-roles', firmId] })
   }
+  const defaultRoles = [...new Set([...PARTICIPANT_TYPES, ...DEFAULT_LEAD_ROLES])]
+  const rows = [
+    ...(query.data ?? []),
+    ...defaultRoles
+      .filter(
+        (role) =>
+          !(query.data ?? []).some(
+            (row) => row.name.trim().toLocaleLowerCase('es') === role.toLocaleLowerCase('es'),
+          ),
+      )
+      .map((role) => ({ id: '', name: role, archived: false })),
+  ]
   const add = useMutation({
     mutationFn: async (names: string[]) => {
       if (!client) throw new Error('Supabase no está configurado.')
       const normalized = names.map((value) => value.trim()).filter(Boolean)
       if (normalized.some((value) => value.length > 120))
         throw new Error('Cada rol admite hasta 120 caracteres.')
+      if (
+        normalized.some((value) =>
+          rows.some(
+            (row) => row.name.trim().toLocaleLowerCase('es') === value.toLocaleLowerCase('es'),
+          ),
+        )
+      )
+        throw new Error('Este rol ya existe; recupéralo si está archivado.')
       const { error } = await client
         .from('crm_lead_roles')
         .insert(normalized.map((value) => ({ firm_id: firmId, name: value })))
@@ -45,18 +67,23 @@ export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canMan
     },
     onSuccess: () => {
       refresh()
+      setName('')
       toast.success('Roles del Lead actualizados.')
     },
-    onError: () => toast.error('No se han podido guardar los roles. Comprueba si ya existen.'),
+    onError: (error) => toast.error(error.message || 'No se han podido guardar los roles.'),
   })
   const toggle = useMutation({
-    mutationFn: async (row: LeadRoleRow) => {
+    mutationFn: async (row: { id: string; name: string; archived: boolean }) => {
       if (!client) throw new Error('Supabase no está configurado.')
-      const { error } = await client
-        .from('crm_lead_roles')
-        .update({ archived: !row.archived })
-        .eq('id', row.id)
-        .eq('firm_id', firmId)
+      const { error } = row.id
+        ? await client
+            .from('crm_lead_roles')
+            .update({ archived: !row.archived })
+            .eq('id', row.id)
+            .eq('firm_id', firmId)
+        : await client
+            .from('crm_lead_roles')
+            .insert({ firm_id: firmId, name: row.name, archived: true })
       if (error) throw error
     },
     onSuccess: refresh,
@@ -90,7 +117,6 @@ export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canMan
                   event.preventDefault()
                   if (name.trim()) {
                     add.mutate([name])
-                    setName('')
                   }
                 }}
               >
@@ -106,52 +132,37 @@ export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canMan
                 </Button>
               </form>
             ) : null}
-            {query.data.length === 0 ? (
-              <div className="space-y-2">
-                <p className="text-muted-foreground text-sm">
-                  Aún no hay roles propios; el selector usa las sugerencias por defecto.
-                </p>
-                {canManage ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={add.isPending}
-                    onClick={() => add.mutate([...DEFAULT_LEAD_ROLES])}
-                  >
-                    Cargar sugerencias por defecto para editarlas
-                  </Button>
-                ) : null}
-              </div>
-            ) : (
-              <ul className="divide-y rounded-md border">
-                {query.data.map((row) => (
-                  <li key={row.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className={row.archived ? 'text-muted-foreground line-through' : ''}>
-                      {row.name}
-                    </span>
-                    {canManage ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={toggle.isPending}
-                        onClick={() => toggle.mutate(row)}
-                        aria-label={`${row.archived ? 'Recuperar' : 'Archivar'} ${row.name}`}
-                      >
-                        {row.archived ? (
-                          <>
-                            <RotateCcw className="h-4 w-4" /> Recuperar
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-4 w-4" /> Archivar
-                          </>
-                        )}
-                      </Button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul className="divide-y rounded-md border">
+              {rows.map((row) => (
+                <li
+                  key={row.id || `default-${row.name}`}
+                  className="flex items-center justify-between px-3 py-2 text-sm"
+                >
+                  <span className={row.archived ? 'text-muted-foreground line-through' : ''}>
+                    {row.name}
+                  </span>
+                  {canManage ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={toggle.isPending}
+                      onClick={() => toggle.mutate(row)}
+                      aria-label={`${row.archived ? 'Recuperar' : 'Archivar'} ${row.name}`}
+                    >
+                      {row.archived ? (
+                        <>
+                          <RotateCcw className="h-4 w-4" /> Recuperar
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-4 w-4" /> Archivar
+                        </>
+                      )}
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </CardContent>

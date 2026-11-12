@@ -342,7 +342,11 @@ export function CaseParticipantsPanel({
           Intervinientes
           <span className="text-muted-foreground ml-2 text-sm font-normal">{top.length}</span>
         </h2>
-        <Button size="sm" onClick={() => setDialog({ mode: 'create' })}>
+        <Button
+          size="sm"
+          disabled={roles.isPending || roles.isError}
+          onClick={() => setDialog({ mode: 'create' })}
+        >
           <Plus className="size-4" /> Añadir interviniente
         </Button>
       </div>

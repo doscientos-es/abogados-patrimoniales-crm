@@ -113,7 +113,12 @@ export function CaseParticipantDialog({
 
   useEffect(() => {
     if (!open) return
-    setTipo(initial?.tipo ?? (subordinate ? INTERNAL_CONTACT_ROLE : 'Cliente'))
+    setTipo(
+      initial?.tipo ??
+        (subordinate
+          ? INTERNAL_CONTACT_ROLE
+          : (roles.find((role) => role.toLocaleLowerCase('es') === 'cliente') ?? roles[0] ?? '')),
+    )
     setSelected(contactos.find((c) => c.id === initial?.contactoId) ?? null)
     setMiembroId(initial?.miembroId ?? '')
     setRef(initial?.ref ?? '')
@@ -125,7 +130,7 @@ export function CaseParticipantDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const isResponsable = !subordinate && tipo === 'Responsable'
+  const isResponsable = !subordinate && tipo.toLocaleLowerCase('es') === 'responsable'
   const options = Array.from(
     new Set([...(subordinate ? [INTERNAL_CONTACT_ROLE] : []), ...roles, tipo]),
   )
@@ -512,7 +517,7 @@ export function CaseParticipantDialog({
           </Button>
           <Button
             onClick={() => void submit()}
-            disabled={busy || pending || (!isResponsable && !selected && !creating)}
+            disabled={busy || pending || !tipo || (!isResponsable && !selected && !creating)}
           >
             {creating ? 'Crear persona y guardar' : 'Guardar'}
           </Button>

@@ -1,3 +1,5 @@
+import { activeRoleOptions, DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
+
 // Tipos de intervención en un expediente (modelo «Implicados»).
 // La persona vive una sola vez en Contactos; su papel en ESTE expediente
 // (tipo, ref., descripción, orden, contacto subordinado) vive en la intervención.
@@ -21,19 +23,14 @@ export const PARTICIPANT_TYPES = [
 
 export type ParticipantType = (typeof PARTICIPANT_TYPES)[number]
 
-/** Tipo fijo de los contactos subordinados a un interviniente. */
+/** Tipo predeterminado de los contactos subordinados a un interviniente. */
 export const INTERNAL_CONTACT_ROLE = 'Contacto interno'
 
 /** Incluye los tipos por defecto, salvo los archivados en el catálogo del despacho. */
 export function participantRoleOptions(
   rows: readonly { name: string; archived: boolean }[],
 ): string[] {
-  const key = (name: string) => name.trim().toLocaleLowerCase('es')
-  const names = new Map<string, string>()
-  for (const name of PARTICIPANT_TYPES) names.set(key(name), name)
-  for (const row of rows) if (row.archived) names.delete(key(row.name))
-  for (const row of rows) if (!row.archived) names.set(key(row.name), row.name)
-  return [...names.values()]
+  return activeRoleOptions([...PARTICIPANT_TYPES, ...DEFAULT_LEAD_ROLES], rows)
 }
 
 const LEGACY: Array<[ParticipantType, RegExp]> = [

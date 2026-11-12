@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
+import { activeRoleOptions, DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export function useLeadRoles(firmId: string | undefined) {
@@ -12,13 +12,11 @@ export function useLeadRoles(firmId: string | undefined) {
       if (!client || !firmId) return [...DEFAULT_LEAD_ROLES]
       const { data, error } = await client
         .from('crm_lead_roles')
-        .select('name')
+        .select('name,archived')
         .eq('firm_id', firmId)
-        .eq('archived', false)
         .order('name')
       if (error) throw error
-      const roles = (data ?? []).map((row) => row.name)
-      return roles.length ? roles : [...DEFAULT_LEAD_ROLES]
+      return activeRoleOptions(DEFAULT_LEAD_ROLES, data ?? [])
     },
   })
 }
