@@ -6,7 +6,6 @@ import {
   LoaderCircle,
   Mail,
   Phone,
-  Pin,
   Plus,
   StickyNote,
 } from 'lucide-react'
@@ -43,10 +42,12 @@ import { useExpedientesPersistentes } from '@/features/expedientes'
 import { formatCurrency, useFacturas } from '@/features/facturacion'
 import {
   notaDesdeRemota,
+  notesForContact,
   useCrearNotaPersona,
   useNotasRemotas,
   type DisparadorNota,
 } from '@/features/notas'
+import { InternalNoteSticker } from '@/features/notas/ui/internal-note-sticker'
 import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
 
@@ -144,13 +145,9 @@ export function ContactDetail({
       (item.oportunidadId !== null && opportunityIds.has(item.oportunidadId)),
   )
   const invoices = (invoicesQuery.data ?? []).filter((item) => item.contactoId === contactId)
-  const notes = (notesQuery.data ?? [])
-    .filter(
-      (item) =>
-        item.contactIds.includes(contactId) ||
-        (item.scope === 'person' && item.origin_id === contactId),
-    )
-    .map(notaDesdeRemota)
+  const notes = notesForContact(notesQuery.data ?? [], contactId, opportunityIds).map(
+    notaDesdeRemota,
+  )
   const latestNotes = notes.filter((note) => note.estado === 'activa').slice(0, 3)
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
@@ -542,16 +539,16 @@ export function ContactDetail({
               </Button>
             </CardHeader>
             <CardContent>
-              {notesQuery.isPending ? (
+              {notesQuery.isPending || opportunitiesQuery.isPending ? (
                 <p className="text-muted-foreground text-sm">Cargando notas internas…</p>
-              ) : notesQuery.isError ? (
+              ) : notesQuery.isError || opportunitiesQuery.isError ? (
                 <p className="text-muted-foreground text-sm">
                   No se pudieron cargar las notas internas.
                 </p>
               ) : latestNotes.length ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {latestNotes.map((note) => (
-                    <ContactNotePostit key={note.id} note={note} />
+                    <InternalNoteSticker key={note.id} note={note} />
                   ))}
                 </div>
               ) : (
@@ -806,8 +803,8 @@ export function ContactDetail({
       {activeTab === 'notes' ? (
         <ContactInternalNotes
           notes={notes}
-          loading={notesQuery.isPending}
-          error={notesQuery.isError}
+          loading={notesQuery.isPending || opportunitiesQuery.isPending}
+          error={notesQuery.isError || opportunitiesQuery.isError}
           creating={createNote.isPending}
           onCreate={(input) =>
             createNote.mutateAsync({
@@ -826,37 +823,6 @@ export function ContactDetail({
         />
       ) : null}
     </main>
-  )
-}
-
-function ContactNotePostit({ note }: { note: ReturnType<typeof notaDesdeRemota> }) {
-  const scopeLabels: Record<typeof note.ambito, string> = {
-    persona: 'Contacto',
-    expediente: 'Expediente',
-    oportunidad: 'Lead',
-    ejecucion: 'Ejecución',
-    presupuesto: 'Presupuesto',
-  }
-  return (
-    <article
-      className={`nota-tono-${note.ambito} flex min-h-40 w-full flex-col rounded-sm border p-4 shadow-md transition-transform hover:-translate-y-0.5 ${note.critica ? 'nota-sticker nota-sticker-critica ring-destructive/70 ring-2' : note.destacada ? 'nota-sticker nota-sticker-destacada' : ''}`}
-      aria-label={`${scopeLabels[note.ambito]}${note.titulo ? `: ${note.titulo}` : ''}`}
-    >
-      <header className="flex items-start justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide uppercase">
-          <StickyNote className="size-3.5" aria-hidden="true" />
-          {scopeLabels[note.ambito]}
-        </span>
-        {note.destacada ? <Pin className="size-4 shrink-0" aria-label="Destacada" /> : null}
-      </header>
-      <h3 className="mt-2 font-serif text-base leading-snug font-semibold">
-        {note.titulo || 'Nota interna'}
-      </h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed whitespace-pre-wrap">{note.contenido}</p>
-      <p className="mt-3 text-xs opacity-70">
-        {note.autor} · {note.creada}
-      </p>
-    </article>
   )
 }
 
@@ -944,9 +910,9 @@ export function LegacyContactInternalNotes({
       : scope === 'expediente'
         ? caseOptions.map((item) => ({ id: item.id, label: `${item.referencia} · ${item.titulo}` }))
         : opportunityOptions.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+          }))
   const selectedRelated = relatedOptions.find((item) => item.id === originId)
 
   const changeScope = (next: ContactNoteScope) => {
@@ -1315,7 +1281,7 @@ export function LegacyContactInternalNotes({
       ) : notes.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {notes.map((note) => (
-            <ContactNotePostit key={note.id} note={note} />
+            <InternalNoteSticker key={note.id} note={note} />
           ))}
         </div>
       ) : (
@@ -1363,6 +1329,9 @@ export function ContactInternalNotes({
         <p className="text-muted-foreground mt-1 text-sm">
           Información de contexto para el equipo, no visible para el cliente ni terceros.
         </p>
+        <Link to="/notas" className="text-primary mt-2 inline-block text-sm underline">
+          Gestionar y editar notas
+        </Link>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <DraftNote
@@ -1385,7 +1354,7 @@ export function ContactInternalNotes({
             />
           </div>
         ) : (
-          notes.map((note) => <ContactNotePostit key={note.id} note={note} />)
+          notes.map((note) => <InternalNoteSticker key={note.id} note={note} />)
         )}
       </div>
     </section>

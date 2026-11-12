@@ -388,6 +388,7 @@ export function CaseParticipantsPanel({
       )}
 
       <CaseParticipantDialog
+        firmId={firmId}
         open={dialog !== null}
         onOpenChange={(open) => !open && setDialog(null)}
         titular={dialogTitular}

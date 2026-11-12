@@ -35,6 +35,7 @@ import {
   useActualizarDetallesOportunidad,
   useEventosOportunidad,
   useMiembrosDespacho,
+  useOportunidadesCompletas,
   useRegistrarComunicacionOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
@@ -44,9 +45,14 @@ import {
 } from '@/features/crm/application/lead-document-reconciliation'
 import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
 import { LeadCommunicationsTimeline } from '@/features/crm/ui/lead-communications-timeline'
-import { useCrearNotaOportunidad, useNotasRemotas } from '@/features/notas'
+import {
+  notaDesdeRemota,
+  notesForContact,
+  useCrearNotaOportunidad,
+  useNotasRemotas,
+} from '@/features/notas'
+import { InternalNoteSticker } from '@/features/notas/ui/internal-note-sticker'
 import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
-import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 import {
   useCompletarTarea,
   useCrearTarea,
@@ -54,6 +60,7 @@ import {
   type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
+import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 import { getSupabaseBrowserClient, type Json } from '@/shared/infrastructure/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -111,6 +118,7 @@ export function LeadWorkspace({
   const members = useMiembrosDespacho(firmId)
   const tasks = useTareasLead(firmId, opportunity.id)
   const notes = useNotasRemotas(firmId)
+  const opportunities = useOportunidadesCompletas(section === 'notes' ? firmId : undefined)
   const onboardings = useOnboardings(firmId)
   const saveDetails = useActualizarDetallesOportunidad(firmId)
   const createTask = useCrearTarea(firmId)
@@ -183,8 +191,8 @@ export function LeadWorkspace({
   const requestedDocuments = ensureRequiredLeadDocumentRequests(
     Array.isArray(details['documentacionSolicitada'])
       ? details['documentacionSolicitada'].filter(
-        (value): value is string => typeof value === 'string',
-      )
+          (value): value is string => typeof value === 'string',
+        )
       : [],
   )
   const reconciledDocuments = reconcileRequestedLeadDocuments(
@@ -196,7 +204,17 @@ export function LeadWorkspace({
     ? details['otrosIntervinientes']
     : []
   const relatedTasks = tasks.data ?? []
-  const relatedNotes = (notes.data ?? []).filter((note) => note.opportunity_id === opportunity.id)
+  const contactOpportunityIds = new Set(
+    (opportunities.data ?? [])
+      .filter((item) => item.contactoId === opportunity.contactoId)
+      .map((item) => item.id),
+  )
+  contactOpportunityIds.add(opportunity.id)
+  const relatedNotes = notesForContact(
+    notes.data ?? [],
+    opportunity.contactoId,
+    contactOpportunityIds,
+  ).map(notaDesdeRemota)
   const memberNames = new Map((members.data ?? []).map((member) => [member.id, member.nombre]))
   const linkedOnboarding = (onboardings.data ?? []).find(
     (item) => item.oportunidadId === opportunity.id,
@@ -304,19 +322,19 @@ export function LeadWorkspace({
             condiciones: formText(form, 'quoteConditions'),
             ...(status === 'Validado' && canReviewQuote
               ? {
-                validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
-                fechaValidacion: new Date().toISOString(),
-                validadoVersion: version,
-              }
+                  validadoPor: membership.data?.role === 'owner' ? 'Propietario' : 'Administrador',
+                  fechaValidacion: new Date().toISOString(),
+                  validadoVersion: version,
+                }
               : {}),
             ...(version !== previousVersion
               ? { validadoVersion: null, validadoPor: null, fechaValidacion: null }
               : {}),
             historial: historyChanged
               ? [
-                ...history,
-                { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
-              ]
+                  ...history,
+                  { version, estado: status, fecha: new Date().toISOString(), responsable: owner },
+                ]
               : history,
           },
         },
@@ -351,11 +369,11 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'validation'
           ? {
-            transicionContratacion: {
-              fase: 'engagement' as const,
-              subestado: 'Pendiente de aceptación',
-            },
-          }
+              transicionContratacion: {
+                fase: 'engagement' as const,
+                subestado: 'Pendiente de aceptación',
+              },
+            }
           : {}),
         detalles: {
           ...details,
@@ -514,12 +532,12 @@ export function LeadWorkspace({
         versionEsperada: opportunity.version,
         ...(opportunity.fase === 'engagement'
           ? {
-            transicionContratacion: {
-              fase: 'validation' as const,
-              subestado: 'Rectificación solicitada',
-              motivo: revisionRequest,
-            },
-          }
+              transicionContratacion: {
+                fase: 'validation' as const,
+                subestado: 'Rectificación solicitada',
+                motivo: revisionRequest,
+              },
+            }
           : {}),
         detalles: {
           ...details,
@@ -870,18 +888,24 @@ export function LeadWorkspace({
             <CardTitle className="text-base">Notas internas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {relatedNotes.map((note) => (
-              <article key={note.id} className="border-b pb-2 text-sm">
-                <p className="font-medium">
-                  {note.title || 'Nota interna'}
-                  {note.highlighted ? ' · Destacada' : ''}
-                </p>
-                <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{note.content}</p>
-              </article>
-            ))}
-            {!relatedNotes.length && !notes.isPending ? (
+            {notes.isPending || opportunities.isPending ? (
+              <p className="text-muted-foreground text-sm">Cargando notas internas…</p>
+            ) : notes.isError || opportunities.isError ? (
+              <p role="alert" className="text-destructive text-sm">
+                No se pudieron cargar las notas internas.
+              </p>
+            ) : relatedNotes.length ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {relatedNotes.map((note) => (
+                  <InternalNoteSticker key={note.id} note={note} />
+                ))}
+              </div>
+            ) : (
               <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
-            ) : null}
+            )}
+            <Link to="/notas" className="text-primary inline-block text-sm underline">
+              Gestionar y editar notas
+            </Link>
             <LeadNoteDialog
               title={noteTitle}
               content={noteContent}
@@ -1386,7 +1410,7 @@ export function LeadWorkspace({
               </div>
             </form>
             {text(quote['estado']) !== 'Validado' ||
-              quote['validadoVersion'] !== quote['version'] ? (
+            quote['validadoVersion'] !== quote['version'] ? (
               <p className="text-destructive text-xs">
                 La versión actual del presupuesto debe estar validada antes de registrar el envío.
               </p>
@@ -2111,16 +2135,16 @@ function qualificationQuestions(value: Json | undefined): QualificationQuestion[
     const questionText = text(record['texto']) || text(record['text']) || text(question)
     return questionText
       ? [
-        {
-          id: text(record['id']) || `question-${index}`,
-          text: questionText,
-          response:
-            record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
-              ? record['respuesta']
-              : 'Pendiente',
-          observation: text(record['observacion']),
-        },
-      ]
+          {
+            id: text(record['id']) || `question-${index}`,
+            text: questionText,
+            response:
+              record['respuesta'] === 'Sí' || record['respuesta'] === 'No'
+                ? record['respuesta']
+                : 'Pendiente',
+            observation: text(record['observacion']),
+          },
+        ]
       : []
   })
 }

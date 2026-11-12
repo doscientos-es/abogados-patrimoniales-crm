@@ -15,6 +15,7 @@ export {
   CONTACT_DOCUMENT_MIME,
   uploadContactDocument,
 } from './infrastructure/upload-contact-document'
+export { useContactPhoneCandidates } from './infrastructure/contact-phone-candidates'
 export {
   useContactBankAccounts,
   useReplaceContactBankAccount,

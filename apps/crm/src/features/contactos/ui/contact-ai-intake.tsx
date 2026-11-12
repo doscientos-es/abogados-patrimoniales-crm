@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { CONTACT_DOCUMENT_MIME } from '@/features/contactos'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 import { LexiaIcon } from '@/shared/ui/lexia'
 
@@ -54,20 +55,26 @@ export function ContactAIIntake({
   onApply,
 }: {
   firmId: string
-  onApply: (values: Record<string, string>) => void
+  onApply: (values: Record<string, string>, documents: File[]) => void
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
+  const [consented, setConsented] = useState(false)
+  const [attachDocuments, setAttachDocuments] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [fields, setFields] = useState<ExtractedField[]>([])
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [documents, setDocuments] = useState<File[]>([])
 
   const changeOpen = (nextOpen: boolean) => {
     if (!nextOpen && processing) return
     setOpen(nextOpen)
     if (!nextOpen) {
+      setConsented(false)
+      setAttachDocuments(true)
       setFields([])
       setSelected(new Set())
+      setDocuments([])
       if (fileInput.current) fileInput.current.value = ''
     }
   }
@@ -76,6 +83,11 @@ export function ContactAIIntake({
     if (!files?.length) return
     if (files.length > 5) {
       toast.error('Puedes procesar como máximo 5 documentos a la vez.')
+      if (fileInput.current) fileInput.current.value = ''
+      return
+    }
+    if (!consented) {
+      toast.error('Confirma primero que autorizas la lectura del documento con LEXIA.')
       if (fileInput.current) fileInput.current.value = ''
       return
     }
@@ -114,6 +126,11 @@ export function ContactAIIntake({
           }
           throw new Error(message)
         }
+        const document =
+          file.type === mime
+            ? file
+            : new File([file], file.name, { type: mime, lastModified: file.lastModified })
+        setDocuments((current) => [...current, document])
         const extracted = (data?.fields ?? []).flatMap((item, index) => {
           if (
             typeof item.field !== 'string' ||
@@ -169,12 +186,18 @@ export function ContactAIIntake({
     const values = Object.fromEntries(
       fields.filter((field) => selected.has(field.id)).map((field) => [field.field, field.value]),
     )
-    if (!Object.keys(values).length) {
-      toast.error('Confirma al menos un dato para trasladarlo al formulario.')
+    if (!Object.keys(values).length && !(attachDocuments && documents.length)) {
+      toast.error('Selecciona al menos un dato o documento para trasladarlo al formulario.')
       return
     }
-    onApply(values)
-    toast.success(`${Object.keys(values).length} dato(s) trasladados. Revísalos antes de guardar.`)
+    if (attachDocuments && documents.some((file) => !CONTACT_DOCUMENT_MIME.includes(file.type))) {
+      toast.error(
+        'Los archivos WEBP no se pueden adjuntar. Usa PDF, JPG o PNG, o desmarca la opción de adjuntar.',
+      )
+      return
+    }
+    onApply(values, attachDocuments ? documents : [])
+    toast.success('Datos y documentos preparados. Revísalos antes de guardar.')
     changeOpen(false)
   }
 
@@ -195,7 +218,7 @@ export function ContactAIIntake({
               <LexiaIcon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-sm font-semibold normal-case tracking-normal">
+              <DialogTitle className="text-sm font-semibold tracking-normal normal-case">
                 Datos del contacto
               </DialogTitle>
               <DialogDescription className="mt-0.5 text-xs">
@@ -205,8 +228,28 @@ export function ContactAIIntake({
           </div>
         </DialogHeader>
 
-        <div className="grid min-h-0 gap-5 overflow-y-auto bg-muted/10 p-4 sm:p-6 md:min-h-[26rem] md:grid-cols-[minmax(17rem,0.9fr)_minmax(0,1.1fr)]">
+        <div className="bg-muted/10 grid min-h-0 gap-5 overflow-y-auto p-4 sm:p-6 md:min-h-[26rem] md:grid-cols-[minmax(17rem,0.9fr)_minmax(0,1.1fr)]">
           <section className="space-y-3" aria-label="Carga de documentos">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={consented}
+                onChange={(event) => setConsented(event.target.checked)}
+                className="mt-1"
+              />
+              <span>Autorizo enviar los documentos a OpenAI para extraer sus datos.</span>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={attachDocuments}
+                onChange={(event) => setAttachDocuments(event.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                Adjuntar los documentos a la ficha del contacto al crearlo (PDF, JPG o PNG).
+              </span>
+            </label>
             <input
               ref={fileInput}
               aria-label="Seleccionar documentos PDF o imágenes"
@@ -227,7 +270,7 @@ export function ContactAIIntake({
               <Button
                 type="button"
                 className="mt-5 h-11 w-full max-w-xs"
-                disabled={processing}
+                disabled={processing || !consented}
                 onClick={() => fileInput.current?.click()}
               >
                 {processing ? (
@@ -242,13 +285,10 @@ export function ContactAIIntake({
                 <span className="px-1">·</span> máximo 4 MB
               </p>
               {processing ? (
-                <p
-                  role="status"
-                  className="text-primary mt-4 flex items-center gap-2 rounded-full bg-primary/5 px-3 py-2 text-xs"
-                >
+                <output className="text-primary bg-primary/5 mt-4 flex items-center gap-2 rounded-full px-3 py-2 text-xs">
                   <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
                   LEXIA está leyendo los documentos…
-                </p>
+                </output>
               ) : null}
             </div>
           </section>
@@ -270,10 +310,11 @@ export function ContactAIIntake({
                 {fields.map((field) => (
                   <div
                     key={field.id}
-                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2.5 rounded-xl border p-3 text-sm shadow-sm transition-colors ${selected.has(field.id)
+                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2.5 rounded-xl border p-3 text-sm shadow-sm transition-colors ${
+                      selected.has(field.id)
                         ? 'border-primary/30 bg-primary/5'
                         : 'bg-background hover:border-primary/30'
-                      }`}
+                    }`}
                   >
                     <label className="contents">
                       <input
@@ -283,14 +324,14 @@ export function ContactAIIntake({
                         className="border-input accent-primary mt-0.5 h-4 w-4 rounded"
                       />
                       <span className="min-w-0 cursor-pointer">
-                        <span className="block font-medium leading-snug">{field.label}</span>
+                        <span className="block leading-snug font-medium">{field.label}</span>
                         <span className="mt-0.5 block break-words">{field.value}</span>
                         {field.excerpt ? (
                           <span className="text-muted-foreground mt-1 block text-xs leading-snug">
                             «{field.excerpt}»
                           </span>
                         ) : null}
-                        <span className="text-muted-foreground mt-1.5 inline-flex max-w-full truncate rounded bg-muted px-1.5 py-0.5 text-[11px]">
+                        <span className="text-muted-foreground bg-muted mt-1.5 inline-flex max-w-full truncate rounded px-1.5 py-0.5 text-[11px]">
                           Fuente: {field.source}
                         </span>
                       </span>
@@ -326,7 +367,7 @@ export function ContactAIIntake({
           </section>
         </div>
 
-        <DialogFooter className="shrink-0 border-t bg-background/95 px-5 py-3 backdrop-blur sm:px-6">
+        <DialogFooter className="bg-background/95 shrink-0 border-t px-5 py-3 backdrop-blur sm:px-6">
           {selected.size ? (
             <p className="text-muted-foreground mr-auto self-center text-xs">
               {selected.size} {selected.size === 1 ? 'dato seleccionado' : 'datos seleccionados'}
@@ -340,7 +381,11 @@ export function ContactAIIntake({
           >
             Cerrar
           </Button>
-          <Button type="button" disabled={!selected.size || processing} onClick={applySelected}>
+          <Button
+            type="button"
+            disabled={processing || (!selected.size && !(attachDocuments && documents.length))}
+            onClick={applySelected}
+          >
             Aplicar datos confirmados
           </Button>
         </DialogFooter>

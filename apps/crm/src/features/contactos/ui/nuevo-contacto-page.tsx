@@ -9,9 +9,15 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useCrearContacto, type Naturaleza, type RelacionDespacho } from '@/features/contactos'
+import {
+  uploadContactDocument,
+  useContactPhoneCandidates,
+  useCrearContacto,
+  type Naturaleza,
+  type RelacionDespacho,
+} from '@/features/contactos'
+import { findContactPhoneDuplicates } from '@/features/contactos/application/contact-phone-duplicates'
 import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
@@ -26,17 +32,6 @@ const RELATIONSHIPS: RelacionDespacho[] = [
   'Tercero',
   'Contraparte',
   'Proveedor',
-]
-const ORIGINS = [
-  'Recomendación de cliente',
-  'Recomendación profesional',
-  'Página web',
-  'Redes sociales',
-  'Publicidad',
-  'Contacto directo',
-  'Cliente anterior',
-  'Colaborador',
-  'Otro',
 ]
 const COUNTRIES = ['España', 'Francia', 'Portugal', 'Reino Unido', 'Andorra']
 const CONTACT_FIELD_NAMES = [
@@ -95,26 +90,37 @@ export function NuevoContactoPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const createContact = useCrearContacto(firmId)
+  const phoneCandidates = useContactPhoneCandidates(firmId)
   const createNote = useCrearNotaPersona(firmId)
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [origin, setOrigin] = useState('')
+  const [documents, setDocuments] = useState<File[]>([])
+  const [saving, setSaving] = useState(false)
+  const [phones, setPhones] = useState<string[]>(['', ''])
+  const [confirmedDuplicates, setConfirmedDuplicates] = useState<string[]>([])
   const [notes, setNotes] = useState<
     { title: string; content: string; highlighted: boolean; critical: boolean }[]
   >([])
   const formRef = useRef<HTMLFormElement>(null)
+  const submitting = useRef(false)
+  const duplicatePhones = findContactPhoneDuplicates(phoneCandidates.data ?? [], phones)
 
-  const applyAIValues = (values: Record<string, string>) => {
+  const updatePhones = () => {
+    if (!formRef.current) return
+    const form = new FormData(formRef.current)
+    setPhones([formText(form, 'telefono'), formText(form, 'telefono2')])
+    setConfirmedDuplicates([])
+  }
+
+  const applyAIValues = (values: Record<string, string>, newDocuments: File[]) => {
+    setDocuments((current) => [...current, ...newDocuments])
     const extractedNature = values['naturaleza']
     if (NATURES.includes(extractedNature as Naturaleza) && extractedNature !== nature)
       flushSync(() => setNature(extractedNature as Naturaleza))
     for (const [name, value] of Object.entries(values)) {
       if (name === 'naturaleza') continue
-      if (name === 'origen') {
-        if (ORIGINS.includes(value)) setOrigin(value)
-        continue
-      }
+      if (name === 'origen') continue
       const field = formRef.current?.elements.namedItem(name)
       if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement)) continue
       if (name === 'codigoPostal' || name === 'numeroOrgano') field.value = value.replace(/\D/g, '')
@@ -122,6 +128,7 @@ export function NuevoContactoPage() {
         field.value = value.replace(/[^\d+()\s-]/g, '')
       else field.value = value
     }
+    updatePhones()
   }
 
   if (session.status === 'loading' || membership.isPending)
@@ -136,6 +143,7 @@ export function NuevoContactoPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (submitting.current) return
     const form = new FormData(event.currentTarget)
     const values = contactFormValues(form)
     const displayName = nature === 'Persona física' ? values['nombre'] : values['razonSocial']
@@ -152,7 +160,23 @@ export function NuevoContactoPage() {
       return
     }
     setSaveError(null)
+    submitting.current = true
+    setSaving(true)
     try {
+      if (values.telefono || values.telefono2) {
+        const refreshed = await phoneCandidates.refetch()
+        if (refreshed.isError || !refreshed.data)
+          throw new Error('No se pudieron comprobar los teléfonos. Inténtalo de nuevo.')
+        const latest = findContactPhoneDuplicates(refreshed.data, [
+          values.telefono,
+          values.telefono2,
+        ])
+        if (latest.some((contact) => !confirmedDuplicates.includes(contact.id))) {
+          setConfirmedDuplicates([])
+          toast.error('Revisa los contactos con el mismo teléfono y confirma si quieres continuar.')
+          return
+        }
+      }
       const contact = await createContact.mutateAsync({
         tipoPersona: nature,
         relacion: relationship,
@@ -177,7 +201,26 @@ export function NuevoContactoPage() {
           break
         }
       }
-      if (notesSaved) toast.success('Contacto creado correctamente.')
+      const failedDocuments: string[] = []
+      for (const file of documents) {
+        try {
+          await uploadContactDocument({
+            firmId,
+            contactId: contact.id,
+            file,
+            name: file.name,
+            type: 'identification',
+          })
+        } catch {
+          failedDocuments.push(file.name)
+        }
+      }
+      if (failedDocuments.length) {
+        toast.error(
+          `El contacto se creó, pero no se pudieron adjuntar: ${failedDocuments.join(', ')}. Súbelos desde su ficha.`,
+        )
+      }
+      if (notesSaved && !failedDocuments.length) toast.success('Contacto creado correctamente.')
       await navigate({ to: '/contactos/$id', params: { id: contact.id } })
     } catch (error) {
       const e = error as { code?: string; message?: string }
@@ -187,6 +230,9 @@ export function NuevoContactoPage() {
           : e?.message || 'No se pudo crear el contacto.'
       setSaveError(message)
       toast.error(message)
+    } finally {
+      submitting.current = false
+      setSaving(false)
     }
   }
 
@@ -203,8 +249,15 @@ export function NuevoContactoPage() {
       <form
         ref={formRef}
         className="space-y-4 [&_input:not([type=email]):not([name^=email])]:uppercase [&_textarea]:uppercase"
-        aria-busy={createContact.isPending}
+        aria-busy={saving}
         aria-label="Formulario de nuevo contacto"
+        onInput={(event) => {
+          if (
+            event.target instanceof HTMLInputElement &&
+            ['telefono', 'telefono2'].includes(event.target.name)
+          )
+            updatePhones()
+        }}
         onSubmit={(event) => void submit(event)}
       >
         <Card>
@@ -293,6 +346,36 @@ export function NuevoContactoPage() {
           </CardContent>
         </Card>
 
+        {documents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Documentos para adjuntar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {documents.map((file, index) => (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="break-all">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      aria-label={`Quitar documento ${file.name}`}
+                      onClick={() =>
+                        setDocuments((current) => current.filter((_, i) => i !== index))
+                      }
+                    >
+                      Quitar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Datos de contacto</CardTitle>
@@ -318,6 +401,38 @@ export function NuevoContactoPage() {
               pattern="[0-9+() -]+"
               maxLength={20}
             />
+            {duplicatePhones.length > 0 && (
+              <div
+                className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 sm:col-span-2 lg:col-span-3"
+                aria-live="polite"
+              >
+                <p>Este teléfono ya aparece en:</p>
+                <ul>
+                  {duplicatePhones.map((contact) => (
+                    <li key={contact.id}>
+                      <Link to="/contactos/$id" params={{ id: contact.id }} className="underline">
+                        {contact.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <label className="mt-2 flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={duplicatePhones.every((contact) =>
+                      confirmedDuplicates.includes(contact.id),
+                    )}
+                    onChange={(event) =>
+                      setConfirmedDuplicates(
+                        event.target.checked ? duplicatePhones.map((contact) => contact.id) : [],
+                      )
+                    }
+                    className="mt-1"
+                  />
+                  <span>He revisado las coincidencias y quiero crear el contacto igualmente.</span>
+                </label>
+              </div>
+            )}
             {(nature === 'Persona jurídica' || nature === 'Público') && (
               <>
                 <Field name="personaContacto" label="Persona de contacto" />
@@ -344,7 +459,7 @@ export function NuevoContactoPage() {
                 name="pais"
                 defaultValue="España"
                 autoComplete="country-name"
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                className="border-input bg-background min-h-10 w-full rounded-md border px-3 text-base"
               >
                 {COUNTRIES.map((country) => (
                   <option key={country} value={country}>
@@ -353,42 +468,6 @@ export function NuevoContactoPage() {
                 ))}
               </select>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Origen del contacto</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="contact-origen">Origen del contacto</Label>
-              <select
-                id="contact-origen"
-                name="origen"
-                value={origin}
-                onChange={(event) => setOrigin(event.target.value)}
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-              >
-                <option value="">Seleccionar</option>
-                {ORIGINS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/recomend/i.test(origin) ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="contact-recommendedById">Recomendado por</Label>
-                <Input
-                  id="contact-recommendedById"
-                  name="recomendadoPor"
-                  placeholder="Nombre de quien lo recomienda"
-                  required
-                />
-              </div>
-            ) : null}
           </CardContent>
         </Card>
 
@@ -466,8 +545,8 @@ export function NuevoContactoPage() {
           <Link to="/contactos" className={buttonVariants({ variant: 'outline' })}>
             Cancelar
           </Link>
-          <Button type="submit" disabled={createContact.isPending}>
-            {createContact.isPending ? 'Creando…' : 'Crear contacto'}
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Creando…' : 'Crear contacto'}
           </Button>
         </div>
       </form>
@@ -507,7 +586,7 @@ function Field({
   const descriptionId = description ? `contact-${name}-description` : undefined
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`contact-${name}`} className={large ? 'text-base font-semibold' : ''}>
+      <Label htmlFor={`contact-${name}`} className="text-base font-semibold">
         {label}
         {required && <span aria-hidden="true"> *</span>}
         {required && <span className="sr-only"> (obligatorio)</span>}
@@ -520,7 +599,7 @@ function Field({
         type={type}
         required={required}
         placeholder={placeholder ?? CONTACT_FIELD_PLACEHOLDERS[name] ?? label}
-        className={large ? 'h-14 px-4 text-xl md:text-xl' : ''}
+        className={large ? 'h-14 px-4 text-xl md:text-xl' : 'min-h-10 text-base md:text-base'}
         onInput={(event) => {
           if (type === 'tel') sanitizePhoneInput(event)
           if (digitsOnly) sanitizeDigitsInput(event)
@@ -551,13 +630,15 @@ function Choice({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`contact-${name}`}>{label}</Label>
+      <Label htmlFor={`contact-${name}`} className="text-base font-semibold">
+        {label}
+      </Label>
       <select
         id={`contact-${name}`}
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+        className="border-input bg-background min-h-10 w-full rounded-md border px-3 text-base"
       >
         {options.map((option) => (
           <option key={option}>{option}</option>

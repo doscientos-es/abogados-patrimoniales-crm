@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { AlertTriangle, Search, UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -14,7 +15,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import type { ContactoPersistido, NuevoContactoInput } from '@/features/contactos'
+import {
+  useContactPhoneCandidates,
+  type ContactoPersistido,
+  type NuevoContactoInput,
+} from '@/features/contactos'
+import { findContactPhoneDuplicates } from '@/features/contactos/application/contact-phone-duplicates'
 import type { MiembroDespacho } from '@/features/crm/application/opportunity-types'
 import {
   INTERNAL_CONTACT_ROLE,
@@ -65,6 +71,7 @@ const emptyPerson = {
  * es un contacto subordinado: tipo fijo «Contacto interno».
  */
 export function CaseParticipantDialog({
+  firmId,
   open,
   onOpenChange,
   titular,
@@ -76,6 +83,7 @@ export function CaseParticipantDialog({
   onSubmit,
   onCreateContact,
 }: {
+  firmId: string | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Nombre del titular cuando se añade un contacto subordinado. */
@@ -98,6 +106,9 @@ export function CaseParticipantDialog({
   const [ref, setRef] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmedPhones, setConfirmedPhones] = useState<string[]>([])
+  const phoneCandidates = useContactPhoneCandidates(open && creating ? firmId : undefined)
+  const phoneDuplicates = findContactPhoneDuplicates(phoneCandidates.data ?? [], [nuevo.telefono])
 
   useEffect(() => {
     if (!open) return
@@ -109,6 +120,7 @@ export function CaseParticipantDialog({
     setQuery('')
     setCreating(false)
     setNuevo(emptyPerson)
+    setConfirmedPhones([])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -141,6 +153,18 @@ export function CaseParticipantDialog({
           const fisica = nuevo.tipo === 'Persona física'
           if (fisica ? !nuevo.nombre.trim() : !nuevo.razonSocial.trim())
             return void toast.error(fisica ? 'Indica el nombre.' : 'Indica la razón social.')
+          if (nuevo.telefono.trim()) {
+            const refreshed = await phoneCandidates.refetch()
+            if (refreshed.isError || !refreshed.data)
+              throw new Error('No se pudieron comprobar los teléfonos. Inténtalo de nuevo.')
+            const latest = findContactPhoneDuplicates(refreshed.data, [nuevo.telefono])
+            if (latest.some((contact) => !confirmedPhones.includes(contact.id))) {
+              setConfirmedPhones([])
+              return void toast.error(
+                'Revisa los contactos con el mismo teléfono y confirma si quieres continuar.',
+              )
+            }
+          }
           contacto = await onCreateContact({
             tipoPersona: nuevo.tipo,
             relacion: relationFor(tipo),
@@ -238,9 +262,20 @@ export function CaseParticipantDialog({
                         .join(' · ') || 'Sin datos de contacto'}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                    Cambiar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/contactos/$id"
+                      params={{ id: selected.id }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Ficha completa
+                    </Link>
+                    <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
+                      Cambiar
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -306,6 +341,18 @@ export function CaseParticipantDialog({
                   Buscar existente
                 </Button>
               </div>
+              <p className="text-sm">
+                Si necesitas más datos, puedes{' '}
+                <Link
+                  to="/contactos/nuevo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  abrir la ficha completa en otra pestaña
+                </Link>{' '}
+                y después seleccionar el contacto aquí.
+              </p>
               <select
                 aria-label="Tipo de persona"
                 className={selectClass}
@@ -353,7 +400,10 @@ export function CaseParticipantDialog({
                   aria-label="Teléfono"
                   placeholder="Teléfono"
                   value={nuevo.telefono}
-                  onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
+                  onChange={(e) => {
+                    setNuevo({ ...nuevo, telefono: e.target.value })
+                    setConfirmedPhones([])
+                  }}
                 />
                 <Input
                   aria-label="Email"
@@ -363,6 +413,46 @@ export function CaseParticipantDialog({
                   onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
                 />
               </div>
+              {phoneDuplicates.length > 0 && (
+                <div
+                  className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+                  aria-live="polite"
+                >
+                  <p>Este teléfono ya aparece en:</p>
+                  <ul>
+                    {phoneDuplicates.map((contact) => (
+                      <li key={contact.id}>
+                        <Link
+                          to="/contactos/$id"
+                          params={{ id: contact.id }}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          {contact.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <label className="mt-2 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={phoneDuplicates.every((contact) =>
+                        confirmedPhones.includes(contact.id),
+                      )}
+                      onChange={(event) =>
+                        setConfirmedPhones(
+                          event.target.checked ? phoneDuplicates.map((contact) => contact.id) : [],
+                        )
+                      }
+                      className="mt-1"
+                    />
+                    <span>
+                      He revisado las coincidencias y quiero crear el contacto igualmente.
+                    </span>
+                  </label>
+                </div>
+              )}
               {duplicates.length ? (
                 <div className="border-warning/40 bg-warning/10 grid gap-2 rounded-md border p-2 text-sm">
                   <p className="flex items-center gap-1.5 font-medium">
