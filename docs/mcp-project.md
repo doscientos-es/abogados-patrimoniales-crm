@@ -23,6 +23,15 @@ de despacho, scopes mínimos, tokens cortos con audiencia del MCP y renovación 
 No construir un servidor OAuth casero. Elegir un proveedor compatible y verificar RFC 8707
 antes de añadirlo; usar el mismo contrato de autorización y herramientas.
 
+**Bloqueo de Supabase Auth como servidor OAuth del MCP:** sus tokens OAuth tienen por defecto
+la audiencia `authenticated` y acceso a la API de la base con los permisos del usuario; sus
+scopes estándar no limitan las operaciones de negocio. Además, el soporte de indicadores de
+recurso RFC 8707 sigue pendiente según [supabase/auth#2610](https://github.com/supabase/auth/issues/2610).
+No basta con habilitar su OAuth ni con aceptar esos JWT en el MCP: se perdería el aislamiento
+de las credenciales de solo lectura. Mantener deshabilitada la conexión OAuth hasta elegir y
+probar un proveedor con audiencia específica del MCP, identidad vinculada de forma segura a LEX,
+permisos y revocación por usuario. Comprobar también la compatibilidad real con ChatGPT.
+
 **Piloto inicial: PAT (clave personal)** de 256 bits, hash SHA-256 en esquema privado,
 caducidad obligatoria de hasta 90 días, máximo 10 claves vigentes por usuario y despacho.
 Es útil para clientes que permiten cabecera Bearer. No es OAuth ni permite prometer conexión

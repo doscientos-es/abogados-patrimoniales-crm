@@ -158,6 +158,8 @@ describe('LEX MCP Streamable HTTP boundary', () => {
   it.each([
     { authorization: '' },
     { authorization: 'Bearer not-a-key' },
+    // An OAuth/session JWT must never be accepted as an MCP-only credential.
+    { authorization: 'Bearer header.payload.signature' },
     { authorization: `Basic ${token}` },
   ])('rejects missing/foreign credentials without touching the database', async (headers) => {
     expect((await handler(request(call('lex_whoami'), headers))).status).toBe(401)
