@@ -26,7 +26,6 @@ import {
   INTERNAL_CONTACT_ROLE,
   PARTICIPANT_TYPES,
   possibleDuplicates,
-  type ParticipantType,
 } from '@/features/expedientes/application/participant-groups'
 
 const selectClass =
@@ -68,7 +67,7 @@ const emptyPerson = {
 
 /**
  * Alta/edición de una intervención (modelo «Implicados»). En modo `titular`
- * es un contacto subordinado: tipo fijo «Contacto interno».
+ * es un contacto subordinado vinculado al titular.
  */
 export function CaseParticipantDialog({
   firmId,
@@ -78,6 +77,7 @@ export function CaseParticipantDialog({
   initial,
   contactos,
   miembros,
+  roles = PARTICIPANT_TYPES,
   excludedContactIds,
   pending,
   onSubmit,
@@ -91,6 +91,7 @@ export function CaseParticipantDialog({
   initial?: InterventionInitial | null
   contactos: ContactoPersistido[]
   miembros: MiembroDespacho[]
+  roles?: readonly string[]
   excludedContactIds?: string[]
   pending: boolean
   onSubmit: (values: InterventionValues) => Promise<unknown>
@@ -112,7 +113,7 @@ export function CaseParticipantDialog({
 
   useEffect(() => {
     if (!open) return
-    setTipo(subordinate ? INTERNAL_CONTACT_ROLE : (initial?.tipo ?? 'Cliente'))
+    setTipo(initial?.tipo ?? (subordinate ? INTERNAL_CONTACT_ROLE : 'Cliente'))
     setSelected(contactos.find((c) => c.id === initial?.contactoId) ?? null)
     setMiembroId(initial?.miembroId ?? '')
     setRef(initial?.ref ?? '')
@@ -124,7 +125,10 @@ export function CaseParticipantDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const isResponsable = tipo === 'Responsable'
+  const isResponsable = !subordinate && tipo === 'Responsable'
+  const options = Array.from(
+    new Set([...(subordinate ? [INTERNAL_CONTACT_ROLE] : []), ...roles, tipo]),
+  )
   const excluded = useMemo(() => new Set(excludedContactIds ?? []), [excludedContactIds])
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -213,20 +217,16 @@ export function CaseParticipantDialog({
         <div className="grid gap-4">
           <div className="grid gap-1.5">
             <Label htmlFor="p-tipo">Tipo</Label>
-            {subordinate ? (
-              <Input id="p-tipo" value={INTERNAL_CONTACT_ROLE} disabled />
-            ) : (
-              <select
-                id="p-tipo"
-                className={selectClass}
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as ParticipantType)}
-              >
-                {PARTICIPANT_TYPES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            )}
+            <select
+              id="p-tipo"
+              className={selectClass}
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+            >
+              {options.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
           </div>
 
           {isResponsable ? (

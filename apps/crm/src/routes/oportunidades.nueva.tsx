@@ -13,7 +13,6 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
-import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -31,11 +30,11 @@ import {
   contactosParaAutocompletado,
   type ContactAutocompleteOption,
 } from '@/features/crm/application/contact-autocomplete'
-import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
 import {
   VIABILIDAD_OPCIONES,
   type ViabilidadInicial,
 } from '@/features/crm/application/initial-viability'
+import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
 import { LeadCreatedDialog } from '@/features/crm/ui/lead-created-dialog'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
@@ -75,8 +74,6 @@ export function NuevaOportunidadPage() {
   const [contactSearch, setContactSearch] = useState('')
   const [hasChangedContact, setHasChangedContact] = useState(false)
   const [contactCreationOpened, setContactCreationOpened] = useState(false)
-  const [participantIds, setParticipantIds] = useState<string[]>([])
-  const [participantSearch, setParticipantSearch] = useState('')
   const [createdOpportunity, setCreatedOpportunity] = useState<{
     id: string
     reference: string
@@ -95,15 +92,6 @@ export function NuevaOportunidadPage() {
   const contactOptions = useMemo(
     () => contactosParaAutocompletado(contacts.data ?? [], contactSearch),
     [contactSearch, contacts.data],
-  )
-  const participantOptions = useMemo(
-    () =>
-      contactosParaAutocompletado(
-        contacts.data ?? [],
-        participantSearch,
-        selectedContactId ? [selectedContactId] : [],
-      ),
-    [contacts.data, participantSearch, selectedContactId],
   )
   const leadRoles = useLeadRoles(firmId)
   const areas = useQuery({
@@ -190,14 +178,6 @@ export function NuevaOportunidadPage() {
             procedimientoIniciado: formText(form, 'procedure'),
             documentacionManifestada: documents.join('\n'),
           },
-          otrosIntervinientes: participantIds.map((id) => {
-            const contact = (contacts.data ?? []).find((item) => item.id === id)
-            return {
-              contactoId: id,
-              nombre: contact ? contactName(contact) : 'Interviniente',
-              rol: 'Interviniente',
-            }
-          }),
           documentosIniciales: documents.map((nombre) => ({ nombre, estado: 'declarado' })),
           viabilidadInicial: {
             resultado: viability,
@@ -219,9 +199,7 @@ export function NuevaOportunidadPage() {
           toast.success('Lead guardado y cerrado como no apto.')
         } catch (error) {
           closeError = error instanceof Error ? error.message : 'Error desconocido.'
-          toast.warning(
-            `Lead creado, pero no se pudo cerrar: ${closeError}`,
-          )
+          toast.warning(`Lead creado, pero no se pudo cerrar: ${closeError}`)
         }
         setCreatedOpportunity({
           id: opportunity.id,
@@ -319,7 +297,6 @@ export function NuevaOportunidadPage() {
                   const selectedId = key ? String(key) : ''
                   setHasChangedContact(true)
                   setContactId(selectedId)
-                  setParticipantIds((current) => current.filter((id) => id !== selectedId))
                   setContactSearch(
                     selectedId
                       ? contactName((contacts.data ?? []).find((item) => item.id === selectedId))
@@ -349,71 +326,6 @@ export function NuevaOportunidadPage() {
                 Actualizar contactos
               </Button>
             ) : null}
-            <div className="space-y-2 border-t pt-4">
-              <Label htmlFor="lead-participants">Otros intervinientes conocidos</Label>
-              <Combobox
-                aria-label="Otros intervinientes conocidos"
-                inputValue={participantSearch}
-                items={participantOptions}
-                onInputChange={setParticipantSearch}
-                onSelectionChange={(key) => {
-                  if (!key) return
-                  const selectedId = String(key)
-                  if (selectedId === selectedContactId) return
-                  setParticipantIds((current) =>
-                    current.includes(selectedId)
-                      ? current.filter((id) => id !== selectedId)
-                      : [...current, selectedId],
-                  )
-                  setParticipantSearch('')
-                }}
-                selectedKey={null}
-              >
-                <ComboboxInput id="lead-participants" placeholder="Añadir interviniente…" />
-                <ComboboxContent>
-                  <ComboboxList<ContactAutocompleteOption> emptyState="No hay coincidencias.">
-                    {(contact) => (
-                      <ContactOption
-                        contact={contact}
-                        query={participantSearch}
-                        selected={participantIds.includes(contact.id)}
-                        showSelection
-                      />
-                    )}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
-              {participantIds.length ? (
-                <ul className="flex flex-wrap gap-1.5" aria-label="Intervinientes seleccionados">
-                  {participantIds.map((id) => {
-                    const participant = (contacts.data ?? []).find((contact) => contact.id === id)
-                    if (!participant) return null
-                    return (
-                      <li key={id}>
-                        <Badge className="border-primary/20 bg-primary/10 text-primary gap-1">
-                          {contactName(participant)}
-                          <button
-                            type="button"
-                            className="hover:bg-primary/15 rounded-sm px-0.5"
-                            onClick={() =>
-                              setParticipantIds((current) =>
-                                current.filter((participantId) => participantId !== id),
-                              )
-                            }
-                            aria-label={`Quitar a ${contactName(participant)} de los intervinientes`}
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      </li>
-                    )
-                  })}
-                </ul>
-              ) : null}
-              <p className="text-muted-foreground text-xs">
-                Se trasladarán como intervinientes al abrir el expediente, sin duplicar sus fichas.
-              </p>
-            </div>
             <input type="hidden" name="contact" value={selectedContactId} />
           </CardContent>
         </Card>
@@ -518,8 +430,9 @@ export function NuevaOportunidadPage() {
               {VIABILIDAD_OPCIONES.map((option) => (
                 <label
                   key={option.value}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-3 text-sm font-semibold ${viability === option.value ? 'border-primary bg-primary/5' : 'border-input'
-                    }`}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-3 text-sm font-semibold ${
+                    viability === option.value ? 'border-primary bg-primary/5' : 'border-input'
+                  }`}
                 >
                   <input
                     type="radio"
@@ -557,13 +470,7 @@ export function NuevaOportunidadPage() {
           >
             Cancelar
           </Link>
-          <Button
-            type="submit"
-            disabled={
-              saving ||
-              !selectedContactId
-            }
-          >
+          <Button type="submit" disabled={saving || !selectedContactId}>
             {saving ? 'Guardando…' : 'Crear Lead'}
           </Button>
         </div>

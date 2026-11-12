@@ -66,9 +66,9 @@ export function LeadRolesCatalog({ firmId, canManage }: { firmId: string; canMan
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Roles en el Lead</CardTitle>
+        <CardTitle className="text-base">Roles personalizados de intervinientes</CardTitle>
         <CardDescription>
-          Sugerencias para la relación de cada interviniente. También se puede escribir otro rol.
+          Se usan en los intervinientes del Lead y del expediente, incluidos sus contactos internos.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

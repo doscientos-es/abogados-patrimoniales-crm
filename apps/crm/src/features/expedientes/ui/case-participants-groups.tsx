@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { useCrearContacto, type ContactoPersistido } from '@/features/contactos'
 import type { MiembroDespacho } from '@/features/crm/application/opportunity-types'
+import { useParticipantRoles } from '@/features/expedientes'
 import type {
   ActualizarParticipanteInput,
   CrearParticipanteInput,
@@ -44,15 +45,19 @@ type Row = Required<Pick<ParticipantePersistido, 'orden' | 'creadoEn'>> &
 
 const VIRTUAL_PREFIX = 'principal-'
 
-function normalise(p: ParticipantePersistido, principalId: string): Row {
-  const tipoResuelto = p.titularId
-    ? INTERNAL_CONTACT_ROLE
-    : p.tipo && (PARTICIPANT_TYPES as readonly string[]).includes(p.tipo)
-      ? p.tipo
+function normalise(p: ParticipantePersistido, principalId: string, roles: readonly string[]): Row {
+  const configuredRole = roles.find(
+    (role) => role.toLocaleLowerCase('es') === p.rol.trim().toLocaleLowerCase('es'),
+  )
+  const tipoResuelto = p.tipo
+    ? p.tipo
+    : p.titularId
+      ? p.rol || INTERNAL_CONTACT_ROLE
       : p.contactoId === principalId && /contacto principal/i.test(p.rol)
         ? 'Cliente'
-        : participantTypeFromRole(p.rol).tipo
-  const legacyDetail = !p.tipo && !p.titularId ? participantTypeFromRole(p.rol).detalle : ''
+        : configuredRole || participantTypeFromRole(p.rol).tipo
+  const legacyDetail =
+    !p.tipo && !p.titularId && !configuredRole ? participantTypeFromRole(p.rol).detalle : ''
   return {
     ...p,
     orden: p.orden ?? 0,
@@ -109,6 +114,7 @@ export function CaseParticipantsPanel({
   }) => Promise<unknown>
 }) {
   const createContact = useCrearContacto(firmId)
+  const roles = useParticipantRoles(firmId)
   const [dialog, setDialog] = useState<DialogState | null>(null)
   const [viewing, setViewing] = useState<Row | null>(null)
   const [removing, setRemoving] = useState<Row | null>(null)
@@ -117,7 +123,7 @@ export function CaseParticipantsPanel({
   const membersById = useMemo(() => new Map(miembros.map((m) => [m.id, m])), [miembros])
 
   const rows = useMemo(() => {
-    const list = participantes.map((p) => normalise(p, principalId))
+    const list = participantes.map((p) => normalise(p, principalId, roles.data ?? []))
     const hasPrincipal = list.some((p) => p.contactoId === principalId && !p.titularId)
     if (!hasPrincipal && principalId) {
       list.unshift({
@@ -134,14 +140,19 @@ export function CaseParticipantsPanel({
       })
     }
     return list
-  }, [participantes, principalId, clienteNombre, expedienteId])
+  }, [participantes, principalId, clienteNombre, expedienteId, roles.data])
 
   const top = rows.filter((r) => !r.titularId)
   const childrenOf = (id: string) => sortParticipants(rows.filter((r) => r.titularId === id))
-  const groups = PARTICIPANT_TYPES.map((tipo) => ({
-    tipo,
-    items: sortParticipants(top.filter((r) => r.tipoResuelto === tipo)),
-  })).filter((g) => g.items.length)
+  const groupTypes = Array.from(
+    new Set([...PARTICIPANT_TYPES, ...top.map((row) => row.tipoResuelto)]),
+  )
+  const groups = groupTypes
+    .map((tipo) => ({
+      tipo,
+      items: sortParticipants(top.filter((r) => r.tipoResuelto === tipo)),
+    }))
+    .filter((g) => g.items.length)
   const linkedIds = rows.map((r) => r.contactoId).filter((v): v is string => Boolean(v))
 
   const displayName = (r: Row) =>
@@ -248,7 +259,7 @@ export function CaseParticipantsPanel({
   const busy = pending || createContact.isPending
 
   const actions = (r: Row, siblings: Row[], index: number, titular: Row | null) => (
-    <div className="flex shrink-0 items-center gap-0.5">
+    <div className="flex max-w-full flex-wrap items-center gap-0.5">
       <IconAction label="Datos del interviniente" onClick={() => setViewing(r)}>
         <IdCard className="size-4" />
       </IconAction>
@@ -325,8 +336,8 @@ export function CaseParticipantsPanel({
         : null
 
   return (
-    <div className="grid gap-3">
-      <div className="flex items-center justify-between">
+    <div className="grid min-w-0 gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">
           Intervinientes
           <span className="text-muted-foreground ml-2 text-sm font-normal">{top.length}</span>
@@ -335,9 +346,17 @@ export function CaseParticipantsPanel({
           <Plus className="size-4" /> Añadir interviniente
         </Button>
       </div>
+      {roles.isError ? (
+        <p role="alert" className="text-destructive text-sm">
+          No se pudieron cargar los roles.{' '}
+          <button type="button" className="underline" onClick={() => void roles.refetch()}>
+            Reintentar
+          </button>
+        </p>
+      ) : null}
 
       {groups.length ? (
-        <div className="divide-y rounded-lg border" aria-label="Implicados">
+        <div className="min-w-0 divide-y rounded-lg border" aria-label="Implicados">
           {groups.map((g) => (
             <section key={g.tipo} aria-label={g.tipo} className="px-3 py-2">
               <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
@@ -349,7 +368,7 @@ export function CaseParticipantsPanel({
                   return (
                     <li key={r.id} className="relative pl-4">
                       <span className="border-border absolute top-4 left-0 w-3 border-t border-dotted" />
-                      <div className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md px-2 py-1.5">
+                      <div className="hover:bg-muted/50 flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-1.5">
                         {line(r)}
                         {actions(r, g.items, i, null)}
                       </div>
@@ -361,10 +380,13 @@ export function CaseParticipantsPanel({
                           {kids.map((k, ki) => (
                             <li key={k.id} className="relative pl-4">
                               <span className="border-border absolute top-4 left-0 w-3 border-t border-dotted" />
-                              <div className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md px-2 py-1">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                                    {INTERNAL_CONTACT_ROLE}
+                              <div className="hover:bg-muted/50 flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-1">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                  <Badge
+                                    variant="outline"
+                                    className="max-w-full text-[10px] break-words whitespace-normal"
+                                  >
+                                    {k.tipoResuelto}
                                   </Badge>
                                   {line(k)}
                                 </div>
@@ -395,8 +417,9 @@ export function CaseParticipantsPanel({
         initial={dialogInitial}
         contactos={contactos}
         miembros={miembros}
+        roles={roles.data ?? PARTICIPANT_TYPES}
         excludedContactIds={linkedIds}
-        pending={busy || createContact.isPending}
+        pending={busy || createContact.isPending || roles.isPending || roles.isError}
         onSubmit={save}
         onCreateContact={(input) => createContact.mutateAsync(input)}
       />
