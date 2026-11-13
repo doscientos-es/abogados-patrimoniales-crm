@@ -45,6 +45,7 @@ import {
 } from '@/features/crm/application/lead-document-reconciliation'
 import { LeadCommunicationDialogs } from '@/features/crm/ui/lead-communication-dialogs'
 import { LeadCommunicationsTimeline } from '@/features/crm/ui/lead-communications-timeline'
+import { InternalDrafts } from '@/features/documentos/ui/internal-drafts'
 import {
   notaDesdeRemota,
   notesForContact,
@@ -1141,100 +1142,103 @@ export function LeadWorkspace({
         </div>
       ) : null}
       {section === 'documents' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Documentación necesaria para este Lead</CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Identificación y Protección de datos son requisitos base y se añaden si faltan.
-              Documentos vigentes de la ficha del contacto se concilian por categoría o nombre
-              exacto; esto confirma recepción, no revisa contenido ni validez jurídica.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form
-              className="grid gap-4 sm:grid-cols-2"
-              onSubmit={(event) => void saveRequestedDocuments(event)}
-            >
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="lead-requested-documents">
-                  Documentos solicitados (uno por línea)
-                </Label>
-                <Textarea
-                  id="lead-requested-documents"
-                  name="requestedDocuments"
-                  rows={7}
-                  defaultValue={requestedDocuments.join('\n')}
-                  placeholder={
-                    'DNI/NIE por ambas caras\nJustificante de domicilio\nDocumentación específica del asunto'
-                  }
+        <div className="space-y-4">
+          <InternalDrafts firmId={firmId} targetId={opportunity.id} targetType="lead" />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Documentación necesaria para este Lead</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Identificación y Protección de datos son requisitos base y se añaden si faltan.
+                Documentos vigentes de la ficha del contacto se concilian por categoría o nombre
+                exacto; esto confirma recepción, no revisa contenido ni validez jurídica.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="grid gap-4 sm:grid-cols-2"
+                onSubmit={(event) => void saveRequestedDocuments(event)}
+              >
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="lead-requested-documents">
+                    Documentos solicitados (uno por línea)
+                  </Label>
+                  <Textarea
+                    id="lead-requested-documents"
+                    name="requestedDocuments"
+                    rows={7}
+                    defaultValue={requestedDocuments.join('\n')}
+                    placeholder={
+                      'DNI/NIE por ambas caras\nJustificante de domicilio\nDocumentación específica del asunto'
+                    }
+                  />
+                </div>
+                <Field
+                  name="documentNotes"
+                  label="Observaciones"
+                  defaultValue={text(details['observacionesDocumentales'])}
+                  multiline
                 />
-              </div>
-              <Field
-                name="documentNotes"
-                label="Observaciones"
-                defaultValue={text(details['observacionesDocumentales'])}
-                multiline
-              />
-              <div className="space-y-2 sm:col-span-2">
-                <h3 className="text-sm font-medium">Conciliación con documentos recibidos</h3>
-                {receivedDocuments.isError ? (
-                  <div className="space-y-2">
-                    <p role="alert" className="text-destructive text-sm">
-                      No se pudo comprobar la documentación del contacto; el estado queda sin
-                      verificar.
+                <div className="space-y-2 sm:col-span-2">
+                  <h3 className="text-sm font-medium">Conciliación con documentos recibidos</h3>
+                  {receivedDocuments.isError ? (
+                    <div className="space-y-2">
+                      <p role="alert" className="text-destructive text-sm">
+                        No se pudo comprobar la documentación del contacto; el estado queda sin
+                        verificar.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={receivedDocuments.isFetching}
+                        onClick={() => void receivedDocuments.refetch()}
+                      >
+                        Reintentar consulta
+                      </Button>
+                    </div>
+                  ) : receivedDocuments.isPending ? (
+                    <output className="text-muted-foreground text-sm" aria-live="polite">
+                      Comprobando documentos recibidos…
+                    </output>
+                  ) : requestedDocuments.length ? (
+                    <>
+                      <p className="text-muted-foreground text-xs">
+                        {receivedDocumentCount} de {requestedDocuments.length} requisitos
+                        conciliados con documentos vigentes.
+                      </p>
+                      <ul className="divide-y rounded-md border">
+                        {reconciledDocuments.map(({ requirement, receivedDocument }) => (
+                          <li
+                            key={requirement}
+                            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                          >
+                            <span>{requirement}</span>
+                            {receivedDocument ? (
+                              <span className="text-muted-foreground">
+                                Recibido · {receivedDocument.original_name}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Pendiente de recibir</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      Añade documentos solicitados para conciliarlos con los archivos recibidos.
                     </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={receivedDocuments.isFetching}
-                      onClick={() => void receivedDocuments.refetch()}
-                    >
-                      Reintentar consulta
-                    </Button>
-                  </div>
-                ) : receivedDocuments.isPending ? (
-                  <output className="text-muted-foreground text-sm" aria-live="polite">
-                    Comprobando documentos recibidos…
-                  </output>
-                ) : requestedDocuments.length ? (
-                  <>
-                    <p className="text-muted-foreground text-xs">
-                      {receivedDocumentCount} de {requestedDocuments.length} requisitos conciliados
-                      con documentos vigentes.
-                    </p>
-                    <ul className="divide-y rounded-md border">
-                      {reconciledDocuments.map(({ requirement, receivedDocument }) => (
-                        <li
-                          key={requirement}
-                          className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-                        >
-                          <span>{requirement}</span>
-                          {receivedDocument ? (
-                            <span className="text-muted-foreground">
-                              Recibido · {receivedDocument.original_name}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">Pendiente de recibir</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    Añade documentos solicitados para conciliarlos con los archivos recibidos.
-                  </p>
-                )}
-              </div>
-              <div className="sm:col-span-2">
-                <Button type="submit" disabled={saveDetails.isPending}>
-                  {saveDetails.isPending ? 'Guardando…' : 'Guardar documentación solicitada'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={saveDetails.isPending}>
+                    {saveDetails.isPending ? 'Guardando…' : 'Guardar documentación solicitada'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
       {section === 'engagement' ? (
         <Card>

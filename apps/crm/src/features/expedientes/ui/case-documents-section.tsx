@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useDocumentNamings } from '@/features/documentos/document-naming-data'
+import { InternalDrafts } from '@/features/documentos/ui/internal-drafts'
 import { useCaseFolders } from '@/features/expedientes'
 import type { CaseDocumentRow } from '@/shared/infrastructure/supabase'
 
@@ -64,6 +65,7 @@ export function CaseDocumentsSection({
         </Link>
       </header>
 
+      <InternalDrafts firmId={firmId} targetId={expedienteId} targetType="case" />
       <CaseDocumentUpload firmId={firmId} caseId={expedienteId} categories={categories}>
         <CaseDocumentsToolbar
           filters={filters}

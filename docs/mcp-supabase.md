@@ -1,8 +1,8 @@
 # LEX MCP en Supabase: preparación
 
-Estado: adaptador Edge preparado, **deshabilitado y no desplegado**. Sigue siendo de solo lectura
-y utiliza claves personales; **no es compatible con la conexión OAuth de ChatGPT todavía**.
-No usarlo con datos reales hasta completar y validar la autorización y el modelo de escrituras.
+Estado: adaptador Edge preparado, **deshabilitado y no desplegado**. Incluye escritura limitada
+de borradores internos de texto con claves personales; **no es compatible con OAuth de ChatGPT**.
+No usarlo con datos reales hasta probar la autorización, las migraciones y el flujo en un entorno aislado.
 
 ## Adaptador
 
@@ -16,7 +16,23 @@ No usarlo con datos reales hasta completar y validar la autorización y el model
 - El empaquetado de imports desde `apps/mcp`, el origen de `Request.url`, las cabeceras y
   la ruta deben probarse con Supabase CLI y en un entorno aislado antes del despliegue real.
 
-## Bloqueos para ChatGPT y escrituras
+## Borradores internos
+
+- `lex_save_internal_draft` guarda texto UTF-8 (hasta 8000 bytes) en un lead o expediente,
+  visible en la sección Documentos de su ficha. Es un borrador pendiente de revisión, no un
+  archivo PDF/Word ni un documento validado; no permite envío, firma ni publicación al cliente.
+- Requiere una nueva clave con `drafts:write` y `leads:read` o `cases:read`, según el destino.
+  Las claves antiguas no reciben escritura. La RPC vuelve a comprobar clave, membresía,
+  alcance, despacho y acceso al expediente. Auditoría sin contenido y reintentos con UUID
+  idempotente; reutilizarlo con otros datos se rechaza.
+- La migración `20261113100000_mcp_internal_drafts.sql` deja el interruptor de escritura en
+  base de datos apagado, también para llamadas directas a la RPC. Solo un operador autorizado
+  puede habilitarlo tras los controles de despliegue. El endpoint sigue deshabilitado por defecto.
+- Aún no vincula el borrador directamente a un contrato o ejecución de procedimiento, no
+  ofrece edición/validación desde la ficha ni exporta archivos. Las pruebas SQL preparadas en
+  `supabase/tests/mcp-internal-drafts.sql` deben ejecutarse en base desechable antes del piloto.
+
+## Bloqueos para ChatGPT y publicación
 
 1. Elegir y verificar la integración OAuth 2.1 con ChatGPT. Supabase Auth ofrece OAuth para
    MCP y permite usar las cuentas existentes, pero documenta tokens con audiencia
@@ -26,15 +42,15 @@ No usarlo con datos reales hasta completar y validar la autorización y el model
    Referencias: [Supabase Auth para MCP](https://supabase.com/docs/guides/auth/oauth-server/mcp-authentication),
    [flujos y scopes](https://supabase.com/docs/guides/auth/oauth-server/oauth-flows) y
    [autenticación de OpenAI](https://developers.openai.com/plugins/build/auth).
-2. Crear permisos independientes para contactos, borradores, documentos y compartición;
+2. Crear permisos independientes para contactos, documentos y compartición;
    no dar escrituras a credenciales existentes. El acceso directo a RPC también debe respetar
    esos permisos y la política de emergencia.
 3. Definir la relación del documento con la ejecución del procedimiento o contrato del lead.
    Los documentos de expediente y contacto tienen flujos distintos; no asumir que uno de ellos
    cubre automáticamente ese caso. La entrega al cliente requiere canal y destinatario definidos.
-4. Implementar revisión humana y confirmación efectiva, protección contra reintentos,
-   versionado, auditoría y limpieza de subidas incompletas. Una bandera enviada por el modelo
-   no demuestra por sí sola la confirmación del usuario.
+4. Completar el flujo de revisión humana, edición/versionado y, para archivos, la limpieza de
+   subidas incompletas. Una bandera enviada por el modelo no demuestra por sí sola la
+   confirmación del usuario.
 5. Ejecutar la migración y las pruebas SQL en una base desechable, y pruebas de aislamiento,
    autorización, revocación, concurrencia y protocolo con un cliente real antes de publicar.
 

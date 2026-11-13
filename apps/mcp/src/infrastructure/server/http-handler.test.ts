@@ -14,7 +14,8 @@ const identity = {
   scopes: ['leads:read', 'cases:read'],
 }
 const read = vi.fn<McpReadGateway['read']>()
-const handler = createMcpHttpHandler({ read }, 'https://lex.example/mcp')
+const saveDraft = vi.fn<McpReadGateway['saveDraft']>()
+const handler = createMcpHttpHandler({ read, saveDraft }, 'https://lex.example/mcp')
 
 function request(payload: unknown, headers: Record<string, string> = {}) {
   return new Request('https://lex.example/mcp', {
@@ -34,6 +35,7 @@ function call(name: string, args: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   read.mockReset()
+  saveDraft.mockReset()
   read.mockImplementation(async (_token, operation): Promise<McpReadResult> => ({
     ok: true,
     data: operation === 'lex_whoami' ? identity : { items: [], nextOffset: null },
@@ -138,6 +140,38 @@ describe('LEX MCP Streamable HTTP boundary', () => {
     expect(read).toHaveBeenCalledTimes(1)
   })
 
+  it('exposes and forwards draft writes only to a scoped credential', async () => {
+    const args = {
+      targetType: 'lead',
+      targetId: '6b9ac8a3-8495-4fa2-bd97-8b0893b4a50b',
+      title: ' Borrador ',
+      content: 'Texto para revisión',
+      idempotencyKey: 'fd35405d-6a4e-4d4d-a05a-14cdaea03842',
+    }
+    expect((await handler(request(call('lex_save_internal_draft', args)))).status).toBe(403)
+    expect(saveDraft).not.toHaveBeenCalled()
+    read.mockResolvedValue({
+      ok: true,
+      data: { ...identity, scopes: [...identity.scopes, 'drafts:write'] },
+    })
+    saveDraft.mockResolvedValue({ ok: true, data: { id: 'draft-1', status: 'pending_review' } })
+    const list = await (
+      await handler(request({ jsonrpc: '2.0', id: 2, method: 'tools/list' }))
+    ).json()
+    expect(
+      list.result.tools.find((item: { name: string }) => item.name === 'lex_save_internal_draft')
+        .annotations.readOnlyHint,
+    ).toBe(false)
+    const response = await handler(request(call('lex_save_internal_draft', args)))
+    expect((await response.json()).result.structuredContent.status).toBe('pending_review')
+    expect(saveDraft).toHaveBeenCalledWith(token, { ...args, title: 'Borrador' })
+    const invalid = await handler(
+      request(call('lex_save_internal_draft', { ...args, content: 'á'.repeat(4001) })),
+    )
+    expect((await invalid.json()).error.code).toBe(-32602)
+    expect(saveDraft).toHaveBeenCalledTimes(1)
+  })
+
   it('rechecks revocation and permissions during the actual read', async () => {
     read
       .mockResolvedValueOnce({ ok: true, data: identity })
@@ -232,13 +266,13 @@ describe('LEX MCP Streamable HTTP boundary', () => {
       'https://lex.example/other',
       'https://lex.example/mcp?x=1',
     ]) {
-      expect(() => createMcpHttpHandler({ read }, url)).toThrow()
+      expect(() => createMcpHttpHandler({ read, saveDraft }, url)).toThrow()
     }
   })
 
   it('accepts the exact Supabase Edge Function path and rejects other paths', async () => {
     const edgeUrl = 'https://project.supabase.co/functions/v1/lex-mcp'
-    const edgeHandler = createMcpHttpHandler({ read }, edgeUrl)
+    const edgeHandler = createMcpHttpHandler({ read, saveDraft }, edgeUrl)
     const payload = { jsonrpc: '2.0', id: 1, method: 'ping' }
     const base = request(payload)
     expect((await edgeHandler(new Request(edgeUrl, base))).status).toBe(200)

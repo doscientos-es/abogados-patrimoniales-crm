@@ -1,6 +1,6 @@
 # LEX MCP: proyecto y operación
 
-Estado: base de solo lectura implementada; **no publicada ni habilitada**. Migración pendiente
+Estado: base de consulta y guardado de borradores internos implementada; **no publicada ni habilitada**. Migraciones pendientes
 de ejecutar y probar en una base local desechable. No se han creado claves reales ni cambiado
 datos remotos. Especificación de transporte fijada a MCP 2025-11-25; se negocian también
 2025-06-18 y 2025-03-26. No se anuncia compatibilidad universal ni con versiones posteriores.
@@ -9,9 +9,11 @@ datos remotos. Especificación de transporte fijada a MCP 2025-11-25; se negocia
 
 Consultar LEX desde un asistente sin copiar toda la base ni conceder acceso administrativo.
 Primera entrega: buscar y consultar leads, contactos, expedientes y metadatos de documentos.
-No hay SQL libre, escrituras de negocio, envío, firma, generación de archivos, lectura del
-contenido de documentos, enlaces firmados ni acceso a Drive. Sí se escriben claves, contadores
-y auditoría: «solo lectura» se refiere a los datos de negocio.
+Hay guardado de borradores internos de texto para revisión en leads y expedientes, con scope
+independiente y un interruptor de base de datos desactivado. No hay SQL libre, envío, firma,
+generación de archivos, lectura del
+contenido de documentos, enlaces firmados ni acceso a Drive. Ver límites y pruebas pendientes en
+[mcp-supabase.md](mcp-supabase.md).
 
 **Identidad:** cuenta LEX existente + credencial personal específica del MCP. Nunca una clave
 compartida por despacho, el correo declarado por el asistente, un `userId` del cliente, una
@@ -80,6 +82,7 @@ explícita que requiere revisión, no una autorización genérica extensible sin
 | `lex_search_contacts` / `lex_get_contact` | Identificar un contacto; correo/teléfono solo en detalle. Sin NIF, IBAN ni campos JSON completos. |
 | `lex_search_cases` / `lex_get_case`       | Conocer fase, estado, situación y próxima acción de expedientes autorizados.                      |
 | `lex_list_case_documents`                 | Comprobar los documentos disponibles de un expediente, sin descargar ni interpretar su contenido. |
+| `lex_save_internal_draft`                 | Guardar texto para revisión interna en un lead o expediente; no se envía ni se valida.            |
 
 Listados: `query` literal de hasta 120 caracteres, `limit` 1–50, `offset` 0–10000. Orden
 `updated_at DESC, id`; devolver `nextOffset`, no inventar totales a partir de una página.

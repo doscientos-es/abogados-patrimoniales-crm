@@ -1,6 +1,12 @@
 -- Prepared locally. Apply only after isolated authorization tests and explicit approval.
 begin;
 
+-- Database-side emergency switch applies even to direct RPC calls. Disabled by default.
+create table lex_mcp.draft_settings (id boolean primary key default true check (id), enabled boolean not null default false);
+insert into lex_mcp.draft_settings(id) values (true);
+alter table lex_mcp.draft_settings enable row level security;
+revoke all on lex_mcp.draft_settings from public, anon, authenticated;
+
 alter table lex_mcp.credentials drop constraint credentials_scopes_check;
 alter table lex_mcp.credentials add constraint credentials_scopes_check check (
   cardinality(scopes) between 1 and 5
@@ -87,7 +93,7 @@ begin
   if k.window_start <= now() - interval '1 minute' then k.window_start := now(); k.window_count := 0; end if;
   if k.window_count >= 120 then return jsonb_build_object('ok', false, 'error', 'rate_limited'); end if;
   update lex_mcp.credentials set window_start = k.window_start, window_count = k.window_count + 1, last_used_at = now() where id = k.id;
-  if not ('drafts:write' = any(k.scopes)) then problem := 'forbidden'; end if;
+  if not ('drafts:write' = any(k.scopes)) or not exists (select 1 from lex_mcp.draft_settings where id and enabled) then problem := 'forbidden'; end if;
   if problem is null then
     begin
       if p_args is null or jsonb_typeof(p_args) <> 'object' or octet_length(p_args::text) > 16000

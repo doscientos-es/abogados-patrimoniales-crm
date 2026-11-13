@@ -12,6 +12,7 @@ const canonicalHost = 'mcp.lex.example'
 // Synthetic fixture, never a real credential.
 const token = `lex_mcp_${'a'.repeat(64)}`
 const read = vi.fn<McpReadGateway['read']>()
+const saveDraft = vi.fn<McpReadGateway['saveDraft']>()
 let server: Server
 
 type RequestOptions = {
@@ -65,7 +66,7 @@ beforeEach(async () => {
   read.mockResolvedValue({ ok: true, data: { scopes: ['leads:read'] } })
   server = createMcpNodeServer({
     publicUrl: `https://${canonicalHost}/mcp`,
-    handleRequest: createMcpHttpHandler({ read }, `https://${canonicalHost}/mcp`),
+    handleRequest: createMcpHttpHandler({ read, saveDraft }, `https://${canonicalHost}/mcp`),
   })
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
