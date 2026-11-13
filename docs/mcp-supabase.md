@@ -27,7 +27,9 @@ No usarlo con datos reales hasta probar la autorización, las migraciones y el f
   idempotente; reutilizarlo con otros datos se rechaza.
 - La migración `20261113100000_mcp_internal_drafts.sql` deja el interruptor de escritura en
   base de datos apagado, también para llamadas directas a la RPC. Solo un operador autorizado
-  puede habilitarlo tras los controles de despliegue. El endpoint sigue deshabilitado por defecto.
+  puede habilitarlo tras los controles de despliegue, cambiando `enabled` a `true` en la única
+  fila de `lex_mcp.draft_settings`; para detener escrituras, volverlo a `false`. El endpoint sigue
+  deshabilitado por defecto.
 - Aún no vincula el borrador directamente a un contrato o ejecución de procedimiento, no
   ofrece edición/validación desde la ficha ni exporta archivos. Las pruebas SQL preparadas en
   `supabase/tests/mcp-internal-drafts.sql` deben ejecutarse en base desechable antes del piloto.

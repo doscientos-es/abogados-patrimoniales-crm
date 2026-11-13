@@ -88,12 +88,13 @@ begin
     join public.crm_firm_members m on m.firm_id = c.firm_id and m.user_id = c.user_id and m.status = 'active'
     join auth.users u on u.id = c.user_id and u.deleted_at is null and (u.banned_until is null or u.banned_until <= now())
     where c.token_hash = encode(extensions.digest(p_token, 'sha256'), 'hex')
-      and c.revoked_at is null and c.expires_at > now() for update of c;
+      and c.revoked_at is null and c.expires_at > now() for update of c for share of m, u;
   if not found then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
   if k.window_start <= now() - interval '1 minute' then k.window_start := now(); k.window_count := 0; end if;
   if k.window_count >= 120 then return jsonb_build_object('ok', false, 'error', 'rate_limited'); end if;
   update lex_mcp.credentials set window_start = k.window_start, window_count = k.window_count + 1, last_used_at = now() where id = k.id;
-  if not ('drafts:write' = any(k.scopes)) or not exists (select 1 from lex_mcp.draft_settings where id and enabled) then problem := 'forbidden'; end if;
+  perform 1 from lex_mcp.draft_settings where id and enabled for share;
+  if not found or not ('drafts:write' = any(k.scopes)) then problem := 'forbidden'; end if;
   if problem is null then
     begin
       if p_args is null or jsonb_typeof(p_args) <> 'object' or octet_length(p_args::text) > 131072
