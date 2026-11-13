@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: { contactId: 'contact-1' },
+  contactOrigin: 'Recomendación',
   createOpportunity: vi.fn(),
   createTask: vi.fn(),
   markNextAction: vi.fn(),
@@ -35,7 +36,7 @@ vi.mock('@/features/auth', () => ({
 }))
 vi.mock('@/features/contactos', () => ({
   useContactos: () => ({
-    data: [{ id: 'contact-1', nombre: 'Ana', apellidos: 'López' }],
+    data: [{ id: 'contact-1', nombre: 'Ana', apellidos: 'López', origen: mocks.contactOrigin }],
     isPending: false,
     refetch: mocks.contactRefetch,
   }),
@@ -65,6 +66,7 @@ afterEach(() => {
   mocks.advanceLead.mockReset()
   mocks.transition.mockReset()
   mocks.search = { contactId: 'contact-1' }
+  mocks.contactOrigin = 'Recomendación'
 })
 
 describe('NuevaOportunidadPage', () => {
@@ -79,6 +81,8 @@ describe('NuevaOportunidadPage', () => {
     expect((screen.getByRole('button', { name: 'Crear Lead' }) as HTMLButtonElement).disabled).toBe(
       false,
     )
+    expect(screen.queryByLabelText('Origen')).toBeNull()
+    expect(screen.queryByLabelText('Otras personas o entidades relacionadas')).toBeNull()
   })
 
   it('keeps the Lead form in memory and refreshes contacts after creating one in another tab', async () => {
@@ -98,6 +102,21 @@ describe('NuevaOportunidadPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Actualizar contactos' }))
     await waitFor(() => expect(mocks.contactRefetch).toHaveBeenCalledOnce())
     expect(screen.queryByRole('button', { name: 'Actualizar contactos' })).toBeNull()
+  })
+
+  it('allows creating a Lead when the contact origin exceeds the Lead limit', async () => {
+    mocks.contactOrigin = 'A'.repeat(170)
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    mocks.advanceLead.mockResolvedValue({})
+    const { container } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(mocks.createOpportunity).toHaveBeenCalledOnce())
+    expect(mocks.createOpportunity.mock.calls[0]?.[0].source).toBe('A'.repeat(160))
   })
 
   it('pregunta por la siguiente acción tras guardar y permite continuar a la ficha', async () => {
@@ -125,10 +144,11 @@ describe('NuevaOportunidadPage', () => {
 
     await waitFor(() =>
       expect(mocks.createOpportunity).toHaveBeenCalledWith(
-        expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS' }),
+        expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS', source: 'Recomendación' }),
       ),
     )
     const details = mocks.createOpportunity.mock.calls[0]?.[0].details
+    expect(details.informacionInicial).not.toHaveProperty('otrasPersonas')
     expect(details.informacionInicial.documentacionManifestada).toBe('TESTAMENTO')
     expect(details.documentosIniciales).toEqual([{ nombre: 'TESTAMENTO', estado: 'declarado' }])
     expect(details.viabilidadInicial.resultado).toBe('apto')
@@ -207,9 +227,7 @@ describe('NuevaOportunidadPage', () => {
       id: 'opportunity-1',
       hito: 'viabilidad_pendiente',
     })
-    expect((screen.getByLabelText('Título *') as HTMLInputElement).value).toBe(
-      'REVISAR VIABILIDAD',
-    )
+    expect((screen.getByLabelText('Título *') as HTMLInputElement).value).toBe('REVISAR VIABILIDAD')
   })
 
   it('exige motivo para no apto y guarda el cierre del Lead con ese motivo', async () => {

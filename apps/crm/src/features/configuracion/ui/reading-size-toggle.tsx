@@ -11,11 +11,10 @@ function applyReadingSize(enabled: boolean) {
 export function ReadingSizeToggle() {
   const [enabled, setEnabled] = useState(false)
 
+  // Se lee tras la hidratación para mantener la salida del servidor y cliente iguales.
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY) === 'large'
-      // Se lee tras la hidratación para mantener la salida del servidor y cliente iguales.
-      // oxlint-disable-next-line react(set-state-in-effect)
       setEnabled(saved)
       applyReadingSize(saved)
     } catch {

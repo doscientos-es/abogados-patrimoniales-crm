@@ -163,7 +163,9 @@ export function NuevaOportunidadPage() {
         contactId: selectedContactId,
         title,
         area: formText(form, 'area'),
-        source: formText(form, 'source'),
+        source: ((contacts.data ?? []).find((item) => item.id === selectedContactId)?.origen ?? '')
+          .trim()
+          .slice(0, 160),
         description: formText(form, 'description'),
         details: {
           rolContacto: { rol: formText(form, 'role') },
@@ -174,7 +176,6 @@ export function NuevaOportunidadPage() {
           informacionInicial: {
             queSolicita: formText(form, 'request'),
             queHaOcurrido: formText(form, 'situation'),
-            otrasPersonas: formText(form, 'people'),
             procedimientoIniciado: formText(form, 'procedure'),
             documentacionManifestada: documents.join('\n'),
           },
@@ -372,12 +373,6 @@ export function NuevaOportunidadPage() {
                   Puedes editar la lista en Configuración → Catálogos → Roles en el Lead.
                 </p>
               </div>
-              <Field
-                name="source"
-                label="Origen"
-                maxLength={160}
-                placeholder="Recomendación, web, llamada…"
-              />
             </div>
             <div className="space-y-6">
               <TextField
@@ -387,7 +382,6 @@ export function NuevaOportunidadPage() {
                 rows={8}
               />
               <TextField name="request" label="¿Qué solicita al despacho?" />
-              <TextField name="people" label="Otras personas o entidades relacionadas" />
               <TextField
                 name="procedure"
                 label="Procedimiento, reclamación o actuación iniciada"
