@@ -268,11 +268,10 @@ pero `/mcp` permanece desactivado por defecto. Para habilitar el piloto, seguir 
 
 ### Despliegues separados
 
-- CRM: conservar su plataforma actual. Usar el workspace raíz para instalar y ejecutar
-  `pnpm build:crm`; el resultado está en `apps/crm/.output` (antes `.output`). Si la plataforma
-  usa raíz de proyecto, apuntarla a `apps/crm` y permitir acceso a la raíz del workspace.
-  El nombre del Worker de Cloudflare se conserva explícitamente en `apps/crm/vite.config.ts`.
-  Revisar las rutas y variables del proyecto de hosting **antes de publicar** este cambio.
+- CRM: en Vercel, configurar `apps/crm` como raíz del proyecto y permitir acceso a los archivos
+  del workspace. Nitro genera `apps/crm/.vercel/output`, incluidos los recursos y la función
+  del servidor; no configurar `dist` como directorio de salida. La compilación local normal
+  genera `apps/crm/.output`. Revisar las variables del hosting antes de publicar.
 - MCP: Docker opcional, preparado en `apps/mcp/Dockerfile` y `compose.mcp.yaml`. También puede
   ejecutarse con Node mediante `pnpm build:mcp` y `pnpm --filter @lex/mcp start`.
   No necesita otro servidor físico: puede convivir con la web detrás de un proxy HTTPS.
