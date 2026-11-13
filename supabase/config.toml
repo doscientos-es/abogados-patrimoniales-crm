@@ -1,0 +1,4 @@
+# Only this function accepts MCP personal credentials instead of a Supabase JWT.
+# Authentication and authorization must still be enforced by the MCP and database.
+[functions.lex-mcp]
+verify_jwt = false

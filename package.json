@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --parallel --stream --filter './apps/*' run dev",
+    "dev": "pnpm --parallel --stream --filter \"./apps/*\" run dev",
     "dev:crm": "pnpm --filter abogados-patrimoniales-crm dev",
     "dev:mcp": "pnpm --filter @lex/mcp dev",
     "build": "pnpm -r run build",

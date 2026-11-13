@@ -235,4 +235,19 @@ describe('LEX MCP Streamable HTTP boundary', () => {
       expect(() => createMcpHttpHandler({ read }, url)).toThrow()
     }
   })
+
+  it('accepts the exact Supabase Edge Function path and rejects other paths', async () => {
+    const edgeUrl = 'https://project.supabase.co/functions/v1/lex-mcp'
+    const edgeHandler = createMcpHttpHandler({ read }, edgeUrl)
+    const payload = { jsonrpc: '2.0', id: 1, method: 'ping' }
+    const base = request(payload)
+    expect((await edgeHandler(new Request(edgeUrl, base))).status).toBe(200)
+    expect(
+      (
+        await edgeHandler(
+          new Request('https://project.supabase.co/functions/v1/other', request(payload)),
+        )
+      ).status,
+    ).toBe(400)
+  })
 })

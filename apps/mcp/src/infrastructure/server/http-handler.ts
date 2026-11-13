@@ -89,13 +89,13 @@ export function createMcpHttpHandler(gateway: McpReadGateway, publicUrl: string)
   const canonical = new URL(publicUrl)
   if (
     canonical.protocol !== 'https:' ||
-    canonical.pathname !== '/mcp' ||
+    !['/mcp', '/functions/v1/lex-mcp'].includes(canonical.pathname) ||
     canonical.search ||
     canonical.hash ||
     canonical.username ||
     canonical.password
   ) {
-    throw new Error('LEX_MCP_PUBLIC_URL must be the canonical HTTPS /mcp endpoint')
+    throw new Error('LEX_MCP_PUBLIC_URL must be a supported canonical HTTPS endpoint')
   }
 
   return async (request: Request): Promise<Response> => {
