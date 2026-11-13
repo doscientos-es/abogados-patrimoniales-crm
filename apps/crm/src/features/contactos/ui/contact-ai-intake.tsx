@@ -1,4 +1,4 @@
-import { FileText, LoaderCircle, Upload, X } from 'lucide-react'
+import { CheckCircle2, FileText, LoaderCircle, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -59,7 +59,6 @@ export function ContactAIIntake({
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
-  const [consented, setConsented] = useState(false)
   const [attachDocuments, setAttachDocuments] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [fields, setFields] = useState<ExtractedField[]>([])
@@ -70,7 +69,6 @@ export function ContactAIIntake({
     if (!nextOpen && processing) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setConsented(false)
       setAttachDocuments(true)
       setFields([])
       setSelected(new Set())
@@ -83,11 +81,6 @@ export function ContactAIIntake({
     if (!files?.length) return
     if (files.length > 5) {
       toast.error('Puedes procesar como máximo 5 documentos a la vez.')
-      if (fileInput.current) fileInput.current.value = ''
-      return
-    }
-    if (!consented) {
-      toast.error('Confirma primero que autorizas la lectura del documento con LEXIA.')
       if (fileInput.current) fileInput.current.value = ''
       return
     }
@@ -210,46 +203,37 @@ export function ContactAIIntake({
       </DialogTrigger>
       <DialogContent
         size="5xl"
-        className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden p-0 sm:max-w-[min(92vw,68rem)]"
+        className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(92vw,68rem)]"
       >
-        <DialogHeader className="shrink-0 border-b px-5 py-3.5 pr-12 text-left sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-              <LexiaIcon className="h-4 w-4" />
+        <DialogHeader className="shrink-0 border-b px-5 py-5 pr-12 text-left sm:px-7">
+          <div className="flex items-center gap-3">
+            <span className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <LexiaIcon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-sm font-semibold tracking-normal normal-case">
+              <DialogTitle className="text-base font-semibold tracking-normal normal-case">
                 Datos del contacto
               </DialogTitle>
-              <DialogDescription className="mt-0.5 text-xs">
-                Sube documentos y confirma los datos que quieras añadir.
+              <DialogDescription className="mt-0.5 text-sm">
+                Completa la ficha a partir de tus documentos con ayuda de LEXIA.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="bg-muted/10 grid min-h-0 gap-5 overflow-y-auto p-4 sm:p-6 md:min-h-[26rem] md:grid-cols-[minmax(17rem,0.9fr)_minmax(0,1.1fr)]">
-          <section className="space-y-3" aria-label="Carga de documentos">
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={consented}
-                onChange={(event) => setConsented(event.target.checked)}
-                className="mt-1"
-              />
-              <span>Autorizo enviar los documentos a OpenAI para extraer sus datos.</span>
-            </label>
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={attachDocuments}
-                onChange={(event) => setAttachDocuments(event.target.checked)}
-                className="mt-1"
-              />
-              <span>
-                Adjuntar los documentos a la ficha del contacto al crearlo (PDF, JPG o PNG).
+        <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <section className="space-y-5 p-5 sm:p-7 md:border-r" aria-label="Carga de documentos">
+            <div className="flex items-start gap-3">
+              <span className="bg-muted text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                1
               </span>
-            </label>
+              <div>
+                <h3 className="text-sm font-semibold">Añade la documentación</h3>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  Sube una identificación u otro documento con datos del contacto.
+                </p>
+              </div>
+            </div>
             <input
               ref={fileInput}
               aria-label="Seleccionar documentos PDF o imágenes"
@@ -259,58 +243,103 @@ export function ContactAIIntake({
               className="sr-only"
               onChange={(event) => void readFiles(event.currentTarget.files)}
             />
-            <div className="from-primary/[0.06] via-background to-muted/40 flex h-full min-h-[21rem] flex-col items-center justify-center rounded-2xl border bg-gradient-to-br p-6 text-center shadow-sm">
-              <span className="bg-background text-primary mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border shadow-sm">
-                <FileText className="h-6 w-6" aria-hidden="true" />
+            <div className="bg-muted/30 flex flex-col items-center rounded-2xl border border-dashed px-5 py-7 text-center sm:py-9">
+              <span className="bg-background text-primary mb-4 flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm">
+                <Upload className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h3 className="text-base font-semibold">Añade documentos</h3>
-              <p className="text-muted-foreground mt-1.5 max-w-xs text-sm leading-relaxed">
-                Identificación o documentación para completar los datos del contacto.
+              <p className="text-sm font-semibold">Selecciona tus archivos</p>
+              <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+                PDF, JPG, PNG o WEBP · hasta 4 MB por archivo
               </p>
               <Button
                 type="button"
-                className="mt-5 h-11 w-full max-w-xs"
-                disabled={processing || !consented}
+                className="mt-5"
+                disabled={processing}
                 onClick={() => fileInput.current?.click()}
               >
                 {processing ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Upload className="h-4 w-4" />
+                  <Upload className="h-4 w-4" aria-hidden="true" />
                 )}
                 {processing ? 'Leyendo documentos…' : 'Añadir PDF o imagen'}
               </Button>
-              <p className="text-muted-foreground mt-4 text-xs">
-                Hasta 5 archivos <span className="px-1">·</span> PDF, JPG, PNG o WEBP
-                <span className="px-1">·</span> máximo 4 MB
+              <p className="text-muted-foreground mt-3 text-xs">Hasta 5 archivos por selección</p>
+            </div>
+
+            {documents.length ? (
+              <div className="space-y-2" aria-label="Documentos procesados">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Documentos leídos · {documents.length}
+                </p>
+                <ul className="space-y-2">
+                  {documents.map((document, index) => (
+                    <li
+                      key={`${document.name}-${index}`}
+                      className="bg-muted/30 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <FileText
+                        className="text-muted-foreground h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate" title={document.name}>
+                        {document.name}
+                      </span>
+                      <CheckCircle2
+                        className="text-primary h-4 w-4 shrink-0"
+                        aria-label="Lectura completada"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="bg-muted/30 rounded-xl border p-3">
+              <label className="flex cursor-pointer items-start gap-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={attachDocuments}
+                  onChange={(event) => setAttachDocuments(event.target.checked)}
+                  className="accent-primary mt-0.5 h-4 w-4 shrink-0"
+                />
+                <span>Adjuntar los documentos a la ficha</span>
+              </label>
+              <p className="text-muted-foreground mt-1 pl-7 text-xs leading-relaxed">
+                Se guardarán al crear el contacto. Solo PDF, JPG o PNG; WEBP es solo para lectura.
               </p>
-              {processing ? (
-                <output className="text-primary bg-primary/5 mt-4 flex items-center gap-2 rounded-full px-3 py-2 text-xs">
-                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  LEXIA está leyendo los documentos…
-                </output>
-              ) : null}
             </div>
           </section>
 
-          <section aria-label="Datos propuestos" className="min-w-0 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-semibold">Propuestas encontradas</h3>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Selecciona qué datos quieres completar.
-                </p>
+          <section
+            aria-label="Datos propuestos"
+            className="bg-muted/10 min-w-0 space-y-5 border-t p-5 sm:p-7 md:border-t-0"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="bg-muted text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                  2
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold">Revisa los datos</h3>
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    Elige qué información quieres añadir a la ficha.
+                  </p>
+                </div>
               </div>
-              <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-medium">
-                {selected.size} seleccionados
+              <span
+                className="bg-background text-muted-foreground rounded-full border px-2.5 py-1 text-xs font-medium"
+                aria-live="polite"
+              >
+                {selected.size} {selected.size === 1 ? 'seleccionado' : 'seleccionados'}
               </span>
             </div>
             {fields.length ? (
-              <div className="space-y-2">
+              <div className="space-y-2" aria-label="Propuestas encontradas">
                 {fields.map((field) => (
                   <div
                     key={field.id}
-                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2.5 rounded-xl border p-3 text-sm shadow-sm transition-colors ${
+                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 rounded-xl border p-4 text-sm transition-colors ${
                       selected.has(field.id)
                         ? 'border-primary/30 bg-primary/5'
                         : 'bg-background hover:border-primary/30'
@@ -324,8 +353,10 @@ export function ContactAIIntake({
                         className="border-input accent-primary mt-0.5 h-4 w-4 rounded"
                       />
                       <span className="min-w-0 cursor-pointer">
-                        <span className="block leading-snug font-medium">{field.label}</span>
-                        <span className="mt-0.5 block break-words">{field.value}</span>
+                        <span className="text-muted-foreground block text-xs font-medium">
+                          {field.label}
+                        </span>
+                        <span className="mt-1 block font-medium break-words">{field.value}</span>
                         {field.excerpt ? (
                           <span className="text-muted-foreground mt-1 block text-xs leading-snug">
                             «{field.excerpt}»
@@ -353,26 +384,40 @@ export function ContactAIIntake({
                 ))}
               </div>
             ) : (
-              <div className="bg-background flex min-h-[21rem] flex-col items-center justify-center rounded-2xl border px-6 py-8 text-center shadow-sm">
-                <span className="bg-primary/10 text-primary mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
-                  <LexiaIcon className="h-5 w-5" />
+              <div
+                className="bg-background flex min-h-52 flex-col items-center justify-center rounded-2xl border px-6 py-8 text-center"
+                aria-live="polite"
+              >
+                <span className="bg-primary/10 text-primary mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+                  {processing ? (
+                    <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <LexiaIcon className="h-5 w-5" />
+                  )}
                 </span>
-                <p className="text-sm font-semibold">Tus propuestas aparecerán aquí</p>
+                <p className="text-sm font-semibold">
+                  {processing
+                    ? 'LEXIA está leyendo los documentos…'
+                    : documents.length
+                      ? 'No hay datos propuestos'
+                      : 'Todavía no hay datos'}
+                </p>
                 <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">
-                  Al añadir un documento, LEXIA encontrará los datos del contacto para que elijas
-                  cuáles completar.
+                  {processing
+                    ? 'Esto puede tardar unos segundos.'
+                    : documents.length
+                      ? 'Puedes añadir otro documento o adjuntar los archivos leídos a la ficha.'
+                      : 'Cuando añadas un documento, verás aquí los datos que LEXIA encuentre.'}
                 </p>
               </div>
             )}
           </section>
         </div>
 
-        <DialogFooter className="bg-background/95 shrink-0 border-t px-5 py-3 backdrop-blur sm:px-6">
-          {selected.size ? (
-            <p className="text-muted-foreground mr-auto self-center text-xs">
-              {selected.size} {selected.size === 1 ? 'dato seleccionado' : 'datos seleccionados'}
-            </p>
-          ) : null}
+        <DialogFooter className="bg-background shrink-0 border-t px-5 py-4 sm:px-7">
+          <p className="text-muted-foreground mr-auto self-center text-xs">
+            Revisa los datos antes de guardar el contacto.
+          </p>
           <Button
             type="button"
             variant="outline"

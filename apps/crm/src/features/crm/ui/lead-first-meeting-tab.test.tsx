@@ -4,11 +4,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   appointments: [] as Array<Record<string, unknown>>,
   create: vi.fn().mockResolvedValue({ id: 'new-event' }),
+  invoke: vi.fn(),
   updateMeeting: vi.fn().mockImplementation(async ({ task, details }) => ({
     ...task,
     reunion: details,
     version: task.version + 1,
   })),
+}))
+
+vi.mock('@/shared/infrastructure/supabase', () => ({
+  getSupabaseBrowserClient: () => ({ functions: { invoke: mocks.invoke } }),
 }))
 
 vi.mock('@/features/tareas', () => ({
@@ -112,6 +117,43 @@ describe('LeadFirstMeetingTab', () => {
     mocks.appointments = [meeting({ status: 'finished', primeraCita: { estado: 'Celebrada' } })]
     renderTab()
     expect(screen.queryByRole('button', { name: /Editar \/ reprogramar cita/ })).toBeNull()
+  })
+
+  it('analyses a saved transcript without a separate authorization checkbox', async () => {
+    mocks.appointments = [meeting({ transcription: 'Transcripción de prueba' })]
+    mocks.invoke.mockResolvedValue({
+      data: { proposal: { resumen: 'Resumen propuesto' } },
+      error: null,
+    })
+    renderTab()
+
+    expect(screen.queryByLabelText(/Confirmo que puedo enviar/)).toBeNull()
+    const analyze = screen.getByRole('button', { name: 'Analizar con LEXIA' })
+    expect(analyze.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(analyze)
+
+    await waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith('analyze-first-meeting-transcript', {
+        body: {
+          firmId: 'firm-1',
+          taskId: 'event-1',
+          transcript: 'Transcripción de prueba',
+          consent: true,
+        },
+      }),
+    )
+    await waitFor(() =>
+      expect(mocks.updateMeeting).toHaveBeenCalledWith(
+        expect.objectContaining({
+          details: expect.objectContaining({
+            lexiaProposal: expect.objectContaining({
+              resumen: 'Resumen propuesto',
+              estado: 'pendiente_revision',
+            }),
+          }),
+        }),
+      ),
+    )
   })
 
   it('offers to schedule a linked first meeting when none exists', async () => {

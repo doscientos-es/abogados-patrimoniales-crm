@@ -52,7 +52,8 @@ describe('ContactAIIntake', () => {
     ).toContain('sticky')
     expect(
       screen.getByRole('button', { name: 'Añadir PDF o imagen' }).hasAttribute('disabled'),
-    ).toBe(true)
+    ).toBe(false)
+    expect(screen.queryByLabelText(/Autorizo enviar los documentos a OpenAI/)).toBeNull()
 
     const file = new File([new Uint8Array([37, 80, 68, 70, 45])], 'dni.pdf', {
       type: 'application/pdf',
@@ -63,12 +64,6 @@ describe('ContactAIIntake', () => {
     fireEvent.change(screen.getByLabelText('Seleccionar documentos PDF o imágenes'), {
       target: { files: [file] },
     })
-    expect(mocks.invoke).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByLabelText(/Autorizo enviar los documentos a OpenAI/))
-    fireEvent.change(screen.getByLabelText('Seleccionar documentos PDF o imágenes'), {
-      target: { files: [file] },
-    })
-
     await waitFor(() =>
       expect(mocks.invoke).toHaveBeenCalledWith(
         'extract-contact-document',
@@ -76,6 +71,7 @@ describe('ContactAIIntake', () => {
       ),
     )
     expect(screen.getByText('Ana')).toBeTruthy()
+    expect(screen.getByLabelText('Documentos procesados').textContent).toContain('dni.pdf')
     expect(onApply).not.toHaveBeenCalled()
 
     const proposalCheckbox = screen.getByLabelText(/Nombre.*Ana/)
@@ -92,7 +88,6 @@ describe('ContactAIIntake', () => {
     const onApply = vi.fn()
     render(<ContactAIIntake firmId="firm-1" onApply={onApply} />)
     fireEvent.click(screen.getByRole('button', { name: 'Dar de alta con LEXIA' }))
-    fireEvent.click(screen.getByLabelText(/Autorizo enviar los documentos a OpenAI/))
     fireEvent.click(screen.getByLabelText(/Adjuntar los documentos a la ficha/))
     const file = new File(['data'], 'dni.pdf', { type: 'application/pdf' })
     Object.defineProperty(file, 'arrayBuffer', {
@@ -104,5 +99,36 @@ describe('ContactAIIntake', () => {
     await screen.findByText('Ana')
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar datos confirmados' }))
     expect(onApply).toHaveBeenCalledWith({ nombre: 'Ana' }, [])
+  })
+
+  it('shows processing and allows attaching a document even when no data is found', async () => {
+    let finish!: (value: unknown) => void
+    mocks.invoke.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const onApply = vi.fn()
+    render(<ContactAIIntake firmId="firm-1" onApply={onApply} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Dar de alta con LEXIA' }))
+    expect(screen.getByText('Todavía no hay datos')).toBeTruthy()
+
+    const file = new File(['data'], 'documento.pdf', { type: 'application/pdf' })
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () => Promise.resolve(new Uint8Array([1]).buffer),
+    })
+    fireEvent.change(screen.getByLabelText('Seleccionar documentos PDF o imágenes'), {
+      target: { files: [file] },
+    })
+    expect(await screen.findByText('LEXIA está leyendo los documentos…')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Leyendo documentos…' }).hasAttribute('disabled'),
+    ).toBe(true)
+
+    finish({ data: { fields: [] }, error: null })
+    expect(await screen.findByText('No hay datos propuestos')).toBeTruthy()
+    expect(screen.getByLabelText('Documentos procesados').textContent).toContain('documento.pdf')
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar datos confirmados' }))
+    expect(onApply).toHaveBeenCalledWith({}, [file])
   })
 })

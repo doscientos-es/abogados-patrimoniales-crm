@@ -28,7 +28,6 @@ const selectClass = 'border-input bg-background h-9 w-full rounded-md border px-
 type ClassifyResult = {
   suggestion?: RawAiSuggestion
   usedContent?: boolean
-  needsConsent?: boolean
   error?: string
 }
 
@@ -59,7 +58,7 @@ export function DocumentNamingPanel({
     null,
   )
   const [busy, setBusy] = useState<'ai' | 'save' | null>(null)
-  const [aiError, setAiError] = useState<{ text: string; consent?: boolean } | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   useEffect(() => {
     setTypeId(current?.type_id ?? '')
@@ -79,10 +78,10 @@ export function DocumentNamingPanel({
   const preview = buildDisplayName(selectedType?.name, description, document.original_name)
   const isPdf = document.mime_type === 'application/pdf'
 
-  const suggest = async (allowConfidential = false) => {
+  const suggest = async () => {
     const client = getSupabaseBrowserClient()
     if (!client) {
-      setAiError({ text: 'LEXIA no está disponible en este entorno.' })
+      setAiError('LEXIA no está disponible en este entorno.')
       return
     }
     setBusy('ai')
@@ -90,32 +89,22 @@ export function DocumentNamingPanel({
     try {
       const { data, error } = await client.functions.invoke<ClassifyResult>(
         'classify-case-document',
-        { body: { documentId: document.id, allowConfidential } },
+        // Preserve the existing Edge Function contract without a second confirmation.
+        { body: { documentId: document.id, allowConfidential: true } },
       )
       let message = data?.error ?? ''
       const context =
         error && typeof error === 'object' && 'context' in error ? error.context : null
       if (context instanceof Response) {
         try {
-          const payload = (await context.clone().json()) as {
-            error?: unknown
-            needsConsent?: unknown
-          }
+          const payload = (await context.clone().json()) as { error?: unknown }
           if (typeof payload.error === 'string') message = payload.error
-          if (payload.needsConsent === true) {
-            setAiError({ text: message, consent: true })
-            return
-          }
         } catch {
           // Keep the fallback message when the response body is not JSON.
         }
       }
-      if (data?.needsConsent) {
-        setAiError({ text: message, consent: true })
-        return
-      }
       if (error || !data?.suggestion) {
-        setAiError({ text: message || error?.message || 'No se ha podido analizar el documento.' })
+        setAiError(message || error?.message || 'No se ha podido analizar el documento.')
         return
       }
       const suggestion = sanitizeSuggestion(data.suggestion, rows)
@@ -127,9 +116,7 @@ export function DocumentNamingPanel({
       if (suggestion.procedureNumber) setProcedureNumber(suggestion.procedureNumber)
       if (suggestion.parties.length) setParties(suggestion.parties.join('; '))
     } catch (error) {
-      setAiError({
-        text: error instanceof Error ? error.message : 'No se ha podido analizar el documento.',
-      })
+      setAiError(error instanceof Error ? error.message : 'No se ha podido analizar el documento.')
     } finally {
       setBusy(null)
     }
@@ -218,19 +205,7 @@ export function DocumentNamingPanel({
 
       {aiError ? (
         <div className="bg-muted/60 rounded-md p-2.5 text-xs">
-          <p>{aiError.text}</p>
-          {aiError.consent ? (
-            <Button
-              className="mt-2"
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() => void suggest(true)}
-            >
-              Sí, que LEXIA lea este documento
-            </Button>
-          ) : null}
+          <p>{aiError}</p>
         </div>
       ) : null}
       {aiSuggestion ? (

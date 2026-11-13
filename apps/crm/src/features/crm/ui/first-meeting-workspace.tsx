@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { estadoAsistente } from '@/features/crm/application/first-meeting-cycle'
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 import {
   MeetingInternalNotes,
   useActualizarReunionEspecial,
   type DetallesReunion,
   type TareaPersistida,
 } from '@/features/tareas'
+import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const TRANSCRIPT_ACCEPT = '.txt,.md,.vtt,.srt,text/plain'
 export const MAX_TRANSCRIPT_CHARS = 60_000
@@ -249,7 +249,6 @@ function AiProposalBlock({
   const savedTranscript =
     typeof task?.reunion['transcription'] === 'string' ? task.reunion['transcription'] : ''
   const [proposal, setProposal] = useState(() => readProposal(task?.reunion['lexiaProposal']))
-  const [consent, setConsent] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const transcriptLength = savedTranscript.trim().length
   const hasTranscript = transcriptLength > 0
@@ -270,7 +269,7 @@ function AiProposalBlock({
 
   const analyze = async () => {
     const client = getSupabaseBrowserClient()
-    if (!task || !hasTranscript || !transcriptWithinLimit || !consent) return
+    if (!task || !hasTranscript || !transcriptWithinLimit) return
     if (!client) {
       toast.error('No se pudo conectar con el despacho activo.')
       return
@@ -280,6 +279,7 @@ function AiProposalBlock({
       const { data, error } = await client.functions.invoke<{ proposal?: unknown }>(
         'analyze-first-meeting-transcript',
         {
+          // Legacy Edge Function contract; clicking Analyze is the requested action.
           body: { firmId, taskId: task.id, transcript: savedTranscript, consent: true },
         },
       )
@@ -298,7 +298,11 @@ function AiProposalBlock({
       }
       const suggested = readProposal(data?.proposal)
       if (!suggested) throw new Error('LEXIA no ha devuelto una propuesta estructurada válida.')
-      const next = { ...suggested, estado: 'pendiente_revision' as const, generadaEn: new Date().toISOString() }
+      const next = {
+        ...suggested,
+        estado: 'pendiente_revision' as const,
+        generadaEn: new Date().toISOString(),
+      }
       setProposal(next)
       await persistProposal(next)
       toast.success('Propuesta de LEXIA guardada para revisión profesional.')
@@ -319,7 +323,10 @@ function AiProposalBlock({
     if (proposal)
       setProposal({
         ...proposal,
-        [key]: value.split('\n').map((item) => item.trim()).filter(Boolean),
+        [key]: value
+          .split('\n')
+          .map((item) => item.trim())
+          .filter(Boolean),
         estado: 'pendiente_revision',
       })
   }
@@ -330,16 +337,22 @@ function AiProposalBlock({
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Sparkles className="text-primary size-5" aria-hidden="true" />
-            <h2 className="text-sm font-bold tracking-wide uppercase">Propuesta estructurada por LEXIA</h2>
+            <h2 className="text-sm font-bold tracking-wide uppercase">
+              Propuesta estructurada por LEXIA
+            </h2>
             <Badge variant={proposal?.estado === 'validada' ? 'default' : 'secondary'}>
-              {proposal ? (proposal.estado === 'validada' ? 'Validada' : 'Pendiente de revisión') : 'Sin analizar'}
+              {proposal
+                ? proposal.estado === 'validada'
+                  ? 'Validada'
+                  : 'Pendiente de revisión'
+                : 'Sin analizar'}
             </Badge>
           </div>
           {canEdit && task ? (
             <Button
               type="button"
               size="sm"
-              disabled={!hasTranscript || !transcriptWithinLimit || !consent || analyzing || update.isPending}
+              disabled={!hasTranscript || !transcriptWithinLimit || analyzing || update.isPending}
               onClick={() => void analyze()}
             >
               <Sparkles className="size-4" aria-hidden="true" />
@@ -359,50 +372,104 @@ function AiProposalBlock({
               : 'Guarda primero la transcripción para poder pedir el análisis.'}
           </p>
         ) : null}
-        {task && canEdit && hasTranscript ? (
-          <label className="text-muted-foreground flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-              className="mt-0.5"
-            />
-            <span>Confirmo que puedo enviar esta transcripción a LEXIA (OpenAI) para analizarla.</span>
-          </label>
-        ) : null}
         {task && !transcriptWithinLimit ? (
           <p className="text-destructive text-xs" role="alert">
-            La transcripción supera el máximo de 60.000 caracteres. Edítala antes de enviarla a LEXIA.
+            La transcripción supera el máximo de 60.000 caracteres. Edítala antes de enviarla a
+            LEXIA.
           </p>
         ) : null}
         {proposal ? (
           <>
             <ol className="flex flex-wrap items-center gap-2 text-xs">
-              {['LEXIA propone', 'Abogado revisa / corrige', 'Abogado valida'].map((step, index) => (
-                <li key={step} className="flex items-center gap-2">
-                  <span className="bg-muted flex size-5 items-center justify-center rounded-full font-semibold">
-                    {proposal.estado === 'validada' && index < 3 ? <CheckCircle2 className="size-4" /> : index + 1}
-                  </span>
-                  <span>{step}</span>
-                  {index < 2 ? <span className="text-muted-foreground">→</span> : null}
-                </li>
-              ))}
+              {['LEXIA propone', 'Abogado revisa / corrige', 'Abogado valida'].map(
+                (step, index) => (
+                  <li key={step} className="flex items-center gap-2">
+                    <span className="bg-muted flex size-5 items-center justify-center rounded-full font-semibold">
+                      {proposal.estado === 'validada' && index < 3 ? (
+                        <CheckCircle2 className="size-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <span>{step}</span>
+                    {index < 2 ? <span className="text-muted-foreground">→</span> : null}
+                  </li>
+                ),
+              )}
             </ol>
             <fieldset disabled={!canEdit} className="grid gap-4 sm:grid-cols-2">
-              <ProposalField label="Resumen" value={proposal.resumen} onChange={(value) => updateText('resumen', value)} />
-              <ProposalField label="Objetivo del cliente" value={proposal.objetivoCliente} onChange={(value) => updateText('objetivoCliente', value)} />
-              <ProposalListField label="Hechos (uno por línea)" value={proposal.hechos} onChange={(value) => updateList('hechos', value)} />
-              <ProposalListField label="Intervinientes y relación (uno por línea)" value={proposal.intervinientes} onChange={(value) => updateList('intervinientes', value)} />
-              <ProposalListField label="Documentos mencionados (uno por línea)" value={proposal.documentos} onChange={(value) => updateList('documentos', value)} />
-              <ProposalListField label="Preguntas pendientes (una por línea)" value={proposal.preguntasPendientes} onChange={(value) => updateList('preguntasPendientes', value)} />
+              <ProposalField
+                label="Resumen"
+                value={proposal.resumen}
+                onChange={(value) => updateText('resumen', value)}
+              />
+              <ProposalField
+                label="Objetivo del cliente"
+                value={proposal.objetivoCliente}
+                onChange={(value) => updateText('objetivoCliente', value)}
+              />
+              <ProposalListField
+                label="Hechos (uno por línea)"
+                value={proposal.hechos}
+                onChange={(value) => updateList('hechos', value)}
+              />
+              <ProposalListField
+                label="Intervinientes y relación (uno por línea)"
+                value={proposal.intervinientes}
+                onChange={(value) => updateList('intervinientes', value)}
+              />
+              <ProposalListField
+                label="Documentos mencionados (uno por línea)"
+                value={proposal.documentos}
+                onChange={(value) => updateList('documentos', value)}
+              />
+              <ProposalListField
+                label="Preguntas pendientes (una por línea)"
+                value={proposal.preguntasPendientes}
+                onChange={(value) => updateList('preguntasPendientes', value)}
+              />
             </fieldset>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-              <p className="text-muted-foreground text-xs">Borrador generado {new Date(proposal.generadaEn).toLocaleString('es-ES')}. Revisa cada dato; LEXIA puede equivocarse.</p>
+              <p className="text-muted-foreground text-xs">
+                Borrador generado {new Date(proposal.generadaEn).toLocaleString('es-ES')}. Revisa
+                cada dato; LEXIA puede equivocarse.
+              </p>
               <div className="flex gap-2">
-                <Button type="button" size="sm" variant="outline" disabled={!canEdit || update.isPending} onClick={() => void persistProposal({ ...proposal, estado: 'pendiente_revision' }).then(() => toast.success('Cambios guardados.')).catch((error: unknown) => toast.error(error instanceof Error ? error.message : 'No se pudo guardar la propuesta.'))}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!canEdit || update.isPending}
+                  onClick={() =>
+                    void persistProposal({ ...proposal, estado: 'pendiente_revision' })
+                      .then(() => toast.success('Cambios guardados.'))
+                      .catch((error: unknown) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : 'No se pudo guardar la propuesta.',
+                        ),
+                      )
+                  }
+                >
                   Guardar revisión
                 </Button>
-                <Button type="button" size="sm" disabled={!canEdit || update.isPending || proposal.estado === 'validada'} onClick={() => void persistProposal({ ...proposal, estado: 'validada' }).then(() => toast.success('Propuesta validada por el abogado.')).catch((error: unknown) => toast.error(error instanceof Error ? error.message : 'No se pudo validar la propuesta.'))}>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!canEdit || update.isPending || proposal.estado === 'validada'}
+                  onClick={() =>
+                    void persistProposal({ ...proposal, estado: 'validada' })
+                      .then(() => toast.success('Propuesta validada por el abogado.'))
+                      .catch((error: unknown) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : 'No se pudo validar la propuesta.',
+                        ),
+                      )
+                  }
+                >
                   Validar propuesta
                 </Button>
               </div>
@@ -410,30 +477,53 @@ function AiProposalBlock({
           </>
         ) : null}
         <p className="text-muted-foreground border-t pt-2 text-xs">
-          La propuesta es un borrador de trabajo, no un análisis jurídico ni una decisión automática. Solo se guarda en la reunión; no modifica el Lead ni sus datos sin validación.
+          La propuesta es un borrador de trabajo, no un análisis jurídico ni una decisión
+          automática. Solo se guarda en la reunión; no modifica el Lead ni sus datos sin validación.
         </p>
       </CardContent>
     </Card>
   )
 }
 
-function ProposalField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function ProposalField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
   return (
     <label className="space-y-1.5 text-sm">
       <span className="font-medium">{label}</span>
-      <Textarea value={value} rows={3} maxLength={3000} onChange={(event) => onChange(event.target.value)} />
+      <Textarea
+        value={value}
+        rows={3}
+        maxLength={3000}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   )
 }
 
-function ProposalListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string) => void }) {
+function ProposalListField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string[]
+  onChange: (value: string) => void
+}) {
   return <ProposalField label={label} value={value.join('\n')} onChange={onChange} />
 }
 
 function readProposal(value: unknown): LexiaProposal | null {
   const item = asRecord(value)
   if (typeof item['resumen'] !== 'string') return null
-  const list = (entry: unknown) => Array.isArray(entry) ? entry.filter((text): text is string => typeof text === 'string') : []
+  const list = (entry: unknown) =>
+    Array.isArray(entry) ? entry.filter((text): text is string => typeof text === 'string') : []
   return {
     resumen: item['resumen'],
     objetivoCliente: typeof item['objetivoCliente'] === 'string' ? item['objetivoCliente'] : '',
@@ -442,7 +532,8 @@ function readProposal(value: unknown): LexiaProposal | null {
     documentos: list(item['documentos']),
     preguntasPendientes: list(item['preguntasPendientes']),
     estado: item['estado'] === 'validada' ? 'validada' : 'pendiente_revision',
-    generadaEn: typeof item['generadaEn'] === 'string' ? item['generadaEn'] : new Date().toISOString(),
+    generadaEn:
+      typeof item['generadaEn'] === 'string' ? item['generadaEn'] : new Date().toISOString(),
   }
 }
 
