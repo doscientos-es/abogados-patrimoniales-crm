@@ -8,17 +8,30 @@ vi.mock('@/features/documentos/loose-supabase', () => ({
 }))
 import { InternalDrafts } from './internal-drafts'
 
-afterEach(() => { cleanup(); vi.resetAllMocks() })
+afterEach(() => {
+  cleanup()
+  vi.resetAllMocks()
+})
 
-it.each([['lead', 'opportunity_id'], ['case', 'case_id']] as const)(
+it.each([
+  ['lead', 'opportunity_id'],
+  ['case', 'case_id'],
+] as const)(
   'shows internal draft text for the selected %s without interpreting HTML',
   async (targetType, column) => {
     mocks.from.mockReturnValue({ select: mocks.select })
     mocks.select.mockReturnValue({ eq: mocks.eq })
     mocks.eq.mockReturnValue({ eq: mocks.eq, order: mocks.order })
-    mocks.order.mockResolvedValue({ data: [{ id: '1', title: 'Encargo', content: '<img src=x>', created_at: '2026-01-01T00:00:00Z' }], error: null })
+    mocks.order.mockResolvedValue({
+      data: [
+        { id: '1', title: 'Encargo', content: '<img src=x>', created_at: '2026-01-01T00:00:00Z' },
+      ],
+      error: null,
+    })
     const { container } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
         <InternalDrafts firmId="firm-1" targetId="target-1" targetType={targetType} />
       </QueryClientProvider>,
     )
