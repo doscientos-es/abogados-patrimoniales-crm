@@ -341,11 +341,9 @@ function CrmMetric({ label, value, tone }: { label: string; value: number; tone:
       search={{ vista: 'todas', abrir: '' }}
       className="group bg-card hover:border-primary/40 hover:bg-muted/50 flex min-h-20 items-center justify-between gap-3 rounded-lg border px-3.5 py-3 transition-colors"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${toneClass}`}
-        >
+      <div className="flex min-w-0 flex-col items-start gap-2">
+        <p className="text-foreground text-sm font-medium">{label}</p>
+        <span className={`rounded-md px-2 py-0.5 text-xl font-semibold tabular-nums ${toneClass}`}>
           {value}
         </span>
       </div>

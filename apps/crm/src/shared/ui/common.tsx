@@ -63,7 +63,7 @@ export function SectionHeader({
           {logo ? (
             <img src="/logo-lex.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
           ) : null}
-          <h1 className="text-foreground min-w-0 truncate font-serif text-2xl font-semibold tracking-wide text-balance uppercase sm:text-3xl">
+          <h1 className="text-foreground min-w-0 font-serif text-2xl font-semibold text-balance sm:text-3xl">
             {title}
           </h1>
           {meta ? (
@@ -126,9 +126,7 @@ export function StatTile({
       )}
     >
       <div className="min-w-0">
-        <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-          {label}
-        </p>
+        <p className="text-foreground text-sm font-medium">{label}</p>
         {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
       </div>
       <p

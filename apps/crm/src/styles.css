@@ -168,6 +168,15 @@
   }
 }
 
+/* Preferencia local del usuario: también amplía diálogos y controles expresados en rem. */
+html[data-reading-large] {
+  font-size: 112.5%;
+}
+
+html[data-reading-large] body {
+  letter-spacing: 0.01em;
+}
+
 /* Pantallas de acceso: atmósfera sobria, con movimiento muy sutil. */
 .auth-login-page {
   position: relative;

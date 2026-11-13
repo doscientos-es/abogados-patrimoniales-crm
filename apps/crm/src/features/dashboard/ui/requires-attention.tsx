@@ -170,7 +170,7 @@ export function RequiresAttention({
   return (
     <Card data-testid="requires-attention">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" /> Requiere atención
           <Badge variant={allIncidents.length ? 'default' : 'outline'}>{allIncidents.length}</Badge>
         </CardTitle>
@@ -233,12 +233,17 @@ export function RequiresAttention({
                   })()}
                 </span>
                 <span className="min-w-0 flex-1" title={incident.explicacion}>
-                  <span className="block truncate text-sm font-medium">{incident.titulo}</span>
-                  <span className="text-muted-foreground block truncate text-xs">
+                  <span className="block text-base font-semibold break-words">
+                    {incident.titulo}
+                  </span>
+                  <span className="text-muted-foreground block text-sm break-words">
                     {MOTIVO_STYLE[incident.motivo].short} · {name(incident.responsableId)}
                   </span>
                 </span>
-                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
+                <ChevronRight
+                  className="text-muted-foreground h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
               </Destino>
             ))}
           </div>

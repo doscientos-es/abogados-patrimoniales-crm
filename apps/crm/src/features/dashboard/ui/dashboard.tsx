@@ -364,12 +364,12 @@ export function Dashboard() {
                 to={risk.to}
                 className="hover:bg-muted/50 focus-visible:ring-ring -mx-2 flex items-center gap-3 rounded-md px-2 py-3 transition-colors outline-none focus-visible:ring-2"
               >
-                <span className="bg-destructive/10 text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums">
+                <span className="bg-destructive/10 text-destructive flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-lg font-semibold tabular-nums">
                   {risk.value}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium">{risk.label}</span>
-                  <span className="text-muted-foreground block text-xs">{risk.detail}</span>
+                  <span className="block text-base font-semibold">{risk.label}</span>
+                  <span className="text-muted-foreground block text-sm">{risk.detail}</span>
                 </span>
                 <ArrowRight
                   className="text-muted-foreground ml-auto h-4 w-4 shrink-0"
@@ -570,14 +570,14 @@ function TodayActionRow({
   if (action.type === 'task') {
     const { task } = action
     return (
-      <li className="flex items-center gap-3 px-4 py-3">
+      <li className="flex flex-wrap items-center gap-3 px-4 py-3">
         <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
         <Link
           to="/tareas"
           className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
         >
-          <span className="block truncate text-sm font-medium">{task.titulo}</span>
-          <span className="text-muted-foreground block truncate text-xs">
+          <span className="block text-base font-semibold break-words">{task.titulo}</span>
+          <span className="text-muted-foreground block text-sm break-words">
             {relatedRecords.get(task.expedienteId ?? task.oportunidadId ?? '') ?? 'Sin vínculo'} ·{' '}
             {formatTaskDueDate(task)}
           </span>
@@ -599,17 +599,17 @@ function TodayActionRow({
   if (action.type === 'opportunity') {
     const { opportunity } = action
     return (
-      <li className="flex items-center gap-3 px-4 py-3">
+      <li className="flex flex-wrap items-center gap-3 px-4 py-3">
         <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
         <Link
           to="/oportunidades/$id"
           params={{ id: opportunity.id }}
           className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
         >
-          <span className="block truncate text-sm font-medium">
+          <span className="block text-base font-semibold break-words">
             {opportunity.referencia} · {opportunity.titulo}
           </span>
-          <span className="text-muted-foreground block truncate text-xs">
+          <span className="text-muted-foreground block text-sm break-words">
             Sin seguimiento · {contactNames.get(opportunity.contactoId) ?? 'Contacto no disponible'}
           </span>
         </Link>
@@ -626,16 +626,16 @@ function TodayActionRow({
 
   const { invoice } = action
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
       <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
       <Link
         to="/facturacion"
         className="min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <span className="block truncate text-sm font-medium">
+        <span className="block text-base font-semibold break-words">
           Cobro pendiente · {invoice.referencia}
         </span>
-        <span className="text-muted-foreground block truncate text-xs">
+        <span className="text-muted-foreground block text-sm break-words">
           {invoice.cliente} · {formatCurrency(invoice.importePendiente, invoice.moneda)}
         </span>
       </Link>
