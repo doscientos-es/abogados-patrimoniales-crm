@@ -4,7 +4,7 @@ import { MCP_TOOLS } from '../../application/tools.ts'
 import { MCP_SCOPES, type McpReadGateway, type McpReadResult } from '../../domain/contracts.ts'
 
 const VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26']
-export const MAX_BODY_BYTES = 16384
+export const MAX_BODY_BYTES = 131072
 const messageSchema = z
   .object({
     jsonrpc: z.literal('2.0'),

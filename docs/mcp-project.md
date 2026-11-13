@@ -135,9 +135,9 @@ tamaño, referencias de página y revisión de prompt injection antes de habilit
 Primero contexto y plantillas aprobadas para minuta de reunión, solicitud de documentación,
 resumen del lead y borrador de hoja de encargo. Señalar datos ausentes y citas; nunca inventar
 hechos, fechas, importes, poderes ni fundamentos jurídicos. Revisión del abogado obligatoria.
-Después, scopes nuevos para guardar **borradores**, idempotencia y control de versión; mostrar
-vista previa y confirmación explícita. Envío/firma/presentación judicial fuera del alcance
-inicial y con autorización adicional. Ninguna clave de lectura gana escrituras automáticamente.
+El guardado de borradores de texto tiene scope propio e idempotencia; todavía faltan edición,
+control de versión y un flujo de aprobación. Envío/firma/presentación judicial quedan fuera del
+alcance inicial y requieren autorización adicional. Ninguna clave de lectura gana escrituras automáticamente.
 
 ## 5. Operación, publicación y conexión
 

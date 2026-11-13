@@ -166,7 +166,7 @@ describe('LEX MCP Streamable HTTP boundary', () => {
     expect((await response.json()).result.structuredContent.status).toBe('pending_review')
     expect(saveDraft).toHaveBeenCalledWith(token, { ...args, title: 'Borrador' })
     const invalid = await handler(
-      request(call('lex_save_internal_draft', { ...args, content: 'á'.repeat(4001) })),
+      request(call('lex_save_internal_draft', { ...args, content: 'á'.repeat(32769) })),
     )
     expect((await invalid.json()).error.code).toBe(-32602)
     expect(saveDraft).toHaveBeenCalledTimes(1)
@@ -239,7 +239,7 @@ describe('LEX MCP Streamable HTTP boundary', () => {
   })
 
   it('rejects oversized streamed bodies even without Content-Length', async () => {
-    const response = await handler(request(call('lex_search_leads', { query: 'x'.repeat(20000) })))
+    const response = await handler(request(call('lex_search_leads', { query: 'x'.repeat(132000) })))
     expect(response.status).toBe(413)
   })
 

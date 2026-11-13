@@ -41,7 +41,7 @@ begin
   perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload || jsonb_build_object('targetId', foreign_lead))->>'error' = 'forbidden', 'cross-firm lead denied');
   perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload || jsonb_build_object('targetType', 'case', 'targetId', hidden_case))->>'error' = 'forbidden', 'unassigned case denied');
   perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload || '{"firmId":"other"}'::jsonb)->>'error' = 'invalid_arguments', 'caller cannot set identity');
-  perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload || jsonb_build_object('content', repeat('x', 8001)))->>'error' = 'invalid_arguments', 'size bounded');
+  perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload || jsonb_build_object('content', repeat('x', 65537)))->>'error' = 'invalid_arguments', 'size bounded');
   result := public.crm_mcp_save_internal_draft(token, payload);
   draft_id := (result#>>'{data,id}')::uuid;
   perform pg_temp.assert_draft(result#>>'{data,status}' = 'pending_review', 'lead draft saved for review');
@@ -51,8 +51,23 @@ begin
   payload := payload || jsonb_build_object('targetType', 'case', 'targetId', own_case, 'idempotencyKey', gen_random_uuid());
   perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload)#>>'{data,status}' = 'pending_review', 'assigned case accepted');
   perform pg_temp.assert_draft(current_setting('request.jwt.claim.sub') = '', 'identity restored');
+  insert into public.crm_internal_document_drafts(firm_id, case_id, title, content, created_by, idempotency_key)
+    values(firm, hidden_case, 'Hidden', 'Fixture', other_actor, gen_random_uuid());
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', actor, 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claim.sub', actor::text, true);
+  execute 'set local role authenticated';
+  perform pg_temp.assert_draft((select count(*) from public.crm_internal_document_drafts where firm_id = firm) = 2, 'RLS hides unassigned case drafts');
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  perform set_config('request.jwt.claim.sub', '', true);
   perform pg_temp.assert_draft(not has_table_privilege('anon', 'public.crm_internal_document_drafts', 'select'), 'anon cannot read drafts');
   perform pg_temp.assert_draft(not has_table_privilege('authenticated', 'public.crm_internal_document_drafts', 'insert'), 'direct writes denied');
+  update public.crm_firm_members set status = 'disabled' where firm_id = firm and user_id = actor;
+  perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload)->>'error' = 'unauthorized', 'disabled member denied');
+  update public.crm_firm_members set status = 'active' where firm_id = firm and user_id = actor;
+  update lex_mcp.credentials set window_start = now(), window_count = 120 where id = write_key_id;
+  perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload)->>'error' = 'rate_limited', 'rate limit enforced');
+  update lex_mcp.credentials set window_count = 0 where id = write_key_id;
   update lex_mcp.credentials set revoked_at = now() where id = write_key_id;
   perform pg_temp.assert_draft(public.crm_mcp_save_internal_draft(token, payload)->>'error' = 'unauthorized', 'revoked key denied');
   perform pg_temp.assert_draft(exists(select 1 from lex_mcp.audit where key_id = write_key_id and operation = 'lex_save_internal_draft' and outcome = 'ok'), 'creation audited');

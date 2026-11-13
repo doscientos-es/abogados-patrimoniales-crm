@@ -54,7 +54,7 @@ create table public.crm_internal_document_drafts (
   case_id uuid,
   opportunity_id uuid,
   title text not null check (char_length(trim(title)) between 1 and 180),
-  content text not null check (octet_length(content) between 1 and 8000 and length(trim(content)) > 0),
+  content text not null check (octet_length(content) between 1 and 65536 and length(trim(content)) > 0),
   created_by uuid not null references auth.users(id) on delete restrict,
   idempotency_key uuid not null,
   created_at timestamptz not null default now(),
@@ -96,7 +96,7 @@ begin
   if not ('drafts:write' = any(k.scopes)) or not exists (select 1 from lex_mcp.draft_settings where id and enabled) then problem := 'forbidden'; end if;
   if problem is null then
     begin
-      if p_args is null or jsonb_typeof(p_args) <> 'object' or octet_length(p_args::text) > 16000
+      if p_args is null or jsonb_typeof(p_args) <> 'object' or octet_length(p_args::text) > 131072
         or exists (select 1 from jsonb_object_keys(p_args) a(key) where a.key not in ('targetType','targetId','title','content','idempotencyKey'))
         or jsonb_typeof(p_args->'targetType') is distinct from 'string'
         or jsonb_typeof(p_args->'targetId') is distinct from 'string'
@@ -106,7 +106,7 @@ begin
       target_type := p_args->>'targetType'; target_id := (p_args->>'targetId')::uuid;
       retry_id := (p_args->>'idempotencyKey')::uuid; title := trim(p_args->>'title'); body := p_args->>'content';
       if target_type not in ('lead','case') or char_length(title) not between 1 and 180
-        or octet_length(body) not between 1 and 8000 or length(trim(body)) = 0 then raise exception 'Invalid input'; end if;
+        or octet_length(body) not between 1 and 65536 or length(trim(body)) = 0 then raise exception 'Invalid input'; end if;
     exception when others then problem := 'invalid_arguments'; end;
   end if;
   if problem is null and not ((target_type = 'lead' and 'leads:read' = any(k.scopes))

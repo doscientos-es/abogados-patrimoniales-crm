@@ -18,7 +18,7 @@ No usarlo con datos reales hasta probar la autorización, las migraciones y el f
 
 ## Borradores internos
 
-- `lex_save_internal_draft` guarda texto UTF-8 (hasta 8000 bytes) en un lead o expediente,
+- `lex_save_internal_draft` guarda texto UTF-8 (hasta 65536 bytes) en un lead o expediente,
   visible en la sección Documentos de su ficha. Es un borrador pendiente de revisión, no un
   archivo PDF/Word ni un documento validado; no permite envío, firma ni publicación al cliente.
 - Requiere una nueva clave con `drafts:write` y `leads:read` o `cases:read`, según el destino.

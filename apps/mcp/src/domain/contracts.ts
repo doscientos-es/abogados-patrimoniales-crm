@@ -20,7 +20,7 @@ export type McpReadResult =
   | { ok: true; data: Record<string, unknown> }
   | { ok: false; error: McpFailure }
 
-/** Authentication and reads must both revalidate the credential and live membership. */
+/** Authentication and every data operation must revalidate credential and live membership. */
 export interface McpReadGateway {
   read(token: string, operation: string, args: Record<string, unknown>): Promise<McpReadResult>
   saveDraft(token: string, args: Record<string, unknown>): Promise<McpReadResult>

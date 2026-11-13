@@ -123,7 +123,7 @@ describe('standalone Node MCP server', () => {
   })
 
   it('bounds streamed request bodies without trusting Content-Length', async () => {
-    expect((await send('/mcp', { body: 'x'.repeat(20000) })).status).toBe(413)
+    expect((await send('/mcp', { body: 'x'.repeat(132000) })).status).toBe(413)
     expect(read).not.toHaveBeenCalled()
   })
 

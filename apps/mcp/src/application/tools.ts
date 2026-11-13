@@ -122,7 +122,7 @@ export const MCP_TOOLS = [
           .string()
           .min(1)
           .refine(
-            (value) => new TextEncoder().encode(value).length <= 8000 && value.trim().length > 0,
+            (value) => new TextEncoder().encode(value).length <= 65536 && value.trim().length > 0,
           ),
         idempotencyKey: z.string().uuid(),
       })
@@ -131,7 +131,7 @@ export const MCP_TOOLS = [
       targetType: { type: 'string', enum: ['lead', 'case'] },
       targetId: { type: 'string', format: 'uuid' },
       title: { type: 'string', minLength: 1, maxLength: 180 },
-      content: { type: 'string', description: 'Texto del borrador, máximo 8000 bytes UTF-8.' },
+      content: { type: 'string', description: 'Texto del borrador, máximo 65536 bytes UTF-8.' },
       idempotencyKey: {
         type: 'string',
         format: 'uuid',
