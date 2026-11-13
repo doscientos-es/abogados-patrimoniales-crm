@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 
 import { useContactos } from '@/features/contactos'
+import { useActualizarDetallesOportunidad, useMiembrosDespacho } from '@/features/crm'
 import {
   addLeadTreeParticipant,
   readLeadTreeParticipants,
@@ -9,10 +10,6 @@ import {
   updateLeadTreeParticipant,
 } from '@/features/crm/application/lead-participant-tree'
 import type { OportunidadPersistida } from '@/features/crm/application/opportunity-types'
-import {
-  useActualizarDetallesOportunidad,
-  useMiembrosDespacho,
-} from '@/features/crm/infrastructure/supabase-oportunidades'
 import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
 import type { Json } from '@/shared/infrastructure/supabase'
 

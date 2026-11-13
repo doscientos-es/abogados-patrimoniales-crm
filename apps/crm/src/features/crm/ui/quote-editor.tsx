@@ -60,21 +60,16 @@ import {
   type LineaPresupuesto,
   type VersionPresupuesto,
 } from '@/features/crm/application/quote-editor'
+import { documentoHtml, imprimir } from '@/features/crm/ui/quote-document'
 import {
   CatalogDialog,
   InstruccionesAbogado,
   LegadoBox,
   RequestReviewDialog,
 } from '@/features/crm/ui/quote-editor-dialogs'
-import { documentoHtml, imprimir } from '@/features/crm/ui/quote-document'
 import { QuoteInternalNotes } from '@/features/crm/ui/quote-internal-notes'
 import { QuoteReviewPanel } from '@/features/crm/ui/quote-review-panel'
-import {
-  estadoTareaRevision,
-  useCrearTarea,
-  useTareaPorId,
-  useTareasLead,
-} from '@/features/tareas'
+import { estadoTareaRevision, useCrearTarea, useTareaPorId, useTareasLead } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const ESTADO_LABEL = {
@@ -238,11 +233,11 @@ export function QuoteEditor({
                 Ya hay un presupuesto manual enviado o aceptado (versión{' '}
                 {String(
                   record(record(opportunity.detalles)['presupuesto'])['versionEnviada'] ??
-                  record(record(opportunity.detalles)['presupuesto'])['version'] ??
-                  '—',
+                    record(record(opportunity.detalles)['presupuesto'])['version'] ??
+                    '—',
                 )}
-                ). Se conservará íntegro, con su importe y evidencia, y el borrador será una
-                versión nueva superior.
+                ). Se conservará íntegro, con su importe y evidencia, y el borrador será una versión
+                nueva superior.
               </p>
             ) : null}
             <Button
@@ -298,7 +293,9 @@ export function QuoteEditor({
   const reviewable = ['borrador', 'devuelto', 'finalizado'].includes(version.estado)
   // Payment terms: only real existing data (previous quote field or an included payment block).
   const paymentTerms = (() => {
-    const previous = String(record(record(opportunity.detalles)['presupuesto'])['formaPago'] ?? '').trim()
+    const previous = String(
+      record(record(opportunity.detalles)['presupuesto'])['formaPago'] ?? '',
+    ).trim()
     if (previous) return previous
     const block = version.bloques.find(
       (item) => item.incluido && /pago/i.test(item.titulo) && item.texto.trim(),
@@ -325,7 +322,11 @@ export function QuoteEditor({
       const list = [...current.bloques]
       const target = index + direction
       if (target < 0 || target >= list.length) return current
-        ;[list[index], list[target]] = [list[target]!, list[index]!]
+      const sourceBlock = list[index]
+      const targetBlock = list[target]
+      if (!sourceBlock || !targetBlock) return current
+      list[index] = targetBlock
+      list[target] = sourceBlock
       return { ...current, bloques: list }
     })
 
@@ -448,7 +449,9 @@ export function QuoteEditor({
                 id="quote-ref"
                 disabled={!canChange}
                 value={version.referencia}
-                onChange={(event) => update((current) => ({ ...current, referencia: event.target.value }))}
+                onChange={(event) =>
+                  update((current) => ({ ...current, referencia: event.target.value }))
+                }
               />
             </div>
             <div className="space-y-1">
@@ -458,7 +461,9 @@ export function QuoteEditor({
                 type="date"
                 disabled={!canChange}
                 value={version.fecha}
-                onChange={(event) => update((current) => ({ ...current, fecha: event.target.value }))}
+                onChange={(event) =>
+                  update((current) => ({ ...current, fecha: event.target.value }))
+                }
               />
             </div>
             <div className="space-y-1 sm:col-span-2">
@@ -467,7 +472,9 @@ export function QuoteEditor({
                 id="quote-subject"
                 disabled={!canChange}
                 value={version.asunto}
-                onChange={(event) => update((current) => ({ ...current, asunto: event.target.value }))}
+                onChange={(event) =>
+                  update((current) => ({ ...current, asunto: event.target.value }))
+                }
               />
             </div>
           </div>
@@ -503,7 +510,9 @@ export function QuoteEditor({
             <p className="text-sm tabular-nums">{euros(totals.base)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">IVA</p>
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+              IVA
+            </p>
             <p className="text-sm tabular-nums">{euros(totals.iva)}</p>
           </div>
           <div>
@@ -538,8 +547,8 @@ export function QuoteEditor({
         <div className="rounded-md border px-4 py-3 text-sm" data-testid="quote-envio">
           <p className="font-semibold">Envío registrado (declarado fuera de LEX)</p>
           <p>
-            {version.envio.fecha.slice(0, 10)} · {version.envio.destinatario} · {version.envio.canal}{' '}
-            · declarado por {version.envio.declaradoPor ?? '—'}
+            {version.envio.fecha.slice(0, 10)} · {version.envio.destinatario} ·{' '}
+            {version.envio.canal} · declarado por {version.envio.declaradoPor ?? '—'}
           </p>
           <p className="text-muted-foreground">Asunto: {version.envio.asunto}</p>
         </div>
@@ -584,7 +593,11 @@ export function QuoteEditor({
           {taskState === 'error' ? (
             <p className="text-destructive mt-1 text-xs">
               No se pudo comprobar la tarea de revisión.{' '}
-              <button type="button" className="underline" onClick={() => void revisionTask.refetch()}>
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void revisionTask.refetch()}
+              >
                 Reintentar
               </button>
             </p>
@@ -620,11 +633,11 @@ export function QuoteEditor({
         </div>
       ) : null}
       {revision?.estado === 'pendiente' &&
-        version.estado === 'en_revision' &&
-        userId &&
-        revisionTask.data &&
-        revisionTask.data.asignadoId === userId &&
-        !['Completada', 'Cancelada'].includes(revisionTask.data.estado) ? (
+      version.estado === 'en_revision' &&
+      userId &&
+      revisionTask.data &&
+      revisionTask.data.asignadoId === userId &&
+      !['Completada', 'Cancelada'].includes(revisionTask.data.estado) ? (
         <QuoteReviewPanel task={revisionTask.data} firmId={firmId} />
       ) : null}
       {version.estado === 'validado' ? (
@@ -645,7 +658,10 @@ export function QuoteEditor({
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  update((current) => ({ ...current, lineas: [...current.lineas, lineaPersonalizada()] }))
+                  update((current) => ({
+                    ...current,
+                    lineas: [...current.lineas, lineaPersonalizada()],
+                  }))
                 }
               >
                 <Plus className="mr-1 h-4 w-4" /> Servicio personalizado
@@ -694,8 +710,8 @@ export function QuoteEditor({
             <span>
               <span className="text-base font-semibold">Bloques del encargo</span>
               <span className="text-muted-foreground ml-2 text-xs">
-                {version.bloques.filter((block) => block.incluido).length} de {version.bloques.length}{' '}
-                incluidos
+                {version.bloques.filter((block) => block.incluido).length} de{' '}
+                {version.bloques.length} incluidos
               </span>
               <span className="text-muted-foreground block text-xs">
                 Copias de este presupuesto: editarlas no cambia la biblioteca ni marca bloques como
@@ -716,7 +732,9 @@ export function QuoteEditor({
                       type="checkbox"
                       disabled={!canChange}
                       checked={block.incluido}
-                      onChange={(event) => updateBlock(block.id, { incluido: event.target.checked })}
+                      onChange={(event) =>
+                        updateBlock(block.id, { incluido: event.target.checked })
+                      }
                     />{' '}
                     Incluir
                   </label>
@@ -838,7 +856,11 @@ export function QuoteEditor({
 
       <div className="bg-background sticky bottom-0 flex flex-wrap justify-end gap-2 border-t py-3">
         {canChange ? (
-          <Button variant="outline" disabled={save.isPending || !dirty} onClick={() => void saveDraft()}>
+          <Button
+            variant="outline"
+            disabled={save.isPending || !dirty}
+            onClick={() => void saveDraft()}
+          >
             Guardar borrador
           </Button>
         ) : null}
@@ -857,7 +879,12 @@ export function QuoteEditor({
                 )
               )
                 return
-              const result = editarVersion(opportunity.detalles, editor, hoy(), new Date().toISOString())
+              const result = editarVersion(
+                opportunity.detalles,
+                editor,
+                hoy(),
+                new Date().toISOString(),
+              )
               void persist(result.editor, result.extra)
                 .then(() =>
                   toast.success(
@@ -881,7 +908,11 @@ export function QuoteEditor({
           >
             Falta el NIF/DNI del cliente: es obligatorio para conformar el presupuesto.{' '}
             {opportunity.contactoId ? (
-              <Link to="/contactos/$id" params={{ id: opportunity.contactoId }} className="underline">
+              <Link
+                to="/contactos/$id"
+                params={{ id: opportunity.contactoId }}
+                className="underline"
+              >
                 Añadirlo en la ficha del contacto
               </Link>
             ) : null}
@@ -912,7 +943,9 @@ export function QuoteEditor({
             </DialogHeader>
             <div
               className="rounded-md border bg-white p-6 text-black"
-              dangerouslySetInnerHTML={{ __html: documentoHtml(version, client, officeName, false) }}
+              dangerouslySetInnerHTML={{
+                __html: documentoHtml(version, client, officeName, false),
+              }}
             />
             <DialogFooter>
               <Button onClick={() => imprimir(version, client, officeName)}>
@@ -927,15 +960,18 @@ export function QuoteEditor({
         <RequestReviewDialog
           version={version}
           bloqueo={puedeSolicitarRevision(editor)}
-          miembros={(members.data ?? []).map((member) => ({ id: member.id, nombre: member.nombre }))}
+          miembros={(members.data ?? []).map((member) => ({
+            id: member.id,
+            nombre: member.nombre,
+          }))}
           pending={save.isPending || createTask.isPending}
           onClose={() => setRequesting(false)}
           existente={
             cachedReviewTask
               ? {
-                asignadoNombre: memberName(cachedReviewTask.asignadoId ?? ''),
-                venceEn: cachedReviewTask.venceEn,
-              }
+                  asignadoNombre: memberName(cachedReviewTask.asignadoId ?? ''),
+                  venceEn: cachedReviewTask.venceEn,
+                }
               : null
           }
           tareasListas={tasks.isSuccess}
@@ -1062,7 +1098,9 @@ function QuoteLine({
         <p className="text-destructive text-xs">Precio no válido: corrígelo antes de finalizar.</p>
       ) : null}
       {line.ivaPct === null ? (
-        <p className="text-destructive text-xs">IVA desconocido: decide el IVA antes de finalizar.</p>
+        <p className="text-destructive text-xs">
+          IVA desconocido: decide el IVA antes de finalizar.
+        </p>
       ) : null}
       {line.precioCents === 0 ? (
         <label className="text-destructive flex items-center gap-2 text-xs">
