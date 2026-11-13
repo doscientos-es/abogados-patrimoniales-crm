@@ -11,7 +11,7 @@ const resultSchema = z.discriminatedUnion('ok', [
   }),
 ])
 
-/** Uses only the publishable key. The narrow RPC, not a service-role client, authorizes reads. */
+/** Uses only the publishable key; narrow RPCs authorize each operation. */
 export function createMcpGateway(url: string, publishableKey: string): McpReadGateway {
   const client = createClient(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -27,6 +27,14 @@ export function createMcpGateway(url: string, publishableKey: string): McpReadGa
         p_args: args,
       })
       if (error) throw new Error('MCP read unavailable')
+      return resultSchema.parse(data)
+    },
+    async saveDraft(token, args) {
+      const { data, error } = await client.rpc('crm_mcp_save_internal_draft', {
+        p_token: token,
+        p_args: args,
+      })
+      if (error) throw new Error('MCP draft unavailable')
       return resultSchema.parse(data)
     },
   }

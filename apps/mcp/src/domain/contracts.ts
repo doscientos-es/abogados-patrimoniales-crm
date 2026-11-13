@@ -1,4 +1,10 @@
-export const MCP_SCOPES = ['leads:read', 'contacts:read', 'cases:read', 'documents:read'] as const
+export const MCP_SCOPES = [
+  'leads:read',
+  'contacts:read',
+  'cases:read',
+  'documents:read',
+  'drafts:write',
+] as const
 export type McpScope = (typeof MCP_SCOPES)[number]
 
 export type McpIdentity = Readonly<{
@@ -17,4 +23,5 @@ export type McpReadResult =
 /** Authentication and reads must both revalidate the credential and live membership. */
 export interface McpReadGateway {
   read(token: string, operation: string, args: Record<string, unknown>): Promise<McpReadResult>
+  saveDraft(token: string, args: Record<string, unknown>): Promise<McpReadResult>
 }

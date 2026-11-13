@@ -27,6 +27,7 @@ function tool(
   schema: z.ZodTypeAny,
   properties: Record<string, unknown>,
   required: string[] = [],
+  readOnly = true,
 ) {
   return {
     name,
@@ -37,7 +38,7 @@ function tool(
       description,
       inputSchema: { type: 'object', properties, required, additionalProperties: false },
       annotations: {
-        readOnlyHint: true,
+        readOnlyHint: readOnly,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
@@ -107,5 +108,37 @@ export const MCP_TOOLS = [
     z.object({ ...listShape, caseId: z.string().uuid() }).strict(),
     { ...listProperties, caseId: { type: 'string', format: 'uuid' } },
     ['caseId'],
+  ),
+  tool(
+    'lex_save_internal_draft',
+    'Guardar un borrador de texto para revisión interna en un lead o expediente. No envía ni valida el documento. Reutiliza idempotencyKey al reintentar la misma operación.',
+    'drafts:write',
+    z
+      .object({
+        targetType: z.enum(['lead', 'case']),
+        targetId: z.string().uuid(),
+        title: z.string().trim().min(1).max(180),
+        content: z
+          .string()
+          .min(1)
+          .refine(
+            (value) => new TextEncoder().encode(value).length <= 8000 && value.trim().length > 0,
+          ),
+        idempotencyKey: z.string().uuid(),
+      })
+      .strict(),
+    {
+      targetType: { type: 'string', enum: ['lead', 'case'] },
+      targetId: { type: 'string', format: 'uuid' },
+      title: { type: 'string', minLength: 1, maxLength: 180 },
+      content: { type: 'string', description: 'Texto del borrador, máximo 8000 bytes UTF-8.' },
+      idempotencyKey: {
+        type: 'string',
+        format: 'uuid',
+        description: 'UUID único por documento; conservarlo en cada reintento.',
+      },
+    },
+    ['targetType', 'targetId', 'title', 'content', 'idempotencyKey'],
+    false,
   ),
 ] as const
