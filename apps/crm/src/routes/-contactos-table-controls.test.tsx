@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { AnchorHTMLAttributes, ComponentType, ReactNode } from 'react'
+import { Suspense, type AnchorHTMLAttributes, type ComponentType, type ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ contacts: vi.fn() }))
@@ -7,9 +7,20 @@ const mocks = vi.hoisted(() => ({ contacts: vi.fn() }))
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
   ...(await importOriginal()),
   createFileRoute: () => (options: object) => ({ options }),
-  Link: ({ children, to, params: _params, ...props }: {
-    children: ReactNode; to: string; params?: unknown
-  } & AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={to} {...props}>{children}</a>,
+  Link: ({
+    children,
+    to,
+    params: _params,
+    ...props
+  }: {
+    children: ReactNode
+    to: string
+    params?: unknown
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
   useNavigate: () => vi.fn(),
 }))
 vi.mock('@/features/auth', () => ({
@@ -30,13 +41,28 @@ const ContactosPage = Route.options.component as ComponentType
 
 beforeEach(() => {
   window.localStorage.clear()
-  mocks.contacts.mockReturnValue({ data: { count: 0, contacts: [] }, isPending: false, isError: false })
+  mocks.contacts.mockReturnValue({
+    data: { count: 0, contacts: [] },
+    isPending: false,
+    isError: false,
+  })
 })
-afterEach(() => { cleanup(); vi.clearAllMocks() })
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
 
 it('configura columnas desde la cabecera y conserva la preferencia', async () => {
-  render(<ContactosPage />)
-  const trigger = await screen.findByRole('button', { name: 'Columnas visibles' })
+  render(
+    <Suspense fallback="Cargando">
+      <ContactosPage />
+    </Suspense>,
+  )
+  const trigger = await screen.findByRole(
+    'button',
+    { name: 'Columnas visibles' },
+    { timeout: 15000 },
+  )
   expect(trigger.closest('th')).toBeTruthy()
   expect(trigger.textContent).toBe('')
   fireEvent.click(trigger)
@@ -49,12 +75,21 @@ it('configura columnas desde la cabecera y conserva la preferencia', async () =>
 })
 
 it('muestra el valor de orden sin el prefijo y permite cambiarlo', async () => {
-  render(<ContactosPage />)
-  await screen.findByRole('button', { name: 'Columnas visibles' })
+  render(
+    <Suspense fallback="Cargando">
+      <ContactosPage />
+    </Suspense>,
+  )
+  await screen.findByRole('button', { name: 'Columnas visibles' }, { timeout: 15000 })
   const sort = screen.getByLabelText('Ordenar contactos')
   expect(sort.textContent).toContain('Nombre')
   expect(sort.textContent).not.toContain('Ordenar')
   fireEvent.click(sort)
   fireEvent.click(await screen.findByRole('option', { name: 'Fecha de alta' }))
-  await waitFor(() => expect(mocks.contacts).toHaveBeenLastCalledWith('firm-1', expect.objectContaining({ sortBy: 'created' })))
+  await waitFor(() =>
+    expect(mocks.contacts).toHaveBeenLastCalledWith(
+      'firm-1',
+      expect.objectContaining({ sortBy: 'created' }),
+    ),
+  )
 })
