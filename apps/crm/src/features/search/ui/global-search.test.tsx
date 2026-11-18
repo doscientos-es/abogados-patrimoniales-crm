@@ -22,6 +22,12 @@ afterEach(() => {
 })
 
 describe('GlobalSearch', () => {
+  it('opens from the sidebar search button', () => {
+    render(<GlobalSearch />)
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en LEX' }))
+    expect(screen.getByRole('dialog', { name: 'Buscar en LEX' })).toBeTruthy()
+  })
+
   it('opens with Ctrl+K and saves a selected module as a recent item', () => {
     render(<GlobalSearch />)
 

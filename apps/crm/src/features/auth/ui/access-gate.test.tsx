@@ -31,12 +31,15 @@ afterEach(() => {
 })
 
 describe('AccessGate', () => {
-  it('limits the space used by the account email in the navigation bar', () => {
+  it('shows only the name in the account button and keeps the email in the menu', async () => {
     render(<AccountMenu />)
 
-    const email = screen.getByTitle('maria@despacho.es')
-    expect(email.className).toContain('truncate')
-    expect(email.parentElement?.className).toContain('w-40')
+    const button = screen.getByRole('button', { name: 'Abrir menú de cuenta' })
+    expect(button.textContent).toContain('María')
+    expect(button.textContent).not.toContain('maria@despacho.es')
+    fireEvent.click(button)
+    expect(await screen.findByText('maria@despacho.es')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy()
   })
 
   it('lets an invited user create a password before membership activation completes', async () => {

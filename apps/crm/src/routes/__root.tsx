@@ -171,9 +171,26 @@ function AuthenticatedRoot() {
   const sidebarOpen = isMobile ? mobileOpen : desktopOpen
   const mobileTriggerRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const desktopTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (isMobile && mobileOpen) closeButtonRef.current?.focus()
+  }, [isMobile, mobileOpen])
+
+  useEffect(() => {
+    if (!isMobile && !desktopOpen) desktopTriggerRef.current?.focus()
+  }, [isMobile, desktopOpen])
+
+  useEffect(() => {
+    if (!isMobile || !mobileOpen) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (!document.getElementById('navegacion-principal')?.contains(event.target as Node)) return
+      setMobileOpen(false)
+      mobileTriggerRef.current?.focus()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
   }, [isMobile, mobileOpen])
 
   const closeMobile = () => {
@@ -199,9 +216,6 @@ function AuthenticatedRoot() {
             if (isMobile) closeMobile()
           }}
           closeButtonRef={closeButtonRef}
-          onEscape={() => {
-            if (isMobile) closeMobile()
-          }}
         />
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <header className="border-border bg-card flex h-12 shrink-0 items-center border-b px-3 md:hidden">
@@ -221,6 +235,7 @@ function AuthenticatedRoot() {
           </header>
           {!desktopOpen && !isMobile ? (
             <Button
+              ref={desktopTriggerRef}
               aria-label="Mostrar navegación"
               title="Mostrar navegación"
               size="icon"

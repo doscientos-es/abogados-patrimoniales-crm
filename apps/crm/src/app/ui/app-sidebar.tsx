@@ -70,13 +70,11 @@ export function AppSidebar({
   onClose,
   onNavigate,
   closeButtonRef,
-  onEscape,
 }: {
   open: boolean
   onClose: () => void
   onNavigate: () => void
   closeButtonRef: RefObject<HTMLButtonElement | null>
-  onEscape: () => void
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const active = (url: string) => (url === '/' ? pathname === '/' : pathname.startsWith(url))
@@ -95,9 +93,6 @@ export function AppSidebar({
       aria-hidden={!open}
       aria-label="Navegación principal"
       inert={!open || undefined}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !event.defaultPrevented) onEscape()
-      }}
       className={cn(
         'bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear md:relative md:z-auto',
         open ? 'w-(--sidebar-width)' : 'w-0 border-r-0',
