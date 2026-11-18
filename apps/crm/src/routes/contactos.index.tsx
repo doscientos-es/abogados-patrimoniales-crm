@@ -87,7 +87,7 @@ type ActiveFilter = {
   onRemove: () => void
 }
 
-export function ContactosPage() {
+function ContactosPage() {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -186,7 +186,8 @@ export function ContactosPage() {
     setSortBy(value)
     setPage(1)
   }
-  const copyReference = async (reference: string) => {
+  const copyReference = async (reference: string | undefined) => {
+    if (!reference) return
     try {
       await navigator.clipboard.writeText(reference)
       toast.success('Referencia copiada.')
