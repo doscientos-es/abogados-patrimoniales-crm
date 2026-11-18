@@ -560,3 +560,20 @@
 .fase-texto {
   color: var(--fase);
 }
+
+/* La celda fija debe usar el mismo fondo opaco que el resto de la fila. */
+.contact-table-row {
+  --contact-row-background: var(--card);
+  background-color: var(--contact-row-background);
+}
+
+.contact-table-row:hover,
+.contact-table-row:focus-within,
+.contact-table-row:has([aria-expanded='true']) {
+  --contact-row-background: color-mix(in oklab, var(--muted) 30%, var(--card));
+  background-color: var(--contact-row-background);
+}
+
+.contact-table-actions {
+  background-color: var(--contact-row-background);
+}

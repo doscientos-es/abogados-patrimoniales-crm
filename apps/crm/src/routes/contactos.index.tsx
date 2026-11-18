@@ -19,6 +19,8 @@ import {
   ArchiveRestore,
   ArrowUpDown,
   ArrowDownUp,
+  Columns3,
+  Copy,
   Eye,
   FilePlus2,
   MoreHorizontal,
@@ -62,6 +64,10 @@ import {
   type ContactoPersistido,
   type SatisfactionLevel,
 } from '@/features/contactos'
+import {
+  CONTACT_OPTIONAL_COLUMNS,
+  useContactTableColumns,
+} from '@/features/contactos/ui/contact-table-columns'
 import { SatisfactionMeter } from '@/features/contactos/ui/satisfaction-meter'
 
 export const Route = createFileRoute('/contactos/')({
@@ -81,11 +87,12 @@ type ActiveFilter = {
   onRemove: () => void
 }
 
-function ContactosPage() {
+export function ContactosPage() {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
+  const columns = useContactTableColumns(session.user?.id)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [archived, setArchived] = useState(false)
@@ -179,6 +186,14 @@ function ContactosPage() {
     setSortBy(value)
     setPage(1)
   }
+  const copyReference = async (reference: string) => {
+    try {
+      await navigator.clipboard.writeText(reference)
+      toast.success('Referencia copiada.')
+    } catch {
+      toast.error('No se pudo copiar la referencia.')
+    }
+  }
 
   if (session.status === 'loading' || membership.isPending || contacts.isPending)
     return <PendingPanel title="Cargando contactos" description="Consultando el despacho…" />
@@ -253,7 +268,7 @@ function ContactosPage() {
           </button>
         </div>
         <div className="space-y-2 py-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_12rem] sm:items-center">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_12rem_auto] sm:items-center">
             <label htmlFor="contact-search" className="relative col-span-2 min-w-0 sm:col-span-1">
               <span className="sr-only">Buscar contactos</span>
               <Search
@@ -418,6 +433,61 @@ function ContactosPage() {
                 <SelectItem id="modified">Última modificación</SelectItem>
               </ContactFilter>
             </div>
+            <div className="col-span-2 sm:col-span-1">
+              <PopoverTrigger>
+                <Button
+                  className="border-border/80 bg-background hover:bg-muted/60 h-9 w-full px-3 font-normal shadow-none"
+                  size="sm"
+                  variant="outline"
+                >
+                  <Columns3 className="h-4 w-4" aria-hidden="true" />
+                  Columnas
+                  {columns.hidden.length ? (
+                    <span className="text-muted-foreground text-xs">
+                      ({columns.hidden.length} ocultas)
+                    </span>
+                  ) : null}
+                </Button>
+                <PopoverContent placement="bottom end" className="w-64 rounded-xl p-0">
+                  <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                    <p className="text-sm font-semibold">Columnas visibles</p>
+                    <button
+                      type="button"
+                      className="text-primary text-xs font-medium hover:underline disabled:opacity-50"
+                      disabled={!columns.hidden.length}
+                      onClick={() => {
+                        if (!columns.reset())
+                          toast.error('No se pudo guardar la vista en este navegador.')
+                      }}
+                    >
+                      Restablecer
+                    </button>
+                  </div>
+                  <div className="space-y-1 p-2">
+                    {CONTACT_OPTIONAL_COLUMNS.map((column) => (
+                      <label
+                        key={column.id}
+                        className="hover:bg-muted/60 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary size-4"
+                          checked={columns.isVisible(column.id)}
+                          onChange={() => {
+                            if (!columns.toggle(column.id))
+                              toast.error('No se pudo guardar la vista en este navegador.')
+                          }}
+                        />
+                        {column.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground border-border border-t px-4 py-2.5 text-xs">
+                    Contacto y acciones siempre visibles. Solo en este navegador.
+                  </p>
+                </PopoverContent>
+              </PopoverTrigger>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-muted-foreground text-xs">
@@ -451,10 +521,12 @@ function ContactosPage() {
           </div>
         </div>
         <div className="border-border/60 bg-card overflow-hidden rounded-xl border">
-          <Table className="min-w-[1240px]">
+          <Table>
             <TableHeader>
               <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead className="w-20 pl-3">Ref.</TableHead>
+                {columns.isVisible('reference') ? (
+                  <TableHead className="min-w-28 pl-3">Referencia</TableHead>
+                ) : null}
                 <SortableTableHead
                   label="Contacto"
                   sortValue="name"
@@ -462,26 +534,42 @@ function ContactosPage() {
                   onSort={changeSort}
                   className="min-w-56"
                 />
-                <SortableTableHead
-                  label="Relación"
-                  sortValue="relationship"
-                  currentSort={sortBy}
-                  onSort={changeSort}
-                  className="min-w-36"
-                />
-                <TableHead className="min-w-30">Naturaleza</TableHead>
-                <TableHead className="min-w-44">Contacto principal</TableHead>
-                <TableHead className="min-w-28">Origen</TableHead>
-                <TableHead className="min-w-24">Satisfacción</TableHead>
-                <TableHead className="min-w-28">Documentación</TableHead>
-                <TableHead className="min-w-24">Estado</TableHead>
-                <SortableTableHead
-                  label="Modificado"
-                  sortValue="modified"
-                  currentSort={sortBy}
-                  onSort={changeSort}
-                  className="min-w-28"
-                />
+                {columns.isVisible('relationship') ? (
+                  <SortableTableHead
+                    label="Relación"
+                    sortValue="relationship"
+                    currentSort={sortBy}
+                    onSort={changeSort}
+                    className="min-w-36"
+                  />
+                ) : null}
+                {columns.isVisible('nature') ? (
+                  <TableHead className="min-w-30">Naturaleza</TableHead>
+                ) : null}
+                {columns.isVisible('primaryContact') ? (
+                  <TableHead className="min-w-44">Contacto principal</TableHead>
+                ) : null}
+                {columns.isVisible('source') ? (
+                  <TableHead className="min-w-28">Origen</TableHead>
+                ) : null}
+                {columns.isVisible('satisfaction') ? (
+                  <TableHead className="min-w-24">Satisfacción</TableHead>
+                ) : null}
+                {columns.isVisible('documents') ? (
+                  <TableHead className="min-w-28">Documentación</TableHead>
+                ) : null}
+                {columns.isVisible('status') ? (
+                  <TableHead className="min-w-24">Estado</TableHead>
+                ) : null}
+                {columns.isVisible('modified') ? (
+                  <SortableTableHead
+                    label="Modificado"
+                    sortValue="modified"
+                    currentSort={sortBy}
+                    onSort={changeSort}
+                    className="min-w-28"
+                  />
+                ) : null}
                 <TableHead className="border-border/60 bg-card sticky right-0 z-20 w-12 border-l text-right">
                   <span className="sr-only">Acciones</span>
                 </TableHead>
@@ -489,15 +577,30 @@ function ContactosPage() {
             </TableHeader>
             <TableBody>
               {(contacts.data?.contacts ?? []).map((contact) => (
-                <TableRow key={contact.id} className="group h-16">
-                  <TableCell className="text-muted-foreground pl-3 font-mono text-xs">
-                    {contact.referencia || '—'}
-                  </TableCell>
+                <TableRow key={contact.id} className="contact-table-row h-16">
+                  {columns.isVisible('reference') ? (
+                    <TableCell className="pl-3">
+                      {contact.referencia ? (
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-flex items-center gap-1.5 rounded font-mono text-xs outline-none focus-visible:ring-2"
+                          aria-label={`Copiar referencia ${contact.referencia}`}
+                          title="Copiar referencia"
+                          onClick={() => void copyReference(contact.referencia)}
+                        >
+                          {contact.referencia}
+                          <Copy className="size-3" aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  ) : null}
                   <TableCell>
                     <Link
                       to="/contactos/$id"
                       params={{ id: contact.id }}
-                      className="hover:bg-muted/60 focus-visible:ring-ring -m-1 flex max-w-60 items-center gap-2.5 rounded-md p-1 transition-colors outline-none focus-visible:ring-2"
+                      className="focus-visible:ring-ring flex max-w-60 items-center gap-2.5 rounded-md outline-none focus-visible:ring-2"
                     >
                       <ContactAvatar name={displayName(contact)} />
                       <div className="min-w-0">
@@ -510,42 +613,59 @@ function ContactosPage() {
                       </div>
                     </Link>
                   </TableCell>
-                  <TableCell>
-                    <RelationshipBadge value={contact.relacion} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {contact.tipoPersona}
-                  </TableCell>
-                  <TableCell>
-                    <p className="max-w-40 truncate text-xs">{primaryContact(contact)}</p>
-                    {contact.cargoContacto ? (
-                      <p className="text-muted-foreground max-w-40 truncate text-xs">
-                        {contact.cargoContacto}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {contact.origen || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <SatisfactionMeter value={contact.profile.satisfaction} showLabel={false} />
-                  </TableCell>
-                  <TableCell>
-                    <MissingData label="Sin datos" />
-                  </TableCell>
-                  <TableCell>
-                    <ContactStatus value={contact.estado} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs tabular-nums">
-                    {contact.modificado}
-                  </TableCell>
-                  <TableCell className="border-border/60 bg-card group-hover:bg-muted sticky right-0 z-10 border-l px-2">
+                  {columns.isVisible('relationship') ? (
+                    <TableCell>
+                      <RelationshipBadge value={contact.relacion} />
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('nature') ? (
+                    <TableCell className="text-muted-foreground text-xs">
+                      {contact.tipoPersona}
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('primaryContact') ? (
+                    <TableCell>
+                      <p className="max-w-40 truncate text-xs">{primaryContact(contact)}</p>
+                      {contact.cargoContacto ? (
+                        <p className="text-muted-foreground max-w-40 truncate text-xs">
+                          {contact.cargoContacto}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('source') ? (
+                    <TableCell className="text-muted-foreground text-xs">
+                      {contact.origen || '—'}
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('satisfaction') ? (
+                    <TableCell>
+                      <SatisfactionMeter value={contact.profile.satisfaction} showLabel={false} />
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('documents') ? (
+                    <TableCell>
+                      <MissingData label="Sin datos" />
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('status') ? (
+                    <TableCell>
+                      <ContactStatus value={contact.estado} />
+                    </TableCell>
+                  ) : null}
+                  {columns.isVisible('modified') ? (
+                    <TableCell className="text-muted-foreground text-xs tabular-nums">
+                      {contact.modificado}
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="contact-table-actions border-border/60 sticky right-0 z-10 border-l px-2">
                     <div className="flex justify-end">
                       <DropdownMenu
                         trigger={
                           <Button
                             size="icon-sm"
                             variant="ghost"
+                            className="hover:bg-transparent"
                             aria-label={`Abrir acciones de ${displayName(contact)}`}
                             title="Acciones"
                           >
