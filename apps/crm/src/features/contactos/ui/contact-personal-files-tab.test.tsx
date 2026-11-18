@@ -60,13 +60,14 @@ describe('ContactPersonalFilesTab', () => {
 
   it('shows document sections and opens an upload with the selected category', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const memberRole = 'lawyer' as const
     render(
       <QueryClientProvider client={client}>
         <ContactPersonalFilesTab
           firmId="firm-1"
           contactId="contact-1"
           relationship="Lead"
-          role="lawyer"
+          role={memberRole}
         />
       </QueryClientProvider>,
     )
@@ -81,6 +82,7 @@ describe('ContactPersonalFilesTab', () => {
 
   it('keeps section status based on all documents when searching', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+    const memberRole = 'lawyer' as const
     client.setQueryData(
       ['contact-documents', 'firm-1', 'contact-1'],
       [
@@ -106,7 +108,7 @@ describe('ContactPersonalFilesTab', () => {
           firmId="firm-1"
           contactId="contact-1"
           relationship="Lead"
-          role="lawyer"
+          role={memberRole}
         />
       </QueryClientProvider>,
     )
