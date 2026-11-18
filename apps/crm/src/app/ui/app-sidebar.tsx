@@ -94,7 +94,7 @@ export function AppSidebar({
       aria-label="Navegación principal"
       inert={!open || undefined}
       className={cn(
-        'bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear md:relative md:z-auto',
+        'app-sidebar bg-sidebar text-sidebar-foreground flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear',
         open ? 'w-(--sidebar-width)' : 'w-0 border-r-0',
       )}
     >

@@ -1,27 +1,42 @@
+import { readFileSync } from 'node:fs'
+
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { createRef, forwardRef, type AnchorHTMLAttributes, type ReactNode } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: () => '/contactos',
-  Link: forwardRef<HTMLAnchorElement, { to: string; children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>>(
-    ({ to, children, ...props }, ref) => <a ref={ref} href={to} {...props}>{children}</a>,
-  ),
+  Link: forwardRef<
+    HTMLAnchorElement,
+    { to: string; children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>
+  >(({ to, children, ...props }, ref) => (
+    <a ref={ref} href={to} {...props}>
+      {children}
+    </a>
+  )),
 }))
 vi.mock('@/features/auth', () => ({ AccountMenu: () => <button>Cuenta</button> }))
 vi.mock('@/features/search', () => ({ GlobalSearch: () => <button>Buscar</button> }))
-vi.mock('@/features/tareas/ui/task-notifications-bell', () => ({ TaskNotificationsBell: () => <button>Avisos</button> }))
+vi.mock('@/features/tareas/ui/task-notifications-bell', () => ({
+  TaskNotificationsBell: () => <button>Avisos</button>,
+}))
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }))
 
 import { SidebarProvider } from '@/components/ui/sidebar'
+
 import { AppSidebar } from './app-sidebar'
 
 afterEach(cleanup)
 
 it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   const onNavigate = vi.fn()
-  render(<SidebarProvider><AppSidebar open onClose={vi.fn()} onNavigate={onNavigate} closeButtonRef={createRef()} /></SidebarProvider>)
+  render(
+    <SidebarProvider>
+      <AppSidebar open onClose={vi.fn()} onNavigate={onNavigate} closeButtonRef={createRef()} />
+    </SidebarProvider>,
+  )
   const sidebar = screen.getByRole('complementary', { name: 'Navegación principal' })
+  expect(sidebar.className).toContain('app-sidebar')
   const header = sidebar.querySelector('[data-sidebar="header"]') as HTMLElement
   const footer = sidebar.querySelector('[data-sidebar="footer"]') as HTMLElement
   expect(within(header).getByRole('button', { name: 'Buscar' })).toBeTruthy()
@@ -31,4 +46,13 @@ it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   expect(calendar.getAttribute('href')).toBe('/calendario')
   fireEvent.click(calendar)
   expect(onNavigate).toHaveBeenCalledOnce()
+})
+
+it('mantiene el menú superpuesto en móvil y dentro del layout en escritorio', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8')
+  expect(css).toMatch(/\.app-shell \.app-sidebar\s*\{\s*position:\s*fixed;/)
+  expect(css).toMatch(
+    /@media\s*\(min-width:\s*48rem\)\s*\{\s*\.app-shell \.app-sidebar\s*\{\s*position:\s*relative;/,
+  )
+  expect(css).toMatch(/\.app-shell \.app-mobile-header\s*\{\s*display:\s*none;/)
 })

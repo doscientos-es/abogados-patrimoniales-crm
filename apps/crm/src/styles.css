@@ -577,3 +577,22 @@
 .contact-table-actions {
   background-color: var(--contact-row-background);
 }
+
+/* El menú móvil se superpone; en escritorio la sidebar ocupa su propio espacio. */
+.app-shell .app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+}
+
+@media (min-width: 48rem) {
+  .app-shell .app-sidebar {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+  }
+
+  .app-shell .app-mobile-header {
+    display: none;
+  }
+}

@@ -218,7 +218,7 @@ function AuthenticatedRoot() {
           closeButtonRef={closeButtonRef}
         />
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="border-border bg-card flex h-12 shrink-0 items-center border-b px-3 md:hidden">
+          <header className="app-mobile-header border-border bg-card flex h-12 shrink-0 items-center border-b px-3">
             <Button
               ref={mobileTriggerRef}
               aria-label="Mostrar navegación"
