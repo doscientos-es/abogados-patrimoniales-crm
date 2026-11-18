@@ -282,8 +282,8 @@ export function GlobalSearch() {
     <>
       <Button
         aria-label="Buscar en LEX"
-        className="text-muted-foreground hover:text-foreground hidden h-9 min-w-0 justify-start gap-2 border px-2.5 font-normal shadow-none md:flex md:w-64 lg:w-80"
-        variant="outline"
+        className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-sidebar-border h-9 w-full min-w-0 justify-start gap-2 border bg-transparent px-2.5 font-normal shadow-none"
+        variant="ghost"
         onClick={() => {
           setActiveIndex(0)
           setOpen(true)
@@ -291,20 +291,9 @@ export function GlobalSearch() {
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="flex-1 truncate text-left text-sm">Buscar en LEX…</span>
-        <kbd className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
-      </Button>
-      <Button
-        aria-label="Buscar en LEX"
-        className="md:hidden"
-        size="icon"
-        title="Buscar en LEX (Ctrl/Cmd K)"
-        variant="ghost"
-        onClick={() => {
-          setActiveIndex(0)
-          setOpen(true)
-        }}
-      >
-        <Search className="h-4 w-4" />
+        <kbd className="bg-sidebar-accent rounded px-1.5 py-0.5 text-[10px] font-medium">
+          Ctrl K
+        </kbd>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

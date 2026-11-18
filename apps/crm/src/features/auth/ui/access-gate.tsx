@@ -117,20 +117,15 @@ export function AccountMenu() {
     <PopoverTrigger>
       <Button
         aria-label="Abrir menú de cuenta"
-        className="h-auto gap-2 px-1.5 py-1 text-left"
+        className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full min-w-0 justify-start gap-2 px-2 text-left"
         variant="ghost"
       >
-        <span className="hidden w-40 min-w-0 text-right text-xs leading-tight lg:block">
-          <span className="text-foreground block truncate font-medium" title={displayName}>
-            {displayName}
-          </span>
-          <span className="text-muted-foreground block truncate" title={email}>
-            {email}
-          </span>
-        </span>
         <UserAvatar name={displayName} seed={session.user.id || email} size="sm" />
+        <span className="min-w-0 truncate text-sm font-medium" title={displayName}>
+          {displayName}
+        </span>
       </Button>
-      <PopoverContent placement="bottom end" className="w-72 p-2">
+      <PopoverContent placement="top start" className="w-72 p-2">
         <div className="border-border border-b px-2 py-2.5">
           <p className="text-foreground text-sm font-medium">{displayName}</p>
           <p className="text-muted-foreground mt-0.5 truncate text-xs">{email}</p>

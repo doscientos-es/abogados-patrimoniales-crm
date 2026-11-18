@@ -70,7 +70,7 @@ export function TaskNotificationsBell() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground relative"
             aria-label={unread ? `Avisos (${unread} sin leer)` : 'Avisos'}
             title="Avisos"
           >
@@ -82,8 +82,8 @@ export function TaskNotificationsBell() {
             ) : null}
           </Button>
         }
-        placement="bottom end"
-        className="max-h-[28rem] w-96 overflow-y-auto"
+        placement="top end"
+        className="max-h-[28rem] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto"
       >
         <DropdownMenuItem
           textValue="Marcar todo como leído"

@@ -12,14 +12,18 @@ import {
   Handshake,
   ChartNoAxesCombined,
   MessageSquareText,
+  PanelLeft,
   Receipt,
   Settings,
   Sparkles,
   Target,
 } from 'lucide-react'
+import type { RefObject } from 'react'
 
+import { Button } from '@/components/ui/button'
 import {
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -28,6 +32,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { AccountMenu } from '@/features/auth'
+import { GlobalSearch } from '@/features/search'
+import { TaskNotificationsBell } from '@/features/tareas/ui/task-notifications-bell'
 import { cn } from '@/lib/utils'
 
 const general = [
@@ -47,7 +54,6 @@ const operativa = [
   { title: 'Expedientes', url: '/expedientes', icon: Briefcase },
   { title: 'Actuaciones', url: '/actuaciones', icon: Activity },
   { title: 'Ejecuciones', url: '/ejecuciones', icon: Scale },
-  { title: 'Calendario', url: '/calendario', icon: CalendarDays },
   { title: 'Tareas', url: '/tareas', icon: CheckSquare },
 ] as const
 
@@ -59,7 +65,19 @@ const gestion = [
 
 const sistema = [{ title: 'Configuración', url: '/configuracion', icon: Settings }] as const
 
-export function AppSidebar({ open }: { open: boolean }) {
+export function AppSidebar({
+  open,
+  onClose,
+  onNavigate,
+  closeButtonRef,
+  onEscape,
+}: {
+  open: boolean
+  onClose: () => void
+  onNavigate: () => void
+  closeButtonRef: RefObject<HTMLButtonElement | null>
+  onEscape: () => void
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const active = (url: string) => (url === '/' ? pathname === '/' : pathname.startsWith(url))
 
@@ -73,28 +91,47 @@ export function AppSidebar({ open }: { open: boolean }) {
 
   return (
     <aside
+      id="navegacion-principal"
       aria-hidden={!open}
       aria-label="Navegación principal"
       inert={!open || undefined}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented) onEscape()
+      }}
       className={cn(
-        'bg-sidebar text-sidebar-foreground relative flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear',
+        'bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear md:relative md:z-auto',
         open ? 'w-(--sidebar-width)' : 'w-0 border-r-0',
       )}
     >
       <div className="flex h-full w-(--sidebar-width) flex-col">
         <SidebarHeader className="border-sidebar-border border-b">
-          <Link
-            to="/"
-            aria-label="LEX.EUS · Inicio"
-            className="flex items-center gap-3 rounded-md px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-          >
-            <span className="bg-sidebar-primary ring-sidebar-foreground/10 flex size-11 shrink-0 items-center justify-center rounded-xl p-2 shadow-sm ring-1">
-              <img src="/logo-lex.svg" alt="" className="h-full w-full object-contain" />
-            </span>
-            <span className="text-sidebar-foreground min-w-0 truncate font-serif text-xl font-semibold tracking-wider group-data-[collapsible=icon]:hidden">
-              LEX.EUS
-            </span>
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/"
+              aria-label="LEX.EUS · Inicio"
+              className="focus-visible:ring-sidebar-ring flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2 outline-none focus-visible:ring-2"
+              onClick={onNavigate}
+            >
+              <span className="bg-sidebar-primary ring-sidebar-foreground/10 flex size-11 shrink-0 items-center justify-center rounded-xl p-2 shadow-sm ring-1">
+                <img src="/logo-lex.svg" alt="" className="h-full w-full object-contain" />
+              </span>
+              <span className="text-sidebar-foreground min-w-0 truncate font-serif text-xl font-semibold tracking-wider group-data-[collapsible=icon]:hidden">
+                LEX.EUS
+              </span>
+            </Link>
+            <Button
+              ref={closeButtonRef}
+              aria-label="Ocultar navegación"
+              title="Ocultar navegación"
+              variant="ghost"
+              size="icon"
+              className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground shrink-0"
+              onClick={onClose}
+            >
+              <PanelLeft className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+          <GlobalSearch />
         </SidebarHeader>
 
         <SidebarContent>
@@ -106,7 +143,7 @@ export function AppSidebar({ open }: { open: boolean }) {
                   {g.items.map((item) => (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active(item.url)} tooltip={item.title}>
-                        <Link to={item.url}>
+                        <Link to={item.url} onClick={onNavigate}>
                           <item.icon />
                           <span>{item.title}</span>
                         </Link>
@@ -118,6 +155,23 @@ export function AppSidebar({ open }: { open: boolean }) {
             </SidebarGroup>
           ))}
         </SidebarContent>
+        <SidebarFooter className="border-sidebar-border shrink-0 border-t">
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <AccountMenu />
+            </div>
+            <Link
+              to="/calendario"
+              aria-label="Abrir calendario"
+              title="Abrir calendario"
+              onClick={onNavigate}
+              className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2"
+            >
+              <CalendarDays className="size-4" aria-hidden="true" />
+            </Link>
+            <TaskNotificationsBell />
+          </div>
+        </SidebarFooter>
       </div>
     </aside>
   )

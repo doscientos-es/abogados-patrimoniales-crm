@@ -9,47 +9,21 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { PanelLeft } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { AccessGate, AccountMenu } from '@/features/auth'
-import { GlobalSearch } from '@/features/search'
-import { TaskNotificationsBell } from '@/features/tareas/ui/task-notifications-bell'
+import { AccessGate } from '@/features/auth'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 import appCss from '../styles.css?url'
-
-const SECTION_LABELS = [
-  ['/informes', 'Informes'],
-  ['/expedientes', 'Expedientes'],
-  ['/oportunidades', 'Leads'],
-  ['/contactos', 'Contactos'],
-  ['/presupuestos', 'Presupuestos'],
-  ['/onboarding', 'Onboarding'],
-  ['/actuaciones', 'Actuaciones'],
-  ['/ejecuciones', 'Ejecuciones'],
-  ['/calendario', 'Calendario'],
-  ['/alertas', 'Alertas y control'],
-  ['/tareas', 'Tareas'],
-  ['/documentos', 'Documentos'],
-  ['/notas', 'Notas internas'],
-  ['/comunicaciones', 'Comunicaciones'],
-  ['/facturacion', 'Facturación y cobros'],
-  ['/configuracion', 'Configuración'],
-  ['/crm', 'CRM'],
-] as const
 
 const PUBLIC_LEGAL_PATHS = new Set(['/condiciones', '/privacidad', '/cookies', '/terminos'])
 
 function isPublicPage(pathname: string) {
   return PUBLIC_LEGAL_PATHS.has(pathname) || /^\/aceptar\/[^/]+$/.test(pathname)
-}
-
-function sectionInfo(pathname: string) {
-  const match = SECTION_LABELS.find(([path]) => pathname.startsWith(path))
-  return match ? { path: match[0], label: match[1] } : { path: '/', label: 'Panel de inicio' }
 }
 
 function NavigationProgress() {
@@ -59,7 +33,7 @@ function NavigationProgress() {
     <>
       <div
         aria-hidden="true"
-        className={`bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
+        className={`bg-primary absolute inset-x-0 top-0 z-20 h-0.5 origin-left transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
           isNavigating ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
         }`}
       />
@@ -191,75 +165,76 @@ function RootComponent() {
 }
 
 function AuthenticatedRoot() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const section = sectionInfo(pathname)
+  const [desktopOpen, setDesktopOpen] = useState(true)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const isMobile = useIsMobile()
+  const sidebarOpen = isMobile ? mobileOpen : desktopOpen
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isMobile && mobileOpen) closeButtonRef.current?.focus()
+  }, [isMobile, mobileOpen])
+
+  const closeMobile = () => {
+    setMobileOpen(false)
+    mobileTriggerRef.current?.focus()
+  }
 
   return (
     <SidebarProvider className="app-shell h-dvh min-h-0 overflow-hidden">
       <div className="bg-background flex h-full min-h-0 w-full overflow-hidden">
-        <AppSidebar open={sidebarOpen} />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="border-border bg-card/95 relative z-10 flex h-14 shrink-0 items-center gap-3 border-b px-3 backdrop-blur sm:px-4">
+        {mobileOpen && isMobile ? (
+          <button
+            type="button"
+            aria-label="Cerrar navegación"
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={closeMobile}
+          />
+        ) : null}
+        <AppSidebar
+          open={sidebarOpen}
+          onClose={() => (isMobile ? closeMobile() : setDesktopOpen(false))}
+          onNavigate={() => {
+            if (isMobile) closeMobile()
+          }}
+          closeButtonRef={closeButtonRef}
+          onEscape={() => {
+            if (isMobile) closeMobile()
+          }}
+        />
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="border-border bg-card flex h-12 shrink-0 items-center border-b px-3 md:hidden">
             <Button
-              aria-label={sidebarOpen ? 'Ocultar navegación' : 'Mostrar navegación'}
+              ref={mobileTriggerRef}
+              aria-label="Mostrar navegación"
+              aria-controls="navegacion-principal"
+              aria-expanded={mobileOpen}
               className="shrink-0"
               size="icon"
-              title={sidebarOpen ? 'Ocultar navegación' : 'Mostrar navegación'}
+              title="Mostrar navegación"
               variant="ghost"
-              onClick={() => setSidebarOpen((open) => !open)}
+              onClick={() => setMobileOpen(true)}
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
-            <GlobalSearch />
-            <div className="hidden min-w-0 flex-1 items-center gap-2 md:flex">
-              <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Área de trabajo
-              </span>
-              <span className="bg-border h-4 w-px" aria-hidden="true" />
-              <Link
-                to={section.path as '/'}
-                className="text-foreground hover:text-primary truncate text-sm font-medium transition-colors"
-                aria-live="polite"
-                title={`Abrir ${section.label}`}
-              >
-                {section.label}
-              </Link>
-            </div>
-            <nav aria-label="Accesos rápidos" className="hidden items-center gap-1 lg:flex">
-              <Link
-                to="/oportunidades"
-                search={{ vista: 'todas', abrir: '' }}
-                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
-              >
-                Leads
-              </Link>
-              <Link
-                to="/expedientes"
-                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
-              >
-                Expedientes
-              </Link>
-              <Link
-                to="/calendario"
-                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
-              >
-                Calendario
-              </Link>
-            </nav>
-            <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-              <Link
-                to="/calendario"
-                className={buttonVariants({ size: 'sm', className: 'hidden md:inline-flex' })}
-              >
-                Abrir calendario
-              </Link>
-              <TaskNotificationsBell />
-              <AccountMenu />
-            </div>
-            <NavigationProgress />
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
+          {!desktopOpen && !isMobile ? (
+            <Button
+              aria-label="Mostrar navegación"
+              title="Mostrar navegación"
+              size="icon"
+              variant="ghost"
+              className="absolute top-2 left-2 z-10"
+              onClick={() => setDesktopOpen(true)}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          ) : null}
+          <NavigationProgress />
+          <main
+            className={`min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5 ${!desktopOpen && !isMobile ? 'pt-14 sm:pt-14 lg:pt-14' : ''}`}
+          >
             {/* Required: nested routes render here. */}
             <Outlet />
           </main>
