@@ -1,5 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileUp, Search } from 'lucide-react'
+import {
+  AlertCircle,
+  FileUp,
+  Files,
+  Fingerprint,
+  ScrollText,
+  Search,
+  ShieldCheck,
+} from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -59,6 +67,42 @@ const STATUS_LABELS: Record<ContactDocumentRow['document_status'], string> = {
   revoked: 'Revocado',
   not_applicable: 'No aplicable',
 }
+const SECTIONS: Array<{
+  id: string
+  title: string
+  description: string
+  types: ContactDocumentType[]
+  icon: typeof Fingerprint
+}> = [
+  {
+    id: 'identification',
+    title: 'Identificación',
+    description: 'DNI · NIE · Pasaporte',
+    types: ['identification'],
+    icon: Fingerprint,
+  },
+  {
+    id: 'privacy',
+    title: 'Protección de datos',
+    description: 'Firma registrada cuando conste',
+    types: ['privacy'],
+    icon: ShieldCheck,
+  },
+  {
+    id: 'authority',
+    title: 'Poderes y autorizaciones',
+    description: 'Incluye acreditación de representación',
+    types: ['power', 'authority'],
+    icon: ScrollText,
+  },
+  {
+    id: 'other',
+    title: 'Otros documentos personales',
+    description: 'Documentos libres del titular',
+    types: ['other'],
+    icon: Files,
+  },
+]
 
 export function ContactPersonalFilesTab({
   firmId,
@@ -119,10 +163,12 @@ export function ContactPersonalFilesTab({
         .includes(normalizedSearch),
   )
 
-  const openUpload = (requirement: string | null) => {
+  const openUpload = (requirement: string | null, type?: ContactDocumentType) => {
     setUploadRequirement(requirement)
     setFile(null)
-    if (requirement) setCategory(categoriesForRequirement(requirement)[0] ?? 'other')
+    setCategory(
+      type ?? (requirement ? (categoriesForRequirement(requirement)[0] ?? 'other') : 'other'),
+    )
     setUploadOpen(true)
   }
 
@@ -223,106 +269,64 @@ export function ContactPersonalFilesTab({
       />
     )
 
-  const sections: Array<{
-    id: string
-    title: string
-    types: ContactDocumentType[]
-  }> = [
-    { id: 'identification', title: '1. NIF e identificación', types: ['identification'] },
-    { id: 'privacy', title: '2. Protección de datos', types: ['privacy'] },
-    { id: 'authority', title: '3. Poderes y autorizaciones', types: ['power', 'authority'] },
-    { id: 'other', title: '4. Otros documentos personales', types: ['other'] },
-  ]
-
   return (
     <section className="space-y-4" aria-label="Archivos personales">
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-3 pt-5">
-          <div className="relative min-w-[220px] flex-1">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por nombre, tipo o etiqueta"
-              aria-label="Buscar documentos personales"
-              className="!pl-10"
-            />
-          </div>
-          <Button type="button" variant="outline" onClick={() => openUpload(null)}>
-            <FileUp className="size-4" aria-hidden="true" />
-            Subir documento
-          </Button>
-          <Badge variant={missing.length ? 'secondary' : 'outline'}>
-            {requiredDocuments.length
-              ? missing.length
-                ? `${missing.length} requisito${missing.length === 1 ? '' : 's'} pendiente${missing.length === 1 ? '' : 's'}`
-                : 'Documentación completa'
-              : relationship === 'Cliente'
-                ? 'Archivo del cliente'
-                : 'Archivo opcional'}
-          </Badge>
-        </CardContent>
-      </Card>
-
-      {relationship !== 'Cliente' ? (
-        <p className="bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-          Este contacto no es cliente: la documentación se archiva de forma opcional y no genera
-          requisitos obligatorios.
-        </p>
-      ) : null}
-      {relationship === 'Lead' ? (
-        <p className="bg-muted/30 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-          Para un lead se solicita identificación y protección de datos antes de continuar.
-        </p>
-      ) : null}
-      {missing.length ? (
-        <p className="border-warning/40 bg-warning/5 text-warning-foreground rounded-md border px-3 py-2 text-sm">
-          Falta incorporar: {missing.map((item) => item.requirement).join(', ')}.
-        </p>
-      ) : null}
-
-      {requiredDocuments.length ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-base">Requisitos documentales del Lead</CardTitle>
-              <Badge variant={missing.length ? 'secondary' : 'outline'}>
-                {missing.length ? `${missing.length} pendiente(s)` : 'Completa'}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {reconciledRequirements.map((item) => (
-              <div
-                key={item.requirement}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative w-full min-w-0 flex-none sm:w-auto sm:max-w-md sm:flex-1">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar documentos"
+            aria-label="Buscar documentos personales"
+            className="!pl-10"
+          />
+        </div>
+        <span className="text-muted-foreground text-sm">
+          {rows.length} documento{rows.length === 1 ? '' : 's'}
+        </span>
+        <Button type="button" variant="outline" onClick={() => openUpload(null)}>
+          <FileUp className="size-4" aria-hidden="true" />
+          Subir documentos
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2" aria-label="Documentación habitual">
+        {['Lead', 'Cliente'].includes(relationship) &&
+          SECTIONS.filter((section) => section.id !== 'other').map((section) => {
+            const state = personalSectionState(section.id, section.types, rows)
+            return state === 'Falta' || state === 'Caducado' || state === 'Pendiente de firma' ? (
+              <button
+                key={section.id}
+                type="button"
+                aria-label={`Subir documento de ${section.title}`}
+                onClick={() => openUpload(null, section.types[0])}
+                className="bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium"
               >
-                <span>{item.requirement}</span>
-                {item.receivedDocument ? (
-                  <Badge variant="outline">Recibido · {item.receivedDocument.name}</Badge>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Badge variant="secondary">Pendiente</Badge>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      aria-label={`Subir ${item.requirement}`}
-                      onClick={() => openUpload(item.requirement)}
-                    >
-                      <FileUp className="size-4" aria-hidden="true" />
-                      Subir
-                    </Button>
-                  </span>
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+                <AlertCircle className="size-3" aria-hidden="true" />
+                {state === 'Falta'
+                  ? `Falta ${section.title}`
+                  : `${section.title} (${state.toLocaleLowerCase('es')})`}
+              </button>
+            ) : null
+          })}
+        {missing
+          .filter((item) => !['Identificación', 'Protección de datos'].includes(item.requirement))
+          .map((item) => (
+            <button
+              key={item.requirement}
+              type="button"
+              aria-label={`Subir ${item.requirement}`}
+              onClick={() => openUpload(item.requirement)}
+              className="bg-warning/15 text-warning-foreground border-warning/40 hover:bg-warning/25 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium"
+            >
+              <FileUp className="size-3" aria-hidden="true" />
+              {item.requirement}
+            </button>
+          ))}
+      </div>
 
       <Dialog
         open={uploadOpen}
@@ -425,207 +429,242 @@ export function ContactPersonalFilesTab({
         </DialogContent>
       </Dialog>
 
-      {sections.map((section) => {
-        const sectionRows = visibleRows.filter((row) => section.types.includes(row.document_type))
-        const sectionMissing = missing.some((item) => {
-          const categories = categoriesForRequirement(item.requirement)
-          return categories.length
-            ? categories.some((type) => section.types.includes(type))
-            : section.id === 'other'
-        })
-        return (
-          <Card key={section.id}>
-            <CardHeader className="pb-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">{section.title}</CardTitle>
-                {sectionMissing ? (
-                  <Badge variant="secondary">Pendiente</Badge>
-                ) : sectionRows.length ? (
-                  <Badge variant="outline">
-                    {sectionRows.length} documento{sectionRows.length === 1 ? '' : 's'}
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {SECTIONS.map((section) => {
+          const sectionRows = visibleRows.filter((row) => section.types.includes(row.document_type))
+          const state = personalSectionState(section.id, section.types, rows)
+          const Icon = section.icon
+          return (
+            <Card key={section.id} className="min-w-0 rounded-lg shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Icon className="text-primary size-4" aria-hidden="true" />
+                    {section.title}
+                  </CardTitle>
+                  <Badge
+                    variant="outline"
+                    className={
+                      state === 'Falta' || state === 'Caducado'
+                        ? 'bg-destructive/10 text-destructive border-destructive/30'
+                        : state === 'Pendiente de firma'
+                          ? 'bg-warning/15 text-warning-foreground border-warning/40'
+                          : state === 'Sin documentos'
+                            ? 'text-muted-foreground'
+                            : 'bg-success/10 text-success-foreground border-success/30'
+                    }
+                  >
+                    {state}
                   </Badge>
-                ) : null}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] text-left text-sm">
-                  <thead className="text-muted-foreground border-b text-xs">
-                    {section.id === 'identification' ? (
-                      <tr>
-                        <th className="py-2 pr-4">Tipo de documento</th>
-                        <th className="py-2 pr-4">Número</th>
-                        <th className="py-2 pr-4">Expedición</th>
-                        <th className="py-2 pr-4">Caducidad</th>
-                        <th className="py-2 pr-4">Estado</th>
-                        <th className="py-2 pr-4">Archivo</th>
-                        <th className="py-2">Subido</th>
-                      </tr>
-                    ) : null}
-                    {section.id === 'privacy' ? (
-                      <tr>
-                        <th className="py-2 pr-4">Tipo de documento</th>
-                        <th className="py-2 pr-4">Fecha de firma</th>
-                        <th className="py-2 pr-4">Estado</th>
-                        <th className="py-2 pr-4">Archivo</th>
-                        <th className="py-2">Observaciones</th>
-                      </tr>
-                    ) : null}
-                    {section.id === 'authority' ? (
-                      <tr>
-                        <th className="py-2 pr-4">Tipo</th>
-                        <th className="py-2 pr-4">Número</th>
-                        <th className="py-2 pr-4">Otorgamiento</th>
-                        <th className="py-2 pr-4">Caducidad</th>
-                        <th className="py-2 pr-4">Estado</th>
-                        <th className="py-2">Archivo</th>
-                      </tr>
-                    ) : null}
-                    {section.id === 'other' ? (
-                      <tr>
-                        <th className="py-2 pr-4">Nombre o descripción</th>
-                        <th className="py-2 pr-4">Categoría</th>
-                        <th className="py-2 pr-4">Fecha</th>
-                        <th className="py-2 pr-4">Caducidad</th>
-                        <th className="py-2 pr-4">Etiquetas</th>
-                        <th className="py-2">Archivo</th>
-                      </tr>
-                    ) : null}
-                  </thead>
-                  <tbody className="divide-y">
-                    {sectionRows.map((document) => (
-                      <tr key={document.id}>
-                        <td className="py-3 pr-4 font-medium">{document.name}</td>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-xs">{section.description}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Subir ${section.title}`}
+                    onClick={() => openUpload(null, section.types[0])}
+                  >
+                    <FileUp className="size-3" aria-hidden="true" />
+                    Subir
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!sectionRows.length ? (
+                  <p className="text-muted-foreground py-3 text-sm">
+                    {normalizedSearch ? 'Sin coincidencias.' : 'Sin archivos incorporados.'}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[680px] text-left text-sm">
+                      <thead className="text-muted-foreground border-b text-xs">
                         {section.id === 'identification' ? (
-                          <>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.document_number || '—'}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.issued_on ? formatDate(document.issued_on) : '—'}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.expires_on ? formatDate(document.expires_on) : '—'}
-                            </td>
-                            <td className="py-3 pr-4">
-                              <Badge
-                                variant={
-                                  document.document_status === 'current' ? 'default' : 'secondary'
-                                }
-                              >
-                                {STATUS_LABELS[document.document_status]}
-                              </Badge>
-                            </td>
-                            <td className="py-3 pr-4">
-                              <DocumentLink document={document} onOpen={openDocument} />
-                            </td>
-                            <td className="text-muted-foreground py-3">
-                              {formatDate(document.created_at)}
-                            </td>
-                          </>
+                          <tr>
+                            <th className="py-2 pr-4">Tipo de documento</th>
+                            <th className="py-2 pr-4">Número</th>
+                            <th className="py-2 pr-4">Expedición</th>
+                            <th className="py-2 pr-4">Caducidad</th>
+                            <th className="py-2 pr-4">Estado</th>
+                            <th className="py-2 pr-4">Archivo</th>
+                            <th className="py-2">Subido</th>
+                          </tr>
                         ) : null}
                         {section.id === 'privacy' ? (
-                          <>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.signed_on ? formatDate(document.signed_on) : '—'}
-                            </td>
-                            <td className="py-3 pr-4">
-                              <Badge
-                                variant={
-                                  document.document_status === 'current' ? 'default' : 'secondary'
-                                }
-                              >
-                                {STATUS_LABELS[document.document_status]}
-                              </Badge>
-                            </td>
-                            <td className="py-3 pr-4">
-                              <DocumentLink document={document} onOpen={openDocument} />
-                            </td>
-                            <td className="text-muted-foreground py-3">
-                              {document.observations || '—'}
-                            </td>
-                          </>
+                          <tr>
+                            <th className="py-2 pr-4">Tipo de documento</th>
+                            <th className="py-2 pr-4">Fecha de firma</th>
+                            <th className="py-2 pr-4">Estado</th>
+                            <th className="py-2 pr-4">Archivo</th>
+                            <th className="py-2">Observaciones</th>
+                          </tr>
                         ) : null}
                         {section.id === 'authority' ? (
-                          <>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.document_number || '—'}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.issued_on ? formatDate(document.issued_on) : '—'}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.expires_on ? formatDate(document.expires_on) : '—'}
-                            </td>
-                            <td className="py-3 pr-4">
-                              <Badge
-                                variant={
-                                  document.document_status === 'current' ? 'default' : 'secondary'
-                                }
-                              >
-                                {STATUS_LABELS[document.document_status]}
-                              </Badge>
-                            </td>
-                            <td className="py-3">
-                              <DocumentLink document={document} onOpen={openDocument} />
-                            </td>
-                          </>
+                          <tr>
+                            <th className="py-2 pr-4">Tipo</th>
+                            <th className="py-2 pr-4">Número</th>
+                            <th className="py-2 pr-4">Otorgamiento</th>
+                            <th className="py-2 pr-4">Caducidad</th>
+                            <th className="py-2 pr-4">Estado</th>
+                            <th className="py-2">Archivo</th>
+                          </tr>
                         ) : null}
                         {section.id === 'other' ? (
-                          <>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {
-                                CATEGORIES.find((item) => item.type === document.document_type)
-                                  ?.label
-                              }
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {formatDate(document.created_at)}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.expires_on ? formatDate(document.expires_on) : '—'}
-                            </td>
-                            <td className="text-muted-foreground py-3 pr-4">
-                              {document.tags.length ? document.tags.join(', ') : '—'}
-                            </td>
-                            <td className="py-3">
-                              <DocumentLink document={document} onOpen={openDocument} />
-                            </td>
-                          </>
+                          <tr>
+                            <th className="py-2 pr-4">Nombre o descripción</th>
+                            <th className="py-2 pr-4">Categoría</th>
+                            <th className="py-2 pr-4">Fecha</th>
+                            <th className="py-2 pr-4">Caducidad</th>
+                            <th className="py-2 pr-4">Etiquetas</th>
+                            <th className="py-2">Archivo</th>
+                          </tr>
                         ) : null}
-                      </tr>
-                    ))}
-                    {!sectionRows.length ? (
-                      <tr>
-                        <td
-                          colSpan={
-                            section.id === 'identification'
-                              ? 7
-                              : section.id === 'privacy'
-                                ? 5
-                                : section.id === 'authority'
-                                  ? 6
-                                  : 6
-                          }
-                          className="text-muted-foreground py-5 text-sm"
-                        >
-                          {normalizedSearch
-                            ? 'No hay documentos que coincidan con la búsqueda.'
-                            : sectionMissing
-                              ? `Falta el documento requerido de ${section.id === 'identification' ? 'identificación' : 'protección de datos'}.`
-                              : 'Sin documentos registrados.'}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+                      </thead>
+                      <tbody className="divide-y">
+                        {sectionRows.map((document) => (
+                          <tr key={document.id}>
+                            <td className="py-3 pr-4 font-medium">{document.name}</td>
+                            {section.id === 'identification' ? (
+                              <>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.document_number || '—'}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.issued_on ? formatDate(document.issued_on) : '—'}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <Badge
+                                    variant={
+                                      document.document_status === 'current'
+                                        ? 'default'
+                                        : 'secondary'
+                                    }
+                                  >
+                                    {STATUS_LABELS[document.document_status]}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <DocumentLink document={document} onOpen={openDocument} />
+                                </td>
+                                <td className="text-muted-foreground py-3">
+                                  {formatDate(document.created_at)}
+                                </td>
+                              </>
+                            ) : null}
+                            {section.id === 'privacy' ? (
+                              <>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.signed_on ? formatDate(document.signed_on) : '—'}
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <Badge
+                                    variant={
+                                      document.document_status === 'current'
+                                        ? 'default'
+                                        : 'secondary'
+                                    }
+                                  >
+                                    {STATUS_LABELS[document.document_status]}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <DocumentLink document={document} onOpen={openDocument} />
+                                </td>
+                                <td className="text-muted-foreground py-3">
+                                  {document.observations || '—'}
+                                </td>
+                              </>
+                            ) : null}
+                            {section.id === 'authority' ? (
+                              <>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.document_number || '—'}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.issued_on ? formatDate(document.issued_on) : '—'}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <Badge
+                                    variant={
+                                      document.document_status === 'current'
+                                        ? 'default'
+                                        : 'secondary'
+                                    }
+                                  >
+                                    {STATUS_LABELS[document.document_status]}
+                                  </Badge>
+                                </td>
+                                <td className="py-3">
+                                  <DocumentLink document={document} onOpen={openDocument} />
+                                </td>
+                              </>
+                            ) : null}
+                            {section.id === 'other' ? (
+                              <>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {
+                                    CATEGORIES.find((item) => item.type === document.document_type)
+                                      ?.label
+                                  }
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {formatDate(document.created_at)}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
+                                </td>
+                                <td className="text-muted-foreground py-3 pr-4">
+                                  {document.tags.length ? document.tags.join(', ') : '—'}
+                                </td>
+                                <td className="py-3">
+                                  <DocumentLink document={document} onOpen={openDocument} />
+                                </td>
+                              </>
+                            ) : null}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
     </section>
   )
+}
+
+function personalSectionState(
+  id: string,
+  types: ContactDocumentType[],
+  rows: ContactDocumentRow[],
+) {
+  const relevant = rows.filter(
+    (row) =>
+      types.includes(row.document_type) &&
+      !['revoked', 'not_applicable'].includes(row.document_status),
+  )
+  if (id === 'other') return relevant.length ? 'Incorporado' : 'Sin documentos'
+  if (!relevant.length) return 'Falta'
+  const today = new Date().toISOString().slice(0, 10)
+  const valid = relevant.filter(
+    (row) => row.document_status !== 'expired' && (!row.expires_on || row.expires_on >= today),
+  )
+  if (!valid.length) return 'Caducado'
+  if (id === 'privacy')
+    return valid.some((row) => row.signed_on && row.signed_on <= today)
+      ? 'Firmado'
+      : 'Pendiente de firma'
+  return valid.some((row) => row.document_status !== 'pending') ? 'Incorporado' : 'Falta'
 }
 
 function DocumentLink({
