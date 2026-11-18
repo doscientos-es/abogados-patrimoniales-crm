@@ -63,7 +63,7 @@ describe('ContactProfileTab', () => {
         expect.objectContaining({ profile: expect.objectContaining({ attention: 'Preferente' }) }),
       ),
     )
-    expect(await screen.findByRole('status')).toHaveTextContent('Guardado')
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Guardado'))
   })
 
   it('restaura el valor anterior y muestra el error si falla el guardado automático', async () => {
@@ -73,7 +73,9 @@ describe('ContactProfileTab', () => {
     const category = screen.getByLabelText('Categoría de atención') as HTMLSelectElement
     fireEvent.change(category, { target: { value: 'Preferente' } })
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Fallo de persistencia')
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('Fallo de persistencia'),
+    )
     expect(category.value).toBe('Estándar')
     expect(mocks.toastError).not.toHaveBeenCalled()
   })

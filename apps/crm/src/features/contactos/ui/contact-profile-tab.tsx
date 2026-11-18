@@ -164,8 +164,8 @@ export function ContactProfileTab({
             </select>
           </div>
           {canManage ? (
-            <p
-              role="status"
+            <output
+              aria-live="polite"
               className={`min-h-4 text-xs ${attentionError ? 'text-destructive' : 'text-muted-foreground'}`}
             >
               {attentionError ??
@@ -174,7 +174,7 @@ export function ContactProfileTab({
                   : attentionFeedback === 'saved'
                     ? 'Guardado'
                     : '')}
-            </p>
+            </output>
           ) : (
             <p className="text-muted-foreground text-xs">
               Tu perfil puede consultar las preferencias, pero no modificarlas.
