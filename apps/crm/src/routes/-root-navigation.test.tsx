@@ -4,10 +4,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ mobile: false }))
 
-vi.mock('@tanstack/react-query', () => ({ QueryClientProvider: ({ children }: { children: ReactNode }) => children }))
+vi.mock('@tanstack/react-query', () => ({
+  QueryClientProvider: ({ children }: { children: ReactNode }) => children,
+}))
 vi.mock('@tanstack/react-router', () => ({
-  createRootRouteWithContext: () => (options: object) => ({ options, useRouteContext: () => ({ queryClient: {} }) }),
-  useRouterState: ({ select }: { select: (state: object) => unknown }) => select({ location: { pathname: '/' }, status: 'idle' }),
+  createRootRouteWithContext: () => (options: object) => ({
+    options,
+    useRouteContext: () => ({ queryClient: {} }),
+  }),
+  useRouterState: ({ select }: { select: (state: object) => unknown }) =>
+    select({ location: { pathname: '/' }, status: 'idle' }),
   useRouter: () => ({}),
   Outlet: () => <div>Contenido</div>,
   Link: () => null,
@@ -15,15 +21,34 @@ vi.mock('@tanstack/react-router', () => ({
   Scripts: () => null,
 }))
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => mocks.mobile }))
-vi.mock('@/components/ui/sidebar', () => ({ SidebarProvider: ({ children }: { children: ReactNode }) => children }))
+vi.mock('@/components/ui/sidebar', () => ({
+  SidebarProvider: ({ children }: { children: ReactNode }) => children,
+}))
 vi.mock('@/components/ui/sonner', () => ({ Toaster: () => null }))
-vi.mock('@/features/auth', () => ({ AccessGate: ({ children }: { children: ReactNode }) => children }))
+vi.mock('@/features/auth', () => ({
+  AccessGate: ({ children }: { children: ReactNode }) => children,
+}))
 vi.mock('@/components/app-sidebar', () => ({
-  AppSidebar: ({ open, onClose, onNavigate, closeButtonRef }: {
-    open: boolean; onClose: () => void; onNavigate: () => void; closeButtonRef: RefObject<HTMLButtonElement | null>
+  AppSidebar: ({
+    open,
+    onClose,
+    onNavigate,
+    closeButtonRef,
+  }: {
+    open: boolean
+    onClose: () => void
+    onNavigate: () => void
+    closeButtonRef: RefObject<HTMLButtonElement | null>
   }) => (
-    <aside id="navegacion-principal" aria-label="Navegación principal" aria-hidden={!open} inert={!open || undefined}>
-      <button ref={closeButtonRef} onClick={onClose}>Ocultar navegación</button>
+    <aside
+      id="navegacion-principal"
+      aria-label="Navegación principal"
+      aria-hidden={!open}
+      inert={!open || undefined}
+    >
+      <button ref={closeButtonRef} onClick={onClose}>
+        Ocultar navegación
+      </button>
       <button onClick={onNavigate}>Contactos</button>
     </aside>
   ),
@@ -31,9 +56,13 @@ vi.mock('@/components/app-sidebar', () => ({
 
 import { Route } from './__root'
 
-const Root = Route.options.component!
+const Root = Route.options.component
+if (!Root) throw new Error('Falta el componente raíz')
 
-afterEach(() => { cleanup(); mocks.mobile = false })
+afterEach(() => {
+  cleanup()
+  mocks.mobile = false
+})
 
 describe('navegación principal', () => {
   it('permite plegar y volver a mostrar la navegación en escritorio', () => {
@@ -41,7 +70,10 @@ describe('navegación principal', () => {
     const sidebar = screen.getByRole('complementary', { name: 'Navegación principal' })
     fireEvent.click(within(sidebar).getByRole('button', { name: 'Ocultar navegación' }))
     expect(sidebar.getAttribute('aria-hidden')).toBe('true')
-    const restore = screen.getAllByRole('button', { name: 'Mostrar navegación' }).find((button) => button.className.includes('absolute'))!
+    const restore = screen
+      .getAllByRole('button', { name: 'Mostrar navegación' })
+      .find((button) => button.className.includes('absolute'))
+    if (!restore) throw new Error('Falta el botón para mostrar la navegación')
     expect(document.activeElement).toBe(restore)
     fireEvent.click(restore)
     expect(sidebar.getAttribute('aria-hidden')).toBe('false')

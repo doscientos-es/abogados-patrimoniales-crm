@@ -269,7 +269,7 @@ function ContactosPage() {
           </button>
         </div>
         <div className="space-y-2 py-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_12rem_auto] sm:items-center">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_12rem] sm:items-center">
             <label htmlFor="contact-search" className="relative col-span-2 min-w-0 sm:col-span-1">
               <span className="sr-only">Buscar contactos</span>
               <Search
@@ -424,7 +424,6 @@ function ContactosPage() {
                 label="Ordenar contactos"
                 value={sortBy}
                 onValueChange={changeSort}
-                prefix="Ordenar"
                 leadingIcon={<ArrowDownUp className="h-3.5 w-3.5" aria-hidden="true" />}
                 triggerClassName="h-9 w-full border-border/80 bg-background font-normal shadow-none hover:bg-muted/60"
               >
@@ -433,61 +432,6 @@ function ContactosPage() {
                 <SelectItem id="created">Fecha de alta</SelectItem>
                 <SelectItem id="modified">Última modificación</SelectItem>
               </ContactFilter>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <PopoverTrigger>
-                <Button
-                  className="border-border/80 bg-background hover:bg-muted/60 h-9 w-full px-3 font-normal shadow-none"
-                  size="sm"
-                  variant="outline"
-                >
-                  <Columns3 className="h-4 w-4" aria-hidden="true" />
-                  Columnas
-                  {columns.hidden.length ? (
-                    <span className="text-muted-foreground text-xs">
-                      ({columns.hidden.length} ocultas)
-                    </span>
-                  ) : null}
-                </Button>
-                <PopoverContent placement="bottom end" className="w-64 rounded-xl p-0">
-                  <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                    <p className="text-sm font-semibold">Columnas visibles</p>
-                    <button
-                      type="button"
-                      className="text-primary text-xs font-medium hover:underline disabled:opacity-50"
-                      disabled={!columns.hidden.length}
-                      onClick={() => {
-                        if (!columns.reset())
-                          toast.error('No se pudo guardar la vista en este navegador.')
-                      }}
-                    >
-                      Restablecer
-                    </button>
-                  </div>
-                  <div className="space-y-1 p-2">
-                    {CONTACT_OPTIONAL_COLUMNS.map((column) => (
-                      <label
-                        key={column.id}
-                        className="hover:bg-muted/60 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          className="accent-primary size-4"
-                          checked={columns.isVisible(column.id)}
-                          onChange={() => {
-                            if (!columns.toggle(column.id))
-                              toast.error('No se pudo guardar la vista en este navegador.')
-                          }}
-                        />
-                        {column.label}
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground border-border border-t px-4 py-2.5 text-xs">
-                    Contacto y acciones siempre visibles. Solo en este navegador.
-                  </p>
-                </PopoverContent>
-              </PopoverTrigger>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -571,8 +515,67 @@ function ContactosPage() {
                     className="min-w-28"
                   />
                 ) : null}
-                <TableHead className="border-border/60 bg-card sticky right-0 z-20 w-12 border-l text-right">
+                <TableHead className="border-border/60 bg-card sticky right-0 z-20 w-12 border-l px-2 text-right">
                   <span className="sr-only">Acciones</span>
+                  <PopoverTrigger>
+                    <Button
+                      aria-label={
+                        columns.hidden.length
+                          ? `Columnas visibles (${columns.hidden.length} ocultas)`
+                          : 'Columnas visibles'
+                      }
+                      title="Columnas visibles"
+                      className="relative"
+                      size="icon-sm"
+                      variant="ghost"
+                    >
+                      <Columns3 className="h-4 w-4" aria-hidden="true" />
+                      {columns.hidden.length ? (
+                        <span
+                          className="bg-primary absolute top-1 right-1 size-1.5 rounded-full"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </Button>
+                    <PopoverContent placement="bottom end" className="w-64 rounded-xl p-0">
+                      <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                        <p className="text-sm font-semibold">Columnas visibles</p>
+                        <button
+                          type="button"
+                          className="text-primary text-xs font-medium hover:underline disabled:opacity-50"
+                          disabled={!columns.hidden.length}
+                          onClick={() => {
+                            if (!columns.reset())
+                              toast.error('No se pudo guardar la vista en este navegador.')
+                          }}
+                        >
+                          Restablecer
+                        </button>
+                      </div>
+                      <div className="space-y-1 p-2">
+                        {CONTACT_OPTIONAL_COLUMNS.map((column) => (
+                          <label
+                            key={column.id}
+                            className="hover:bg-muted/60 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-primary size-4"
+                              checked={columns.isVisible(column.id)}
+                              onChange={() => {
+                                if (!columns.toggle(column.id))
+                                  toast.error('No se pudo guardar la vista en este navegador.')
+                              }}
+                            />
+                            {column.label}
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-muted-foreground border-border border-t px-4 py-2.5 text-xs">
+                        Contacto y acciones siempre visibles. Solo en este navegador.
+                      </p>
+                    </PopoverContent>
+                  </PopoverTrigger>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -822,7 +825,6 @@ function ContactFilter({
   value,
   onValueChange,
   triggerClassName,
-  prefix,
   leadingIcon,
   children,
 }: {
@@ -830,7 +832,6 @@ function ContactFilter({
   value: string
   onValueChange: (value: string) => void
   triggerClassName: string
-  prefix?: string
   leadingIcon?: React.ReactNode
   children: React.ReactNode
 }) {
@@ -843,14 +844,9 @@ function ContactFilter({
       }}
     >
       <SelectTrigger aria-label={label} className={triggerClassName}>
-        {leadingIcon || prefix ? (
+        {leadingIcon ? (
           <div className="flex min-w-0 items-center gap-1.5">
-            {leadingIcon ? (
-              <span className="text-muted-foreground shrink-0">{leadingIcon}</span>
-            ) : null}
-            {prefix ? (
-              <span className="text-muted-foreground shrink-0 text-xs">{prefix}</span>
-            ) : null}
+            <span className="text-muted-foreground shrink-0">{leadingIcon}</span>
             <SelectValue />
           </div>
         ) : (
