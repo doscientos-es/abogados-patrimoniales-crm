@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   useContactPhoneCandidates,
   type ContactoPersistido,
@@ -105,7 +104,6 @@ export function CaseParticipantDialog({
   const [creating, setCreating] = useState(false)
   const [nuevo, setNuevo] = useState(emptyPerson)
   const [ref, setRef] = useState('')
-  const [descripcion, setDescripcion] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmedPhones, setConfirmedPhones] = useState<string[]>([])
   const phoneCandidates = useContactPhoneCandidates(open && creating ? firmId : undefined)
@@ -122,7 +120,6 @@ export function CaseParticipantDialog({
     setSelected(contactos.find((c) => c.id === initial?.contactoId) ?? null)
     setMiembroId(initial?.miembroId ?? '')
     setRef(initial?.ref ?? '')
-    setDescripcion(initial?.descripcion ?? '')
     setQuery('')
     setCreating(false)
     setNuevo(emptyPerson)
@@ -155,7 +152,13 @@ export function CaseParticipantDialog({
       if (isResponsable) {
         const miembro = miembros.find((m) => m.id === miembroId) ?? null
         if (!miembro) return void toast.error('Selecciona un profesional del despacho.')
-        await onSubmit({ tipo, contacto: null, miembro, ref, descripcion })
+        await onSubmit({
+          tipo,
+          contacto: null,
+          miembro,
+          ref,
+          descripcion: initial?.descripcion ?? '',
+        })
       } else {
         let contacto = selected
         if (creating) {
@@ -192,7 +195,13 @@ export function CaseParticipantDialog({
           setCreating(false)
         }
         if (!contacto) return void toast.error('Selecciona una persona o crea una nueva.')
-        await onSubmit({ tipo, contacto, miembro: null, ref, descripcion })
+        await onSubmit({
+          tipo,
+          contacto,
+          miembro: null,
+          ref,
+          descripcion: initial?.descripcion ?? '',
+        })
       }
       onOpenChange(false)
     } catch (error) {
@@ -258,8 +267,8 @@ export function CaseParticipantDialog({
             <div className="grid gap-1.5">
               <Label htmlFor="p-search">Implicado</Label>
               {selected ? (
-                <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                  <div className="min-w-0 break-words">
                     <p className="font-medium">{selected.nombre}</p>
                     <p className="text-muted-foreground text-xs">
                       {[selected.nif, selected.telefono, selected.email]
@@ -267,7 +276,7 @@ export function CaseParticipantDialog({
                         .join(' · ') || 'Sin datos de contacto'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Link
                       to="/contactos/$id"
                       params={{ id: selected.id }}
@@ -277,6 +286,16 @@ export function CaseParticipantDialog({
                     >
                       Ficha completa
                     </Link>
+                    <Link
+                      to="/contactos/$id"
+                      params={{ id: selected.id }}
+                      search={{ tab: 'general' }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Editar contacto
+                    </Link>
                     <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
                       Cambiar
                     </Button>
@@ -285,10 +304,13 @@ export function CaseParticipantDialog({
               ) : (
                 <>
                   <div className="relative">
-                    <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+                    <Search
+                      aria-hidden="true"
+                      className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    />
                     <Input
                       id="p-search"
-                      className="pl-8"
+                      className="!pl-10"
                       placeholder="Buscar en Contactos: nombre, NIF, teléfono o email"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
@@ -498,20 +520,8 @@ export function CaseParticipantDialog({
               onChange={(e) => setRef(e.target.value)}
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="p-desc">Descripción</Label>
-            <Textarea
-              id="p-desc"
-              rows={2}
-              placeholder={
-                subordinate ? 'Ej. lleva las comunicaciones del cliente' : 'Ej. demandado principal'
-              }
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-            />
-          </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

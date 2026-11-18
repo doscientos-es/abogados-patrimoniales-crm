@@ -210,7 +210,7 @@ function FichaOportunidadPage() {
   )
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
-      <header className="bg-card rounded-xl border px-4 py-3 sm:px-5">
+      <header className="bg-card rounded-xl border px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <Link
             to="/oportunidades"
@@ -231,14 +231,16 @@ function FichaOportunidadPage() {
             {data.subestado}
           </Badge>
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t pt-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl leading-tight font-semibold text-balance">{data.titulo}</h1>
-            <p className="text-muted-foreground mt-0.5 text-sm">
+        <div className="mt-3 space-y-4 border-t pt-4">
+          <div className="min-w-0">
+            <h1 className="text-xl leading-tight font-semibold text-balance break-words">
+              {data.titulo}
+            </h1>
+            <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-relaxed break-words">
               {data.descripcion || 'Sin descripción registrada.'}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <LeadChatgptAction
               key={`${membership.data.firmId}:${data.id}:${session.user.id}`}
               scope={{ firmId: membership.data.firmId, leadId: data.id, userId: session.user.id }}
@@ -455,7 +457,7 @@ export function LeadHeroActions({
   const canAdvance = OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== 'lost')
 
   return (
-    <div className="flex shrink-0 flex-wrap gap-2" aria-label="Acciones rápidas del Lead">
+    <div className="flex min-w-0 flex-wrap gap-2" aria-label="Acciones rápidas del Lead">
       {canEdit ? (
         <a
           href="#lead-edit-details"
