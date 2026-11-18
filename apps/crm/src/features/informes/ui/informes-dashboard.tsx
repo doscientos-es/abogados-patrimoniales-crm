@@ -145,10 +145,7 @@ export function InformesDashboard() {
 
   return (
     <div className="mx-auto max-w-[1440px] pb-6">
-      <SectionHeader
-        title="Informes"
-        subtitle="Una lectura clara del pulso económico, operativo y de cartera del despacho."
-      />
+      <SectionHeader title="Informes" />
 
       <section
         className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"

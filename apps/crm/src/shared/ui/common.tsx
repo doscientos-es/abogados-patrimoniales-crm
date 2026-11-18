@@ -45,13 +45,11 @@ export function UserAvatar({
 
 export function SectionHeader({
   title,
-  subtitle,
   actions,
   meta,
   logo = false,
 }: {
   title: string
-  subtitle?: string
   actions?: ReactNode
   meta?: ReactNode
   logo?: boolean
@@ -63,7 +61,7 @@ export function SectionHeader({
           {logo ? (
             <img src="/logo-lex.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
           ) : null}
-          <h1 className="text-foreground min-w-0 font-serif text-2xl font-semibold text-balance sm:text-3xl">
+          <h1 className="text-foreground min-w-0 font-serif text-xl font-semibold text-balance sm:text-2xl">
             {title}
           </h1>
           {meta ? (
@@ -72,9 +70,6 @@ export function SectionHeader({
             </span>
           ) : null}
         </div>
-        {subtitle ? (
-          <p className="text-muted-foreground mt-1 max-w-3xl text-sm">{subtitle}</p>
-        ) : null}
       </div>
       {actions ? (
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">{actions}</div>
@@ -116,17 +111,17 @@ export function StatTile({
   return (
     <div
       className={cn(
-        'border-border bg-card rounded-lg border',
+        'border-border/60 bg-card rounded-lg border',
         compact
           ? cn(
-              'flex min-h-20 items-center justify-between gap-3 border-l-[3px] px-3.5 py-3 shadow-sm',
+              'flex min-h-20 items-center justify-between gap-3 border-l-2 px-3.5 py-3',
               statTonoBorder[tono],
             )
           : 'p-4',
       )}
     >
       <div className="min-w-0">
-        <p className="text-foreground text-sm font-medium">{label}</p>
+        <p className="text-muted-foreground text-sm font-medium">{label}</p>
         {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
       </div>
       <p
@@ -230,11 +225,12 @@ export function ViewSwitch({
         <button
           key={option.id}
           type="button"
+          aria-pressed={value === option.id}
           onClick={() => onChange(option.id)}
           className={cn(
             'rounded px-3 py-1.5 text-xs font-medium transition-colors',
             value === option.id
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-muted text-foreground'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >

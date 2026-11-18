@@ -252,10 +252,7 @@ export function NuevaOportunidadPage() {
       >
         <ArrowLeft className="h-4 w-4" /> Volver
       </Link>
-      <SectionHeader
-        title="Nuevo Lead"
-        subtitle="Captura el contexto esencial ahora y completa la cualificación desde la ficha."
-      />
+      <SectionHeader title="Nuevo Lead" />
       <form className="space-y-4" onSubmit={(event) => void submit(event)}>
         <Card>
           <CardContent className="space-y-5 pt-6">

@@ -168,15 +168,6 @@
   }
 }
 
-/* Preferencia local del usuario: también amplía diálogos y controles expresados en rem. */
-html[data-reading-large] {
-  font-size: 112.5%;
-}
-
-html[data-reading-large] body {
-  letter-spacing: 0.01em;
-}
-
 /* Pantallas de acceso: atmósfera sobria, con movimiento muy sutil. */
 .auth-login-page {
   position: relative;
@@ -555,12 +546,12 @@ html[data-reading-large] body {
 }
 
 .fase-columna {
-  border-top: 3px solid var(--fase);
-  background-color: color-mix(in oklab, var(--fase) 5%, transparent);
+  border-top: 2px solid var(--fase);
+  background-color: color-mix(in oklab, var(--fase) 3%, var(--background));
 }
 
 .fase-tarjeta {
-  border-left: 3px solid var(--fase);
+  border-left: 2px solid var(--fase);
 }
 
 .fase-punto {

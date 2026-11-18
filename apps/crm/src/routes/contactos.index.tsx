@@ -43,7 +43,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -222,15 +221,14 @@ function ContactosPage() {
     <main className="mx-auto max-w-[1400px] space-y-5">
       <SectionHeader
         title="Contactos"
-        subtitle="Personas y entidades almacenadas en el despacho activo."
         actions={
           <Link to="/contactos/nuevo" className={buttonVariants({ size: 'sm' })}>
             <FilePlus2 className="h-4 w-4" /> Nuevo contacto
           </Link>
         }
       />
-      <Card className="border-border/80 overflow-hidden shadow-sm">
-        <div className="border-border/80 flex items-center gap-1 border-b px-3 pt-2.5">
+      <div>
+        <div className="border-border/60 flex items-center gap-1 border-b">
           <button
             type="button"
             aria-pressed={!archived}
@@ -254,7 +252,7 @@ function ContactosPage() {
             Archivados
           </button>
         </div>
-        <CardContent className="space-y-2 p-3">
+        <div className="space-y-2 py-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_12rem] sm:items-center">
             <label htmlFor="contact-search" className="relative col-span-2 min-w-0 sm:col-span-1">
               <span className="sr-only">Buscar contactos</span>
@@ -293,12 +291,7 @@ function ContactosPage() {
                   className="border-border/80 w-[min(25rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
                 >
                   <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold">Filtros</p>
-                      <p className="text-muted-foreground text-xs">
-                        Acota el listado por sus datos
-                      </p>
-                    </div>
+                    <p className="text-sm font-semibold">Filtros</p>
                     <span className="text-muted-foreground text-xs tabular-nums">
                       {activeFilterCount ? `${activeFilterCount} activos` : 'Sin filtros'}
                     </span>
@@ -456,14 +449,12 @@ function ContactosPage() {
               </>
             ) : null}
           </div>
-        </CardContent>
-        <div className="border-border/80 overflow-x-auto border-t">
+        </div>
+        <div className="border-border/60 bg-card overflow-hidden rounded-xl border">
           <Table className="min-w-[1240px]">
             <TableHeader>
-              <TableRow className="border-border/80 bg-muted/30 hover:bg-muted/30">
-                <TableHead className="w-20 pl-3 text-[10px] font-semibold tracking-wide uppercase">
-                  Ref.
-                </TableHead>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="w-20 pl-3">Ref.</TableHead>
                 <SortableTableHead
                   label="Contacto"
                   sortValue="name"
@@ -478,24 +469,12 @@ function ContactosPage() {
                   onSort={changeSort}
                   className="min-w-36"
                 />
-                <TableHead className="min-w-30 text-[10px] font-semibold tracking-wide uppercase">
-                  Naturaleza
-                </TableHead>
-                <TableHead className="min-w-44 text-[10px] font-semibold tracking-wide uppercase">
-                  Contacto principal
-                </TableHead>
-                <TableHead className="min-w-28 text-[10px] font-semibold tracking-wide uppercase">
-                  Origen
-                </TableHead>
-                <TableHead className="min-w-24 text-[10px] font-semibold tracking-wide uppercase">
-                  Satisfacción
-                </TableHead>
-                <TableHead className="min-w-28 text-[10px] font-semibold tracking-wide uppercase">
-                  Documentación
-                </TableHead>
-                <TableHead className="min-w-24 text-[10px] font-semibold tracking-wide uppercase">
-                  Estado
-                </TableHead>
+                <TableHead className="min-w-30">Naturaleza</TableHead>
+                <TableHead className="min-w-44">Contacto principal</TableHead>
+                <TableHead className="min-w-28">Origen</TableHead>
+                <TableHead className="min-w-24">Satisfacción</TableHead>
+                <TableHead className="min-w-28">Documentación</TableHead>
+                <TableHead className="min-w-24">Estado</TableHead>
                 <SortableTableHead
                   label="Modificado"
                   sortValue="modified"
@@ -503,15 +482,15 @@ function ContactosPage() {
                   onSort={changeSort}
                   className="min-w-28"
                 />
-                <TableHead className="border-border/80 bg-muted/30 sticky right-0 z-20 w-12 border-l text-right">
+                <TableHead className="border-border/60 bg-card sticky right-0 z-20 w-12 border-l text-right">
                   <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(contacts.data?.contacts ?? []).map((contact) => (
-                <TableRow key={contact.id} className="h-16 hover:!bg-transparent">
-                  <TableCell className="text-primary pl-3 font-mono text-xs font-medium">
+                <TableRow key={contact.id} className="group h-16">
+                  <TableCell className="text-muted-foreground pl-3 font-mono text-xs">
                     {contact.referencia || '—'}
                   </TableCell>
                   <TableCell>
@@ -560,7 +539,7 @@ function ContactosPage() {
                   <TableCell className="text-muted-foreground text-xs tabular-nums">
                     {contact.modificado}
                   </TableCell>
-                  <TableCell className="border-border/80 bg-card sticky right-0 z-10 border-l px-2">
+                  <TableCell className="border-border/60 bg-card group-hover:bg-muted sticky right-0 z-10 border-l px-2">
                     <div className="flex justify-end">
                       <DropdownMenu
                         trigger={
@@ -652,7 +631,7 @@ function ContactosPage() {
             </div>
           ) : null}
         </div>
-      </Card>
+      </div>
       <AlertDialog
         open={contactToDelete !== null}
         onOpenChange={(open) => {
@@ -705,7 +684,7 @@ function SortableTableHead({
       <button
         type="button"
         onClick={() => onSort(sortValue)}
-        className={`hover:text-foreground flex h-8 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase transition-colors ${
+        className={`hover:text-foreground flex h-8 items-center gap-1 text-xs font-medium transition-colors ${
           active ? 'text-primary' : 'text-muted-foreground'
         }`}
         aria-label={`Ordenar por ${label}`}
@@ -774,17 +753,7 @@ function FilterField({ label, children }: { label: string; children: React.React
 }
 
 function RelationshipBadge({ value }: { value: string }) {
-  const tones: Record<string, string> = {
-    Cliente: 'border-primary/20 bg-primary/10 text-primary',
-    Lead: 'border-warning/30 bg-warning/10 text-warning-foreground',
-    'Profesional / colaborador': 'border-success/30 bg-success/10 text-success',
-    Contraparte: 'border-destructive/20 bg-destructive/10 text-destructive',
-  }
-  return (
-    <Badge className={tones[value] ?? 'border-border bg-secondary text-secondary-foreground'}>
-      {value}
-    </Badge>
-  )
+  return <Badge variant="secondary">{value}</Badge>
 }
 
 function ContactStatus({ value }: { value: string }) {
@@ -808,17 +777,9 @@ function ContactAvatar({ name }: { name: string }) {
     .map((part) => part[0])
     .join('')
     .toUpperCase()
-  const tones = [
-    'bg-primary/10 text-primary',
-    'bg-success/10 text-success',
-    'bg-warning/10 text-warning-foreground',
-    'bg-secondary text-secondary-foreground',
-  ]
-  const tone = tones[(name.charCodeAt(0) || 0) % tones.length]
-
   return (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${tone}`}
+      className="bg-muted text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
       aria-hidden="true"
     >
       {initials || '—'}

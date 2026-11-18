@@ -61,4 +61,30 @@ describe('PipelineBoard', () => {
     fireEvent.click(screen.getByRole('button', { name: /avanzar op-0001 a cualificación/i }))
     expect(onAdvance).toHaveBeenCalledWith(opportunity, 'qualification')
   })
+
+  it('permite arrastrar a una fase válida sin permitir saltos no autorizados', () => {
+    const onAdvance = vi.fn().mockResolvedValue(undefined)
+    render(
+      <PipelineBoard
+        oportunidades={[opportunity]}
+        contactosPorId={new Map()}
+        isPending={false}
+        onAdvance={onAdvance}
+      />,
+    )
+    const handle = screen.getByRole('button', { name: 'Arrastrar OP-0001' })
+    const dataTransfer = { effectAllowed: '', setData: vi.fn() }
+    const invalidColumn = screen.getByText('Validación').closest('.fase-columna')
+    const validColumn = screen.getByText('Cualificación').closest('.fase-columna')
+    if (!invalidColumn || !validColumn) throw new Error('Faltan columnas del pipeline')
+
+    fireEvent.dragStart(handle, { dataTransfer })
+    fireEvent.drop(invalidColumn, { dataTransfer })
+    expect(onAdvance).not.toHaveBeenCalled()
+
+    fireEvent.dragStart(handle, { dataTransfer })
+    fireEvent.dragOver(validColumn, { dataTransfer })
+    fireEvent.drop(validColumn, { dataTransfer })
+    expect(onAdvance).toHaveBeenCalledWith(opportunity, 'qualification')
+  })
 })

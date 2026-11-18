@@ -170,7 +170,6 @@ export function CalendarPage({
     <main className="mx-auto max-w-375 space-y-4 p-3 sm:p-6">
       <SectionHeader
         title="Calendario"
-        subtitle="Vista centralizada de tareas, recordatorios, eventos y plazos del despacho."
         actions={
           <Link to="/tareas" className={buttonVariants({ className: 'gap-1.5' })}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Nueva tarea
@@ -626,7 +625,7 @@ function CalendarEvent({
       title={`${eventLabel[task.tipo]} · ${time} · ${task.titulo}`}
       aria-label={`Ver detalles de ${task.titulo}`}
       className={cn(
-        'block w-full rounded-md border text-left transition-colors focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+        'focus-visible:ring-ring block w-full rounded-md border text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
         eventStyle[task.tipo],
         task.critico && 'ring-destructive/30 ring-1',
         agenda ? 'px-3 py-2 text-sm' : 'truncate px-1.5 py-1 text-[10px] font-medium',

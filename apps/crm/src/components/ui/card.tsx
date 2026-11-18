@@ -13,5 +13,7 @@ import { cn } from '@/lib/utils'
 export { Card, CardContent, CardDescription, CardFooter, CardHeader }
 
 export function CardTitle({ className, ...props }: ComponentProps<typeof DoscientosCardTitle>) {
-  return <DoscientosCardTitle {...props} className={cn('tracking-wide uppercase', className)} />
+  return (
+    <DoscientosCardTitle {...props} className={cn('font-semibold tracking-normal', className)} />
+  )
 }

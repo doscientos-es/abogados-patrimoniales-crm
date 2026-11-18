@@ -116,10 +116,7 @@ export function ComunicacionesPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-5 p-6">
-      <SectionHeader
-        title="Comunicaciones"
-        subtitle="Registro de seguimiento vinculado al Lead, onboarding y expediente."
-      />
+      <SectionHeader title="Comunicaciones" />
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
           <div>

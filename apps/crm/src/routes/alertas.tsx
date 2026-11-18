@@ -47,10 +47,10 @@ function AlertasPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-5">
-      <SectionHeader
-        title="Alertas y control"
-        subtitle="Señales del trabajo guardado que requieren revisión profesional. Las alertas no validan plazos ni sustituyen el criterio del equipo."
-      />
+      <SectionHeader title="Alertas y control" />
+      <p className="text-muted-foreground text-sm">
+        Las alertas no validan plazos ni sustituyen el criterio del equipo.
+      </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Alertas activas" value={allAlerts.length} />
         <StatTile label="Críticas" value={criticalCount} tono="riesgo" />

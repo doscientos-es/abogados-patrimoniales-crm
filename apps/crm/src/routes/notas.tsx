@@ -214,7 +214,6 @@ function NotesPage() {
     <main className="mx-auto max-w-7xl space-y-5 p-6">
       <SectionHeader
         title="Notas internas"
-        subtitle="Información de contexto para el equipo. Las notas no se envían al cliente ni a terceros."
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -738,15 +737,15 @@ function NoteForm({
       ? contacts.map((item) => ({ id: item.id, label: contactName(item), contactIds: [item.id] }))
       : scope === 'case'
         ? cases.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-          contactIds: [item.contactoPrincipalId],
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+            contactIds: [item.contactoPrincipalId],
+          }))
         : opportunities.map((item) => ({
-          id: item.id,
-          label: `${item.referencia} · ${item.titulo}`,
-          contactIds: [item.contactoId],
-        }))
+            id: item.id,
+            label: `${item.referencia} · ${item.titulo}`,
+            contactIds: [item.contactoId],
+          }))
   const selected = options.find((item) => item.id === originId)
   useEffect(() => {
     setScope(

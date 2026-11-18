@@ -47,10 +47,7 @@ function ActuacionesPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-5">
-      <SectionHeader
-        title="Actuaciones"
-        subtitle="Registro cronológico de la actividad profesional de todos los expedientes del despacho."
-      />
+      <SectionHeader title="Actuaciones" />
       {!activities.data?.length ? (
         <Card>
           <CardContent className="space-y-4 py-10 text-center text-sm">

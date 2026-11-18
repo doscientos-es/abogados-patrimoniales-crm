@@ -33,8 +33,8 @@ export const STAGE_COLOR_CLASS: Record<OpportunityStage, string> = {
 
 const PRIORITY_CLASS: Record<OportunidadResumen['prioridad'], string> = {
   Alta: 'border-destructive/25 bg-destructive/10 text-destructive',
-  Media: 'border-warning/30 bg-warning/10 text-warning-foreground',
-  Baja: 'border-primary/20 bg-primary/10 text-primary',
+  Media: 'border-transparent bg-muted text-muted-foreground',
+  Baja: 'border-transparent bg-muted text-muted-foreground',
 }
 
 function formatUpdatedAt(value: string) {
@@ -80,7 +80,7 @@ export function PipelineBoard({
           return (
             <Card
               key={stage}
-              className={`fase-columna ${STAGE_COLOR_CLASS[stage]} h-full rounded-xl border shadow-sm transition-all ${canMoveTo(stage) ? 'border-primary bg-primary/10 ring-primary/20 ring-2' : ''}`}
+              className={`fase-columna ${STAGE_COLOR_CLASS[stage]} h-full gap-0 rounded-xl border py-0 shadow-none transition-colors ${canMoveTo(stage) ? 'border-primary ring-primary/20 ring-2' : ''}`}
               onDragOver={(event) => {
                 if (canMoveTo(stage)) event.preventDefault()
               }}
@@ -113,7 +113,7 @@ export function PipelineBoard({
                   return (
                     <article
                       key={oportunidad.id}
-                      className={`fase-tarjeta bg-card rounded-lg border p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${dragged?.id === oportunidad.id ? 'opacity-50' : ''}`}
+                      className={`fase-tarjeta bg-card hover:border-primary/40 rounded-lg border p-3 shadow-sm transition-colors ${dragged?.id === oportunidad.id ? 'opacity-50' : ''}`}
                       aria-describedby="pipeline-drag-help"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -133,7 +133,7 @@ export function PipelineBoard({
                             </button>
                           ) : null}
                           <div className="min-w-0">
-                            <p className="fase-texto text-[10px] font-semibold tracking-wider uppercase">
+                            <p className="text-muted-foreground font-mono text-[11px]">
                               {oportunidad.referencia}
                             </p>
                             <Link
@@ -151,7 +151,7 @@ export function PipelineBoard({
                           {oportunidad.prioridad}
                         </Badge>
                       </div>
-                      <div className="border-border/70 text-muted-foreground mt-3 space-y-1.5 border-y py-2 text-xs">
+                      <div className="text-muted-foreground mt-3 space-y-1.5 text-xs">
                         <p className="flex min-w-0 items-center gap-1.5">
                           <UserRound className="size-3 shrink-0" aria-hidden="true" />
                           <span className="truncate">
@@ -181,7 +181,7 @@ export function PipelineBoard({
                       {target ? (
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant="ghost"
                           size="sm"
                           className="mt-3 h-8 w-full justify-between px-2.5 text-xs"
                           disabled={isPending}

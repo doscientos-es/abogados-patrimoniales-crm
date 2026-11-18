@@ -114,9 +114,9 @@ export function onboardingErrorMessage(error: unknown) {
     error instanceof Error
       ? error.message
       : error &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof error.message === 'string'
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
         ? error.message
         : ''
   const messages: Record<string, string> = {
@@ -243,7 +243,6 @@ export function OnboardingPage() {
     <main className="mx-auto max-w-[1500px]">
       <SectionHeader
         title="Onboarding"
-        subtitle="Desde el envío de la proforma hasta el inicio formal del encargo y su incorporación a CASEWORK."
         meta={`${items.length} onboarding${items.length === 1 ? '' : 's'} · ${activos} activo${activos === 1 ? '' : 's'}`}
         actions={
           <>

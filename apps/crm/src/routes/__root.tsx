@@ -16,7 +16,6 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate, AccountMenu } from '@/features/auth'
-import { ReadingSizeToggle } from '@/features/configuracion/ui/reading-size-toggle'
 import { GlobalSearch } from '@/features/search'
 import { TaskNotificationsBell } from '@/features/tareas/ui/task-notifications-bell'
 
@@ -255,7 +254,6 @@ function AuthenticatedRoot() {
               >
                 Abrir calendario
               </Link>
-              <ReadingSizeToggle />
               <TaskNotificationsBell />
               <AccountMenu />
             </div>

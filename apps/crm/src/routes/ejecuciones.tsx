@@ -152,7 +152,6 @@ function EjecucionesPage() {
     <main className="mx-auto max-w-6xl space-y-5">
       <SectionHeader
         title="Ejecuciones"
-        subtitle="Seguimiento de cumplimiento judicial y extrajudicial: importes, responsables, estados y próximo control."
         actions={
           <Button type="button" onClick={() => setShowForm((value) => !value)}>
             {showForm ? 'Cerrar alta' : 'Activar ejecución'}

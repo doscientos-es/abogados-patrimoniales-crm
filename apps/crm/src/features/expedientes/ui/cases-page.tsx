@@ -152,11 +152,7 @@ export function CasesPage({
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-4 p-6">
-      <SectionHeader
-        title="Control de expedientes"
-        subtitle="Supervisión y seguimiento del recorrido de los expedientes judiciales y extrajudiciales del despacho."
-        actions={actions}
-      />
+      <SectionHeader title="Control de expedientes" actions={actions} />
       <UnderlineTabs
         items={CASE_NATURE_TABS.map(({ value, label }) => ({
           id: value,
@@ -449,7 +445,7 @@ function CaseCard({
         }
         event.dataTransfer.setData('text/plain', item.id)
       }}
-      className="bg-card hover:border-primary/40 overflow-hidden shadow-sm transition"
+      className="bg-card hover:border-primary/40 overflow-hidden py-0 shadow-sm transition-colors"
     >
       <CardContent className="space-y-2.5 px-3 pt-2.5 pb-3">
         <div className="flex items-center justify-between gap-2">
@@ -472,7 +468,7 @@ function CaseCard({
             {item.referencia}
           </span>
           <Badge
-            variant={item.prioridad === 'Alta' ? 'destructive' : 'secondary'}
+            variant={item.prioridad === 'Alta' ? 'danger' : 'secondary'}
             className="h-5 px-1.5 text-[10px]"
           >
             {item.prioridad}
@@ -488,7 +484,7 @@ function CaseCard({
           <Badge variant="outline">{caseMegaphase(currentColumn)}</Badge>
           <Badge variant="outline">{item.naturaleza}</Badge>
         </div>
-        <div className="space-y-0.5 border-y py-1.5 text-xs leading-4">
+        <div className="space-y-0.5 py-1.5 text-xs leading-4">
           <p>
             <span className="text-muted-foreground">Responsable:</span> {assigneeName}
           </p>

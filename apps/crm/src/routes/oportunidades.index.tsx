@@ -236,7 +236,6 @@ function LeadsPersistidos({
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader
         title="Leads"
-        subtitle="Registros persistentes del despacho con búsqueda y flujo de fases compartido."
         actions={
           <>
             <ViewSwitch
@@ -286,10 +285,7 @@ function LeadsPersistidos({
               className="border-border/80 w-[min(28rem,calc(100vw-2rem))] rounded-xl p-0 shadow-lg"
             >
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold">Filtros de Leads</p>
-                  <p className="text-muted-foreground text-xs">Acota el tablero comercial</p>
-                </div>
+                <p className="text-sm font-semibold">Filtros de Leads</p>
                 <span className="text-muted-foreground text-xs tabular-nums">
                   {activeFilters.length ? `${activeFilters.length} activos` : 'Sin filtros'}
                 </span>
@@ -427,11 +423,11 @@ function LeadsPersistidos({
           onAdvance={advance}
         />
       ) : (
-        <Card>
+        <Card className="border-border/60 py-0 shadow-none">
           <CardContent className="overflow-x-auto p-0">
-            <Table>
+            <Table className="min-w-[900px]">
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
                   <TableHead>Código</TableHead>
                   <TableHead>Contacto</TableHead>
                   <TableHead>Asunto</TableHead>
@@ -455,15 +451,17 @@ function LeadsPersistidos({
                 ) : null}
                 {filtradas.map((oportunidad) => (
                   <TableRow key={oportunidad.id}>
-                    <TableCell className="font-medium">{oportunidad.referencia}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {oportunidad.referencia}
+                    </TableCell>
+                    <TableCell className="font-medium">
                       {contactosPorId.get(oportunidad.contactoId) ?? 'Contacto eliminado'}
                     </TableCell>
                     <TableCell className="max-w-[360px] truncate">
                       <Link
                         to="/oportunidades/$id"
                         params={{ id: oportunidad.id }}
-                        className="hover:underline"
+                        className="hover:text-primary font-medium hover:underline"
                       >
                         {oportunidad.titulo}
                       </Link>
@@ -475,15 +473,13 @@ function LeadsPersistidos({
                         {NOMBRES_FASE[oportunidad.fase] ?? oportunidad.fase}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <span
-                        className={`fase-chip ${STAGE_COLOR_CLASS[oportunidad.fase]} inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium`}
-                      >
-                        {oportunidad.subestado}
-                      </span>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {oportunidad.subestado}
                     </TableCell>
-                    <TableCell>{oportunidad.origen || '—'}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {oportunidad.origen || '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
                       {new Intl.DateTimeFormat('es-ES').format(new Date(oportunidad.actualizada))}
                     </TableCell>
                     <TableCell>
@@ -503,7 +499,7 @@ function LeadsPersistidos({
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             className="h-7 px-2 text-xs"
                             disabled={transition.isPending}
                             onClick={() =>

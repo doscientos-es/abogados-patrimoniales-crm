@@ -270,7 +270,6 @@ export function NuevoContactoPage() {
       </Link>
       <SectionHeader
         title="Nuevo contacto"
-        subtitle="La ficha y sus notas se guardarán en el despacho activo."
         actions={<ContactAIIntake firmId={firmId} onApply={applyAIValues} />}
       />
       <form

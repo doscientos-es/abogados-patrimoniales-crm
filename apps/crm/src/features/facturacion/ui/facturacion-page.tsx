@@ -112,7 +112,6 @@ export function FacturacionPage() {
     <div className="mx-auto max-w-[1400px]">
       <SectionHeader
         title="Facturación"
-        subtitle="Crea facturas desde un expediente y gestiona su emisión y cobro desde aquí."
         logo
         actions={
           <div className="flex gap-2">

@@ -242,7 +242,7 @@ export function Dashboard() {
     <main className="mx-auto max-w-350 space-y-5">
       <SectionHeader
         title="Inicio"
-        subtitle={summary}
+        meta={summary}
         actions={
           <Link to="/tareas" className={buttonVariants({ size: 'sm', className: 'gap-1.5' })}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Crear tarea

@@ -11,7 +11,7 @@ export function SettingsPage({
 } = {}) {
   return (
     <div className="mx-auto max-w-300">
-      <SectionHeader title="Configuración" subtitle="Despacho, perfil y accesos." />
+      <SectionHeader title="Configuración" />
       <FirmSettings activeTab={activeTab} onSelectTab={onSelectTab} />
     </div>
   )

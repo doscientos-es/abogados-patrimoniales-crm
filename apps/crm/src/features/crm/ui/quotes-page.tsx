@@ -87,7 +87,6 @@ export function QuotesPage() {
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
       <SectionHeader
         title="Presupuestos"
-        subtitle="Prepara y sigue las propuestas comerciales desde la ficha de cada Lead."
         meta={`${items.length} en seguimiento`}
         actions={
           <Link to="/oportunidades/nueva" search={{}} className={buttonVariants({ size: 'sm' })}>

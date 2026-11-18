@@ -185,7 +185,6 @@ export function CrmDashboard() {
     <main className="mx-auto max-w-350 space-y-6">
       <SectionHeader
         title="Cockpit CRM"
-        subtitle="Estado actual del embudo comercial, alertas operativas e indicadores de conversión."
         actions={
           <Link
             to="/oportunidades/nueva"
