@@ -884,41 +884,43 @@ export function LeadWorkspace({
         />
       ) : null}
       {section === 'notes' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notas internas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {notes.isPending || opportunities.isPending ? (
-              <p className="text-muted-foreground text-sm">Cargando notas internas…</p>
-            ) : notes.isError || opportunities.isError ? (
-              <p role="alert" className="text-destructive text-sm">
-                No se pudieron cargar las notas internas.
-              </p>
-            ) : relatedNotes.length ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {relatedNotes.map((note) => (
-                  <InternalNoteSticker key={note.id} note={note} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
-            )}
-            <Link to="/notas" className="text-primary inline-block text-sm underline">
-              Gestionar y editar notas
-            </Link>
-            <LeadNoteDialog
-              title={noteTitle}
-              content={noteContent}
-              highlighted={noteHighlighted}
-              pending={createNote.isPending}
-              onTitleChange={setNoteTitle}
-              onContentChange={setNoteContent}
-              onHighlightedChange={setNoteHighlighted}
-              onSubmit={(event) => addNote(event)}
-            />
-          </CardContent>
-        </Card>
+        <section aria-labelledby="lead-notes-heading" className="min-w-0 space-y-4 lg:col-span-2">
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="lead-notes-heading" className="text-base font-semibold">
+              Notas internas
+            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link to="/notas" className="text-primary text-sm underline">
+                Gestionar y editar notas
+              </Link>
+              <LeadNoteDialog
+                title={noteTitle}
+                content={noteContent}
+                highlighted={noteHighlighted}
+                pending={createNote.isPending}
+                onTitleChange={setNoteTitle}
+                onContentChange={setNoteContent}
+                onHighlightedChange={setNoteHighlighted}
+                onSubmit={(event) => addNote(event)}
+              />
+            </div>
+          </header>
+          {notes.isPending || opportunities.isPending ? (
+            <p className="text-muted-foreground text-sm">Cargando notas internas…</p>
+          ) : notes.isError || opportunities.isError ? (
+            <p role="alert" className="text-destructive text-sm">
+              No se pudieron cargar las notas internas.
+            </p>
+          ) : relatedNotes.length ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {relatedNotes.map((note) => (
+                <InternalNoteSticker key={note.id} note={note} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">Sin notas vinculadas.</p>
+          )}
+        </section>
       ) : null}
       {section === 'communications' ? (
         <Card className="lg:col-span-2">
