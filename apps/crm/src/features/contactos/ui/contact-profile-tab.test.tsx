@@ -44,7 +44,7 @@ function renderProfile() {
 }
 
 describe('ContactProfileTab', () => {
-  it('solo muestra y guarda la categoría de atención en las preferencias', async () => {
+  it('guarda automáticamente la categoría de atención y muestra feedback discreto', async () => {
     mocks.mutateAsync.mockResolvedValueOnce(undefined)
     renderProfile()
 
@@ -54,15 +54,28 @@ describe('ContactProfileTab', () => {
     expect(screen.queryByLabelText('Tratamiento')).toBeNull()
     expect(screen.queryByLabelText('Indicaciones internas')).toBeNull()
     expect(screen.queryByLabelText('Observaciones de trato')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Guardar categoría' })).toBeNull()
 
     fireEvent.change(category, { target: { value: 'Preferente' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }))
 
     await waitFor(() =>
       expect(mocks.mutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ profile: expect.objectContaining({ attention: 'Preferente' }) }),
       ),
     )
+    expect(await screen.findByRole('status')).toHaveTextContent('Guardado')
+  })
+
+  it('restaura el valor anterior y muestra el error si falla el guardado automático', async () => {
+    mocks.mutateAsync.mockRejectedValueOnce(new Error('Fallo de persistencia'))
+    renderProfile()
+
+    const category = screen.getByLabelText('Categoría de atención') as HTMLSelectElement
+    fireEvent.change(category, { target: { value: 'Preferente' } })
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Fallo de persistencia')
+    expect(category.value).toBe('Estándar')
+    expect(mocks.toastError).not.toHaveBeenCalled()
   })
 
   it('preserva la observación de satisfacción si falla el guardado', async () => {

@@ -8,13 +8,30 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   upload: vi.fn(),
   toastError: vi.fn(),
+  duplicateCandidates: [] as {
+    id: string
+    name: string
+    taxId: string | null
+    email: string | null
+    alternateEmail: string | null
+    phone: string | null
+    alternatePhone: string | null
+  }[],
 }))
 
 vi.mock('sonner', () => ({
   toast: { error: mocks.toastError, success: vi.fn() },
 }))
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/contactos">{children}</a>,
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children: ReactNode
+    to: string
+    params?: { id: string }
+  }) => <a href={params ? `/contactos/${params.id}` : to}>{children}</a>,
   useNavigate: () => mocks.navigate,
 }))
 vi.mock('@/features/auth', () => ({
@@ -24,15 +41,8 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/features/contactos', () => ({
   useCrearContacto: () => ({ mutateAsync: mocks.create, isPending: false }),
   uploadContactDocument: mocks.upload,
-  useContactPhoneCandidates: () => ({
-    data: [
-      {
-        id: 'existing',
-        name: 'Contacto existente',
-        phone: '+34 600 123 456',
-        alternatePhone: null,
-      },
-    ],
+  useContactDuplicateCandidates: () => ({
+    data: mocks.duplicateCandidates,
     refetch: mocks.refetch,
   }),
 }))
@@ -59,16 +69,21 @@ import { NuevoContactoPage } from './nuevo-contacto-page'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  mocks.duplicateCandidates = []
 })
 
-describe('alta de contacto con teléfono compartido', () => {
-  it('avisa, exige confirmación y permite crear después de revisar la coincidencia', async () => {
+describe('detección de contactos duplicados al dar de alta', () => {
+  it('avisa del teléfono repetido, permite abrir el contacto y exige confirmación para continuar', async () => {
     const existing = {
       id: 'existing',
       name: 'Contacto existente',
+      taxId: null,
+      email: null,
+      alternateEmail: null,
       phone: '+34 600 123 456',
       alternatePhone: null,
     }
+    mocks.duplicateCandidates = [existing]
     mocks.refetch.mockResolvedValue({ data: [existing], isError: false })
     mocks.create.mockResolvedValue({ id: 'new-contact' })
     mocks.navigate.mockResolvedValue(undefined)
@@ -76,6 +91,9 @@ describe('alta de contacto con teléfono compartido', () => {
     fireEvent.input(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
     fireEvent.input(screen.getByLabelText('Teléfono'), { target: { value: '600123456' } })
     expect(screen.getByText('Contacto existente')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Contacto existente' }).getAttribute('href')).toBe(
+      '/contactos/existing',
+    )
     const form = screen.getByRole('form', { name: 'Formulario de nuevo contacto' })
     fireEvent.submit(form)
     await waitFor(() => expect(mocks.refetch).toHaveBeenCalled())
@@ -89,6 +107,32 @@ describe('alta de contacto con teléfono compartido', () => {
       }),
     )
     expect(mocks.create).toHaveBeenCalledOnce()
+  })
+
+  it('bloquea un documento duplicado y ofrece abrir la ficha existente', async () => {
+    const existing = {
+      id: 'existing',
+      name: 'Contacto con el mismo DNI',
+      taxId: '12345678Z',
+      email: null,
+      alternateEmail: null,
+      phone: null,
+      alternatePhone: null,
+    }
+    mocks.duplicateCandidates = [existing]
+    mocks.refetch.mockResolvedValue({ data: [existing], isError: false })
+    render(<NuevoContactoPage />)
+
+    fireEvent.input(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.input(screen.getByLabelText('NIF'), { target: { value: '1234 5678-Z' } })
+    expect(screen.getByRole('link', { name: existing.name }).getAttribute('href')).toBe(
+      '/contactos/existing',
+    )
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce())
+    expect(mocks.create).not.toHaveBeenCalled()
+    expect(mocks.toastError).toHaveBeenCalledWith(expect.stringContaining('Ya existe'))
   })
 })
 

@@ -45,11 +45,16 @@ describe('ContactAIIntake', () => {
     expect(dialog.className).toContain('max-w-5xl')
     expect(dialog.className).toContain('overflow-hidden')
     expect(dialog.querySelector('.overflow-y-auto')).toBeTruthy()
-    expect(
-      screen
-        .getByRole('button', { name: 'Aplicar datos confirmados' })
-        .closest('[data-slot="dialog-footer"]')?.className,
-    ).toContain('sticky')
+    expect(screen.queryByText(/Completa la ficha a partir de tus documentos/)).toBeNull()
+    expect(screen.queryByText(/Sube una identificación u otro documento/)).toBeNull()
+    expect(screen.queryByText(/Elige qué información quieres añadir/)).toBeNull()
+    const footer = screen
+      .getByRole('button', { name: 'Aplicar datos confirmados' })
+      .closest('[data-slot="dialog-footer"]')
+    expect(footer?.className).toContain('sticky')
+    expect(footer?.className.split(' ')).toEqual(
+      expect.arrayContaining(['mx-0', 'px-5', 'sm:px-7']),
+    )
     expect(
       screen.getByRole('button', { name: 'Añadir PDF o imagen' }).hasAttribute('disabled'),
     ).toBe(false)
@@ -71,6 +76,7 @@ describe('ContactAIIntake', () => {
       ),
     )
     expect(screen.getByText('Ana')).toBeTruthy()
+    expect(screen.getByText('Ana').className).toContain('font-semibold')
     expect(screen.getByLabelText('Documentos procesados').textContent).toContain('dni.pdf')
     expect(onApply).not.toHaveBeenCalled()
 

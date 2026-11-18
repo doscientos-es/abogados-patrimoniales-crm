@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -206,33 +205,18 @@ export function ContactAIIntake({
         className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(92vw,68rem)]"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-5 pr-12 text-left sm:px-7">
-          <div className="flex items-center gap-3">
-            <span className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <LexiaIcon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <DialogTitle className="text-base font-semibold tracking-normal normal-case">
-                Datos del contacto
-              </DialogTitle>
-              <DialogDescription className="mt-0.5 text-sm">
-                Completa la ficha a partir de tus documentos con ayuda de LEXIA.
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle className="text-base font-semibold tracking-normal normal-case">
+            Datos del contacto
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <section className="space-y-5 p-5 sm:p-7 md:border-r" aria-label="Carga de documentos">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               <span className="bg-muted text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                 1
               </span>
-              <div>
-                <h3 className="text-sm font-semibold">Añade la documentación</h3>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  Sube una identificación u otro documento con datos del contacto.
-                </p>
-              </div>
+              <h3 className="text-sm font-semibold">Añade la documentación</h3>
             </div>
             <input
               ref={fileInput}
@@ -316,16 +300,11 @@ export function ContactAIIntake({
             className="bg-muted/10 min-w-0 space-y-5 border-t p-5 sm:p-7 md:border-t-0"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <span className="bg-muted text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                   2
                 </span>
-                <div>
-                  <h3 className="text-sm font-semibold">Revisa los datos</h3>
-                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                    Elige qué información quieres añadir a la ficha.
-                  </p>
-                </div>
+                <h3 className="text-sm font-semibold">Revisa los datos</h3>
               </div>
               <span
                 className="bg-background text-muted-foreground rounded-full border px-2.5 py-1 text-xs font-medium"
@@ -339,7 +318,7 @@ export function ContactAIIntake({
                 {fields.map((field) => (
                   <div
                     key={field.id}
-                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 rounded-xl border p-4 text-sm transition-colors ${
+                    className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-xl border p-3 text-sm transition-colors ${
                       selected.has(field.id)
                         ? 'border-primary/30 bg-primary/5'
                         : 'bg-background hover:border-primary/30'
@@ -352,18 +331,23 @@ export function ContactAIIntake({
                         onChange={() => toggleField(field)}
                         className="border-input accent-primary mt-0.5 h-4 w-4 rounded"
                       />
-                      <span className="min-w-0 cursor-pointer">
-                        <span className="text-muted-foreground block text-xs font-medium">
+                      <span className="min-w-0 cursor-pointer space-y-1">
+                        <span className="text-muted-foreground block text-xs leading-snug font-medium">
                           {field.label}
                         </span>
-                        <span className="mt-1 block font-medium break-words">{field.value}</span>
-                        {field.excerpt ? (
-                          <span className="text-muted-foreground mt-1 block text-xs leading-snug">
-                            «{field.excerpt}»
+                        <span className="text-foreground block text-base leading-snug font-semibold break-words">
+                          {field.value}
+                        </span>
+                        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                          {field.excerpt ? (
+                            <span className="text-muted-foreground min-w-0 text-xs leading-snug">
+                              «{field.excerpt}»
+                            </span>
+                          ) : null}
+                          <span className="text-muted-foreground inline-flex max-w-full min-w-0 items-center gap-1 text-[11px] leading-snug">
+                            <span className="shrink-0">Fuente:</span>
+                            <span className="truncate">{field.source}</span>
                           </span>
-                        ) : null}
-                        <span className="text-muted-foreground bg-muted mt-1.5 inline-flex max-w-full truncate rounded px-1.5 py-0.5 text-[11px]">
-                          Fuente: {field.source}
                         </span>
                       </span>
                     </label>
@@ -414,7 +398,7 @@ export function ContactAIIntake({
           </section>
         </div>
 
-        <DialogFooter className="bg-background shrink-0 border-t px-5 py-4 sm:px-7">
+        <DialogFooter className="bg-background mx-0 mb-0 shrink-0 border-t px-5 py-4 sm:px-7">
           <p className="text-muted-foreground mr-auto self-center text-xs">
             Revisa los datos antes de guardar el contacto.
           </p>

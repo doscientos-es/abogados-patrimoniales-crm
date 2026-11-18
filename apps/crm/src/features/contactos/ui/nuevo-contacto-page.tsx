@@ -12,12 +12,17 @@ import { Label } from '@/components/ui/label'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   uploadContactDocument,
-  useContactPhoneCandidates,
+  useContactDuplicateCandidates,
   useCrearContacto,
   type Naturaleza,
   type RelacionDespacho,
 } from '@/features/contactos'
-import { findContactPhoneDuplicates } from '@/features/contactos/application/contact-phone-duplicates'
+import {
+  DUPLICATE_CONTACT_FIELDS,
+  findContactDuplicates,
+  type DuplicateContactField,
+  type DuplicateContactValues,
+} from '@/features/contactos/application/contact-duplicates'
 import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +88,13 @@ const CONTACT_FIELD_PLACEHOLDERS: Partial<Record<ContactFieldName, string>> = {
   personaContacto: 'Ej. Nombre y apellidos',
   cargo: 'Ej. Cargo o puesto',
 }
+const DUPLICATE_FIELD_LABELS: Record<DuplicateContactField, string> = {
+  documento: 'documento',
+  email: 'correo',
+  email2: 'correo alternativo',
+  telefono: 'teléfono',
+  telefono2: 'teléfono alternativo',
+}
 
 export function NuevoContactoPage() {
   const navigate = useNavigate()
@@ -90,26 +102,39 @@ export function NuevoContactoPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const createContact = useCrearContacto(firmId)
-  const phoneCandidates = useContactPhoneCandidates(firmId)
+  const duplicateCandidates = useContactDuplicateCandidates(firmId)
   const createNote = useCrearNotaPersona(firmId)
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [documents, setDocuments] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
-  const [phones, setPhones] = useState<string[]>(['', ''])
+  const [duplicateValues, setDuplicateValues] = useState<DuplicateContactValues>({
+    documento: '',
+    email: '',
+    email2: '',
+    telefono: '',
+    telefono2: '',
+  })
   const [confirmedDuplicates, setConfirmedDuplicates] = useState<string[]>([])
   const [notes, setNotes] = useState<
     { title: string; content: string; highlighted: boolean; critical: boolean }[]
   >([])
   const formRef = useRef<HTMLFormElement>(null)
   const submitting = useRef(false)
-  const duplicatePhones = findContactPhoneDuplicates(phoneCandidates.data ?? [], phones)
+  const duplicateContacts = findContactDuplicates(duplicateCandidates.data ?? [], duplicateValues)
+  const hasDocumentDuplicate = duplicateContacts.some(({ fields }) => fields.includes('documento'))
 
-  const updatePhones = () => {
+  const updateDuplicateValues = () => {
     if (!formRef.current) return
     const form = new FormData(formRef.current)
-    setPhones([formText(form, 'telefono'), formText(form, 'telefono2')])
+    setDuplicateValues({
+      documento: formText(form, 'documento'),
+      email: formText(form, 'email'),
+      email2: formText(form, 'email2'),
+      telefono: formText(form, 'telefono'),
+      telefono2: formText(form, 'telefono2'),
+    })
     setConfirmedDuplicates([])
   }
 
@@ -128,7 +153,7 @@ export function NuevoContactoPage() {
         field.value = value.replace(/[^\d+()\s-]/g, '')
       else field.value = value
     }
-    updatePhones()
+    updateDuplicateValues()
   }
 
   if (session.status === 'loading' || membership.isPending)
@@ -163,17 +188,19 @@ export function NuevoContactoPage() {
     submitting.current = true
     setSaving(true)
     try {
-      if (values.telefono || values.telefono2) {
-        const refreshed = await phoneCandidates.refetch()
+      if (DUPLICATE_CONTACT_FIELDS.some((field) => values[field])) {
+        const refreshed = await duplicateCandidates.refetch()
         if (refreshed.isError || !refreshed.data)
-          throw new Error('No se pudieron comprobar los teléfonos. Inténtalo de nuevo.')
-        const latest = findContactPhoneDuplicates(refreshed.data, [
-          values.telefono,
-          values.telefono2,
-        ])
-        if (latest.some((contact) => !confirmedDuplicates.includes(contact.id))) {
+          throw new Error('No se pudieron comprobar los contactos existentes. Inténtalo de nuevo.')
+        const latest = findContactDuplicates(refreshed.data, values)
+        if (latest.some(({ fields }) => fields.includes('documento'))) {
           setConfirmedDuplicates([])
-          toast.error('Revisa los contactos con el mismo teléfono y confirma si quieres continuar.')
+          toast.error('Ya existe un contacto con ese documento. Abre su ficha antes de continuar.')
+          return
+        }
+        if (latest.some(({ contact }) => !confirmedDuplicates.includes(contact.id))) {
+          setConfirmedDuplicates([])
+          toast.error('Revisa los contactos con los mismos datos antes de continuar.')
           return
         }
       }
@@ -254,9 +281,11 @@ export function NuevoContactoPage() {
         onInput={(event) => {
           if (
             event.target instanceof HTMLInputElement &&
-            ['telefono', 'telefono2'].includes(event.target.name)
+            DUPLICATE_CONTACT_FIELDS.includes(
+              event.target.name as (typeof DUPLICATE_CONTACT_FIELDS)[number],
+            )
           )
-            updatePhones()
+            updateDuplicateValues()
         }}
         onSubmit={(event) => void submit(event)}
       >
@@ -401,36 +430,62 @@ export function NuevoContactoPage() {
               pattern="[0-9+() -]+"
               maxLength={20}
             />
-            {duplicatePhones.length > 0 && (
+            {duplicateContacts.length > 0 && (
               <div
-                className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 sm:col-span-2 lg:col-span-3"
+                className={`rounded-md border p-3 text-sm sm:col-span-2 lg:col-span-3 ${
+                  hasDocumentDuplicate
+                    ? 'border-destructive/40 bg-destructive/5 text-destructive'
+                    : 'border-amber-300 bg-amber-50 text-amber-950'
+                }`}
                 aria-live="polite"
               >
-                <p>Este teléfono ya aparece en:</p>
-                <ul>
-                  {duplicatePhones.map((contact) => (
-                    <li key={contact.id}>
-                      <Link to="/contactos/$id" params={{ id: contact.id }} className="underline">
+                <p className="font-medium">
+                  {hasDocumentDuplicate
+                    ? 'Ya existe un contacto con ese documento:'
+                    : 'Ya hay contactos con alguno de estos datos:'}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {duplicateContacts.map(({ contact, fields }) => (
+                    <li key={contact.id} className="flex flex-wrap items-baseline gap-x-2">
+                      <Link
+                        to="/contactos/$id"
+                        params={{ id: contact.id }}
+                        className="font-medium underline"
+                      >
                         {contact.name}
                       </Link>
+                      <span className="text-xs opacity-80">
+                        Coincide en{' '}
+                        {fields.map((field) => DUPLICATE_FIELD_LABELS[field]).join(', ')}
+                      </span>
                     </li>
                   ))}
                 </ul>
-                <label className="mt-2 flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={duplicatePhones.every((contact) =>
-                      confirmedDuplicates.includes(contact.id),
-                    )}
-                    onChange={(event) =>
-                      setConfirmedDuplicates(
-                        event.target.checked ? duplicatePhones.map((contact) => contact.id) : [],
-                      )
-                    }
-                    className="mt-1"
-                  />
-                  <span>He revisado las coincidencias y quiero crear el contacto igualmente.</span>
-                </label>
+                {hasDocumentDuplicate ? (
+                  <p className="mt-2 text-xs">
+                    No se puede crear otro contacto con el mismo documento. Abre la ficha existente.
+                  </p>
+                ) : (
+                  <label className="mt-2 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={duplicateContacts.every(({ contact }) =>
+                        confirmedDuplicates.includes(contact.id),
+                      )}
+                      onChange={(event) =>
+                        setConfirmedDuplicates(
+                          event.target.checked
+                            ? duplicateContacts.map(({ contact }) => contact.id)
+                            : [],
+                        )
+                      }
+                      className="mt-1"
+                    />
+                    <span>
+                      He revisado las coincidencias y quiero crear el contacto igualmente.
+                    </span>
+                  </label>
+                )}
               </div>
             )}
             {(nature === 'Persona jurídica' || nature === 'Público') && (

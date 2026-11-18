@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createNote: vi.fn().mockResolvedValue(undefined),
   navigate: vi.fn(),
   aiValues: {} as Record<string, string>,
+  refetchDuplicates: vi.fn().mockResolvedValue({ data: [], isError: false }),
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
@@ -30,6 +31,7 @@ vi.mock('@/features/auth', () => ({
 
 vi.mock('@/features/contactos', () => ({
   useContactos: () => ({ data: [] }),
+  useContactDuplicateCandidates: () => ({ data: [], refetch: mocks.refetchDuplicates }),
   useCrearContacto: () => ({ isPending: false, mutateAsync: mocks.createContact }),
 }))
 
@@ -38,9 +40,9 @@ vi.mock('@/features/contactos/ui/contact-ai-intake', () => ({
     onApply,
   }: {
     firmId: string
-    onApply: (values: Record<string, string>) => void
+    onApply: (values: Record<string, string>, documents: File[]) => void
   }) => (
-    <button type="button" onClick={() => onApply(mocks.aiValues)}>
+    <button type="button" onClick={() => onApply(mocks.aiValues, [])}>
       Aplicar datos de prueba
     </button>
   ),
@@ -58,6 +60,7 @@ afterEach(() => {
   mocks.createNote.mockReset().mockResolvedValue(undefined)
   mocks.navigate.mockClear()
   mocks.aiValues = {}
+  mocks.refetchDuplicates.mockClear().mockResolvedValue({ data: [], isError: false })
 })
 
 describe('NuevoContactoPage', () => {

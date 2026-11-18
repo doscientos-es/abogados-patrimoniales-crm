@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +36,9 @@ export function ContactProfileTab({
 }) {
   const update = useActualizarPerfilContacto(firmId)
   const [profile, setProfile] = useState<ContactProfile>(contact.profile ?? EMPTY_CONTACT_PROFILE)
+  const [attention, setAttention] = useState<ContactProfile['attention']>(profile.attention)
+  const [attentionFeedback, setAttentionFeedback] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [attentionError, setAttentionError] = useState<string | null>(null)
   const [nextRating, setNextRating] = useState<SatisfactionLevel>(profile.satisfaction)
   const [ratingNotes, setRatingNotes] = useState('')
   const [incidentType, setIncidentType] = useState<string>(INCIDENT_TYPES[0] ?? 'Otro')
@@ -54,9 +57,20 @@ export function ContactProfileTab({
     }
   }
 
-  const savePreferences = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    void persist(profile, 'Categoría de atención guardada.')
+  const saveAttention = async (value: ContactProfile['attention']) => {
+    const next = { ...profile, attention: value }
+    setAttention(value)
+    setAttentionFeedback('saving')
+    setAttentionError(null)
+    try {
+      await update.mutateAsync({ contactId: contact.id, version: contact.version, profile: next })
+      setProfile(next)
+      setAttentionFeedback('saved')
+    } catch (error) {
+      setAttention(profile.attention)
+      setAttentionFeedback('idle')
+      setAttentionError(profileErrorMessage(error))
+    }
   }
 
   const addRating = () => {
@@ -130,39 +144,42 @@ export function ContactProfileTab({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Preferencias de atención</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={savePreferences}>
-            <div className="w-full max-w-sm space-y-1.5">
-              <Label htmlFor="contact-attention">Categoría de atención</Label>
-              <select
-                id="contact-attention"
-                value={profile.attention}
-                disabled={!canManage || update.isPending}
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    attention: event.target.value as ContactProfile['attention'],
-                  })
-                }
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm disabled:opacity-60"
-              >
-                {ATTENTION_CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {canManage ? (
-              <Button type="submit" className="sm:shrink-0" disabled={update.isPending}>
-                {update.isPending ? 'Guardando…' : 'Guardar categoría'}
-              </Button>
-            ) : (
-              <p className="text-muted-foreground text-xs sm:self-center">
-                Tu perfil puede consultar las preferencias, pero no modificarlas.
-              </p>
-            )}
-          </form>
+        <CardContent className="space-y-2">
+          <div className="w-full max-w-sm space-y-1.5">
+            <Label htmlFor="contact-attention">Categoría de atención</Label>
+            <select
+              id="contact-attention"
+              value={attention}
+              disabled={!canManage || update.isPending}
+              onChange={(event) =>
+                void saveAttention(event.target.value as ContactProfile['attention'])
+              }
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm disabled:opacity-60"
+            >
+              {ATTENTION_CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          {canManage ? (
+            <p
+              role="status"
+              className={`min-h-4 text-xs ${attentionError ? 'text-destructive' : 'text-muted-foreground'}`}
+            >
+              {attentionError ??
+                (attentionFeedback === 'saving'
+                  ? 'Guardando…'
+                  : attentionFeedback === 'saved'
+                    ? 'Guardado'
+                    : '')}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Tu perfil puede consultar las preferencias, pero no modificarlas.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -320,13 +337,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                  ...item,
-                                  resolution: (
-                                    document.getElementById(
-                                      `incident-resolution-${incident.id}`,
-                                    ) as HTMLTextAreaElement
-                                  ).value,
-                                }
+                                    ...item,
+                                    resolution: (
+                                      document.getElementById(
+                                        `incident-resolution-${incident.id}`,
+                                      ) as HTMLTextAreaElement
+                                    ).value,
+                                  }
                                 : item,
                             ),
                           }
@@ -359,13 +376,13 @@ export function ContactProfileTab({
                             incidents: profile.incidents.map((item) =>
                               item.id === incident.id
                                 ? {
-                                  ...item,
-                                  observations: (
-                                    document.getElementById(
-                                      `incident-notes-${incident.id}`,
-                                    ) as HTMLTextAreaElement
-                                  ).value,
-                                }
+                                    ...item,
+                                    observations: (
+                                      document.getElementById(
+                                        `incident-notes-${incident.id}`,
+                                      ) as HTMLTextAreaElement
+                                    ).value,
+                                  }
                                 : item,
                             ),
                           }
@@ -400,9 +417,9 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : new Intl.DateTimeFormat('es-ES', {
-      dateStyle: 'medium',
-      ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
-    }).format(date)
+        dateStyle: 'medium',
+        ...(value.includes('T') ? { timeStyle: 'short' as const } : {}),
+      }).format(date)
 }
 
 function profileErrorMessage(error: unknown) {

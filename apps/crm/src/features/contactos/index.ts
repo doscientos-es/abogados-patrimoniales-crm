@@ -16,6 +16,7 @@ export {
   uploadContactDocument,
 } from './infrastructure/upload-contact-document'
 export { useContactPhoneCandidates } from './infrastructure/contact-phone-candidates'
+export { useContactDuplicateCandidates } from './infrastructure/contact-duplicate-candidates'
 export {
   useContactBankAccounts,
   useReplaceContactBankAccount,
