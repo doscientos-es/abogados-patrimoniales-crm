@@ -11,7 +11,7 @@ import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 afterEach(cleanup)
 
 describe('ContactPersonalFilesTab', () => {
-  it('keeps the search icon clear of the input text', async () => {
+  it('shows the document count and upload action without a search field', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const memberRole = 'lawyer' as const
     render(
@@ -25,11 +25,9 @@ describe('ContactPersonalFilesTab', () => {
       </QueryClientProvider>,
     )
 
-    const input = await screen.findByRole('textbox', { name: 'Buscar documentos personales' })
-    const icon = input.parentElement?.querySelector('svg')
-
-    expect(input.className).toContain('!pl-10')
-    expect(icon?.classList.contains('pointer-events-none')).toBe(true)
+    expect(await screen.findByText('0 documentos')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Subir documentos' })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Buscar documentos personales' })).toBeNull()
   })
 
   it('opens the upload dialog prefilled from a pending Lead requirement', async () => {
@@ -80,7 +78,7 @@ describe('ContactPersonalFilesTab', () => {
     expect((screen.getByLabelText('Categoría') as HTMLSelectElement).value).toBe('power')
   })
 
-  it('keeps section status based on all documents when searching', async () => {
+  it('shows stored documents and their section status', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
     const memberRole = 'lawyer' as const
     client.setQueryData(
@@ -92,6 +90,20 @@ describe('ContactPersonalFilesTab', () => {
           name: 'DNI',
           original_name: 'dni.pdf',
           document_status: 'current',
+          document_number: 'TEST-123',
+          issued_on: '2026-01-02',
+          expires_on: '2099-01-02',
+          signed_on: null,
+          observations: 'Documento revisado',
+          tags: [],
+          created_at: '2026-01-01',
+        },
+        {
+          id: 'doc-2',
+          document_type: 'other',
+          name: 'Justificante',
+          original_name: 'justificante.pdf',
+          document_status: 'pending',
           document_number: '',
           issued_on: null,
           expires_on: null,
@@ -116,11 +128,14 @@ describe('ContactPersonalFilesTab', () => {
     const title = screen.getByText('Identificación', { selector: '[data-slot="card-title"]' })
     const card = title.closest('[data-slot="card"]') as HTMLElement
     expect(within(card).getByText('Incorporado')).toBeTruthy()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Buscar documentos personales' }), {
-      target: { value: 'inexistente' },
-    })
-    expect(within(card).getByText('Incorporado')).toBeTruthy()
-    expect(within(card).getByText('Sin coincidencias.')).toBeTruthy()
+    expect(within(card).getByText('DNI')).toBeTruthy()
+    expect(within(card).getByRole('button', { name: 'dni.pdf' })).toBeTruthy()
+    expect(within(card).getByText('Vigente')).toBeTruthy()
+    expect(within(card).getByText('Documento revisado')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'justificante.pdf' })).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText('TEST-123')).toBeNull()
+    expect(screen.queryByText('Expedición')).toBeNull()
     expect(screen.queryByText('Falta Identificación')).toBeNull()
   })
 })

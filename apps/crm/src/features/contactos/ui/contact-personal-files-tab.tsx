@@ -1,13 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  AlertCircle,
-  FileUp,
-  Files,
-  Fingerprint,
-  ScrollText,
-  Search,
-  ShieldCheck,
-} from 'lucide-react'
+import { AlertCircle, FileUp, Files, Fingerprint, ScrollText, ShieldCheck } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -124,7 +116,6 @@ export function ContactPersonalFilesTab({
   const [file, setFile] = useState<File | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadRequirement, setUploadRequirement] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
   const documents = useQuery({
     queryKey: ['contact-documents', firmId, contactId],
     enabled: canManage,
@@ -146,23 +137,6 @@ export function ContactPersonalFilesTab({
     relationship === 'Lead' ? ensureRequiredLeadDocumentRequests(requiredDocumentRequests) : []
   const reconciledRequirements = reconcileRequestedLeadDocuments(requiredDocuments, rows)
   const missing = reconciledRequirements.filter((item) => !item.receivedDocument)
-  const normalizedSearch = search.trim().toLocaleLowerCase('es')
-  const visibleRows = rows.filter(
-    (row) =>
-      !normalizedSearch ||
-      [
-        row.name,
-        row.original_name,
-        CATEGORIES.find((item) => item.type === row.document_type)?.label,
-        row.document_number,
-        row.observations,
-        ...row.tags,
-      ]
-        .join(' ')
-        .toLocaleLowerCase('es')
-        .includes(normalizedSearch),
-  )
-
   const openUpload = (requirement: string | null, type?: ContactDocumentType) => {
     setUploadRequirement(requirement)
     setFile(null)
@@ -272,19 +246,6 @@ export function ContactPersonalFilesTab({
   return (
     <section className="space-y-4" aria-label="Archivos personales">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full min-w-0 flex-none sm:w-auto sm:max-w-md sm:flex-1">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar documentos"
-            aria-label="Buscar documentos personales"
-            className="!pl-10"
-          />
-        </div>
         <span className="text-muted-foreground text-sm">
           {rows.length} documento{rows.length === 1 ? '' : 's'}
         </span>
@@ -431,7 +392,7 @@ export function ContactPersonalFilesTab({
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         {SECTIONS.map((section) => {
-          const sectionRows = visibleRows.filter((row) => section.types.includes(row.document_type))
+          const sectionRows = rows.filter((row) => section.types.includes(row.document_type))
           const state = personalSectionState(section.id, section.types, rows)
           const Icon = section.icon
           return (
@@ -473,166 +434,33 @@ export function ContactPersonalFilesTab({
               </CardHeader>
               <CardContent>
                 {!sectionRows.length ? (
-                  <p className="text-muted-foreground py-3 text-sm">
-                    {normalizedSearch ? 'Sin coincidencias.' : 'Sin archivos incorporados.'}
-                  </p>
+                  <p className="text-muted-foreground py-3 text-sm">Sin archivos incorporados.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[680px] text-left text-sm">
-                      <thead className="text-muted-foreground border-b text-xs">
-                        {section.id === 'identification' ? (
-                          <tr>
-                            <th className="py-2 pr-4">Tipo de documento</th>
-                            <th className="py-2 pr-4">Número</th>
-                            <th className="py-2 pr-4">Expedición</th>
-                            <th className="py-2 pr-4">Caducidad</th>
-                            <th className="py-2 pr-4">Estado</th>
-                            <th className="py-2 pr-4">Archivo</th>
-                            <th className="py-2">Subido</th>
-                          </tr>
-                        ) : null}
-                        {section.id === 'privacy' ? (
-                          <tr>
-                            <th className="py-2 pr-4">Tipo de documento</th>
-                            <th className="py-2 pr-4">Fecha de firma</th>
-                            <th className="py-2 pr-4">Estado</th>
-                            <th className="py-2 pr-4">Archivo</th>
-                            <th className="py-2">Observaciones</th>
-                          </tr>
-                        ) : null}
-                        {section.id === 'authority' ? (
-                          <tr>
-                            <th className="py-2 pr-4">Tipo</th>
-                            <th className="py-2 pr-4">Número</th>
-                            <th className="py-2 pr-4">Otorgamiento</th>
-                            <th className="py-2 pr-4">Caducidad</th>
-                            <th className="py-2 pr-4">Estado</th>
-                            <th className="py-2">Archivo</th>
-                          </tr>
-                        ) : null}
-                        {section.id === 'other' ? (
-                          <tr>
-                            <th className="py-2 pr-4">Nombre o descripción</th>
-                            <th className="py-2 pr-4">Categoría</th>
-                            <th className="py-2 pr-4">Fecha</th>
-                            <th className="py-2 pr-4">Caducidad</th>
-                            <th className="py-2 pr-4">Etiquetas</th>
-                            <th className="py-2">Archivo</th>
-                          </tr>
-                        ) : null}
-                      </thead>
-                      <tbody className="divide-y">
-                        {sectionRows.map((document) => (
-                          <tr key={document.id}>
-                            <td className="py-3 pr-4 font-medium">{document.name}</td>
-                            {section.id === 'identification' ? (
-                              <>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.document_number || '—'}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.issued_on ? formatDate(document.issued_on) : '—'}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <Badge
-                                    variant={
-                                      document.document_status === 'current'
-                                        ? 'default'
-                                        : 'secondary'
-                                    }
-                                  >
-                                    {STATUS_LABELS[document.document_status]}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <DocumentLink document={document} onOpen={openDocument} />
-                                </td>
-                                <td className="text-muted-foreground py-3">
-                                  {formatDate(document.created_at)}
-                                </td>
-                              </>
-                            ) : null}
-                            {section.id === 'privacy' ? (
-                              <>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.signed_on ? formatDate(document.signed_on) : '—'}
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <Badge
-                                    variant={
-                                      document.document_status === 'current'
-                                        ? 'default'
-                                        : 'secondary'
-                                    }
-                                  >
-                                    {STATUS_LABELS[document.document_status]}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <DocumentLink document={document} onOpen={openDocument} />
-                                </td>
-                                <td className="text-muted-foreground py-3">
-                                  {document.observations || '—'}
-                                </td>
-                              </>
-                            ) : null}
-                            {section.id === 'authority' ? (
-                              <>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.document_number || '—'}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.issued_on ? formatDate(document.issued_on) : '—'}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <Badge
-                                    variant={
-                                      document.document_status === 'current'
-                                        ? 'default'
-                                        : 'secondary'
-                                    }
-                                  >
-                                    {STATUS_LABELS[document.document_status]}
-                                  </Badge>
-                                </td>
-                                <td className="py-3">
-                                  <DocumentLink document={document} onOpen={openDocument} />
-                                </td>
-                              </>
-                            ) : null}
-                            {section.id === 'other' ? (
-                              <>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {
-                                    CATEGORIES.find((item) => item.type === document.document_type)
-                                      ?.label
-                                  }
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {formatDate(document.created_at)}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.expires_on ? formatDate(document.expires_on) : '—'}
-                                </td>
-                                <td className="text-muted-foreground py-3 pr-4">
-                                  {document.tags.length ? document.tags.join(', ') : '—'}
-                                </td>
-                                <td className="py-3">
-                                  <DocumentLink document={document} onOpen={openDocument} />
-                                </td>
-                              </>
-                            ) : null}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ul className="divide-y">
+                    {sectionRows.map((document) => (
+                      <li key={document.id} className="flex items-start justify-between gap-3 py-3">
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-medium break-words">{document.name}</p>
+                          <DocumentLink document={document} onOpen={openDocument} />
+                          {document.observations ? (
+                            <details className="text-xs">
+                              <summary className="text-muted-foreground cursor-pointer">
+                                Observaciones
+                              </summary>
+                              <p className="break-words whitespace-pre-wrap">
+                                {document.observations}
+                              </p>
+                            </details>
+                          ) : null}
+                        </div>
+                        <Badge
+                          variant={document.document_status === 'current' ? 'default' : 'secondary'}
+                        >
+                          {STATUS_LABELS[document.document_status]}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </CardContent>
             </Card>
@@ -715,11 +543,4 @@ function TextField({
 function field(form: FormData, name: string) {
   const value = form.get(name)
   return typeof value === 'string' ? value.trim() : ''
-}
-
-function formatDate(value: string) {
-  const date = new Date(value.length === 10 ? `${value}T00:00:00` : value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date)
 }
