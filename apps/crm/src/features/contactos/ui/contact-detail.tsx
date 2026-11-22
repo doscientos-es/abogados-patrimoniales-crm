@@ -53,6 +53,7 @@ import { useTareasPersistentes } from '@/features/tareas'
 
 import { requiredDocumentsForContact } from '../application/lead-document-requirements'
 import { ContactBankingTab } from './contact-banking-tab'
+import { CONTACT_ORIGINS } from './contact-origins'
 import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 import { ContactProfileTab } from './contact-profile-tab'
 import { DraftNote } from './draft-note'
@@ -157,7 +158,7 @@ export function ContactDetail({
       ...contact,
       nombre: text(data, 'name'),
       apellidos: text(data, 'lastName'),
-      razonSocial: text(data, 'legalName'),
+      razonSocial: data.has('legalName') ? text(data, 'legalName') : (contact.razonSocial ?? ''),
       codigoOrgano: text(data, 'courtCode'),
       numeroOrgano: text(data, 'courtNumber'),
       partidoJudicial: text(data, 'courtDistrict'),
@@ -178,7 +179,9 @@ export function ContactDetail({
       cargoContacto: text(data, 'contactRole'),
       origen: text(data, 'source'),
       relacion: text(data, 'relationship') as RelacionDespacho,
-      recomendadoPor: text(data, 'recommendedBy'),
+      recomendadoPor: data.has('recommendedBy')
+        ? text(data, 'recommendedBy')
+        : (contact.recomendadoPor ?? ''),
     }
     try {
       await update.mutateAsync({ contacto: changed, version: contact.version })
@@ -622,12 +625,14 @@ export function ContactDetail({
                 value={contact.apellidos ?? ''}
                 autoComplete="family-name"
               />
-              <Field
-                name="legalName"
-                label="Razón social"
-                value={contact.razonSocial ?? ''}
-                autoComplete="organization"
-              />
+              {contact.tipoPersona !== 'Persona física' ? (
+                <Field
+                  name="legalName"
+                  label="Razón social"
+                  value={contact.razonSocial ?? ''}
+                  autoComplete="organization"
+                />
+              ) : null}
               {contact.tipoPersona === 'Órgano judicial' ? (
                 <>
                   <Field name="courtNumber" label="Número" value={contact.numeroOrgano ?? ''} />
@@ -731,7 +736,25 @@ export function ContactDetail({
                   <Field name="contactRole" label="Cargo" value={contact.cargoContacto ?? ''} />
                 </>
               ) : null}
-              <Field name="source" label="Origen" value={contact.origen} />
+              <div className="space-y-1">
+                <Label htmlFor="contact-source">Origen</Label>
+                <select
+                  id="contact-source"
+                  name="source"
+                  defaultValue={contact.origen}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                >
+                  <option value="">Seleccionar</option>
+                  {contact.origen && !CONTACT_ORIGINS.includes(contact.origen) ? (
+                    <option value={contact.origen}>{contact.origen}</option>
+                  ) : null}
+                  {CONTACT_ORIGINS.map((origin) => (
+                    <option key={origin} value={origin}>
+                      {origin}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="contact-relationship">Relación con el despacho</Label>
                 <select
@@ -752,19 +775,21 @@ export function ContactDetail({
                   ))}
                 </select>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="contact-recommended-by">Recomendado por</Label>
-                <Input
-                  id="contact-recommended-by"
-                  name="recommendedBy"
-                  defaultValue={
-                    contact.recomendadoPor ??
-                    (recommendedContact ? displayName(recommendedContact) : '')
-                  }
-                  placeholder="Nombre de quien lo recomienda"
-                  className="uppercase"
-                />
-              </div>
+              {contact.recomendadoPor || contact.recommendedById ? (
+                <div className="space-y-1">
+                  <Label htmlFor="contact-recommended-by">Recomendado por</Label>
+                  <Input
+                    id="contact-recommended-by"
+                    name="recommendedBy"
+                    defaultValue={
+                      contact.recomendadoPor ??
+                      (recommendedContact ? displayName(recommendedContact) : '')
+                    }
+                    placeholder="Nombre de quien lo recomienda"
+                    className="uppercase"
+                  />
+                </div>
+              ) : null}
               <div className="flex items-end gap-2">
                 <Button type="submit" disabled={update.isPending}>
                   Guardar

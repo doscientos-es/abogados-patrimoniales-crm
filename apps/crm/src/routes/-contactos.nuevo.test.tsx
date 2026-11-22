@@ -151,6 +151,26 @@ describe('NuevoContactoPage', () => {
     })
   })
 
+  it('permite registrar una recomendación sin indicar quién la hizo', async () => {
+    render(<NuevoContactoPage />)
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.change(screen.getByLabelText(/^Origen/), {
+      target: { value: 'Recomendación de cliente' },
+    })
+    expect((screen.getByLabelText('Recomendado por') as HTMLInputElement).required).toBe(false)
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    await waitFor(() =>
+      expect(mocks.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          valores: expect.objectContaining({
+            origen: 'Recomendación de cliente',
+            recomendadoPor: '',
+          }),
+        }),
+      ),
+    )
+  })
+
   it('aplica los datos confirmados por IA al formulario sin crear el contacto automáticamente', async () => {
     mocks.aiValues = {
       naturaleza: 'Persona física',
@@ -178,7 +198,7 @@ describe('NuevoContactoPage', () => {
       '1990-01-02',
     )
     expect((screen.getByLabelText('País') as HTMLSelectElement).value).toBe('Francia')
-    expect((screen.getByLabelText(/^Origen/) as HTMLSelectElement).value).toBe('Redes sociales')
+    expect((screen.getByLabelText(/^Origen/) as HTMLSelectElement).value).toBe('')
     expect(mocks.createContact).not.toHaveBeenCalled()
 
     fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))

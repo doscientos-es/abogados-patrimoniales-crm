@@ -27,6 +27,7 @@ import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
 import { ContactAIIntake } from './contact-ai-intake'
+import { CONTACT_ORIGINS } from './contact-origins'
 import { DraftNote } from './draft-note'
 
 const NATURES: Naturaleza[] = ['Persona física', 'Persona jurídica', 'Órgano judicial', 'Público']
@@ -106,6 +107,7 @@ export function NuevoContactoPage() {
   const createNote = useCrearNotaPersona(firmId)
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
+  const [origin, setOrigin] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [documents, setDocuments] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
@@ -522,6 +524,34 @@ export function NuevoContactoPage() {
                 ))}
               </select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Origen del contacto</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-origen">Origen del contacto</Label>
+              <select
+                id="contact-origen"
+                name="origen"
+                value={origin}
+                onChange={(event) => setOrigin(event.target.value)}
+                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+              >
+                <option value="">Seleccionar</option>
+                {CONTACT_ORIGINS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/recomend/i.test(origin) ? (
+              <Field name="recomendadoPor" label="Recomendado por" />
+            ) : null}
           </CardContent>
         </Card>
 
