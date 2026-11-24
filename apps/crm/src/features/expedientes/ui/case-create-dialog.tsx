@@ -1,3 +1,10 @@
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -25,6 +32,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { ContactoPersistido } from '@/features/contactos'
 import type { MiembroDespacho } from '@/features/crm'
+import {
+  contactosParaAutocompletado,
+  nombreCompletoContacto as contactName,
+} from '@/features/crm/application/contact-autocomplete'
 import type { CrearExpedienteInput } from '@/features/expedientes/application/case-types'
 
 export function CaseCreateDialog({
@@ -36,7 +47,8 @@ export function CaseCreateDialog({
   trigger,
   practiceAreas,
 }: {
-  contactos: Pick<ContactoPersistido, 'id' | 'nombre'>[]
+  contactos: (Pick<ContactoPersistido, 'id' | 'nombre'> &
+    Partial<Pick<ContactoPersistido, 'apellidos' | 'razonSocial' | 'nif' | 'referencia'>>)[]
   miembros: MiembroDespacho[]
   pending: boolean
   onCreate: (input: CrearExpedienteInput) => Promise<{ id: string }>
@@ -46,11 +58,16 @@ export function CaseCreateDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [contactoId, setContactoId] = useState('')
+  const [contactSearch, setContactSearch] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormError(null)
     const data = new FormData(event.currentTarget)
+    if (!contactoId) {
+      setFormError('Selecciona un cliente de la lista.')
+      return
+    }
     let expediente: { id: string }
     try {
       expediente = await onCreate({
@@ -74,6 +91,7 @@ export function CaseCreateDialog({
     toast.success('Expediente creado.')
     setOpen(false)
     setContactoId('')
+    setContactSearch('')
     void Promise.resolve()
       .then(() => onCreated?.(expediente.id))
       .catch(() => undefined)
@@ -142,22 +160,45 @@ export function CaseCreateDialog({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="case-create-contacto">Cliente *</Label>
-                  <select
-                    id="case-create-contacto"
-                    name="contacto"
-                    value={contactoId}
-                    onChange={(event) => setContactoId(event.target.value)}
-                    className={selectClassName}
-                    required
-                    aria-describedby="case-create-contacto-help"
+                  <Combobox
+                    aria-label="Cliente *"
+                    inputValue={contactSearch}
+                    items={contactosParaAutocompletado(contactos, contactSearch)}
+                    selectedKey={contactoId || null}
+                    onInputChange={(value) => {
+                      setContactSearch(value)
+                      if (value !== contactName(contactos.find((item) => item.id === contactoId)))
+                        setContactoId('')
+                    }}
+                    onSelectionChange={(key) => {
+                      const id = key ? String(key) : ''
+                      setContactoId(id)
+                      setContactSearch(contactName(contactos.find((item) => item.id === id)))
+                    }}
                   >
-                    <option value="">Selecciona una persona o entidad</option>
-                    {contactos.map((contacto) => (
-                      <option key={contacto.id} value={contacto.id}>
-                        {contacto.nombre}
-                      </option>
-                    ))}
-                  </select>
+                    <ComboboxInput
+                      id="case-create-contacto"
+                      placeholder="Busca por nombre, NIF o referencia"
+                      aria-describedby="case-create-contacto-help"
+                    />
+                    <ComboboxContent>
+                      <ComboboxList<(typeof contactos)[number]> emptyState="No hay coincidencias.">
+                        {(contacto) => (
+                          <ComboboxItem
+                            id={contacto.id}
+                            textValue={[contactName(contacto), contacto.nif, contacto.referencia]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          >
+                            {[contactName(contacto), contacto.nif, contacto.referencia]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                  <input type="hidden" name="contacto" value={contactoId} />
                   <p id="case-create-contacto-help" className="text-muted-foreground text-xs">
                     Será la referencia principal del expediente.
                   </p>

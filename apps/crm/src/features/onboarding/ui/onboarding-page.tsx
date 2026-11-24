@@ -1230,7 +1230,7 @@ function OpenCaseDialog({
           </p>
           <p className="text-primary text-lg font-semibold tracking-wide">{proximaReferencia}</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            La referencia definitiva la asignará Supabase al abrirlo.
+            La referencia definitiva se asignará al abrirlo.
           </p>
         </div>
       ) : null}

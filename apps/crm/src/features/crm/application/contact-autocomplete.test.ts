@@ -23,6 +23,9 @@ describe('contactosParaAutocompletado', () => {
 
     expect(contactosParaAutocompletado(contacts, 'maria')).toEqual([contacts[0]])
     expect(contactosParaAutocompletado(contacts, 'b123')).toEqual([contacts[1]])
+    expect(
+      contactosParaAutocompletado([{ ...contacts[0]!, referencia: 'CT-001056' }], '001056'),
+    ).toHaveLength(1)
   })
 
   it('excluye contactos y limita los resultados renderizados', () => {

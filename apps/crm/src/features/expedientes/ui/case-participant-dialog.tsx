@@ -20,6 +20,7 @@ import {
   type NuevoContactoInput,
 } from '@/features/contactos'
 import { findContactPhoneDuplicates } from '@/features/contactos/application/contact-phone-duplicates'
+import { nombreCompletoContacto } from '@/features/crm/application/contact-autocomplete'
 import type { MiembroDespacho } from '@/features/crm/application/opportunity-types'
 import {
   INTERNAL_CONTACT_ROLE,
@@ -137,7 +138,7 @@ export function CaseParticipantDialog({
     if (!q) return []
     return contactos
       .filter((c) =>
-        [c.nombre, c.apellidos, c.razonSocial, c.nif, c.email, c.telefono]
+        [nombreCompletoContacto(c), c.nif, c.referencia, c.email, c.telefono]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q)),
       )
@@ -269,9 +270,9 @@ export function CaseParticipantDialog({
               {selected ? (
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                   <div className="min-w-0 break-words">
-                    <p className="font-medium">{selected.nombre}</p>
+                    <p className="font-medium">{nombreCompletoContacto(selected)}</p>
                     <p className="text-muted-foreground text-xs">
-                      {[selected.nif, selected.telefono, selected.email]
+                      {[selected.referencia, selected.nif, selected.telefono, selected.email]
                         .filter(Boolean)
                         .join(' · ') || 'Sin datos de contacto'}
                     </p>
@@ -311,7 +312,7 @@ export function CaseParticipantDialog({
                     <Input
                       id="p-search"
                       className="!pl-10"
-                      placeholder="Buscar en Contactos: nombre, NIF, teléfono o email"
+                      placeholder="Buscar en Contactos: nombre, NIF, referencia, teléfono o email"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                     />
@@ -326,9 +327,9 @@ export function CaseParticipantDialog({
                           onClick={() => setSelected(c)}
                         >
                           <span>
-                            <span className="font-medium">{c.nombre}</span>
+                            <span className="font-medium">{nombreCompletoContacto(c)}</span>
                             <span className="text-muted-foreground block text-xs">
-                              {[c.nif, c.relacion].filter(Boolean).join(' · ')}
+                              {[c.referencia, c.nif, c.relacion].filter(Boolean).join(' · ')}
                             </span>
                           </span>
                           {excluded.has(c.id) ? (

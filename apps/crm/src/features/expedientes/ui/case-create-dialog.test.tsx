@@ -30,6 +30,15 @@ afterEach(() => {
   mocks.toastSuccess.mockReset()
 })
 
+async function selectContact(query: string, option: string) {
+  const input = screen.getByRole('combobox', { name: 'Cliente *' })
+  input.focus()
+  fireEvent.change(input, {
+    target: { value: query },
+  })
+  fireEvent.click(await screen.findByRole('option', { name: option }))
+}
+
 describe('CaseCreateDialog', () => {
   it('requests a contact before allowing a case to be created', () => {
     render(<CaseCreateDialog contactos={[]} miembros={[]} pending={false} onCreate={vi.fn()} />)
@@ -59,9 +68,7 @@ describe('CaseCreateDialog', () => {
     const advancedSettings = screen.getByText('Creación avanzada').closest('details')
     expect(advancedSettings?.open).toBe(false)
 
-    fireEvent.change(screen.getByLabelText('Cliente *'), {
-      target: { value: 'contact-1' },
-    })
+    await selectContact('Ana', 'Ana López')
     fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
       target: { value: 'Herencia familiar' },
     })
@@ -96,7 +103,7 @@ describe('CaseCreateDialog', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /nuevo expediente/i }))
-    fireEvent.change(screen.getByLabelText('Cliente *'), { target: { value: 'contact-1' } })
+    await selectContact('Ana', 'Ana López')
     fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
       target: { value: 'Herencia familiar' },
     })
@@ -105,5 +112,34 @@ describe('CaseCreateDialog', () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('case-1'))
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Expediente creado.')
     expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it('distinguishes clients by full name, NIF and reference and requires a real selection', async () => {
+    const onCreate = vi.fn()
+    render(
+      <CaseCreateDialog
+        contactos={[
+          { id: '1', nombre: 'Ana', apellidos: 'López', nif: '12345678Z', referencia: 'CT-001001' },
+          { id: '2', nombre: 'Ana', apellidos: 'Pérez', nif: '87654321X', referencia: 'CT-001002' },
+        ]}
+        miembros={[]}
+        pending={false}
+        onCreate={onCreate}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /nuevo expediente/i }))
+    await selectContact('CT-001002', 'Ana Pérez · 87654321X · CT-001002')
+    expect((screen.getByRole('combobox', { name: 'Cliente *' }) as HTMLInputElement).value).toBe(
+      'Ana Pérez',
+    )
+    fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
+      target: { value: 'Asunto' },
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Cliente *' }), {
+      target: { value: 'Otra persona' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^crear expediente$/i }))
+    expect(screen.getByText('Selecciona un cliente de la lista.')).toBeTruthy()
+    expect(onCreate).not.toHaveBeenCalled()
   })
 })

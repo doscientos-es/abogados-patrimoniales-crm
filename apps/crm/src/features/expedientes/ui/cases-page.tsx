@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import type { ContactoPersistido } from '@/features/contactos'
 import type { MiembroDespacho } from '@/features/crm'
+import { nombreCompletoContacto } from '@/features/crm/application/contact-autocomplete'
 import {
   CASE_CONTROL_COLUMNS,
   caseAlerts,
@@ -73,7 +74,7 @@ export function CasesPage({
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [now] = useState(() => Date.now())
   const contactNames = useMemo(
-    () => new Map(contactos.map((item) => [item.id, item.nombre])),
+    () => new Map(contactos.map((item) => [item.id, nombreCompletoContacto(item)])),
     [contactos],
   )
   const memberNames = useMemo(
