@@ -5,10 +5,14 @@ import type { TareaPersistida } from '@/features/tareas'
 
 export function AppointmentLink({
   task,
+  newTab = false,
 }: {
   task: Pick<TareaPersistida, 'id' | 'expedienteId' | 'oportunidadId'>
+  newTab?: boolean
 }) {
   const className = buttonVariants({ variant: 'outline', size: 'sm' })
+  const externalProps = newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {}
+  const label = newTab ? 'Abrir cita en otra pestaña' : 'Abrir ficha de la cita'
   if (task.expedienteId)
     return (
       <Link
@@ -16,8 +20,9 @@ export function AppointmentLink({
         to="/expedientes/$id"
         params={{ id: task.expedienteId }}
         search={{ tab: 'appointments', appointmentId: task.id }}
+        {...externalProps}
       >
-        Abrir ficha de la cita
+        {label}
       </Link>
     )
   if (task.oportunidadId)
@@ -27,8 +32,9 @@ export function AppointmentLink({
         to="/oportunidades/$id"
         params={{ id: task.oportunidadId }}
         search={{ tab: 'firstMeeting', appointmentId: task.id }}
+        {...externalProps}
       >
-        Abrir ficha de la cita
+        {label}
       </Link>
     )
   return null

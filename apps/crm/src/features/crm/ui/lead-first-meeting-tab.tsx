@@ -12,6 +12,7 @@ import {
   estadoAsistente,
   isAppointment,
 } from '@/features/crm/application/first-meeting-cycle'
+import { ContactAppointmentHistory } from '@/features/crm/ui/contact-appointment-history'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { FirstMeetingData } from '@/features/crm/ui/first-meeting-data'
 import { FirstMeetingWorkspace } from '@/features/crm/ui/first-meeting-workspace'
@@ -73,6 +74,7 @@ export function AppointmentsTab({
     (task?.creadaPorId === currentUserId || ['owner', 'admin', 'lawyer'].includes(memberRole))
   const canHold = Boolean(task && canEdit && canHoldAppointment(task, currentUserId, memberRole))
   const first = scope === 'lead' && meetings.length === 0
+  const showContactHistory = scope === 'lead' && Boolean(contactId)
 
   const schedule = async (input: CrearTareaInput) => {
     const details = input.detallesReunion
@@ -164,44 +166,62 @@ export function AppointmentsTab({
           successMessage={first ? 'Solicitud de primera cita creada.' : 'Solicitud de cita creada.'}
         />
       ) : null}
-      {task ? (
-        <div key={task.id} className="space-y-4">
-          {state !== 'en_curso' ? (
-            <FirstMeetingData firmId={firmId} task={task} members={members} canEdit={canManage} />
-          ) : null}
-          {state === 'pendiente' ? (
-            <Link
-              className={buttonVariants({ variant: 'outline' })}
-              to="/tareas/$taskId"
-              params={{ taskId: task.id }}
-            >
-              Abrir encargo de agenda
-            </Link>
-          ) : null}
-          {canHold &&
-          (state === 'en_curso' || state === 'programada' || state === 'no_asistencia') &&
-          !['Completada', 'Cancelada'].includes(task.estado) ? (
-            <FirstMeetingAssistant
+      <div
+        className={
+          showContactHistory && task
+            ? 'grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]'
+            : undefined
+        }
+      >
+        {task ? (
+          <div key={task.id} className="min-w-0 space-y-4">
+            {state !== 'en_curso' ? (
+              <FirstMeetingData firmId={firmId} task={task} members={members} canEdit={canManage} />
+            ) : null}
+            {state === 'pendiente' ? (
+              <Link
+                className={buttonVariants({ variant: 'outline' })}
+                to="/tareas/$taskId"
+                params={{ taskId: task.id }}
+              >
+                Abrir encargo de agenda
+              </Link>
+            ) : null}
+            {canHold &&
+            (state === 'en_curso' || state === 'programada' || state === 'no_asistencia') &&
+            !['Completada', 'Cancelada'].includes(task.estado) ? (
+              <FirstMeetingAssistant
+                firmId={firmId}
+                task={task}
+                reference={parent.referencia}
+                contactName={contactName}
+                currentUserId={currentUserId}
+                canEdit
+                compact
+                onStarted={() => setSelected(task.id)}
+              />
+            ) : null}
+            <FirstMeetingWorkspace
               firmId={firmId}
               task={task}
-              reference={parent.referencia}
-              contactName={contactName}
-              currentUserId={currentUserId}
-              canEdit
-              compact
-              onStarted={() => setSelected(task.id)}
+              contactId={contactId}
+              canEdit={canManage}
+              canTakeNotes={canHold}
+              canFollowUp={canEdit && task.reunion['followUpAssigneeId'] === currentUserId}
             />
-          ) : null}
-          <FirstMeetingWorkspace
+          </div>
+        ) : null}
+        {showContactHistory ? (
+          <ContactAppointmentHistory
             firmId={firmId}
-            task={task}
             contactId={contactId}
-            canEdit={canManage}
-            canTakeNotes={canHold}
-            canFollowUp={canEdit && task.reunion['followUpAssigneeId'] === currentUserId}
+            contactName={contactName}
+            lead={{ id: parent.id, reference: parent.referencia }}
+            tasks={tasks.data ?? []}
+            selectedId={task?.id}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   )
 }

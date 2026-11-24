@@ -1,4 +1,7 @@
-# Only this function accepts MCP personal credentials instead of a Supabase JWT.
-# Authentication and authorization must still be enforced by the MCP and database.
+# This function accepts MCP personal credentials instead of a Supabase JWT.
 [functions.lex-mcp]
+verify_jwt = false
+
+# Supabase Cron authenticates with a separate secret stored in Vault.
+[functions.google-calendar-sync]
 verify_jwt = false

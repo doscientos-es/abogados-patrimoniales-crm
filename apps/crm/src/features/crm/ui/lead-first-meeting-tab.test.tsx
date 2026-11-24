@@ -1,8 +1,15 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type * as Router from '@tanstack/react-router'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   appointments: [] as Array<Record<string, unknown>>,
+  origins: {
+    leads: [] as { id: string; reference: string }[],
+    cases: [] as { id: string; reference: string }[],
+  },
+  notes: [] as Array<Record<string, unknown>>,
   create: vi.fn().mockResolvedValue({ id: 'new-event' }),
   invoke: vi.fn(),
   updateMeeting: vi.fn().mockImplementation(async ({ task, details }) => ({
@@ -12,7 +19,37 @@ const mocks = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [] }) }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: ({ queryKey }: { queryKey: string[] }) => ({
+    data:
+      queryKey[1] === 'contact-appointment-origins'
+        ? mocks.origins
+        : queryKey[1] === 'notes'
+          ? mocks.notes
+          : [],
+  }),
+}))
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof Router>()),
+  Link: ({
+    to,
+    params,
+    search,
+    children,
+    ...props
+  }: ComponentProps<'a'> & {
+    to: string
+    params: { id?: string; taskId?: string }
+    search?: Record<string, string>
+  }) => (
+    <a
+      {...props}
+      href={`${to.replace('$id', params.id ?? '').replace('$taskId', params.taskId ?? '')}${search ? `?${new URLSearchParams(search)}` : ''}`}
+    >
+      {children}
+    </a>
+  ),
+}))
 vi.mock('@/features/auth', () => ({
   useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
 }))
@@ -34,6 +71,8 @@ afterEach(() => {
   cleanup()
   vi.clearAllMocks()
   mocks.appointments = []
+  mocks.origins = { leads: [], cases: [] }
+  mocks.notes = []
 })
 
 const opportunity = {
@@ -277,6 +316,83 @@ describe('LeadFirstMeetingTab', () => {
     expect((screen.getByRole('combobox', { name: 'Cita' }) as HTMLSelectElement).value).toBe(
       'case-event-2',
     )
+  })
+
+  it('shows the same contact’s appointment history and final notes without leaving the active meeting', () => {
+    mocks.origins = {
+      leads: [{ id: 'previous-lead', reference: 'OP-002' }],
+      cases: [{ id: 'case-1', reference: 'EXP-001' }],
+    }
+    mocks.appointments = [
+      { ...meeting({ status: 'in_progress' }), titulo: 'Cita actual' },
+      {
+        ...meeting({ status: 'finished' }),
+        id: 'past-event',
+        oportunidadId: 'previous-lead',
+        titulo: 'Consulta anterior',
+      },
+      {
+        ...meeting({ startsAt: '2099-10-22T09:00:00Z' }),
+        id: 'future-event',
+        expedienteId: 'case-1',
+        titulo: 'Próximo seguimiento',
+      },
+      {
+        ...meeting({ status: 'preparation', attendeeContactIds: ['contact-1'] }),
+        id: 'pending-event',
+        expedienteId: 'case-2',
+        titulo: 'Pendiente de llamada',
+      },
+      {
+        ...meeting({ attendeeContactIds: ['other-contact'] }),
+        id: 'unrelated-event',
+        expedienteId: 'case-1',
+        titulo: 'Cita de otra persona',
+      },
+      { ...meeting(), id: 'unknown-event', expedienteId: 'case-2', titulo: 'Cita sin vínculo' },
+    ]
+    mocks.notes = [
+      {
+        status: 'archived',
+        details: { taskId: 'past-event', cierreCita: 'true' },
+        content: 'Nota archivada',
+      },
+      {
+        status: 'active',
+        details: {
+          taskId: 'past-event',
+          cierrePrimeraCita: 'true',
+          notasFinales: ['Revisar la documentación de la herencia'],
+        },
+        content: '',
+      },
+    ]
+    renderTab()
+
+    const liveNotes = screen.getByLabelText('Añadir notas durante la cita') as HTMLInputElement
+    fireEvent.change(liveNotes, { target: { value: 'Borrador de la reunión actual' } })
+    const history = within(screen.getByRole('complementary', { name: 'Historial de citas' }))
+    const past = within(history.getByRole('region', { name: 'Anteriores' }))
+    const upcoming = within(history.getByRole('region', { name: 'Próximas y en curso' }))
+    fireEvent.click(past.getByText('Consulta anterior'))
+    expect(past.getByText('Revisar la documentación de la herencia')).toBeTruthy()
+    expect(past.queryByText('Nota archivada')).toBeNull()
+    fireEvent.click(upcoming.getByText('Próximo seguimiento'))
+    const link = upcoming.getByRole('link', { name: 'Abrir cita en otra pestaña' })
+    expect(link.getAttribute('href')).toBe(
+      '/expedientes/case-1?tab=appointments&appointmentId=future-event',
+    )
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(
+      within(history.getByRole('region', { name: 'Sin fecha confirmada' })).getByText(
+        'Pendiente de llamada',
+      ),
+    ).toBeTruthy()
+    expect(history.queryByText('Cita actual')).toBeNull()
+    expect(history.queryByText('Cita de otra persona')).toBeNull()
+    expect(history.queryByText('Cita sin vínculo')).toBeNull()
+    expect(liveNotes.value).toBe('Borrador de la reunión actual')
+    expect(screen.getAllByRole('option')).toHaveLength(1)
   })
 
   it('offers to schedule a linked first meeting when none exists', async () => {

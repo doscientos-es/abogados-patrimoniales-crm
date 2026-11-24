@@ -12,6 +12,10 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useMiembrosDespacho } from '@/features/crm'
+import {
+  closingNoteItems,
+  closingNoteTaskId,
+} from '@/features/crm/application/contact-appointment-history'
 import { meetingHosts, terminar } from '@/features/crm/application/first-meeting-cycle'
 import { ShortTextList } from '@/features/crm/ui/short-text-list'
 import { useActualizarEstadoNota, useGuardarNota, useNotasRemotas } from '@/features/notas'
@@ -54,27 +58,11 @@ export function FirstMeetingClosingDialog({
   const [derivedTitles, setDerivedTitles] = useState<string[]>([])
   const [derivedDraft, setDerivedDraft] = useState('')
   const [finishing, setFinishing] = useState(false)
-  const closeNote = (notes.data ?? []).find((note) => {
-    const details = note.details
-    return Boolean(
-      details &&
-      typeof details === 'object' &&
-      !Array.isArray(details) &&
-      note.status !== 'archived' &&
-      details['taskId'] === task.id &&
-      (details['cierreCita'] === 'true' || details['cierrePrimeraCita'] === 'true'),
-    )
-  })
+  const closeNote = (notes.data ?? []).find((note) => closingNoteTaskId(note) === task.id)
   const details = closeNote?.details
   const noteDetails =
     details && typeof details === 'object' && !Array.isArray(details) ? details : {}
-  const savedItems = noteDetails['notasFinales']
-  const initialItems = Array.isArray(savedItems)
-    ? savedItems.filter((item): item is string => typeof item === 'string')
-    : closeNote?.content
-      ? [closeNote.content]
-      : []
-  const finalItems = noteItems ?? initialItems
+  const finalItems = noteItems ?? closingNoteItems(closeNote)
 
   const finish = async () => {
     if (notes.isPending || notes.isError || finishingRef.current || (!caseId && !opportunityId))
