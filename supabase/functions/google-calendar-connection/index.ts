@@ -29,7 +29,9 @@ Deno.serve(async (req) => {
     const firmId = typeof body.firmId === 'string' ? body.firmId : ''
     if (!firmId || !['verify', 'activate'].includes(String(body.action)))
       return response({ error: 'Invalid request' }, 400)
-    const caller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } })
+    const caller = createClient(url, anonKey, {
+      global: { headers: { Authorization: authorization } },
+    })
     const { data: user, error: authError } = await caller.auth.getUser(token)
     if (authError || !user.user) return response({ error: 'Unauthorized' }, 401)
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
@@ -46,9 +48,13 @@ Deno.serve(async (req) => {
     const calendarId = env('GOOGLE_CALENDAR_ID')
     const staffDomain = env('GOOGLE_CALENDAR_STAFF_DOMAIN').toLowerCase()
     const workerSecret = env('CRM_GOOGLE_CALENDAR_WORKER_SECRET')
-    if (firmId !== env('GOOGLE_CALENDAR_FIRM_ID') || !isDedicatedCalendar(calendarId)
-      || !/^[a-z\d-]+(?:\.[a-z\d-]+)+$/.test(staffDomain)
-      || workerSecret.length < 32 || workerSecret.length > 256)
+    if (
+      firmId !== env('GOOGLE_CALENDAR_FIRM_ID') ||
+      !isDedicatedCalendar(calendarId) ||
+      !/^[a-z\d-]+(?:\.[a-z\d-]+)+$/.test(staffDomain) ||
+      workerSecret.length < 32 ||
+      workerSecret.length > 256
+    )
       return response({ code: 'configuration' })
 
     let accessToken: string
@@ -70,7 +76,9 @@ Deno.serve(async (req) => {
       })
       if (error) return response({ code: 'schedule' })
     }
-    const { data, error } = await admin.rpc('crm_google_calendar_sync_status', { target_firm: firmId })
+    const { data, error } = await admin.rpc('crm_google_calendar_sync_status', {
+      target_firm: firmId,
+    })
     if (error || !Array.isArray(data) || !data[0]) return response({ code: 'schedule' })
     return response({ code: 'ok', ...data[0] })
   } catch {

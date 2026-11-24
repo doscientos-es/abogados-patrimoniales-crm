@@ -19,8 +19,10 @@ test('rejects missing access, non-owned calendars and primary calendars', async 
     ),
   )
   await assert.rejects(
-    verifyCalendarAccess('firm@group.calendar.google.com', 'access', async () =>
-      new Response(null, { status: 403 }),
+    verifyCalendarAccess(
+      'firm@group.calendar.google.com',
+      'access',
+      async () => new Response(null, { status: 403 }),
     ),
   )
   await assert.rejects(verifyCalendarAccess('primary', 'access'))

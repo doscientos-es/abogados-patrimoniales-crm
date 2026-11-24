@@ -49,28 +49,49 @@ export function CalendarSettings({ firmId, actorRole }: { firmId: string; actorR
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          La comprobación no crea eventos. Las invitaciones dependen también de los ajustes de Google
-          de cada asistente.
+          La comprobación no crea eventos. Las invitaciones dependen también de los ajustes de
+          Google de cada asistente.
         </p>
         {canManage ? (
           <>
             <div aria-live="polite" className="text-sm">
-              {check.isError ? <p className="text-destructive">No se ha podido comprobar la conexión.</p> : null}
+              {check.isError ? (
+                <p className="text-destructive">No se ha podido comprobar la conexión.</p>
+              ) : null}
               {result?.code === 'ok' ? (
                 <div className="space-y-1">
-                  <p>Conexión verificada. Sincronización {result.enabled ? 'activa' : 'no activada'}.</p>
-                  {result.enabled ? <p>Pendientes: {result.pending ?? 0}. Con error: {result.failed ?? 0}.</p> : null}
-                  {(result.failed ?? 0) > 0 ? <p>Revisa los correos verificados del equipo y los permisos de Google.</p> : null}
+                  <p>
+                    Conexión verificada. Sincronización {result.enabled ? 'activa' : 'no activada'}.
+                  </p>
+                  {result.enabled ? (
+                    <p>
+                      Pendientes: {result.pending ?? 0}. Con error: {result.failed ?? 0}.
+                    </p>
+                  ) : null}
+                  {(result.failed ?? 0) > 0 ? (
+                    <p>Revisa los correos verificados del equipo y los permisos de Google.</p>
+                  ) : null}
                 </div>
-              ) : result ? <p className="text-destructive">{errors[result.code]}</p> : null}
+              ) : result ? (
+                <p className="text-destructive">{errors[result.code]}</p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={check.isPending} onClick={() => check.mutate('verify')}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={check.isPending}
+                onClick={() => check.mutate('verify')}
+              >
                 {check.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
                 Probar conexión
               </Button>
               {result?.code === 'ok' && !result.enabled ? (
-                <Button type="button" disabled={check.isPending} onClick={() => check.mutate('activate')}>
+                <Button
+                  type="button"
+                  disabled={check.isPending}
+                  onClick={() => check.mutate('activate')}
+                >
                   Activar sincronización
                 </Button>
               ) : null}
@@ -81,7 +102,11 @@ export function CalendarSettings({ firmId, actorRole }: { firmId: string; actorR
               </p>
             ) : null}
           </>
-        ) : <p className="text-muted-foreground text-sm">Solo los administradores pueden comprobar esta conexión.</p>}
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Solo los administradores pueden comprobar esta conexión.
+          </p>
+        )}
       </CardContent>
     </Card>
   )
