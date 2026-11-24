@@ -99,7 +99,7 @@ export function FirstMeetingAssistant({
   const start = async () => {
     try {
       let currentTask = task
-      if (!reunion['status'] || reunion['status'] === 'preparation') {
+      if (!reunion['status']) {
         currentTask = await updateMeeting.mutateAsync({
           task: currentTask,
           details: {
@@ -113,7 +113,7 @@ export function FirstMeetingAssistant({
         task: currentTask,
         details: comenzar(currentTask.reunion, new Date().toISOString()),
       })
-      toast.success('Primera cita en curso.')
+      toast.success('Cita en curso.')
       onStarted()
     } catch (error) {
       toast.error(errorMessage(error), { duration: 10000 })

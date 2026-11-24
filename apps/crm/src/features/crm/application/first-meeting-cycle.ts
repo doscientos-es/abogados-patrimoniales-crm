@@ -25,7 +25,7 @@ type Reunion = Record<string, unknown>
 
 export function isAppointment(task: TareaPersistida) {
   return (
-    task.tipo === 'Evento' && (task.reunion['specialType'] === 'meeting' || isFirstMeeting(task))
+    task.tipo === 'Evento' && (task.reunion?.['specialType'] === 'meeting' || isFirstMeeting(task))
   )
 }
 
@@ -55,8 +55,10 @@ export function canHoldAppointment(task: TareaPersistida, userId: string, role: 
 /** Manual fallback: don't send client names or notes to an external calendar. */
 export function googleCalendarDraft(reunion: Reunion) {
   if (estadoAsistente(reunion) !== 'programada') return null
-  const start = Date.parse(String(reunion['startsAt'] ?? ''))
-  const end = Date.parse(String(reunion['endsAt'] ?? ''))
+  const { startsAt, endsAt } = reunion
+  if (typeof startsAt !== 'string' || typeof endsAt !== 'string') return null
+  const start = Date.parse(startsAt)
+  const end = Date.parse(endsAt)
   if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return null
   const compactUtc = (value: number) => new Date(value).toISOString().replace(/[-:]|\.\d{3}/g, '')
   const params = new URLSearchParams({

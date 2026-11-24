@@ -12,11 +12,22 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
-    params: _params,
+    params,
+    search,
     children,
     ...props
-  }: { to: string; params?: unknown } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={to} {...props}>
+  }: {
+    to: string
+    params?: Record<string, string>
+    search?: Record<string, string>
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a
+      href={
+        to.replace(/\$(\w+)/g, (match, key: string) => params?.[key] ?? match) +
+        (search ? `?${new URLSearchParams(search)}` : '')
+      }
+      {...props}
+    >
       {children}
     </a>
   ),
@@ -119,7 +130,7 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('dialog', { name: 'Reunión con cliente' })).toBeTruthy()
     expect(screen.getByText('Revisar la estrategia.')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Abrir tarea' }).getAttribute('href')).toBe(
-      '/tareas/$taskId',
+      '/tareas/task-1',
     )
     const updatedDate = new Date(eventDate)
     updatedDate.setDate(updatedDate.getDate() + 1)
@@ -135,5 +146,49 @@ describe('CalendarPage', () => {
         venceEn: updatedDate.toISOString(),
       }),
     )
+  })
+
+  it('opens the confirmed appointment directly from the host’s calendar without editing its task due date', () => {
+    const startsAt = new Date().toISOString()
+    mocks.tasks = [
+      {
+        id: 'appointment-1',
+        expedienteId: 'case-1',
+        tipo: 'Evento',
+        titulo: 'Cita confirmada',
+        estado: 'Pendiente',
+        prioridad: 'Media',
+        asignadoId: 'secretary-1',
+        venceEn: null,
+        reunion: {
+          specialType: 'meeting',
+          status: 'scheduled',
+          startsAt,
+          attendeeUserIds: ['user-1'],
+        },
+      },
+      {
+        id: 'appointment-2',
+        tipo: 'Evento',
+        titulo: 'Otra cita',
+        estado: 'Pendiente',
+        reunion: {
+          specialType: 'meeting',
+          status: 'scheduled',
+          startsAt,
+          attendeeUserIds: ['user-2'],
+        },
+      },
+    ]
+    renderCalendar()
+    expect(screen.getByRole('button', { name: 'Ver detalles de Otra cita' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Mis citas' }))
+    expect(screen.queryByRole('button', { name: 'Ver detalles de Otra cita' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles de Cita confirmada' }))
+
+    expect(screen.getByRole('link', { name: 'Abrir ficha de la cita' }).getAttribute('href')).toBe(
+      '/expedientes/case-1?tab=appointments&appointmentId=appointment-1',
+    )
+    expect(screen.queryByRole('button', { name: 'Actualizar fecha' })).toBeNull()
   })
 })

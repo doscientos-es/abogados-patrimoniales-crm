@@ -6,6 +6,7 @@ import {
   dayKey,
   EMPTY_CALENDAR_FILTERS,
   filterCalendarEntries,
+  isPersonalAppointment,
 } from './calendar-model'
 
 const task = (overrides: Record<string, unknown> = {}) =>
@@ -40,6 +41,25 @@ describe('calendarEntries', () => {
     ])
 
     expect(entries.map((entry) => entry.task.id)).toEqual(['critical', 'normal'])
+  })
+
+  it('only displays confirmed appointments and puts them in the host’s agenda, not the scheduler’s', () => {
+    const appointment = (status: string) =>
+      task({
+        id: status,
+        tipo: 'Evento',
+        asignadoId: 'secretary-1',
+        reunion: { specialType: 'meeting', status, attendeeUserIds: ['lawyer-1'] },
+      })
+    const confirmed = appointment('scheduled')
+    const entries = calendarEntries([
+      appointment('preparation'),
+      appointment('not_held'),
+      confirmed,
+    ])
+    expect(entries.map((entry) => entry.task.id)).toEqual(['scheduled'])
+    expect(isPersonalAppointment(confirmed, 'lawyer-1')).toBe(true)
+    expect(isPersonalAppointment(confirmed, 'secretary-1')).toBe(false)
   })
 })
 

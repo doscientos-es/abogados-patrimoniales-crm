@@ -4,6 +4,7 @@ import {
   REMINDER_TITLE,
   comenzar,
   estadoAsistente,
+  googleCalendarDraft,
   isFirstMeeting,
   marcarNoAsistencia,
   pickFirstMeeting,
@@ -58,5 +59,16 @@ describe('ciclo de Primera cita', () => {
       (pickFirstMeeting([closed, live, other] as never[], 'lead-1') as { id?: string } | undefined)
         ?.id,
     ).toBe('live')
+  })
+
+  it('only exports the confirmed time range and a generic title to Google Calendar', () => {
+    const draft = googleCalendarDraft({ ...programada, subject: 'Confidential client details' })
+    expect(draft && Object.fromEntries(new URL(draft).searchParams)).toEqual({
+      action: 'TEMPLATE',
+      text: 'Cita del despacho',
+      dates: '20261020T083000Z/20261020T090000Z',
+    })
+    expect(googleCalendarDraft({ ...programada, status: 'preparation' })).toBeNull()
+    expect(googleCalendarDraft({ ...programada, endsAt: programada.startsAt })).toBeNull()
   })
 })

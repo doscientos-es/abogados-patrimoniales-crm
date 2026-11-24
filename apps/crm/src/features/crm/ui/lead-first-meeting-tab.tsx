@@ -8,9 +8,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import type { OportunidadPersistida } from '@/features/crm'
 import {
   ESTADO_ASISTENTE_LABEL,
+  canHoldAppointment,
   estadoAsistente,
   isAppointment,
-  meetingHosts,
 } from '@/features/crm/application/first-meeting-cycle'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { FirstMeetingData } from '@/features/crm/ui/first-meeting-data'
@@ -71,12 +71,7 @@ export function AppointmentsTab({
   const canManage =
     canEdit &&
     (task?.creadaPorId === currentUserId || ['owner', 'admin', 'lawyer'].includes(memberRole))
-  const hosts = task ? meetingHosts(task.reunion) : []
-  const canHold =
-    canEdit &&
-    (hosts.length > 0
-      ? hosts.includes(currentUserId) || ['owner', 'admin'].includes(memberRole)
-      : canManage || task?.asignadoId === currentUserId)
+  const canHold = Boolean(task && canEdit && canHoldAppointment(task, currentUserId, memberRole))
   const first = scope === 'lead' && meetings.length === 0
 
   const schedule = async (input: CrearTareaInput) => {

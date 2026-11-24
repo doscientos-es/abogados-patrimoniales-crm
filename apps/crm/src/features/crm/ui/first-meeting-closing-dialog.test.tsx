@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   archive: vi.fn(),
   update: vi.fn(),
-  complete: vi.fn(),
   error: vi.fn(),
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: mocks.error } }))
@@ -15,7 +14,9 @@ vi.mock('@/features/contactos', () => ({
   CONTACT_DOCUMENT_CATEGORIES: [],
   uploadContactDocument: vi.fn(),
 }))
-vi.mock('@/features/crm', () => ({ useMiembrosDespacho: () => ({ data: [] }) }))
+vi.mock('@/features/crm', () => ({
+  useMiembrosDespacho: () => ({ data: [{ id: 'secretary-1', nombre: 'Sara' }] }),
+}))
 vi.mock('@/features/notas', () => ({
   useNotasRemotas: () => ({ data: mocks.notes, isPending: false, isError: false }),
   useGuardarNota: () => ({ mutateAsync: mocks.save }),
@@ -26,7 +27,6 @@ vi.mock('@/features/tareas', () => ({
   useCrearTarea: () => ({ isPending: false }),
   useMarcarSiguienteAccion: () => ({ isPending: false }),
   useActualizarReunionEspecial: () => ({ mutateAsync: mocks.update }),
-  useCompletarTarea: () => ({ mutateAsync: mocks.complete }),
 }))
 
 import { FirstMeetingClosingDialog } from './first-meeting-closing-dialog'
@@ -40,21 +40,20 @@ const task = {
     primeraCita: { estado: 'En curso' },
     attendeeContactIds: ['contact-1'],
   },
-} as never
+} as unknown as React.ComponentProps<typeof FirstMeetingClosingDialog>['task']
 
 beforeEach(() => {
   mocks.notes = []
   mocks.save.mockResolvedValue(undefined)
   mocks.archive.mockResolvedValue(undefined)
-  mocks.update.mockResolvedValue({ estado: 'Pendiente' })
-  mocks.complete.mockResolvedValue(undefined)
+  mocks.update.mockResolvedValue({ reunion: {} })
 })
 afterEach(() => {
   cleanup()
   vi.resetAllMocks()
 })
 
-describe('Cierre de primera cita', () => {
+describe('Cierre de cita', () => {
   it('conserva notas antiguas y guarda las nuevas como lista, incluido el texto pendiente', async () => {
     mocks.notes = [
       {
@@ -86,7 +85,7 @@ describe('Cierre de primera cita', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => expect(screen.getByText('Primera conclusión')).toBeTruthy())
     fireEvent.change(input, { target: { value: 'Otra conclusión' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Finalizar primera cita' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
     expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,7 +123,7 @@ describe('Cierre de primera cita', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Quitar nota 1' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Finalizar primera cita' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
     await waitFor(() =>
       expect(mocks.archive).toHaveBeenCalledWith(
         expect.objectContaining({ noteId: 'note-1', status: 'archived' }),
@@ -147,12 +146,57 @@ describe('Cierre de primera cita', () => {
     fireEvent.change(screen.getByLabelText('Añadir notas finales'), {
       target: { value: 'Borrador pendiente' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Finalizar primera cita' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
     await waitFor(() => expect(mocks.error).toHaveBeenCalledWith('No se pudo guardar'))
     expect(mocks.update).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
     expect((screen.getByLabelText('Añadir notas finales') as HTMLInputElement).value).toBe(
       'Borrador pendiente',
     )
+  })
+
+  it('closes a case appointment with its derived tasks and administrative assignee', async () => {
+    const caseTask = {
+      ...task,
+      expedienteId: 'case-1',
+      reunion: { status: 'in_progress', attendeeContactIds: ['contact-1'] },
+    }
+    render(
+      <FirstMeetingClosingDialog
+        firmId="firm-1"
+        task={caseTask}
+        reference="EXP-1"
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.queryByLabelText(/archivo de transcripción/i)).toBeNull()
+    fireEvent.change(screen.getByLabelText('Añadir notas finales'), {
+      target: { value: 'Cliente conforme' },
+    })
+    fireEvent.change(screen.getByLabelText('Añadir tareas derivadas'), {
+      target: { value: 'Revisar escritura' },
+    })
+    fireEvent.change(screen.getByLabelText('Responsable administrativo'), {
+      target: { value: 'secretary-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
+
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce())
+    expect(mocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'case',
+        caseId: 'case-1',
+        opportunityId: null,
+        content: 'Cliente conforme',
+      }),
+    )
+    expect(mocks.update).toHaveBeenCalledWith({
+      task: caseTask,
+      details: expect.objectContaining({
+        status: 'finished',
+        followUpAssigneeId: 'secretary-1',
+        derivedTaskTitles: ['Revisar escritura'],
+      }),
+    })
   })
 })

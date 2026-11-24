@@ -50,7 +50,6 @@ export function FirstMeetingClosingDialog({
       ? scheduler
       : ''
   })
-  const [finishedAt] = useState(() => new Date().toISOString())
   const finishingRef = useRef(false)
   const [derivedTitles, setDerivedTitles] = useState<string[]>([])
   const [derivedDraft, setDerivedDraft] = useState('')
@@ -82,9 +81,18 @@ export function FirstMeetingClosingDialog({
       return
     const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
     const items = noteDraft.trim() ? [...finalItems, noteDraft.trim()] : finalItems
+    const derivedTaskTitles = [
+      ...derivedTitles,
+      ...(derivedDraft.trim() ? [derivedDraft.trim()] : []),
+    ]
+    if (derivedTaskTitles.length > 25 || derivedTaskTitles.some((title) => title.length > 500)) {
+      toast.error('Añade como máximo 25 tareas derivadas de hasta 500 caracteres.')
+      return
+    }
     finishingRef.current = true
     setFinishing(true)
     try {
+      const closedMeeting = terminar(liveMeeting.reunion, new Date().toISOString())
       if (items.length && (!closeNote || noteItems !== null || noteDraft.trim())) {
         await saveNote.mutateAsync({
           ...(closeNote ? { noteId: closeNote.id } : {}),
@@ -131,12 +139,9 @@ export function FirstMeetingClosingDialog({
       const finished = await updateMeeting.mutateAsync({
         task: liveMeeting,
         details: {
-          ...terminar(liveMeeting.reunion, finishedAt),
+          ...closedMeeting,
           ...(followUpAssigneeId ? { followUpAssigneeId } : {}),
-          derivedTaskTitles: [
-            ...derivedTitles,
-            ...(derivedDraft.trim() ? [derivedDraft.trim()] : []),
-          ],
+          derivedTaskTitles,
         },
       })
       toast.success(

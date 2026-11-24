@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import {
   ESTADO_ASISTENTE_LABEL,
   estadoAsistente,
+  googleCalendarDraft,
   meetingHosts,
 } from '@/features/crm/application/first-meeting-cycle'
 import {
@@ -79,6 +80,7 @@ export function FirstMeetingData({
           .join(', ') || '—'
   const estado = estadoAsistente(reunion)
   const editable = canEdit && estado === 'programada'
+  const googleDraft = googleCalendarDraft(reunion)
   const items: Array<[string, string]> = [
     ['Fecha', date ? new Date(`${date}T00:00`).toLocaleDateString('es-ES') : '—'],
     ['Hora', time || '—'],
@@ -101,6 +103,16 @@ export function FirstMeetingData({
           </span>
         ))}
         <Badge variant="secondary">{ESTADO_ASISTENTE_LABEL[estado]}</Badge>
+        {googleDraft ? (
+          <a
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            href={googleDraft}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Añadir a Google Calendar
+          </a>
+        ) : null}
         {editable ? (
           <Button
             type="button"

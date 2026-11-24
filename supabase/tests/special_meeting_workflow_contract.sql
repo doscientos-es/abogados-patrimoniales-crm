@@ -20,8 +20,15 @@ begin
     raise exception 'Special meeting rescheduling history and reasons must be enforced';
   end if;
 
-  if position('next_status in (''preparation'', ''cancelled'', ''not_held'') then null' in workflow_definition) = 0 then
+  if position('due_at = case when next_status in (''scheduled'', ''in_progress'', ''finished'')' in workflow_definition) = 0 then
     raise exception 'Unscheduled special meetings must not retain a calendar due date';
+  end if;
+  if position('''confirmedAt'', now()' in workflow_definition) = 0
+    or position('Consulta la fecha y hora en tu agenda.' in workflow_definition) = 0 then
+    raise exception 'Confirming a meeting must record the confirmation and notify its hosts';
+  end if;
+  if position('''followUpAssigneeId'', follow_up_id, ''followUpTaskId'', follow_up.id' in workflow_definition) = 0 then
+    raise exception 'The administrative follow-up must be linked to the finished appointment';
   end if;
 end;
 $$;

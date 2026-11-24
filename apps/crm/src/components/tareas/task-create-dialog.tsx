@@ -174,20 +174,21 @@ export function TaskCreateDialog({
       toast.error(issue)
       return
     }
-    const dueDate = text(data, 'dueDate')
+    const meetingRequest = details?.specialType === 'meeting'
+    const dueDate = meetingRequest ? '' : text(data, 'dueDate')
     try {
       await onCreate({
         expedienteId: expedienteId ?? (text(data, 'case') || null),
         oportunidadId: oportunidadId ?? null,
         ...(lineaId ? { lineaId } : {}),
-        tipo: kind,
+        tipo: meetingRequest ? 'Evento' : kind,
         titulo,
         descripcion: text(data, 'description'),
         prioridad: (text(data, 'priority') || 'Media') as CrearTareaInput['prioridad'],
         venceEn: dueDate ? iso(`${dueDate}T${text(data, 'dueTime') || '09:00'}`) : null,
         recordarEn: iso(text(data, 'reminder')),
         clasePlazo:
-          kind === 'Plazo'
+          !meetingRequest && kind === 'Plazo'
             ? ((text(data, 'deadlineClass') || 'Judicial') as CrearTareaInput['clasePlazo'])
             : null,
         critico: data.get('critical') === 'on',
@@ -211,6 +212,20 @@ export function TaskCreateDialog({
   }
 
   const forcedAdvanced = kind !== 'Tarea' || special !== 'none'
+  const casePicker = selectCase ? (
+    <SelectField
+      name="case"
+      label="Expediente *"
+      required
+      className="sm:col-span-2"
+      value={caseId}
+      onChange={setCaseId}
+      options={[
+        ['', 'Selecciona expediente'],
+        ...(cases ?? []).map((item) => [item.id, `${item.referencia} · ${item.titulo}`] as const),
+      ]}
+    />
+  ) : null
 
   return (
     <Dialog
@@ -252,15 +267,18 @@ export function TaskCreateDialog({
                 members={members}
               />
             ) : special === 'meeting' ? (
-              <MeetingFields
-                firmId={firmId}
-                caseId={caseId}
-                members={members}
-                preset={meetingPreset}
-                currentUserId={currentUserId}
-                defaultAssigneeId={defaultAssigneeId}
-                onBack={() => setSpecial('none')}
-              />
+              <>
+                {casePicker}
+                <MeetingFields
+                  firmId={firmId}
+                  caseId={caseId}
+                  members={members}
+                  preset={meetingPreset}
+                  currentUserId={currentUserId}
+                  defaultAssigneeId={defaultAssigneeId}
+                  onBack={() => setSpecial('none')}
+                />
+              </>
             ) : (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -287,22 +305,7 @@ export function TaskCreateDialog({
                     className="sm:col-span-2"
                   />
 
-                  {selectCase ? (
-                    <SelectField
-                      name="case"
-                      label="Expediente *"
-                      required
-                      className="sm:col-span-2"
-                      value={caseId}
-                      onChange={setCaseId}
-                      options={[
-                        ['', 'Selecciona expediente'],
-                        ...(cases ?? []).map(
-                          (item) => [item.id, `${item.referencia} · ${item.titulo}`] as const,
-                        ),
-                      ]}
-                    />
-                  ) : null}
+                  {casePicker}
                   <SelectField
                     key={currentUserId ?? ''}
                     name="assignee"
@@ -532,6 +535,7 @@ function MeetingFields({
             name="meetingType"
             label="Tipo de reunión"
             required
+            defaultValue={preset?.meetingType ?? 'Primera cita'}
             options={[
               'Primera cita',
               'Seguimiento',

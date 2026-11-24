@@ -1,4 +1,15 @@
+import {
+  estadoAsistente,
+  isAppointment,
+  meetingHosts,
+} from '@/features/crm/application/first-meeting-cycle'
 import type { TareaPersistida } from '@/features/tareas'
+
+export function isPersonalAppointment(task: TareaPersistida, userId: string) {
+  if (!isAppointment(task)) return false
+  const hosts = meetingHosts(task.reunion)
+  return hosts.length ? hosts.includes(userId) : task.asignadoId === userId
+}
 
 export type CalendarEntry = {
   task: TareaPersistida
@@ -60,9 +71,15 @@ export function buildMonthGrid(value: Date) {
 
 export function calendarEntries(tasks: TareaPersistida[]): CalendarEntry[] {
   return tasks
-    .filter((task) => task.estado !== 'Cancelada' && Boolean(task.venceEn))
+    .filter(
+      (task) =>
+        task.estado !== 'Cancelada' &&
+        (!isAppointment(task) ||
+          ['programada', 'en_curso', 'finalizada'].includes(estadoAsistente(task.reunion))),
+    )
     .flatMap((task) => {
-      const date = new Date(task.venceEn ?? '')
+      const start = isAppointment(task) ? task.reunion['startsAt'] : null
+      const date = new Date(typeof start === 'string' && start ? start : (task.venceEn ?? ''))
       return Number.isNaN(date.getTime()) ? [] : [{ task, date, dayKey: dayKey(date) }]
     })
     .sort((first, second) => {

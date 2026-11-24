@@ -48,7 +48,7 @@ import { MeetingAttendeesPicker } from '@/components/tareas/meeting-attendees-pi
 import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { TaskHoldDialog } from '@/components/tareas/task-hold-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -67,6 +67,7 @@ import { useMiembrosDespacho } from '@/features/crm'
 import { isAppointment, meetingHosts } from '@/features/crm/application/first-meeting-cycle'
 import { leerMarcador } from '@/features/crm/application/quote-editor'
 import { leerMarcadorEnvio } from '@/features/crm/application/quote-send-task'
+import { AppointmentLink } from '@/features/crm/ui/appointment-link'
 import { QuoteReviewPanel } from '@/features/crm/ui/quote-review-panel'
 import { SendTaskLink } from '@/features/crm/ui/quote-send-task'
 import { useExpedientesPersistentes, useParticipantesPersistentes } from '@/features/expedientes'
@@ -270,17 +271,6 @@ const meetingRescheduleHistory = (details: Record<string, unknown>) =>
       )
     : []
 
-const formatElapsedTime = (startedAt: string, now: number) => {
-  const startedAtMs = Date.parse(startedAt)
-  const elapsedSeconds = Number.isNaN(startedAtMs)
-    ? 0
-    : Math.max(0, Math.floor((now - startedAtMs) / 1000))
-  const hours = Math.floor(elapsedSeconds / 3600)
-  const minutes = Math.floor((elapsedSeconds % 3600) / 60)
-  const seconds = elapsedSeconds % 60
-  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
-}
-
 const toDateTimeLocal = (value: string | null) => {
   if (!value) return ''
   const date = new Date(value)
@@ -427,6 +417,7 @@ export function TaskDetail({
 
   const Root = embedded ? 'div' : 'main'
   const isOpen = !['Completada', 'Cancelada'].includes(task.estado)
+  const appointment = isAppointment(task)
   const run = async (operation: () => Promise<unknown>, success: string) => {
     try {
       await operation()
@@ -678,7 +669,7 @@ export function TaskDetail({
           {isOpen ? (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                {task.estado === 'Pendiente' ? (
+                {task.estado === 'Pendiente' && !appointment ? (
                   <Button
                     className="gap-1.5"
                     disabled={!canWork || change.isPending || task.bloqueada}
@@ -693,15 +684,17 @@ export function TaskDetail({
                     Empezar
                   </Button>
                 ) : null}
-                <Button
-                  className="gap-1.5"
-                  variant={task.estado === 'Pendiente' ? 'outline' : 'default'}
-                  disabled={!canWork || task.bloqueada}
-                  onClick={() => setCompleteOpen(true)}
-                >
-                  <CircleCheck className="h-4 w-4" aria-hidden="true" />
-                  Completar
-                </Button>
+                {!appointment ? (
+                  <Button
+                    className="gap-1.5"
+                    variant={task.estado === 'Pendiente' ? 'outline' : 'default'}
+                    disabled={!canWork || task.bloqueada}
+                    onClick={() => setCompleteOpen(true)}
+                  >
+                    <CircleCheck className="h-4 w-4" aria-hidden="true" />
+                    Completar
+                  </Button>
+                ) : null}
                 <Button
                   className="gap-1.5"
                   variant="outline"
@@ -746,7 +739,7 @@ export function TaskDetail({
                     type="button"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5"
-                    disabled={!canManage}
+                    disabled={!canManage || appointment}
                     onClick={() => setCancelOpen(true)}
                   >
                     <Ban className="h-4 w-4" aria-hidden="true" />
@@ -858,7 +851,7 @@ export function TaskDetail({
                 ) : null}
               </CardContent>
             </Card>
-          ) : isAppointment(task) &&
+          ) : appointment &&
             task.reunion['status'] !== 'preparation' &&
             task.reunion['status'] !== 'scheduled' ? (
             <AppointmentLink task={task} />
@@ -870,7 +863,7 @@ export function TaskDetail({
               members={members.data ?? []}
               participants={participants.data ?? []}
               actorId={session.user?.id ?? ''}
-              canManage={canManage || (canWork && task.reunion['status'] === 'preparation')}
+              canManage={canManage}
               canWork={canWork}
               pending={updateSpecialMeeting.isPending}
               onSave={(details) =>
@@ -1163,7 +1156,7 @@ export function TaskDetail({
                 id="task-quick-status"
                 className={inlineFieldClass}
                 value={task.estado}
-                disabled={!canWork || !isOpen || change.isPending}
+                disabled={!canWork || !isOpen || appointment || change.isPending}
                 onChange={(event) => selectStatus(event.target.value as EstadoTarea)}
               >
                 {TASK_STATES.map((state) => (
@@ -2037,35 +2030,6 @@ function TaskReminderDialog({
   )
 }
 
-function AppointmentLink({ task }: { task: TareaPersistida }) {
-  const className = buttonVariants({ variant: 'outline', size: 'sm' })
-  if (task.expedienteId)
-    return (
-      <Link
-        reloadDocument
-        className={className}
-        to="/expedientes/$id"
-        params={{ id: task.expedienteId }}
-        search={{ tab: 'appointments', appointmentId: task.id }}
-      >
-        Abrir ficha de la cita
-      </Link>
-    )
-  if (task.oportunidadId)
-    return (
-      <Link
-        reloadDocument
-        className={className}
-        to="/oportunidades/$id"
-        params={{ id: task.oportunidadId }}
-        search={{ tab: 'firstMeeting', appointmentId: task.id }}
-      >
-        Abrir ficha de la cita
-      </Link>
-    )
-  return null
-}
-
 function SpecialMeetingWorkspace({
   firmId,
   task,
@@ -2091,14 +2055,9 @@ function SpecialMeetingWorkspace({
 }) {
   const details = task.reunion
   const status = detailsText(details, 'status') || 'preparation'
+  const canSchedule = canManage || (canWork && status === 'preparation')
   const [newPreparationItem, setNewPreparationItem] = useState('')
   const [preparationCategory, setPreparationCategory] = useState('Gestión previa')
-  const [clockNow, setClockNow] = useState(0)
-  useEffect(() => {
-    if (status !== 'in_progress') return
-    const interval = window.setInterval(() => setClockNow(Date.now()), 1000)
-    return () => window.clearInterval(interval)
-  }, [status])
   const statusLabels: Record<string, string> = {
     preparation: 'Preparación',
     scheduled: 'Agendada',
@@ -2126,6 +2085,7 @@ function SpecialMeetingWorkspace({
   }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!canSchedule || pending) return
     const form = event.currentTarget
     const data = new FormData(form, (event.nativeEvent as SubmitEvent).submitter)
     const meetingAction = formText(data, 'meetingAction')
@@ -2141,14 +2101,14 @@ function SpecialMeetingWorkspace({
       toast.error('Indica el motivo para cancelar o marcar la reunión como no celebrada.')
       return
     }
-    const startInput = canManage
-      ? formText(data, 'specialStartsAt')
-      : detailsText(details, 'startsAt')
-    const endInput = canManage ? formText(data, 'specialEndsAt') : detailsText(details, 'endsAt')
-    const startsAt = isRescheduling ? '' : startInput ? new Date(startInput).toISOString() : ''
-    const endsAt = isRescheduling ? '' : endInput ? new Date(endInput).toISOString() : ''
+    const startInput = Date.parse(formText(data, 'specialStartsAt'))
+    const endInput = Date.parse(formText(data, 'specialEndsAt'))
+    const startsAt =
+      !isRescheduling && Number.isFinite(startInput) ? new Date(startInput).toISOString() : ''
+    const endsAt =
+      !isRescheduling && Number.isFinite(endInput) ? new Date(endInput).toISOString() : ''
     if (
-      ['scheduled', 'in_progress', 'finished'].includes(nextStatus) &&
+      nextStatus === 'scheduled' &&
       (!startsAt || !endsAt || Date.parse(endsAt) <= Date.parse(startsAt))
     ) {
       toast.error('Para agendar indica inicio y fin; el fin debe ser posterior al inicio.')
@@ -2158,13 +2118,12 @@ function SpecialMeetingWorkspace({
     const oldNotes = Array.isArray(details['internalNotes'])
       ? details['internalNotes'].filter((item): item is string => typeof item === 'string')
       : []
-    const newNote = formText(data, 'meetingInternalNote').trim()
     const preparationItems = meetingPreparationItems(details)
     const checkedPreparationIds = new Set(
       data.getAll('preparationDone').filter((value): value is string => typeof value === 'string'),
     )
     const submittedPreparationItems =
-      canManage && status === 'preparation'
+      status === 'preparation'
         ? preparationItems.map((item) => ({ ...item, done: checkedPreparationIds.has(item.id) }))
         : preparationItems
     const newItemText = formText(data, 'preparationNewItem').trim()
@@ -2197,26 +2156,13 @@ function SpecialMeetingWorkspace({
           ? submittedPreparationItems.filter((item) => item.id !== removePreparationItemId)
           : submittedPreparationItems
     const rescheduleHistory = meetingRescheduleHistory(details)
-    const actualDurationMinutes =
-      nextStatus === 'finished' && detailsText(details, 'startedAt')
-        ? Math.max(
-            0,
-            Math.round((Date.now() - Date.parse(detailsText(details, 'startedAt'))) / 60_000),
-          )
-        : typeof details['actualDurationMinutes'] === 'number'
-          ? details['actualDurationMinutes']
-          : undefined
     const result: DetallesReunion = {
       ...(details as unknown as DetallesReunion),
       startsAt,
       endsAt,
-      mode: (canManage
-        ? formText(data, 'specialMode')
-        : detailsText(details, 'mode')) as DetallesReunion['mode'],
-      location: canManage
-        ? formText(data, 'specialPreferredLocation')
-        : detailsText(details, 'location'),
-      meetingUrl: canManage ? formText(data, 'specialUrl') : detailsText(details, 'meetingUrl'),
+      mode: formText(data, 'specialMode') as DetallesReunion['mode'],
+      location: formText(data, 'specialPreferredLocation'),
+      meetingUrl: formText(data, 'specialUrl'),
       preparation: canManage
         ? formText(data, 'specialPreparation')
         : detailsText(details, 'preparation'),
@@ -2234,9 +2180,9 @@ function SpecialMeetingWorkspace({
             .getAll('specialContacts')
             .filter((value): value is string => typeof value === 'string')
         : detailsIds(details, 'attendeeContactIds'),
-      attendeeUserIds: canManage
-        ? data.getAll('specialUsers').filter((value): value is string => typeof value === 'string')
-        : detailsIds(details, 'attendeeUserIds'),
+      attendeeUserIds: data
+        .getAll('specialUsers')
+        .filter((value): value is string => typeof value === 'string'),
       attendeeNames: canManage
         ? formText(data, 'specialOtherAttendees')
             .split(',')
@@ -2245,11 +2191,7 @@ function SpecialMeetingWorkspace({
         : Array.isArray(details['attendeeNames'])
           ? details['attendeeNames'].filter((item): item is string => typeof item === 'string')
           : [],
-      durationMinutes: canManage
-        ? Number(formText(data, 'specialDuration')) || 60
-        : typeof details['durationMinutes'] === 'number'
-          ? details['durationMinutes']
-          : 60,
+      durationMinutes: Number(formText(data, 'specialDuration')) || 60,
       preferredDate: canManage
         ? formText(data, 'specialPreferredDate')
         : detailsText(details, 'preferredDate'),
@@ -2273,30 +2215,10 @@ function SpecialMeetingWorkspace({
             ],
           }
         : {}),
-      ...(nextStatus === 'in_progress' && !details['startedAt'] ? { startedAt: now } : {}),
-      ...(nextStatus === 'finished' ? { finishedAt: now } : {}),
-      ...(actualDurationMinutes === undefined ? {} : { actualDurationMinutes }),
       internalNotes: [
         ...oldNotes,
-        ...(newNote ? [newNote] : []),
         ...(isRescheduling ? [`Reprogramación: ${rescheduleReason}`] : []),
       ],
-      outcome:
-        canManage && data.has('meetingOutcome')
-          ? formText(data, 'meetingOutcome')
-          : detailsText(details, 'outcome'),
-      decisions:
-        canManage && data.has('meetingDecisions')
-          ? formText(data, 'meetingDecisions')
-          : detailsText(details, 'decisions'),
-      transcription:
-        canManage && data.has('meetingTranscription')
-          ? formText(data, 'meetingTranscription')
-          : detailsText(details, 'transcription'),
-      summary:
-        canManage && data.has('meetingSummary')
-          ? formText(data, 'meetingSummary')
-          : detailsText(details, 'summary'),
     }
     if (status === 'preparation' && nextStatus === 'scheduled') {
       if (!meetingHosts(result as unknown as Record<string, unknown>).length) {
@@ -2314,7 +2236,6 @@ function SpecialMeetingWorkspace({
     : []
   const preparationItems = meetingPreparationItems(details)
   const rescheduleHistory = meetingRescheduleHistory(details)
-  const startedAt = detailsText(details, 'startedAt')
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
@@ -2322,7 +2243,7 @@ function SpecialMeetingWorkspace({
           <div>
             <h2 className="font-semibold">Tarea especial · Reunión</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              La reunión mantiene su preparación, agenda, asistentes y resultado en este expediente.
+              Prepara el encargo y confirma la cita después de hablar con el cliente.
             </p>
           </div>
           <Badge variant="secondary">{statusLabels[status] ?? statusLabels['preparation']}</Badge>
@@ -2337,27 +2258,6 @@ function SpecialMeetingWorkspace({
             )
           })}
         </div>
-        {status === 'in_progress' ? (
-          <section className="border-warning/50 bg-warning/5 space-y-2 rounded-md border p-4 text-center">
-            <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              Reunión en curso
-            </h3>
-            <output
-              role="timer"
-              aria-label="Tiempo transcurrido de la reunión"
-              className="font-mono text-3xl tabular-nums"
-            >
-              {formatElapsedTime(startedAt, clockNow || Date.parse(startedAt))}
-            </output>
-            <p className="text-muted-foreground text-xs">Inicio real: {date(startedAt || null)}</p>
-          </section>
-        ) : null}
-        {['cancelled', 'not_held'].includes(status) ? (
-          <p className="rounded-md border p-3 text-sm">
-            <strong>Motivo: </strong>
-            {detailsText(details, 'statusReason') || 'Sin motivo registrado.'}
-          </p>
-        ) : null}
         <form ref={formRef} className="space-y-4" onSubmit={submit}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Label>
@@ -2387,7 +2287,8 @@ function SpecialMeetingWorkspace({
                 usersName="specialUsers"
                 defaultContactIds={contactIds}
                 defaultUserIds={userIds}
-                disabled={!canManage}
+                disabled={!canSchedule}
+                contactsReadOnly={!canManage}
               />
             </div>
             <Label>
@@ -2411,7 +2312,7 @@ function SpecialMeetingWorkspace({
                     ? String(details['durationMinutes'])
                     : '60'
                 }
-                disabled={!canManage}
+                disabled={!canSchedule}
               />
             </Label>
             <Label>
@@ -2441,7 +2342,7 @@ function SpecialMeetingWorkspace({
               <select
                 name="specialMode"
                 defaultValue={detailsText(details, 'mode') || 'office_bilbao'}
-                disabled={!canManage}
+                disabled={!canSchedule}
                 className="border-input bg-background h-10 w-full rounded-md border px-3"
               >
                 <option value="office_bilbao">Despacho Bilbao</option>
@@ -2457,7 +2358,7 @@ function SpecialMeetingWorkspace({
                 defaultValue={
                   detailsText(details, 'preferredLocation') || detailsText(details, 'location')
                 }
-                disabled={!canManage}
+                disabled={!canSchedule}
               />
             </Label>
             <Label>
@@ -2496,7 +2397,7 @@ function SpecialMeetingWorkspace({
                             name="preparationDone"
                             value={item.id}
                             defaultChecked={item.done}
-                            disabled={!canManage || pending}
+                            disabled={!canSchedule || pending}
                             aria-label={`Preparación completada: ${item.text}`}
                             className="mt-1"
                           />
@@ -2520,7 +2421,7 @@ function SpecialMeetingWorkspace({
                           name="meetingAction"
                           value={`remove_preparation_item:${item.id}`}
                           aria-label={`Quitar punto: ${item.text}`}
-                          disabled={!canManage || pending}
+                          disabled={!canSchedule || pending}
                         >
                           Quitar
                         </Button>
@@ -2538,7 +2439,7 @@ function SpecialMeetingWorkspace({
                     name="preparationCategory"
                     value={preparationCategory}
                     onChange={(event) => setPreparationCategory(event.target.value)}
-                    disabled={!canManage || pending}
+                    disabled={!canSchedule || pending}
                     className="border-input bg-background h-10 rounded-md border px-3 text-sm"
                   >
                     <option>Documentación a solicitar</option>
@@ -2552,14 +2453,14 @@ function SpecialMeetingWorkspace({
                   aria-label="Punto de preparación"
                   value={newPreparationItem}
                   onChange={(event) => setNewPreparationItem(event.target.value)}
-                  disabled={!canManage || pending}
+                  disabled={!canSchedule || pending}
                   placeholder="Qué hay que preparar…"
                 />
                 <Button
                   type="submit"
                   name="meetingAction"
                   value="add_preparation_item"
-                  disabled={!canManage || pending}
+                  disabled={!canSchedule || pending}
                 >
                   Añadir punto de preparación
                 </Button>
@@ -2572,7 +2473,7 @@ function SpecialMeetingWorkspace({
               <MeetingCalendarPanel
                 firmId={firmId}
                 taskId={task.id}
-                disabled={!canManage}
+                disabled={!canSchedule}
                 initialDate={
                   detailsText(details, 'startsAt')
                     ? new Date(detailsText(details, 'startsAt'))
@@ -2597,7 +2498,7 @@ function SpecialMeetingWorkspace({
                   name="specialStartsAt"
                   type="datetime-local"
                   defaultValue={toDateTimeLocal(detailsText(details, 'startsAt'))}
-                  disabled={!canManage}
+                  disabled={!canSchedule}
                 />
               </Label>
               <Label>
@@ -2606,7 +2507,7 @@ function SpecialMeetingWorkspace({
                   name="specialEndsAt"
                   type="datetime-local"
                   defaultValue={toDateTimeLocal(detailsText(details, 'endsAt'))}
-                  disabled={!canManage}
+                  disabled={!canSchedule}
                 />
               </Label>
               <Label>
@@ -2615,7 +2516,7 @@ function SpecialMeetingWorkspace({
                   name="specialUrl"
                   type="url"
                   defaultValue={detailsText(details, 'meetingUrl')}
-                  disabled={!canManage}
+                  disabled={!canSchedule}
                 />
               </Label>
             </div>
@@ -2635,53 +2536,17 @@ function SpecialMeetingWorkspace({
               Motivo de cancelación o no celebración
               <Textarea
                 name="meetingStatusReason"
-                disabled={!canManage}
+                disabled={!canSchedule}
                 placeholder="Indica qué ha ocurrido…"
               />
             </Label>
-          ) : null}
-          {status === 'in_progress' || status === 'finished' ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Label>
-                Resumen
-                <Textarea
-                  name="meetingSummary"
-                  defaultValue={detailsText(details, 'summary')}
-                  disabled={!canManage}
-                />
-              </Label>
-              <Label>
-                Decisiones
-                <Textarea
-                  name="meetingDecisions"
-                  defaultValue={detailsText(details, 'decisions')}
-                  disabled={!canManage}
-                />
-              </Label>
-              <Label>
-                Resultado
-                <Textarea
-                  name="meetingOutcome"
-                  defaultValue={detailsText(details, 'outcome')}
-                  disabled={!canManage}
-                />
-              </Label>
-              <Label>
-                Transcripción
-                <Textarea
-                  name="meetingTranscription"
-                  defaultValue={detailsText(details, 'transcription')}
-                  disabled={!canManage}
-                />
-              </Label>
-            </div>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button
               type="submit"
               name="meetingStatus"
               value={status}
-              disabled={!canManage || pending}
+              disabled={!canSchedule || pending}
             >
               Guardar cambios
             </Button>
@@ -2690,7 +2555,7 @@ function SpecialMeetingWorkspace({
                 type="submit"
                 name="meetingStatus"
                 value="scheduled"
-                disabled={!canManage || pending}
+                disabled={!canSchedule || pending}
               >
                 Confirmar cita con el cliente
               </Button>
@@ -2709,23 +2574,13 @@ function SpecialMeetingWorkspace({
                 </Button>
               </>
             ) : null}
-            {status === 'in_progress' ? (
-              <Button
-                type="submit"
-                name="meetingStatus"
-                value="finished"
-                disabled={!canWork || pending}
-              >
-                Finalizar reunión
-              </Button>
-            ) : null}
             {['preparation', 'scheduled'].includes(status) ? (
               <Button
                 type="submit"
                 variant="outline"
                 name="meetingStatus"
                 value="not_held"
-                disabled={!canManage || pending}
+                disabled={!canSchedule || pending}
               >
                 No celebrada
               </Button>
@@ -2736,7 +2591,7 @@ function SpecialMeetingWorkspace({
                 variant="outline"
                 name="meetingStatus"
                 value="cancelled"
-                disabled={!canManage || pending}
+                disabled={!canSchedule || pending}
               >
                 Cancelar reunión
               </Button>

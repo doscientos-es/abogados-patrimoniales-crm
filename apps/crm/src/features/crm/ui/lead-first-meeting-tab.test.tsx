@@ -24,10 +24,11 @@ vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: mocks.appointments, isPending: false, isError: false }),
   useCrearTarea: () => ({ mutateAsync: mocks.create, isPending: false }),
   useActualizarReunionEspecial: () => ({ mutateAsync: mocks.updateMeeting, isPending: false }),
+  useMarcarSiguienteAccion: () => ({ isPending: false }),
   MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
 }))
 
-import { LeadFirstMeetingTab } from './lead-first-meeting-tab'
+import { AppointmentsTab, LeadFirstMeetingTab } from './lead-first-meeting-tab'
 
 afterEach(() => {
   cleanup()
@@ -96,9 +97,8 @@ describe('LeadFirstMeetingTab', () => {
       }),
     ]
     const tab = renderTab()
-    fireEvent.change(screen.getByLabelText('Texto de la transcripción'), {
-      target: { value: 'Transcripción todavía sin guardar' },
-    })
+    expect(screen.queryByLabelText('Texto de la transcripción')).toBeNull()
+    expect(screen.getByText('Notas internas de la reunión')).toBeTruthy()
     const input = screen.getByLabelText('Añadir notas durante la cita') as HTMLInputElement
     fireEvent.change(input, { target: { value: '  Nueva nota  ' } })
     fireEvent.keyDown(input, { key: 'Enter' })
@@ -117,9 +117,6 @@ describe('LeadFirstMeetingTab', () => {
         : {},
     ]
     tab.rerender(tabElement())
-    expect((screen.getByLabelText('Texto de la transcripción') as HTMLTextAreaElement).value).toBe(
-      'Transcripción todavía sin guardar',
-    )
     tab.unmount()
     renderTab()
     expect(screen.getByText('Nueva nota')).toBeTruthy()
@@ -127,7 +124,7 @@ describe('LeadFirstMeetingTab', () => {
   })
 
   it('conserva el borrador de la nota si falla su guardado', async () => {
-    mocks.appointments = [meeting()]
+    mocks.appointments = [meeting({ status: 'in_progress' })]
     mocks.updateMeeting.mockRejectedValueOnce(new Error('Error al guardar'))
     renderTab()
     const input = screen.getByLabelText('Añadir notas durante la cita') as HTMLInputElement
@@ -139,22 +136,15 @@ describe('LeadFirstMeetingTab', () => {
     expect(screen.queryByText('Texto pendiente')).toBeNull()
   })
 
-  it('shows a compact appointment summary and the transcript workspace, without the long form', () => {
+  it('shows the schedule and a manual Google Calendar link before the appointment starts', () => {
     mocks.appointments = [meeting()]
     renderTab()
 
     const block = screen.getByRole('region', { name: 'Datos de la cita' })
     for (const text of ['Ana Responsable', 'Despacho Rekalde', '30 min', 'Agendada'])
       expect(block.textContent).toContain(text)
-    expect(
-      screen.getAllByRole('heading', { name: 'Transcripción de la Primera cita' }),
-    ).toHaveLength(1)
-    expect(screen.getByText('Pendiente')).toBeTruthy()
-    expect(screen.getByLabelText('Texto de la transcripción')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Guardar transcripción' })).toBeTruthy()
-    expect(screen.getByText(/se enviará a OpenAI/)).toBeTruthy()
-    expect(screen.queryByText('Resultado y siguientes pasos')).toBeNull()
-    expect(screen.queryByRole('button', { name: /Comenzar primera cita/i })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Añadir a Google Calendar' })).toBeTruthy()
+    expect(screen.queryByLabelText('Texto de la transcripción')).toBeNull()
   })
 
   it('reschedules with any minute and keeps the meeting lifecycle status', async () => {
@@ -220,16 +210,14 @@ describe('LeadFirstMeetingTab', () => {
   })
 
   it('analyses a saved transcript without a separate authorization checkbox', async () => {
-    mocks.appointments = [meeting({ transcription: 'Transcripción de prueba' })]
+    mocks.appointments = [meeting({ status: 'finished', transcription: 'Transcripción de prueba' })]
     mocks.invoke.mockResolvedValue({
       data: { proposal: { resumen: 'Resumen propuesto' } },
       error: null,
     })
     renderTab()
 
-    expect(
-      screen.getAllByRole('heading', { name: 'Transcripción de la Primera cita' }),
-    ).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { name: 'Transcripción de la cita' })).toHaveLength(1)
     expect(screen.getByText('Incorporada')).toBeTruthy()
     expect(screen.getByText('Transcripción de prueba')).toBeTruthy()
     expect(screen.queryByLabelText(/Confirmo que puedo enviar/)).toBeNull()
@@ -258,6 +246,36 @@ describe('LeadFirstMeetingTab', () => {
           }),
         }),
       ),
+    )
+  })
+
+  it('keeps the lead appointments separate and opens the exact case appointment from a link', () => {
+    mocks.appointments = [
+      { ...meeting(), titulo: 'Consulta inicial' },
+      { ...meeting(), id: 'case-event-1', expedienteId: 'case-1', titulo: 'Revisión' },
+      { ...meeting(), id: 'case-event-2', expedienteId: 'case-1', titulo: 'Seguimiento' },
+    ]
+    const lead = renderTab()
+    expect(screen.getAllByRole('option')).toHaveLength(1)
+    expect(screen.getByRole('option', { name: /Consulta inicial/ })).toBeTruthy()
+    lead.unmount()
+
+    render(
+      <AppointmentsTab
+        scope="case"
+        parent={{ id: 'case-1', titulo: 'Sucesión', referencia: 'EXP-001' }}
+        firmId="firm-1"
+        members={[]}
+        contactId="contact-1"
+        currentUserId="user-1"
+        memberRole="paralegal"
+        appointmentId="case-event-2"
+        canEdit
+      />,
+    )
+    expect(screen.getAllByRole('option')).toHaveLength(2)
+    expect((screen.getByRole('combobox', { name: 'Cita' }) as HTMLSelectElement).value).toBe(
+      'case-event-2',
     )
   })
 

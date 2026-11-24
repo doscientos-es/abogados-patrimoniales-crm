@@ -22,6 +22,7 @@ import { useActiveMembership, useAuthSession } from '@/features/auth'
 import {
   buildMonthGrid,
   calendarEntries,
+  isPersonalAppointment,
   dayKey,
   EMPTY_CALENDAR_FILTERS,
   filterCalendarEntries,
@@ -33,6 +34,8 @@ import {
   type CalendarEntryFilters,
 } from '@/features/calendar/application/calendar-model'
 import { useMiembrosDespacho } from '@/features/crm'
+import { isAppointment } from '@/features/crm/application/first-meeting-cycle'
+import { AppointmentLink } from '@/features/crm/ui/appointment-link'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
   useCrearTarea,
@@ -108,6 +111,8 @@ export function CalendarPage({
   const view = viewProp ?? localView
   const setView = onViewChange ?? setLocalView
   const [filters, setFilters] = useState<CalendarEntryFilters>(EMPTY_CALENDAR_FILTERS)
+  const [onlyMyAppointments, setOnlyMyAppointments] = useState(false)
+  const userId = session.user?.id ?? ''
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const [createDay, setCreateDay] = useState<Date | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null)
@@ -118,8 +123,17 @@ export function CalendarPage({
   )
 
   const entries = useMemo(
-    () => filterCalendarEntries(calendarEntries(tasks.data ?? []), filters, caseNames),
-    [caseNames, filters, tasks.data],
+    () =>
+      filterCalendarEntries(
+        calendarEntries(
+          (tasks.data ?? []).filter(
+            (task) => !onlyMyAppointments || isPersonalAppointment(task, userId),
+          ),
+        ),
+        filters,
+        caseNames,
+      ),
+    [caseNames, filters, onlyMyAppointments, tasks.data, userId],
   )
   const activeFilterCount =
     Number(filters.tipo !== 'all') +
@@ -218,6 +232,15 @@ export function CalendarPage({
               </button>
             ))}
           </fieldset>
+          <Button
+            type="button"
+            size="sm"
+            variant={onlyMyAppointments ? 'default' : 'outline'}
+            aria-pressed={onlyMyAppointments}
+            onClick={() => setOnlyMyAppointments((current) => !current)}
+          >
+            Mis citas
+          </Button>
           <Badge variant="secondary" className="h-8 px-2.5 tabular-nums">
             {monthEntries.length} {monthEntries.length === 1 ? 'fecha' : 'fechas'} en el mes
           </Badge>
@@ -659,9 +682,10 @@ function EventDetailDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const task = entry?.task
+  const appointment = Boolean(task && isAppointment(task))
   const updateDate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!task) return
+    if (!task || appointment) return
     const dueAtValue = new FormData(event.currentTarget).get('dueAt')
     const dueAt = typeof dueAtValue === 'string' ? dueAtValue : ''
     try {
@@ -699,25 +723,35 @@ function EventDetailDialog({
                   <dd className="font-medium">{task.critico ? 'Crítica' : task.prioridad}</dd>
                 </div>
               </dl>
-              <form className="space-y-1.5" onSubmit={(event) => void updateDate(event)}>
-                <Label htmlFor={`calendar-task-date-${task.id}`}>Fecha y hora</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id={`calendar-task-date-${task.id}`}
-                    name="dueAt"
-                    type="datetime-local"
-                    defaultValue={task.venceEn ? dateTimeLocalValue(new Date(task.venceEn)) : ''}
-                  />
-                  <Button type="submit" variant="outline" disabled={pending}>
-                    Actualizar fecha
-                  </Button>
-                </div>
-              </form>
+              {!appointment ? (
+                <form className="space-y-1.5" onSubmit={(event) => void updateDate(event)}>
+                  <Label htmlFor={`calendar-task-date-${task.id}`}>Fecha y hora</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`calendar-task-date-${task.id}`}
+                      name="dueAt"
+                      type="datetime-local"
+                      defaultValue={task.venceEn ? dateTimeLocalValue(new Date(task.venceEn)) : ''}
+                    />
+                    <Button type="submit" variant="outline" disabled={pending}>
+                      Actualizar fecha
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
             </div>
             <DialogFooter>
-              <Link to="/tareas/$taskId" params={{ taskId: task.id }} className={buttonVariants()}>
-                Abrir tarea
-              </Link>
+              {appointment && (task.expedienteId || task.oportunidadId) ? (
+                <AppointmentLink task={task} />
+              ) : (
+                <Link
+                  to="/tareas/$taskId"
+                  params={{ taskId: task.id }}
+                  className={buttonVariants()}
+                >
+                  Abrir tarea
+                </Link>
+              )}
             </DialogFooter>
           </>
         ) : null}

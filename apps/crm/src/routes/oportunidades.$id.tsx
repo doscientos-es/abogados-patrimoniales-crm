@@ -43,8 +43,8 @@ import {
   type OportunidadPersistida,
 } from '@/features/crm'
 import {
+  canHoldAppointment,
   estadoAsistente,
-  meetingHosts,
   pickFirstMeeting,
 } from '@/features/crm/application/first-meeting-cycle'
 import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
@@ -288,12 +288,7 @@ function FichaOportunidadPage() {
           contactName={contacto.data ? contactName(contacto.data) : ''}
           canEdit={
             !data.archivadoEn &&
-            (meetingHosts(firstMeetingTask.reunion).includes(session.user.id) ||
-              ['owner', 'admin'].includes(membership.data.role) ||
-              (!meetingHosts(firstMeetingTask.reunion).length &&
-                (firstMeetingTask.asignadoId === session.user.id ||
-                  firstMeetingTask.creadaPorId === session.user.id ||
-                  membership.data.role === 'lawyer')))
+            canHoldAppointment(firstMeetingTask, session.user.id, membership.data.role)
           }
           currentUserId={session.user.id}
           onStarted={() =>

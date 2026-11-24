@@ -21,6 +21,7 @@ export function MeetingAttendeesPicker({
   defaultContactIds = [],
   defaultUserIds = [],
   disabled = false,
+  contactsReadOnly = false,
 }: {
   firmId: string | undefined
   caseParticipants?: Array<{ id: string; contactoId: string | null; nombre: string; rol?: string }>
@@ -30,6 +31,7 @@ export function MeetingAttendeesPicker({
   defaultContactIds?: string[]
   defaultUserIds?: string[]
   disabled?: boolean
+  contactsReadOnly?: boolean
 }) {
   const contacts = useContactos(firmId)
   const [contactIds, setContactIds] = useState(defaultContactIds)
@@ -56,7 +58,7 @@ export function MeetingAttendeesPicker({
       {userIds.map((id) => (
         <input key={`u-${id}`} type="hidden" name={usersName} value={id} />
       ))}
-      {caseContacts.length && !disabled ? (
+      {caseContacts.length && !disabled && !contactsReadOnly ? (
         <div className="space-y-1.5">
           <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Intervinientes del expediente
@@ -90,17 +92,19 @@ export function MeetingAttendeesPicker({
       ) : null}
       {disabled ? null : (
         <div className="flex flex-wrap gap-1.5">
-          <SearchMenu
-            label="Añadir contacto"
-            icon={<UserPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
-            itemIcon={
-              <Building2 className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
-            }
-            placeholder="Buscar en contactos…"
-            options={contactOptions}
-            selected={contactIds}
-            onPick={(id) => setContactIds((list) => toggle(list, id))}
-          />
+          {!contactsReadOnly ? (
+            <SearchMenu
+              label="Añadir contacto"
+              icon={<UserPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
+              itemIcon={
+                <Building2 className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
+              }
+              placeholder="Buscar en contactos…"
+              options={contactOptions}
+              selected={contactIds}
+              onPick={(id) => setContactIds((list) => toggle(list, id))}
+            />
+          ) : null}
           <SearchMenu
             label="Añadir compañero"
             icon={<Users className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
@@ -118,7 +122,7 @@ export function MeetingAttendeesPicker({
               key={`c-${id}`}
               name={contactName(id)}
               tag="Contacto"
-              disabled={disabled}
+              disabled={disabled || contactsReadOnly}
               onRemove={() => setContactIds((list) => list.filter((item) => item !== id))}
             />
           ))}

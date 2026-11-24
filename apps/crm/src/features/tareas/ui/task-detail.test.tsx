@@ -65,15 +65,25 @@ vi.mock('@/components/tareas/task-create-dialog', () => ({
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
-    params: _params,
+    params,
+    search,
+    reloadDocument: _reloadDocument,
     children,
     ...props
   }: {
     to: string
-    params?: unknown
+    params?: Record<string, string>
+    search?: Record<string, string>
+    reloadDocument?: boolean
     children?: ReactNode
   } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={to} {...props}>
+    <a
+      href={
+        to.replace(/\$(\w+)/g, (match, key: string) => params?.[key] ?? match) +
+        (search ? `?${new URLSearchParams(search)}` : '')
+      }
+      {...props}
+    >
       {children}
     </a>
   ),
@@ -424,15 +434,10 @@ describe('TaskDetail', () => {
     )
   })
 
-  it.each([
-    ['preparation', 'Agendar reunión', 'scheduled', 'owner'],
-    ['scheduled', 'Comenzar reunión', 'in_progress', 'paralegal'],
-    ['in_progress', 'Finalizar reunión', 'finished', 'paralegal'],
-  ])('transitions a special meeting from %s to %s', async (status, button, nextStatus, role) => {
-    mocks.role = role
+  it('lets the assigned scheduler confirm without editing the request or managing the task', async () => {
     mocks.meetingDetails = {
       specialType: 'meeting',
-      status,
+      status: 'preparation',
       startsAt: '2026-09-20T09:00:00.000Z',
       endsAt: '2026-09-20T10:00:00.000Z',
       mode: 'office_bilbao',
@@ -456,15 +461,20 @@ describe('TaskDetail', () => {
     }
     render(<TaskDetail taskId="task-1" />)
 
-    fireEvent.click(screen.getByRole('button', { name: button }))
+    expect((screen.getByLabelText('Objeto de la reunión') as HTMLInputElement).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Añadir contacto' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Añadir compañero' })).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-09-20T14:00' } })
+    const endsAt = new Date('2026-09-20T14:00').toISOString()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar cita con el cliente' }))
 
     await expect.poll(() => mocks.updateSpecialMeeting.mock.calls.length).toBe(1)
     expect(mocks.updateSpecialMeeting).toHaveBeenCalledWith(
       expect.objectContaining({
         details: expect.objectContaining({
-          status: nextStatus,
+          status: 'scheduled',
           startsAt: '2026-09-20T09:00:00.000Z',
-          endsAt: '2026-09-20T10:00:00.000Z',
+          endsAt,
           location: 'Sala Bilbao',
           attendeeContactIds: ['contact-1'],
           attendeeUserIds: ['user-2'],
@@ -623,26 +633,32 @@ describe('TaskDetail', () => {
     )
   })
 
-  it('shows an elapsed timer while a special meeting is in progress', () => {
-    mocks.meetingDetails = {
-      specialType: 'meeting',
-      status: 'in_progress',
-      startsAt: '2026-09-25T09:00:00.000Z',
-      endsAt: '2026-09-25T10:00:00.000Z',
-      startedAt: new Date(Date.now() - 65_000).toISOString(),
-      mode: 'office_bilbao',
-      location: 'Sala Bilbao',
-      meetingUrl: '',
-      preparation: '',
-      attendeeContactIds: [],
-      attendeeUserIds: [],
-    }
-    render(<TaskDetail taskId="task-1" />)
+  it.each(['scheduled', 'in_progress', 'finished'])(
+    'opens the case appointment from a %s task instead of offering a second meeting workflow',
+    (status) => {
+      mocks.meetingDetails = {
+        specialType: 'meeting',
+        status,
+        startsAt: '2026-09-25T09:00:00.000Z',
+        endsAt: '2026-09-25T10:00:00.000Z',
+        startedAt: new Date(Date.now() - 65_000).toISOString(),
+        mode: 'office_bilbao',
+        location: 'Sala Bilbao',
+        meetingUrl: '',
+        preparation: '',
+        attendeeContactIds: [],
+        attendeeUserIds: [],
+      }
+      render(<TaskDetail taskId="task-1" />)
 
-    expect(
-      screen.getByRole('timer', { name: 'Tiempo transcurrido de la reunión' }).textContent,
-    ).toMatch(/^\d{2}:\d{2}:\d{2}$/)
-  })
+      expect(
+        screen.getByRole('link', { name: 'Abrir ficha de la cita' }).getAttribute('href'),
+      ).toBe('/expedientes/case-1?tab=appointments&appointmentId=task-1')
+      expect(screen.queryByRole('button', { name: 'Comenzar reunión' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Finalizar reunión' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Completar' })).toBeNull()
+    },
+  )
 
   it('saves a meeting internal note linked to the task and lists linked notes', async () => {
     mocks.role = 'owner'
