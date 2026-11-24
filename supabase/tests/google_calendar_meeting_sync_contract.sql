@@ -86,6 +86,9 @@ declare
   test_secret text := repeat('s', 32);
   valid_token text := repeat('a', 64);
   expired_token text := repeat('b', 64);
+  meeting public.crm_tasks;
+  request_count bigint;
+  claimed record;
 begin
   if has_table_privilege('authenticated', 'public.crm_google_calendar_invocations', 'SELECT')
     or has_function_privilege('authenticated', 'public.crm_consume_google_calendar_invocation(text)', 'EXECUTE')
@@ -103,6 +106,38 @@ begin
   if not (select enabled from public.crm_google_calendar_sync_status(gen_random_uuid())) then
     raise exception 'Activation must report that synchronization is enabled';
   end if;
+
+  meeting.id := gen_random_uuid();
+  meeting.firm_id := gen_random_uuid();
+  meeting.kind := 'event';
+  meeting.status := 'pending';
+  meeting.meeting_details := jsonb_build_object(
+    'specialType', 'meeting', 'status', 'scheduled', 'startsAt', now() + interval '2 days',
+    'endsAt', now() + interval '2 days 1 hour'
+  );
+  select count(*) into request_count from net.http_request_queue;
+  perform public.crm_capture_google_calendar_meeting(meeting, false);
+  if (select count(*) from net.http_request_queue) <> request_count + 1 then
+    raise exception 'Confirming a meeting must dispatch immediately';
+  end if;
+  perform public.crm_capture_google_calendar_meeting(meeting, false);
+  select * into strict claimed from public.crm_claim_google_calendar_jobs(meeting.firm_id, 'example.com');
+  perform public.crm_finish_google_calendar_job(claimed.id, claimed.lease_id, claimed.revision, 'calendar_request');
+  if (select count(*) from net.http_request_queue) <> request_count + 1 then
+    raise exception 'Unchanged meetings and retry bookkeeping must not dispatch immediately';
+  end if;
+  meeting.meeting_details := meeting.meeting_details || jsonb_build_object('endsAt', now() + interval '2 days 2 hours');
+  perform public.crm_capture_google_calendar_meeting(meeting, false);
+  perform public.crm_capture_google_calendar_meeting(meeting, true);
+  if (select count(*) from net.http_request_queue) <> request_count + 3 then
+    raise exception 'Rescheduling and cancelling must dispatch immediately';
+  end if;
+  perform cron.alter_job(scheduled_job_id, active := false);
+  perform public.crm_capture_google_calendar_meeting(meeting, false);
+  if (select count(*) from net.http_request_queue) <> request_count + 3 then
+    raise exception 'Pausing synchronization must also stop immediate dispatch';
+  end if;
+
   insert into public.crm_google_calendar_invocations (token_hash, expires_at) values
     (extensions.hmac(valid_token, test_secret, 'sha256'), now() + interval '2 minutes'),
     (extensions.hmac(expired_token, test_secret, 'sha256'), now() - interval '1 second');

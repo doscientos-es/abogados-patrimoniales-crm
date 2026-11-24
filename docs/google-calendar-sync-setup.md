@@ -25,7 +25,7 @@ Verificar el proyecto Supabase enlazado para **Nuestro** antes de hacer cambios.
 
 Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Para usar un cliente OAuth distinto, configurar juntos `GOOGLE_CALENDAR_CLIENT_ID` y `GOOGLE_CALENDAR_CLIENT_SECRET`; ambos tienen prioridad sobre los de Drive.
 
-Antes de aplicar migraciones, comparar el historial remoto con el repositorio: este proyecto tiene versiones históricas que no coinciden y no debe ejecutarse `supabase db push` a ciegas. Desplegar las funciones `google-calendar-sync` y `google-calendar-connection`. La primera valida una credencial de Cron de un solo uso; la segunda exige una sesión y un administrador activo del despacho.
+Antes de aplicar migraciones, comparar el historial remoto con el repositorio: este proyecto tiene versiones históricas que no coinciden y no debe ejecutarse `supabase db push` a ciegas. Desplegar las funciones `google-calendar-sync` y `google-calendar-connection`. La primera valida una credencial de un solo uso; la segunda exige una sesión y un administrador activo del despacho.
 
 En producción (`abogados-patrimoniales-crm`), las migraciones locales `20261124150000`, `20261124151000` y `20261124160000` se aplicaron con las versiones remotas `20261124164621`, `20261124164638` y `20261124164730`, respectivamente. No volver a aplicarlas al reconciliar el historial.
 
@@ -35,7 +35,7 @@ Abrir **CRM → Configuración → Conexiones → Google Calendar** como adminis
 
 Como alternativa administrativa, las entradas de Vault son `crm_google_calendar_worker_url` y `crm_google_calendar_worker_secret`. La primera es la URL HTTPS de `google-calendar-sync`; la segunda contiene el mismo valor que `CRM_GOOGLE_CALENDAR_WORKER_SECRET`. No copiarlas a tickets ni chat. El trabajo de Cron también debe activarse explícitamente.
 
-Cron procesa la cola cada minuto. La migración encola también las citas futuras ya confirmadas, así que al activar la sincronización se pueden enviar invitaciones de citas existentes. Para pausar nuevos envíos, desactivar **`crm-google-calendar-sync`** en Supabase Cron; los cambios del CRM seguirán quedando en cola. Evitar cambiar el ID del calendario después de empezar a sincronizar: cambiarlo no retira los eventos del calendario anterior.
+Al confirmar, modificar o cancelar una cita, la base de datos solicita la sincronización después de guardar los cambios. Cron revisa la cola cada minuto como respaldo para reintentar errores. La migración encola también las citas futuras ya confirmadas, así que al activar la sincronización se pueden enviar invitaciones de citas existentes. Para pausar los nuevos envíos inmediatos y los reintentos, desactivar **`crm-google-calendar-sync`** en Supabase Cron; los cambios del CRM seguirán quedando en cola. Una llamada que ya esté en curso podría terminar después de la pausa. Evitar cambiar el ID del calendario después de empezar a sincronizar: cambiarlo no retira los eventos del calendario anterior.
 
 ## 3. Prueba de puesta en marcha
 
