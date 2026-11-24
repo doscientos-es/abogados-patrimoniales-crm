@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { isDedicatedCalendar, synchronizeCalendarJob, type CalendarJob } from './calendar.ts'
+import { calendarAccessToken } from './oauth.ts'
 
 const env = (name: string) => Deno.env.get(name)?.trim() ?? ''
 
@@ -12,30 +13,6 @@ function authorized(provided: string | null, expected: string) {
   const left = encoder.encode(provided)
   const right = encoder.encode(expected)
   return left.length === right.length && timingSafeEqual(left, right)
-}
-
-async function accessToken() {
-  const clientId = env('GOOGLE_CALENDAR_CLIENT_ID')
-  const clientSecret = env('GOOGLE_CALENDAR_CLIENT_SECRET')
-  const refreshToken = env('GOOGLE_CALENDAR_REFRESH_TOKEN')
-  if (!clientId || !clientSecret || !refreshToken)
-    throw new Error('Google Calendar is not configured')
-  const result = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-    }),
-    signal: AbortSignal.timeout(6_000),
-  })
-  if (!result.ok) throw new Error('Google Calendar authorization unavailable')
-  const data = (await result.json()) as { access_token?: unknown }
-  if (typeof data.access_token !== 'string' || !data.access_token)
-    throw new Error('Google Calendar returned an invalid authorization')
-  return data.access_token
 }
 
 Deno.serve(async (request) => {
@@ -71,7 +48,7 @@ Deno.serve(async (request) => {
     const jobs = data as CalendarJob[]
     if (!jobs.length) return new Response(null, { status: 204 })
 
-    const token = await accessToken().catch(() => null)
+    const token = await calendarAccessToken(env).catch(() => null)
     let failures = 0
     for (const job of jobs) {
       let errorCode = token ? null : 'google_auth'

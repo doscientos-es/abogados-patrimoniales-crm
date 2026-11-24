@@ -5,9 +5,9 @@ El CRM crea una **Cita del despacho** en un calendario privado al confirmar la f
 ## 1. Google: crear un calendario y autorizar el acceso
 
 1. Con la cuenta de integración del despacho, abrir Google Calendar → **Configuración → Añadir calendario → Crear un calendario**. Crear `LEX · Citas`, zona horaria `Europe/Madrid`. Mantenerlo privado y no compartir permisos de edición. Copiar el **ID del calendario** desde **Integrar el calendario**; debe acabar en `@group.calendar.google.com`.
-2. En el proyecto [Google Cloud](https://console.cloud.google.com/) del cliente, habilitar **Google Calendar API**. Se puede reutilizar el proyecto usado para Drive, pero el token de Drive no autoriza Calendar. Crear un cliente OAuth web separado para Calendar para no tocar la conexión existente.
+2. En el proyecto [Google Cloud](https://console.cloud.google.com/) del cliente, habilitar **Google Calendar API**. Se pueden reutilizar el proyecto y el cliente OAuth web de Drive, pero el token de Drive no autoriza Calendar.
 3. En **Google Auth Platform**, usar audiencia **Interna** si el despacho usa Workspace y registrar el permiso `https://www.googleapis.com/auth/calendar.events.owned`. Si la aplicación es externa, completar la publicación y cualquier verificación requerida por Google; el modo Testing no es adecuado para producción porque el token puede caducar a los siete días.
-4. Añadir `https://developers.google.com/oauthplayground` a las URI de redirección del **cliente OAuth de Calendar**. Abrir [OAuth Playground](https://developers.google.com/oauthplayground/), activar **Use your own OAuth credentials** e introducir las credenciales del nuevo cliente. Pedir acceso **Offline**, autorizar solo el permiso anterior con la cuenta propietaria del calendario e intercambiar el código por el **Refresh token**.
+4. Añadir `https://developers.google.com/oauthplayground` a las URI de redirección del cliente OAuth. Abrir [OAuth Playground](https://developers.google.com/oauthplayground/), activar **Use your own OAuth credentials** e introducir las credenciales del cliente. Pedir acceso **Offline**, autorizar el permiso anterior con la cuenta propietaria del calendario e intercambiar el código por un **Refresh token** específico para Calendar. No reemplazar el token de Drive.
 
 No copiar secretos a Git, tickets, chat ni comandos. Introducirlos directamente en los formularios de OAuth y Supabase.
 
@@ -17,13 +17,13 @@ Verificar el proyecto Supabase enlazado para **Nuestro** antes de hacer cambios.
 
 | Nombre                              | Valor                                                           |
 | ----------------------------------- | --------------------------------------------------------------- |
-| `GOOGLE_CALENDAR_CLIENT_ID`         | ID del nuevo cliente OAuth de Calendar                          |
-| `GOOGLE_CALENDAR_CLIENT_SECRET`     | Secreto del nuevo cliente OAuth de Calendar                     |
 | `GOOGLE_CALENDAR_REFRESH_TOKEN`     | Token offline autorizado por la cuenta propietaria              |
 | `GOOGLE_CALENDAR_ID`                | ID de `LEX · Citas`                                             |
 | `GOOGLE_CALENDAR_FIRM_ID`           | UUID exacto del despacho (`crm_firms.id`)                       |
 | `GOOGLE_CALENDAR_STAFF_DOMAIN`      | Dominio corporativo exacto, sin `@`; no usar un dominio público |
 | `CRM_GOOGLE_CALENDAR_WORKER_SECRET` | Secreto aleatorio y exclusivo, de 32 a 256 caracteres ASCII     |
+
+Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Para usar un cliente OAuth distinto, configurar juntos `GOOGLE_CALENDAR_CLIENT_ID` y `GOOGLE_CALENDAR_CLIENT_SECRET`; ambos tienen prioridad sobre los de Drive.
 
 Con el proyecto ya enlazado, revisar las migraciones con `supabase db push --dry-run` y aplicar las aprobadas con `supabase db push`. Desplegar con `supabase functions deploy google-calendar-sync`. Esta función valida el secreto propio de Cron en lugar de un JWT; no comparte el secreto con el CRM ni con Google.
 
