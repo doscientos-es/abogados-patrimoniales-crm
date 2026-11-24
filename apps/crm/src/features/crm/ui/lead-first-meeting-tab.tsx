@@ -161,7 +161,7 @@ export function AppointmentsTab({
             subject: parent.titulo,
             contactIds: contactId ? [contactId] : [],
           }}
-          successMessage={first ? 'Primera cita programada.' : 'Solicitud de cita creada.'}
+          successMessage={first ? 'Solicitud de primera cita creada.' : 'Solicitud de cita creada.'}
         />
       ) : null}
       {task ? (

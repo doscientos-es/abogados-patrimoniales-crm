@@ -93,7 +93,7 @@ describe('TaskCreateDialog', () => {
       target: { value: 'Seguimiento' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Añadir compañero' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Mi nombre' }))
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Mi nombre' }))
     fireEvent.click(screen.getByRole('button', { name: 'Crear reunión' }))
 
     await waitFor(() =>
