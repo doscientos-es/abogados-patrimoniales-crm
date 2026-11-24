@@ -25,7 +25,7 @@ Verificar el proyecto Supabase enlazado para **Nuestro** antes de hacer cambios.
 
 Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Para usar un cliente OAuth distinto, configurar juntos `GOOGLE_CALENDAR_CLIENT_ID` y `GOOGLE_CALENDAR_CLIENT_SECRET`; ambos tienen prioridad sobre los de Drive.
 
-Con el proyecto ya enlazado, revisar las migraciones con `supabase db push --dry-run` y aplicar las aprobadas con `supabase db push`. Desplegar con `supabase functions deploy google-calendar-sync`. Esta función valida el secreto propio de Cron en lugar de un JWT; no comparte el secreto con el CRM ni con Google.
+Antes de aplicar migraciones, comparar el historial remoto con el repositorio: este proyecto tiene versiones históricas que no coinciden y no debe ejecutarse `supabase db push` a ciegas. Desplegar las funciones `google-calendar-sync` y `google-calendar-connection`. La primera valida el secreto propio de Cron; la segunda exige una sesión y un administrador activo del despacho.
 
 Abrir **CRM → Configuración → Conexiones → Google Calendar** como administrador y pulsar **Probar conexión**. La prueba comprueba la autorización y acceso al calendario sin crear eventos. Una vez verificada, pulsar **Activar sincronización**: el servidor configura Vault con la URL y el secreto sin mostrarlos en el CRM. Al activarla se pueden enviar invitaciones de citas futuras ya confirmadas.
 
