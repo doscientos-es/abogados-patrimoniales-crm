@@ -42,6 +42,15 @@ describe('AccessGate', () => {
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy()
   })
 
+  it('opens the account menu from the compact avatar', async () => {
+    render(<AccountMenu compact />)
+    const button = screen.getByRole('button', { name: 'Abrir menú de cuenta' })
+    expect(button.textContent).not.toContain('María')
+    fireEvent.click(button)
+    expect(await screen.findByText('maria@despacho.es')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy()
+  })
+
   it('lets an invited user create a password before membership activation completes', async () => {
     mocks.refetch.mockResolvedValue(undefined)
     mocks.updatePassword.mockResolvedValue(undefined)

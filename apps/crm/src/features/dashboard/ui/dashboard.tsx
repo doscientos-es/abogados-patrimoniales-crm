@@ -1,20 +1,22 @@
 import { Link } from '@tanstack/react-router'
 import {
   ArrowRight,
+  BriefcaseBusiness,
   CalendarDays,
   Check,
   CheckCircle2,
-  FileUp,
+  CircleDollarSign,
+  FileText,
   FolderOpen,
   HandCoins,
-  MessageSquarePlus,
-  Plus,
+  ListTodo,
+  MessageSquare,
   UsersRound,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
-import { PendingPanel, SectionHeader } from '@/components/common'
+import { PendingPanel } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -239,16 +241,69 @@ export function Dashboard() {
   ].filter((risk) => risk.value > 0)
 
   return (
-    <main className="mx-auto max-w-350 space-y-5">
-      <SectionHeader
-        title="Inicio"
-        meta={summary}
-        actions={
-          <Link to="/tareas" className={buttonVariants({ size: 'sm', className: 'gap-1.5' })}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Crear tarea
+    <main className="mx-auto max-w-350 space-y-4 pb-8 sm:space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-semibold tracking-tight sm:text-3xl">Inicio</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{summary}</p>
+        </div>
+        <Link
+          to="/tareas"
+          className={buttonVariants({ size: 'sm', className: 'gap-2 rounded-xl' })}
+        >
+          <ListTodo className="size-4" aria-hidden="true" /> Ver tareas
+        </Link>
+      </header>
+      <section
+        aria-label="Resumen del despacho"
+        className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4"
+      >
+        {[
+          {
+            label: 'Tareas pendientes',
+            value: dashboard.openTasks.length,
+            to: '/tareas' as const,
+            icon: ListTodo,
+          },
+          {
+            label: 'Expedientes activos',
+            value: dashboard.activeCases.length,
+            to: '/expedientes' as const,
+            icon: BriefcaseBusiness,
+          },
+          {
+            label: 'Oportunidades activas',
+            value: dashboard.activeOpportunities.length,
+            to: '/oportunidades' as const,
+            icon: UsersRound,
+          },
+          {
+            label: 'Facturas pendientes de cobro',
+            value: dashboard.pendingInvoices.length,
+            to: '/facturacion' as const,
+            icon: CircleDollarSign,
+          },
+        ].map(({ label, value, to, icon: Icon }) => (
+          <Link
+            key={label}
+            to={to}
+            aria-label={`${value} ${label}`}
+            className="border-border/70 bg-card hover:border-primary/30 focus-visible:ring-ring flex min-w-0 flex-col gap-2 rounded-xl border p-3 shadow-sm transition-colors outline-none focus-visible:ring-2 sm:gap-3 sm:rounded-2xl sm:p-5"
+          >
+            <span className="flex items-center gap-2.5 sm:gap-3">
+              <span className="bg-primary/8 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-10 sm:rounded-xl">
+                <Icon className="size-4 sm:size-5" aria-hidden="true" />
+              </span>
+              <span className="text-xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+                {value}
+              </span>
+            </span>
+            <span className="text-muted-foreground text-xs leading-snug font-medium sm:text-sm">
+              {label}
+            </span>
           </Link>
-        }
-      />
+        ))}
+      </section>
       <section
         aria-labelledby="quick-actions-heading"
         className="flex flex-wrap items-center gap-2"
@@ -257,28 +312,28 @@ export function Dashboard() {
           id="quick-actions-heading"
           className="text-muted-foreground mr-1 text-xs font-medium tracking-wide uppercase"
         >
-          Acciones rápidas
+          Accesos rápidos
         </span>
         {[
           {
             to: '/expedientes' as const,
             icon: FolderOpen,
-            title: 'Abrir expediente',
+            title: 'Expedientes',
           },
           {
             to: '/tareas' as const,
-            icon: Plus,
-            title: 'Crear tarea',
+            icon: ListTodo,
+            title: 'Tareas',
           },
           {
             to: '/comunicaciones' as const,
-            icon: MessageSquarePlus,
-            title: 'Nueva conversación',
+            icon: MessageSquare,
+            title: 'Comunicaciones',
           },
           {
             to: '/documentos' as const,
-            icon: FileUp,
-            title: 'Subir documento',
+            icon: FileText,
+            title: 'Documentos',
           },
         ].map(({ to, icon: Icon, title }) => (
           <Link
@@ -287,7 +342,7 @@ export function Dashboard() {
             className={buttonVariants({
               variant: 'outline',
               size: 'sm',
-              className: 'h-8 gap-1.5 rounded-full px-3',
+              className: 'h-9 gap-2 rounded-xl px-3',
             })}
           >
             <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -472,7 +527,7 @@ export function Dashboard() {
               key={item.id}
               to="/oportunidades/$id"
               params={{ id: item.id }}
-              className="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors"
+              className="hover:bg-muted/50 focus-visible:ring-ring flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition-colors outline-none focus-visible:ring-2"
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">
@@ -508,18 +563,21 @@ function TodayActionInbox({
   return (
     <section
       aria-labelledby="today-actions-heading"
-      className="border-primary/20 bg-card overflow-hidden rounded-lg border shadow-sm"
+      className="border-border/70 bg-card overflow-hidden rounded-2xl border shadow-sm"
     >
-      <div className="border-primary/15 bg-primary/5 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3.5">
+      <div className="border-border/70 bg-primary/5 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-5 sm:px-6">
         <div>
-          <p className="text-primary text-xs font-semibold tracking-wide uppercase">
+          <p className="text-primary text-xs font-semibold tracking-[0.12em] uppercase">
             Bandeja de hoy
           </p>
-          <h2 id="today-actions-heading" className="mt-0.5 font-serif text-lg font-semibold">
-            {actionCount
-              ? `Tienes ${actionCount} ${actionCount === 1 ? 'acción prioritaria' : 'acciones prioritarias'}.`
-              : 'Todo bajo control.'}
+          <h2 id="today-actions-heading" className="mt-1 font-serif text-xl font-semibold">
+            {actionCount ? 'Acciones prioritarias' : 'Todo bajo control.'}
           </h2>
+          {actionCount ? (
+            <p className="text-muted-foreground mt-1 text-sm">
+              {actionCount} {actionCount === 1 ? 'acción mostrada' : 'acciones mostradas'}
+            </p>
+          ) : null}
         </div>
         {actionCount ? (
           <Link
@@ -544,7 +602,7 @@ function TodayActionInbox({
           ))}
         </ul>
       ) : (
-        <p className="text-muted-foreground px-4 py-5 text-sm">
+        <p className="text-muted-foreground px-5 py-6 text-sm sm:px-6">
           No hay plazos, seguimientos ni cobros que requieran atención inmediata.
         </p>
       )}
@@ -570,7 +628,7 @@ function TodayActionRow({
   if (action.type === 'task') {
     const { task } = action
     return (
-      <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <li className="hover:bg-muted/30 flex flex-wrap items-center gap-3 px-5 py-4 transition-colors sm:px-6">
         <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
         <Link
           to="/tareas"
@@ -599,7 +657,7 @@ function TodayActionRow({
   if (action.type === 'opportunity') {
     const { opportunity } = action
     return (
-      <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <li className="hover:bg-muted/30 flex flex-wrap items-center gap-3 px-5 py-4 transition-colors sm:px-6">
         <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
         <Link
           to="/oportunidades/$id"
@@ -626,7 +684,7 @@ function TodayActionRow({
 
   const { invoice } = action
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <li className="hover:bg-muted/30 flex flex-wrap items-center gap-3 px-5 py-4 transition-colors sm:px-6">
       <span className={`h-8 w-1 shrink-0 rounded-full ${toneClass}`} aria-hidden="true" />
       <Link
         to="/facturacion"
@@ -759,11 +817,14 @@ function DashboardControl({ dashboard }: { dashboard: ReturnType<typeof buildDas
   ]
 
   return (
-    <section aria-label="Centro de control operativo" className="border-b pb-4">
-      <div className="mb-3">
-        <h2 className="font-serif text-lg">Resumen</h2>
+    <section aria-label="Centro de control operativo">
+      <div className="mb-4">
+        <h2 className="font-serif text-xl font-semibold">Resumen operativo</h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Una visión de la actividad del despacho.
+        </p>
       </div>
-      <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+      <div className="grid gap-4 lg:grid-cols-3">
         {groups.map((group) => (
           <MetricGroup key={group.title} {...group} />
         ))}
@@ -782,10 +843,12 @@ function MetricGroup({
   metrics: ControlMetric[]
 }) {
   return (
-    <div className="py-4 lg:px-5 lg:first:pl-0 lg:last:pr-0">
-      <div className="text-muted-foreground mb-2 flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-        <h3 className="text-xs font-semibold tracking-wide uppercase">{title}</h3>
+    <div className="border-border/70 bg-card rounded-2xl border p-5 shadow-sm">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="bg-primary/8 text-primary flex size-9 items-center justify-center rounded-xl">
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+        <h3 className="text-sm font-semibold">{title}</h3>
       </div>
       <ul className="divide-y">
         {metrics.map((metric) => (
@@ -808,14 +871,10 @@ function CompactMetric({ label, value, tone, to }: ControlMetric) {
     <li className="list-none">
       <Link
         to={to}
-        className="hover:bg-muted/50 focus-visible:ring-ring group -mx-1 flex min-w-0 items-center gap-2 rounded-sm px-1 py-2 transition-colors outline-none focus-visible:ring-2"
+        className="hover:bg-muted/50 focus-visible:ring-ring group -mx-2 flex min-w-0 items-center gap-2 rounded-lg px-2 py-2.5 transition-colors outline-none focus-visible:ring-2"
       >
-        <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs font-medium">
-          {label}
-        </span>
-        <span className={`font-serif text-lg font-semibold tabular-nums ${valueClass}`}>
-          {value}
-        </span>
+        <span className="text-muted-foreground min-w-0 flex-1 text-sm">{label}</span>
+        <span className={`text-base font-semibold tabular-nums ${valueClass}`}>{value}</span>
         <ArrowRight
           className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
           aria-hidden="true"
@@ -854,11 +913,11 @@ function DashboardCard({
 }) {
   const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children)
   return (
-    <Card className={className}>
+    <Card className={`border-border/70 rounded-2xl shadow-sm ${className ?? ''}`}>
       <CardHeader className="flex-row items-start justify-between gap-3 pb-3">
         <div className="min-w-0">
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-          {description ? <p className="text-muted-foreground mt-1 text-xs">{description}</p> : null}
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          {description ? <p className="text-muted-foreground mt-1 text-sm">{description}</p> : null}
         </div>
         {action}
       </CardHeader>

@@ -268,6 +268,7 @@ function FichaOportunidadPage() {
           reference={data.referencia}
           contactName={contacto.data ? contactName(contacto.data) : ''}
           canEdit={!data.archivadoEn}
+          onStarted={() => setActiveTab('firstMeeting')}
         />
       ) : null}
       {!data.archivadoEn &&

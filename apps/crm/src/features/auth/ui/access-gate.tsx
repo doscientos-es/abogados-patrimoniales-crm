@@ -16,6 +16,7 @@ import { UserAvatar } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 import {
   signInWithPassword,
@@ -102,7 +103,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-export function AccountMenu() {
+export function AccountMenu({ compact = false }: { compact?: boolean } = {}) {
   const session = useAuthSession()
   const [sending, setSending] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -117,13 +118,19 @@ export function AccountMenu() {
     <PopoverTrigger>
       <Button
         aria-label="Abrir menú de cuenta"
-        className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full min-w-0 justify-start gap-2 px-2 text-left"
+        title={compact ? 'Abrir menú de cuenta' : undefined}
+        className={cn(
+          'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full min-w-0 gap-2 rounded-xl px-2 text-left',
+          compact ? 'justify-center' : 'justify-start',
+        )}
         variant="ghost"
       >
         <UserAvatar name={displayName} seed={session.user.id || email} size="sm" />
-        <span className="min-w-0 truncate text-sm font-medium" title={displayName}>
-          {displayName}
-        </span>
+        {!compact ? (
+          <span className="min-w-0 truncate text-sm font-medium" title={displayName}>
+            {displayName}
+          </span>
+        ) : null}
       </Button>
       <PopoverContent placement="top start" className="w-72 p-2">
         <div className="border-border border-b px-2 py-2.5">

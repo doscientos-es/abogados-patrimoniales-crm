@@ -419,8 +419,11 @@ export type GuardarNotaInput = {
   critical: boolean
   requiresAcknowledgement: boolean
   validity: 'permanent' | 'temporary'
+  startsOn?: string | null
   reviewOn: string | null
+  reviewPending?: boolean
   expiresOn: string | null
+  snoozedUntil?: string | null
   expiryAction: 'archive' | 'confirm'
   triggers: string[]
   visibility: 'team' | 'restricted'
@@ -428,7 +431,7 @@ export type GuardarNotaInput = {
   caseId?: string | null
   opportunityId?: string | null
   /** Extra keys merged into `details`, e.g. `{ taskId }` to link the note to a task. */
-  extraDetails?: Record<string, string>
+  extraDetails?: Record<string, Json | undefined>
 }
 
 export function useGuardarNota(firmId: string | undefined) {
@@ -458,12 +461,12 @@ export function useGuardarNota(firmId: string | undefined) {
           critical: input.critical,
           requires_acknowledgement: input.requiresAcknowledgement,
           validity: input.validity,
-          starts_on: '',
+          starts_on: input.startsOn ?? '',
           review_on: input.reviewOn ?? '',
           expires_on: input.validity === 'temporary' ? (input.expiresOn ?? '') : '',
           expiry_action: input.expiryAction,
-          review_pending: Boolean(input.reviewOn),
-          snoozed_until: '',
+          review_pending: input.reviewPending ?? Boolean(input.reviewOn),
+          snoozed_until: input.snoozedUntil ?? '',
           visibility: input.visibility,
           details: { ...input.extraDetails, triggers: input.triggers },
           contact_ids: input.contactIds,

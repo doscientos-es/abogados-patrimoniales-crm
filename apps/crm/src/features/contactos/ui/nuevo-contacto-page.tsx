@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { ContactAIIntake } from './contact-ai-intake'
 import { CONTACT_ORIGINS } from './contact-origins'
 import { DraftNote } from './draft-note'
+import { PostalMunicipalitySuggestions, usePostalMunicipality } from './postal-municipality'
 
 const NATURES: Naturaleza[] = ['Persona física', 'Persona jurídica', 'Órgano judicial', 'Público']
 const RELATIONSHIPS: RelacionDespacho[] = [
@@ -105,6 +106,11 @@ export function NuevoContactoPage() {
   const createContact = useCrearContacto(firmId)
   const duplicateCandidates = useContactDuplicateCandidates(firmId)
   const createNote = useCrearNotaPersona(firmId)
+  const postalLookup = usePostalMunicipality({
+    codigoPostal: 'codigoPostal',
+    municipio: 'municipio',
+    pais: 'pais',
+  })
   const [nature, setNature] = useState<Naturaleza>('Persona física')
   const [relationship, setRelationship] = useState<RelacionDespacho>('Lead')
   const [origin, setOrigin] = useState('')
@@ -141,6 +147,7 @@ export function NuevoContactoPage() {
   }
 
   const applyAIValues = (values: Record<string, string>, newDocuments: File[]) => {
+    postalLookup.reset()
     setDocuments((current) => [...current, ...newDocuments])
     const extractedNature = values['naturaleza']
     if (NATURES.includes(extractedNature as Naturaleza) && extractedNature !== nature)
@@ -288,6 +295,7 @@ export function NuevoContactoPage() {
           )
             updateDuplicateValues()
         }}
+        onChange={postalLookup.onFormChange}
         onSubmit={(event) => void submit(event)}
       >
         <Card>
@@ -506,7 +514,10 @@ export function NuevoContactoPage() {
               description="Introduce los cinco dígitos del código postal."
               digitsOnly
             />
-            <Field name="municipio" label="Municipio" autoComplete="address-level2" />
+            <div>
+              <Field name="municipio" label="Municipio" autoComplete="address-level2" />
+              <PostalMunicipalitySuggestions lookup={postalLookup} />
+            </div>
             <Field name="provincia" label="Provincia" autoComplete="address-level1" />
             <div className="space-y-1.5">
               <Label htmlFor="contact-pais">País</Label>

@@ -147,7 +147,7 @@ export function TaskCreateDialog({
     const form = event.currentTarget
     const data = new FormData(form)
     const details = firstMeeting
-      ? firstMeetingDetails(data)
+      ? firstMeetingDetails(data, members)
       : special === 'meeting'
         ? meetingDetails(data)
         : special === 'communication'
@@ -166,7 +166,7 @@ export function TaskCreateDialog({
       return
     }
     const issue = firstMeeting
-      ? firstMeetingCreationIssue(data)
+      ? firstMeetingCreationIssue(data, members)
       : details?.specialType === 'meeting'
         ? specialMeetingCreationIssue(details)
         : null
@@ -192,11 +192,7 @@ export function TaskCreateDialog({
             : null,
         critico: data.get('critical') === 'on',
         asignadoId: firstMeeting
-          ? (members.find((member) =>
-            member.nombre
-              .toLowerCase()
-              .startsWith(text(data, 'firstMeetingLawyer').toLowerCase()),
-          )?.id ?? currentUserId ?? null)
+          ? text(data, 'firstMeetingLawyer')
           : text(data, 'assignee') || null,
         mensajeInicial: text(data, 'initialMessage'),
         etiquetaIds: labelIds,
@@ -204,7 +200,7 @@ export function TaskCreateDialog({
       })
       toast.success(
         successMessage ??
-        (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
+          (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
       )
       form.reset()
       reset()
@@ -250,7 +246,11 @@ export function TaskCreateDialog({
         ) : (
           <form className="space-y-4" aria-busy={pending} onSubmit={(event) => void submit(event)}>
             {firstMeeting && meetingPreset ? (
-              <FirstMeetingFields preset={meetingPreset} contextLabel={contextLabel} />
+              <FirstMeetingFields
+                preset={meetingPreset}
+                contextLabel={contextLabel}
+                members={members}
+              />
             ) : special === 'meeting' ? (
               <MeetingFields
                 firmId={firmId}
@@ -601,7 +601,7 @@ function MeetingFields({
             ].map((value) => [value, value] as const)}
           />
           {datePreference === 'Antes de una fecha' ||
-            datePreference === 'Fecha concreta preferente' ? (
+          datePreference === 'Fecha concreta preferente' ? (
             <Field
               name="meetingPreferredDate"
               label={datePreference === 'Antes de una fecha' ? 'Fecha límite' : 'Fecha preferente'}
@@ -793,11 +793,11 @@ export function PresetPicker({
   const filtered = presets.filter((preset) => preset.toLowerCase().includes(needle))
   const specials = onSpecial
     ? (
-      [
-        ['meeting', 'Reunión', CalendarClock],
-        ['communication', 'Comunicación', MessageSquare],
-      ] as const
-    ).filter(([, name]) => name.toLowerCase().includes(needle))
+        [
+          ['meeting', 'Reunión', CalendarClock],
+          ['communication', 'Comunicación', MessageSquare],
+        ] as const
+      ).filter(([, name]) => name.toLowerCase().includes(needle))
     : []
   const close = () => {
     setOpen(false)
@@ -955,14 +955,14 @@ function meetingDetails(data: FormData): DetallesReunion {
   }
 }
 
-const FIRST_MEETING_LAWYERS = ['Igor', 'Jon', 'David'] as const
-
 function FirstMeetingFields({
   preset,
   contextLabel,
+  members,
 }: {
   preset: MeetingPreset
   contextLabel?: string | undefined
+  members: Array<{ id: string; nombre: string }>
 }) {
   return (
     <div className="space-y-5">
@@ -980,15 +980,23 @@ function FirstMeetingFields({
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Abogado de la Primera Cita *</legend>
         <div className="flex flex-wrap gap-2">
-          {FIRST_MEETING_LAWYERS.map((name, index) => (
+          {members.map((member, index) => (
             <label
-              key={name}
+              key={member.id}
               className="has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm"
             >
-              <input type="radio" name="firstMeetingLawyer" value={name} required={index === 0} />
-              {name}
+              <input
+                type="radio"
+                name="firstMeetingLawyer"
+                value={member.id}
+                required={index === 0}
+              />
+              {member.nombre}
             </label>
           ))}
+          {!members.length ? (
+            <p className="text-muted-foreground text-sm">No hay miembros disponibles.</p>
+          ) : null}
         </div>
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -1029,17 +1037,22 @@ function FirstMeetingFields({
   )
 }
 
-function firstMeetingCreationIssue(data: FormData): string | null {
-  if (!text(data, 'firstMeetingLawyer')) return 'Elige el abogado de la Primera Cita.'
+function firstMeetingCreationIssue(data: FormData, members: Array<{ id: string }>): string | null {
+  if (!members.some((member) => member.id === text(data, 'firstMeetingLawyer')))
+    return 'Elige el abogado de la Primera Cita.'
   if (!text(data, 'firstMeetingDate')) return 'Indica la fecha de la cita.'
   if (!text(data, 'firstMeetingTime')) return 'Indica la hora de la cita.'
   return null
 }
 
-function firstMeetingDetails(data: FormData): DetallesReunion {
+function firstMeetingDetails(
+  data: FormData,
+  members: Array<{ id: string; nombre: string }>,
+): DetallesReunion {
   const duration = Number(text(data, 'meetingDuration')) || 30
   const date = text(data, 'firstMeetingDate')
   const time = text(data, 'firstMeetingTime')
+  const lawyer = members.find((member) => member.id === text(data, 'firstMeetingLawyer'))
   const start = date && time ? new Date(`${date}T${time}`) : null
   const valid = start && !Number.isNaN(start.getTime())
   return {
@@ -1058,7 +1071,8 @@ function firstMeetingDetails(data: FormData): DetallesReunion {
     durationMinutes: duration,
     preferredDateType: 'Fecha concreta preferente',
     preferredDate: date,
-    abogadoPrimeraCita: text(data, 'firstMeetingLawyer'),
+    abogadoPrimeraCita: lawyer?.nombre ?? '',
+    abogadoPrimeraCitaId: lawyer?.id ?? '',
   }
 }
 

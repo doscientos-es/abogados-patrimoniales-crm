@@ -9,7 +9,7 @@ import {
   Plus,
   StickyNote,
 } from 'lucide-react'
-import { useState, type FormEvent, type InputHTMLAttributes } from 'react'
+import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
@@ -57,6 +57,7 @@ import { CONTACT_ORIGINS } from './contact-origins'
 import { ContactPersonalFilesTab } from './contact-personal-files-tab'
 import { ContactProfileTab } from './contact-profile-tab'
 import { DraftNote } from './draft-note'
+import { PostalMunicipalitySuggestions, usePostalMunicipality } from './postal-municipality'
 
 export const CONTACT_TABS = ['summary', 'general', 'banking', 'profile', 'files', 'notes'] as const
 
@@ -608,194 +609,204 @@ export function ContactDetail({
             <CardTitle className="text-base">Datos generales</CardTitle>
           </CardHeader>
           <CardContent>
-            <form
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-              onSubmit={(event) => void save(event)}
-            >
-              <Field
-                name="name"
-                label="Nombre"
-                value={contact.nombre}
-                autoComplete="given-name"
-                required
-              />
-              <Field
-                name="lastName"
-                label="Apellidos"
-                value={contact.apellidos ?? ''}
-                autoComplete="family-name"
-              />
-              {contact.tipoPersona !== 'Persona física' ? (
-                <Field
-                  name="legalName"
-                  label="Razón social"
-                  value={contact.razonSocial ?? ''}
-                  autoComplete="organization"
-                />
-              ) : null}
-              {contact.tipoPersona === 'Órgano judicial' ? (
-                <>
-                  <Field name="courtNumber" label="Número" value={contact.numeroOrgano ?? ''} />
-                  <Field
-                    name="courtDistrict"
-                    label="Partido judicial"
-                    value={contact.partidoJudicial ?? ''}
-                  />
-                  <Field
-                    name="courtCode"
-                    label="Código del órgano"
-                    value={contact.codigoOrgano ?? ''}
-                  />
-                </>
-              ) : null}
-              {contact.tipoPersona === 'Público' ? (
-                <>
-                  <Field name="body" label="Organismo" value={contact.organismo ?? ''} />
-                  <Field
-                    name="administrativeUnit"
-                    label="Unidad administrativa"
-                    value={contact.unidadAdministrativa ?? ''}
-                  />
-                </>
-              ) : null}
-              <Field name="taxId" label="NIF / CIF" value={contact.nif} />
-              <Field
-                name="birthDate"
-                label="Fecha de nacimiento"
-                value={contact.nacimiento ?? ''}
-                type="date"
-                autoComplete="bday"
-              />
-              <Field
-                name="email"
-                label="Correo"
-                value={contact.email}
-                type="email"
-                autoComplete="email"
-              />
-              <Field
-                name="email2"
-                label="Correo alternativo"
-                value={contact.email2 ?? ''}
-                type="email"
-                autoComplete="email"
-              />
-              <Field
-                name="phone"
-                label="Teléfono"
-                value={contact.telefono}
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                pattern="[0-9+() -]+"
-                maxLength={20}
-              />
-              <Field
-                name="phone2"
-                label="Teléfono alternativo"
-                value={contact.telefono2 ?? ''}
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                pattern="[0-9+() -]+"
-                maxLength={20}
-              />
-              <Field
-                name="address"
-                label="Dirección"
-                value={contact.direccion}
-                autoComplete="street-address"
-              />
-              <Field
-                name="postalCode"
-                label="Código postal"
-                value={contact.cp}
-                autoComplete="postal-code"
-                inputMode="numeric"
-              />
-              <Field
-                name="city"
-                label="Municipio"
-                value={contact.municipio}
-                autoComplete="address-level2"
-              />
-              <Field
-                name="province"
-                label="Provincia"
-                value={contact.provincia}
-                autoComplete="address-level1"
-              />
-              <Field name="country" label="País" value={contact.pais} autoComplete="country-name" />
-              {contact.tipoPersona === 'Persona jurídica' || contact.tipoPersona === 'Público' ? (
+            <ContactGeneralForm onSubmit={(event) => void save(event)}>
+              {(postalLookup) => (
                 <>
                   <Field
-                    name="contactPerson"
-                    label="Persona de contacto"
-                    value={contact.personaContacto ?? ''}
+                    name="name"
+                    label="Nombre"
+                    value={contact.nombre}
+                    autoComplete="given-name"
+                    required
                   />
-                  <Field name="contactRole" label="Cargo" value={contact.cargoContacto ?? ''} />
-                </>
-              ) : null}
-              <div className="space-y-1">
-                <Label htmlFor="contact-source">Origen</Label>
-                <select
-                  id="contact-source"
-                  name="source"
-                  defaultValue={contact.origen}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  <option value="">Seleccionar</option>
-                  {contact.origen && !CONTACT_ORIGINS.includes(contact.origen) ? (
-                    <option value={contact.origen}>{contact.origen}</option>
+                  <Field
+                    name="lastName"
+                    label="Apellidos"
+                    value={contact.apellidos ?? ''}
+                    autoComplete="family-name"
+                  />
+                  {contact.tipoPersona !== 'Persona física' ? (
+                    <Field
+                      name="legalName"
+                      label="Razón social"
+                      value={contact.razonSocial ?? ''}
+                      autoComplete="organization"
+                    />
                   ) : null}
-                  {CONTACT_ORIGINS.map((origin) => (
-                    <option key={origin} value={origin}>
-                      {origin}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="contact-relationship">Relación con el despacho</Label>
-                <select
-                  id="contact-relationship"
-                  name="relationship"
-                  defaultValue={contact.relacion}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                >
-                  {[
-                    'Lead',
-                    'Cliente',
-                    'Profesional / colaborador',
-                    'Tercero',
-                    'Contraparte',
-                    'Proveedor',
-                  ].map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </div>
-              {contact.recomendadoPor || contact.recommendedById ? (
-                <div className="space-y-1">
-                  <Label htmlFor="contact-recommended-by">Recomendado por</Label>
-                  <Input
-                    id="contact-recommended-by"
-                    name="recommendedBy"
-                    defaultValue={
-                      contact.recomendadoPor ??
-                      (recommendedContact ? displayName(recommendedContact) : '')
-                    }
-                    placeholder="Nombre de quien lo recomienda"
-                    className="uppercase"
+                  {contact.tipoPersona === 'Órgano judicial' ? (
+                    <>
+                      <Field name="courtNumber" label="Número" value={contact.numeroOrgano ?? ''} />
+                      <Field
+                        name="courtDistrict"
+                        label="Partido judicial"
+                        value={contact.partidoJudicial ?? ''}
+                      />
+                      <Field
+                        name="courtCode"
+                        label="Código del órgano"
+                        value={contact.codigoOrgano ?? ''}
+                      />
+                    </>
+                  ) : null}
+                  {contact.tipoPersona === 'Público' ? (
+                    <>
+                      <Field name="body" label="Organismo" value={contact.organismo ?? ''} />
+                      <Field
+                        name="administrativeUnit"
+                        label="Unidad administrativa"
+                        value={contact.unidadAdministrativa ?? ''}
+                      />
+                    </>
+                  ) : null}
+                  <Field name="taxId" label="NIF / CIF" value={contact.nif} />
+                  <Field
+                    name="birthDate"
+                    label="Fecha de nacimiento"
+                    value={contact.nacimiento ?? ''}
+                    type="date"
+                    autoComplete="bday"
                   />
-                </div>
-              ) : null}
-              <div className="flex items-end gap-2">
-                <Button type="submit" disabled={update.isPending}>
-                  Guardar
-                </Button>
-              </div>
-            </form>
+                  <Field
+                    name="email"
+                    label="Correo"
+                    value={contact.email}
+                    type="email"
+                    autoComplete="email"
+                  />
+                  <Field
+                    name="email2"
+                    label="Correo alternativo"
+                    value={contact.email2 ?? ''}
+                    type="email"
+                    autoComplete="email"
+                  />
+                  <Field
+                    name="phone"
+                    label="Teléfono"
+                    value={contact.telefono}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    pattern="[0-9+() -]+"
+                    maxLength={20}
+                  />
+                  <Field
+                    name="phone2"
+                    label="Teléfono alternativo"
+                    value={contact.telefono2 ?? ''}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    pattern="[0-9+() -]+"
+                    maxLength={20}
+                  />
+                  <Field
+                    name="address"
+                    label="Dirección"
+                    value={contact.direccion}
+                    autoComplete="street-address"
+                  />
+                  <Field
+                    name="postalCode"
+                    label="Código postal"
+                    value={contact.cp}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                  />
+                  <div>
+                    <Field
+                      name="city"
+                      label="Municipio"
+                      value={contact.municipio}
+                      autoComplete="address-level2"
+                    />
+                    <PostalMunicipalitySuggestions lookup={postalLookup} />
+                  </div>
+                  <Field
+                    name="province"
+                    label="Provincia"
+                    value={contact.provincia}
+                    autoComplete="address-level1"
+                  />
+                  <Field
+                    name="country"
+                    label="País"
+                    value={contact.pais}
+                    autoComplete="country-name"
+                  />
+                  {contact.tipoPersona === 'Persona jurídica' ||
+                  contact.tipoPersona === 'Público' ? (
+                    <>
+                      <Field
+                        name="contactPerson"
+                        label="Persona de contacto"
+                        value={contact.personaContacto ?? ''}
+                      />
+                      <Field name="contactRole" label="Cargo" value={contact.cargoContacto ?? ''} />
+                    </>
+                  ) : null}
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-source">Origen</Label>
+                    <select
+                      id="contact-source"
+                      name="source"
+                      defaultValue={contact.origen}
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    >
+                      <option value="">Seleccionar</option>
+                      {contact.origen && !CONTACT_ORIGINS.includes(contact.origen) ? (
+                        <option value={contact.origen}>{contact.origen}</option>
+                      ) : null}
+                      {CONTACT_ORIGINS.map((origin) => (
+                        <option key={origin} value={origin}>
+                          {origin}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-relationship">Relación con el despacho</Label>
+                    <select
+                      id="contact-relationship"
+                      name="relationship"
+                      defaultValue={contact.relacion}
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    >
+                      {[
+                        'Lead',
+                        'Cliente',
+                        'Profesional / colaborador',
+                        'Tercero',
+                        'Contraparte',
+                        'Proveedor',
+                      ].map((value) => (
+                        <option key={value}>{value}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {contact.recomendadoPor || contact.recommendedById ? (
+                    <div className="space-y-1">
+                      <Label htmlFor="contact-recommended-by">Recomendado por</Label>
+                      <Input
+                        id="contact-recommended-by"
+                        name="recommendedBy"
+                        defaultValue={
+                          contact.recomendadoPor ??
+                          (recommendedContact ? displayName(recommendedContact) : '')
+                        }
+                        placeholder="Nombre de quien lo recomienda"
+                        className="uppercase"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="flex items-end gap-2">
+                    <Button type="submit" disabled={update.isPending}>
+                      Guardar
+                    </Button>
+                  </div>
+                </>
+              )}
+            </ContactGeneralForm>
           </CardContent>
         </Card>
       ) : null}
@@ -1408,6 +1419,29 @@ function NoteCheckbox({
       />
       {label}
     </label>
+  )
+}
+
+function ContactGeneralForm({
+  onSubmit,
+  children,
+}: {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  children: (lookup: ReturnType<typeof usePostalMunicipality>) => ReactNode
+}) {
+  const lookup = usePostalMunicipality({
+    codigoPostal: 'postalCode',
+    municipio: 'city',
+    pais: 'country',
+  })
+  return (
+    <form
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      onChange={lookup.onFormChange}
+      onSubmit={onSubmit}
+    >
+      {children(lookup)}
+    </form>
   )
 }
 

@@ -70,4 +70,42 @@ describe('TaskCreateDialog', () => {
       expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ asignadoId: null })),
     )
   })
+
+  it('identifica al abogado elegido por su identificador aunque haya nombres iguales', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    renderDialog(
+      <TaskCreateDialog
+        oportunidadId="lead-1"
+        members={[
+          { id: 'a', nombre: 'Ana' },
+          { id: 'b', nombre: 'Ana' },
+        ]}
+        pending={false}
+        onCreate={onCreate}
+        meetingPreset={{
+          meetingType: 'Primera cita',
+          subject: 'Consulta',
+          contactIds: ['contact-1'],
+        }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea' }))
+    fireEvent.click(screen.getAllByRole('radio', { name: 'Ana' })[1]!)
+    fireEvent.change(screen.getByLabelText('Fecha de la cita *'), {
+      target: { value: '2026-12-02' },
+    })
+    fireEvent.change(screen.getByLabelText('Hora *'), { target: { value: '10:30' } })
+    fireEvent.click(screen.getByRole('button', { name: 'CREAR PRIMERA CITA' }))
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          asignadoId: 'b',
+          detallesReunion: expect.objectContaining({
+            abogadoPrimeraCita: 'Ana',
+            abogadoPrimeraCitaId: 'b',
+          }),
+        }),
+      ),
+    )
+  })
 })

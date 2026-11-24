@@ -64,7 +64,7 @@ const MOTIVO_STYLE: Record<MotivoAtencion, { icon: LucideIcon; tone: string; sho
 }
 
 const selectClass =
-  'border-input bg-background h-8 rounded-md border px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
+  'border-input bg-background focus-visible:ring-ring h-9 max-w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-2'
 
 /** Documentos recibidos en bandeja, sin leer su contenido ni saltarse las políticas del cliente. */
 function useDocumentosPorComprobar(firmId: string) {
@@ -94,7 +94,7 @@ function useDocumentosPorComprobar(firmId: string) {
 
 function Destino({ incidencia, children }: { incidencia: Incidencia; children: ReactNode }) {
   const className =
-    'hover:bg-muted/50 flex items-center gap-3 rounded-md border px-3 py-1.5 text-sm transition-colors'
+    'hover:bg-muted/50 focus-visible:ring-ring group flex items-start gap-3 rounded-lg px-2 py-3 text-sm transition-colors outline-none focus-visible:ring-2 sm:px-3'
   const destination = incidencia.destino
   if (destination.tipo === 'tarea')
     return (
@@ -168,13 +168,28 @@ export function RequiresAttention({
       : 'Sin responsable'
 
   return (
-    <Card data-testid="requires-attention">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" /> Requiere atención
-          <Badge variant={allIncidents.length ? 'default' : 'outline'}>{allIncidents.length}</Badge>
-        </CardTitle>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+    <Card data-testid="requires-attention" className="border-border/70 gap-0 rounded-2xl shadow-sm">
+      <CardHeader className="gap-4 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="bg-warning/15 text-warning-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+              <AlertTriangle className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <CardTitle className="text-base">Requiere atención</CardTitle>
+              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+                Incidencias pendientes de revisión.
+              </p>
+            </div>
+          </div>
+          <Badge variant={allIncidents.length ? 'default' : 'outline'} className="shrink-0">
+            {allIncidents.length} en total
+          </Badge>
+        </div>
+        <div
+          aria-label="Filtros de incidencias"
+          className="bg-muted/40 flex flex-wrap items-center gap-2 rounded-xl p-2 text-sm"
+        >
           <select
             aria-label="Responsable"
             className={selectClass}
@@ -189,17 +204,19 @@ export function RequiresAttention({
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-1.5">
+          <label className="hover:bg-background/80 flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-xs font-medium sm:text-sm">
             <input
               type="checkbox"
+              className="accent-primary size-4"
               checked={filters.misTareas}
               onChange={(event) => updateFilters({ ...filters, misTareas: event.target.checked })}
             />
             Mis tareas
           </label>
-          <label className="flex items-center gap-1.5">
+          <label className="hover:bg-background/80 flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-xs font-medium sm:text-sm">
             <input
               type="checkbox"
+              className="accent-primary size-4"
               checked={filters.siguientesAcciones}
               onChange={(event) =>
                 updateFilters({ ...filters, siguientesAcciones: event.target.checked })
@@ -216,42 +233,49 @@ export function RequiresAttention({
           </p>
         ) : null}
         {incidents.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground py-3 text-sm">
             {allIncidents.length ? 'Nada con estos filtros.' : 'Todo en orden: no hay incidencias.'}
           </p>
         ) : (
-          <div className="space-y-2">
-            {visible.map((incident) => (
-              <Destino key={incident.id} incidencia={incident}>
-                <span
-                  className={`flex size-7 shrink-0 items-center justify-center rounded-full ${MOTIVO_STYLE[incident.motivo].tone}`}
-                  aria-hidden="true"
-                >
-                  {(() => {
-                    const Icon = MOTIVO_STYLE[incident.motivo].icon
-                    return <Icon className="size-3.5" />
-                  })()}
-                </span>
-                <span className="min-w-0 flex-1" title={incident.explicacion}>
-                  <span className="block text-base font-semibold break-words">
-                    {incident.titulo}
-                  </span>
-                  <span className="text-muted-foreground block text-sm break-words">
-                    {MOTIVO_STYLE[incident.motivo].short} · {name(incident.responsableId)}
-                  </span>
-                </span>
-                <ChevronRight
-                  className="text-muted-foreground h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-              </Destino>
-            ))}
-          </div>
+          <ul className="divide-border/70 divide-y">
+            {visible.map((incident) => {
+              const { icon: Icon, tone, short } = MOTIVO_STYLE[incident.motivo]
+              return (
+                <li key={incident.id}>
+                  <Destino incidencia={incident}>
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${tone}`}
+                      aria-hidden="true"
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold break-words">
+                        {incident.titulo}
+                      </span>
+                      <span className="text-muted-foreground mt-1 block text-xs leading-relaxed break-words">
+                        <span className="text-foreground font-medium">{short}</span>
+                        {' · '}
+                        {name(incident.responsableId)}
+                      </span>
+                      <span className="text-muted-foreground mt-1 block text-xs leading-relaxed break-words">
+                        {incident.explicacion}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      className="text-muted-foreground group-hover:text-foreground mt-2 size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  </Destino>
+                </li>
+              )
+            })}
+          </ul>
         )}
         {incidents.length > PAGE_SIZE ? (
           <nav
             aria-label="Paginación de incidencias"
-            className="flex items-center justify-between gap-3 pt-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-3 pt-3 text-sm"
           >
             <span className="text-muted-foreground text-xs">
               {currentPage * PAGE_SIZE + 1}–{currentPage * PAGE_SIZE + visible.length} de{' '}

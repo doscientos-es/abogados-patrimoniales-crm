@@ -79,6 +79,7 @@ export type DetallesReunion = {
   primeraCita?: DetallesPrimeraCita
   /** Abogado que atenderá la Primera cita, distinto de quien la prepara. */
   abogadoPrimeraCita?: string
+  abogadoPrimeraCitaId?: string
 }
 
 export type EtiquetaTarea = {

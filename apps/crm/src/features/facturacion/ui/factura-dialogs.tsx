@@ -1,5 +1,5 @@
-import { Eye, FileDown, Printer } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { Eye, FileDown, Plus, Printer, Trash2 } from 'lucide-react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -180,7 +180,7 @@ function DialogShell({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className={wide ? 'max-w-3xl' : 'max-w-md'}>
+      <DialogContent size={wide ? '3xl' : 'md'}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -229,7 +229,7 @@ export function BorradorFacturaDialog({
     <DialogShell
       trigger={trigger}
       title={factura ? `Editar borrador ${factura.referencia}` : 'Crear borrador de factura'}
-      description="Al guardar se crea un borrador, todavía sin numeración fiscal. Después tendrás que emitirlo desde la lista de facturas."
+      description="Guarda los datos para revisarlos más adelante. Este paso no emite la factura ni asigna numeración fiscal."
       wide
       render={(cerrar) => (
         <BorradorFacturaForm
@@ -260,7 +260,8 @@ function BorradorFacturaForm({
   onGuardar: (input: GuardarBorradorInput) => Promise<unknown>
   cerrar: () => void
 }) {
-  const [asuntoId, setAsuntoId] = useState(factura?.asuntoId ?? expedientes[0]?.id ?? '')
+  const id = useId()
+  const [asuntoId, setAsuntoId] = useState(factura?.asuntoId ?? '')
   const [concepto, setConcepto] = useState(factura?.concepto ?? '')
   const [moneda, setMoneda] = useState(factura?.moneda ?? 'EUR')
   const [emision, setEmision] = useState(factura?.emision ?? hoy())
@@ -270,9 +271,11 @@ function BorradorFacturaForm({
       ? factura.lineas.map((linea) => ({ ...linea, clave: linea.id }))
       : [lineaVacia()],
   )
+  const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
 
   const expediente = expedientes.find((item) => item.id === asuntoId)
-  const contactoId = expediente?.contactoPrincipalId ?? factura?.contactoId ?? ''
+  const contactoId =
+    expediente?.contactoPrincipalId ?? (asuntoId === factura?.asuntoId ? factura.contactoId : '')
   const totales = calcularTotales(lineas)
 
   const actualizar = (clave: string, cambios: Partial<LineaEditable>) =>
@@ -282,13 +285,18 @@ function BorradorFacturaForm({
 
   const enviar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setErrorFormulario(null)
     if (!asuntoId || !contactoId) {
-      toast.error('Selecciona un expediente con contacto principal.')
+      setErrorFormulario('Selecciona un expediente con contacto principal.')
+      return
+    }
+    if (!emision) {
+      setErrorFormulario('Indica la fecha prevista de emisión.')
       return
     }
     const error = validarBorrador({ concepto, emision, vencimiento: vencimiento || null, lineas })
     if (error) {
-      toast.error(error)
+      setErrorFormulario(error)
       return
     }
     await ejecutar(
@@ -316,129 +324,228 @@ function BorradorFacturaForm({
   }
 
   return (
-    <form className="space-y-4" onSubmit={(event) => void enviar(event)}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Campo label="Expediente">
-          <select
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-            value={asuntoId}
-            onChange={(event) => setAsuntoId(event.target.value)}
-          >
-            <option value="">Selecciona un expediente</option>
-            {expedientes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.referencia} · {item.titulo}
-              </option>
-            ))}
-          </select>
-        </Campo>
-        <Campo label="Cliente">
-          <div className="bg-muted/50 flex h-9 items-center rounded-md border px-3 text-sm">
-            {contactoId ? nombreCliente(contactoId) : 'Se completa al elegir expediente'}
-          </div>
-        </Campo>
-        <Campo label="Fecha de emisión prevista">
-          <Input
-            type="date"
-            value={emision}
-            onChange={(event) => setEmision(event.target.value)}
-            required
-          />
-        </Campo>
-        <Campo label="Vencimiento">
-          <Input
-            type="date"
-            value={vencimiento}
-            onChange={(event) => setVencimiento(event.target.value)}
-          />
-        </Campo>
-        <Campo label="Moneda">
-          <select
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-            value={moneda}
-            onChange={(event) => setMoneda(event.target.value)}
-          >
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
-            <option value="GBP">GBP</option>
-          </select>
-        </Campo>
-      </div>
-      <Campo label="Concepto">
-        <Textarea
-          value={concepto}
-          onChange={(event) => setConcepto(event.target.value)}
-          placeholder="Honorarios por asesoramiento patrimonial"
-          required
-        />
-      </Campo>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">Líneas</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setLineas((actuales) => [...actuales, lineaVacia()])}
-          >
-            Añadir línea
-          </Button>
+    <form className="space-y-5" noValidate onSubmit={(event) => void enviar(event)}>
+      <section aria-labelledby={`${id}-datos`} className="space-y-4">
+        <div>
+          <h3 id={`${id}-datos`} className="text-base font-semibold">
+            Datos de la factura
+          </h3>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Selecciona el expediente y completa los datos básicos.
+          </p>
         </div>
-        {lineas.map((linea) => (
-          <div key={linea.clave} className="grid gap-2 sm:grid-cols-[1fr_5rem_7rem_5rem_auto]">
-            <Input
-              value={linea.descripcion}
-              onChange={(event) => actualizar(linea.clave, { descripcion: event.target.value })}
-              placeholder="Descripción"
-            />
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={linea.cantidad}
-              onChange={(event) =>
-                actualizar(linea.clave, { cantidad: Number(event.target.value) })
-              }
-            />
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={linea.precioUnitario}
-              onChange={(event) =>
-                actualizar(linea.clave, { precioUnitario: Number(event.target.value) })
-              }
-            />
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={linea.tipoIva}
-              onChange={(event) => actualizar(linea.clave, { tipoIva: Number(event.target.value) })}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={lineas.length === 1}
-              onClick={() =>
-                setLineas((actuales) => actuales.filter((item) => item.clave !== linea.clave))
-              }
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1.5 text-sm font-medium" htmlFor={`${id}-expediente`}>
+            <span className="block">Expediente</span>
+            <select
+              id={`${id}-expediente`}
+              className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-2"
+              value={asuntoId}
+              onChange={(event) => setAsuntoId(event.target.value)}
             >
-              Quitar
-            </Button>
+              <option value="">Selecciona un expediente</option>
+              {factura && !expedientes.some((item) => item.id === factura.asuntoId) ? (
+                <option value={factura.asuntoId}>
+                  {factura.asuntoReferencia} · Expediente original
+                </option>
+              ) : null}
+              {expedientes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.referencia} · {item.titulo}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="space-y-1.5 text-sm font-medium">
+            <span className="block">Cliente</span>
+            <p className="bg-muted/50 flex min-h-10 items-center rounded-lg border px-3 py-2 font-normal break-words">
+              {contactoId ? nombreCliente(contactoId) : 'Se completa al elegir expediente'}
+            </p>
           </div>
+          <label className="space-y-1.5 text-sm font-medium" htmlFor={`${id}-emision`}>
+            <span className="block">Fecha de emisión prevista</span>
+            <Input
+              id={`${id}-emision`}
+              type="date"
+              value={emision}
+              onChange={(event) => setEmision(event.target.value)}
+            />
+          </label>
+          <label className="space-y-1.5 text-sm font-medium" htmlFor={`${id}-vencimiento`}>
+            <span className="block">
+              Vencimiento <span className="text-muted-foreground font-normal">(opcional)</span>
+            </span>
+            <Input
+              id={`${id}-vencimiento`}
+              type="date"
+              value={vencimiento}
+              onChange={(event) => setVencimiento(event.target.value)}
+            />
+          </label>
+          <label
+            className="space-y-1.5 text-sm font-medium sm:col-span-2"
+            htmlFor={`${id}-concepto`}
+          >
+            <span className="block">Concepto</span>
+            <Textarea
+              id={`${id}-concepto`}
+              value={concepto}
+              onChange={(event) => setConcepto(event.target.value)}
+              placeholder="Ej. Honorarios por asesoramiento patrimonial"
+              rows={2}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section aria-labelledby={`${id}-lineas`} className="space-y-3 border-t pt-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 id={`${id}-lineas`} className="text-base font-semibold">
+              Conceptos e importes
+            </h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Añade los servicios y su IVA correspondiente.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium" htmlFor={`${id}-moneda`}>
+            Moneda
+            <select
+              id={`${id}-moneda`}
+              className="border-input bg-background focus-visible:ring-ring h-9 rounded-lg border px-2 outline-none focus-visible:ring-2"
+              value={moneda}
+              onChange={(event) => setMoneda(event.target.value)}
+            >
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </label>
+        </div>
+        {lineas.map((linea, indice) => (
+          <fieldset
+            key={linea.clave}
+            className="bg-muted/30 min-w-0 space-y-3 rounded-xl border p-3 sm:p-4"
+          >
+            <legend className="px-1 text-sm font-semibold">Línea {indice + 1}</legend>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={`Quitar línea ${indice + 1}`}
+                disabled={lineas.length === 1}
+                onClick={() =>
+                  setLineas((actuales) => actuales.filter((item) => item.clave !== linea.clave))
+                }
+              >
+                <Trash2 className="size-4" aria-hidden="true" />{' '}
+                <span className="hidden sm:inline">Quitar</span>
+              </Button>
+            </div>
+            <label
+              className="block space-y-1.5 text-xs font-medium"
+              htmlFor={`${id}-${linea.clave}-descripcion`}
+            >
+              <span className="block">Descripción</span>
+              <Input
+                id={`${id}-${linea.clave}-descripcion`}
+                value={linea.descripcion}
+                onChange={(event) => actualizar(linea.clave, { descripcion: event.target.value })}
+                placeholder="Ej. Preparación y estudio del expediente"
+                maxLength={500}
+              />
+            </label>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <label
+                className="min-w-0 space-y-1.5 text-xs font-medium"
+                htmlFor={`${id}-${linea.clave}-cantidad`}
+              >
+                <span className="block">Cantidad</span>
+                <Input
+                  id={`${id}-${linea.clave}-cantidad`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={linea.cantidad}
+                  onChange={(event) =>
+                    actualizar(linea.clave, { cantidad: Number(event.target.value) })
+                  }
+                />
+              </label>
+              <label
+                className="min-w-0 space-y-1.5 text-xs font-medium"
+                htmlFor={`${id}-${linea.clave}-precio`}
+              >
+                <span className="block">Precio unitario</span>
+                <Input
+                  id={`${id}-${linea.clave}-precio`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={linea.precioUnitario}
+                  onChange={(event) =>
+                    actualizar(linea.clave, { precioUnitario: Number(event.target.value) })
+                  }
+                />
+              </label>
+              <label
+                className="min-w-0 space-y-1.5 text-xs font-medium"
+                htmlFor={`${id}-${linea.clave}-iva`}
+              >
+                <span className="block">IVA (%)</span>
+                <Input
+                  id={`${id}-${linea.clave}-iva`}
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={linea.tipoIva}
+                  onChange={(event) =>
+                    actualizar(linea.clave, { tipoIva: Number(event.target.value) })
+                  }
+                />
+              </label>
+            </div>
+          </fieldset>
         ))}
-      </div>
-      <div className="text-muted-foreground flex flex-wrap gap-4 text-sm">
-        <span>Base: {formatCurrency(totales.baseImponible, moneda)}</span>
-        <span>IVA: {formatCurrency(totales.cuotaIva, moneda)}</span>
-        <span className="text-foreground font-medium">
-          Total: {formatCurrency(totales.total, moneda)}
-        </span>
-      </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={lineas.length >= 200}
+          onClick={() => setLineas((actuales) => [...actuales, lineaVacia()])}
+        >
+          <Plus className="size-4" aria-hidden="true" /> Añadir línea
+        </Button>
+      </section>
+
+      <section aria-label="Resumen de importes" className="bg-primary/5 rounded-xl border p-4">
+        <h3 className="text-sm font-semibold">Resumen</h3>
+        <dl className="mt-3 space-y-2 text-sm">
+          <div className="text-muted-foreground flex justify-between gap-3">
+            <dt>Base imponible</dt>
+            <dd className="tabular-nums">{formatCurrency(totales.baseImponible, moneda)}</dd>
+          </div>
+          <div className="text-muted-foreground flex justify-between gap-3">
+            <dt>IVA</dt>
+            <dd className="tabular-nums">{formatCurrency(totales.cuotaIva, moneda)}</dd>
+          </div>
+          <div className="flex justify-between gap-3 border-t pt-3 text-base font-semibold">
+            <dt>Total</dt>
+            <dd className="tabular-nums">{formatCurrency(totales.total, moneda)}</dd>
+          </div>
+        </dl>
+      </section>
+      {errorFormulario ? (
+        <p role="alert" className="text-destructive text-sm">
+          {errorFormulario}
+        </p>
+      ) : null}
       <DialogFooter>
+        <Button type="button" variant="outline" onClick={cerrar} disabled={pending}>
+          Cancelar
+        </Button>
         <Button type="submit" disabled={pending}>
           {pending ? 'Guardando…' : 'Guardar borrador'}
         </Button>

@@ -15,8 +15,18 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   )),
 }))
-vi.mock('@/features/auth', () => ({ AccountMenu: () => <button>Cuenta</button> }))
-vi.mock('@/features/search', () => ({ GlobalSearch: () => <button>Buscar</button> }))
+vi.mock('@/features/auth', () => ({
+  AccountMenu: ({ compact }: { compact: boolean }) => (
+    <button data-compact={compact}>Cuenta</button>
+  ),
+}))
+vi.mock('@/features/search', () => ({
+  GlobalSearchTrigger: ({ onOpen, compact }: { onOpen: () => void; compact: boolean }) => (
+    <button data-compact={compact} onClick={onOpen}>
+      Buscar
+    </button>
+  ),
+}))
 vi.mock('@/features/tareas/ui/task-notifications-bell', () => ({
   TaskNotificationsBell: () => <button>Avisos</button>,
 }))
@@ -32,7 +42,15 @@ it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   const onNavigate = vi.fn()
   render(
     <SidebarProvider>
-      <AppSidebar open onClose={vi.fn()} onNavigate={onNavigate} closeButtonRef={createRef()} />
+      <AppSidebar
+        open
+        collapsed={false}
+        isMobile={false}
+        onClose={vi.fn()}
+        onNavigate={onNavigate}
+        onOpenSearch={vi.fn()}
+        closeButtonRef={createRef()}
+      />
     </SidebarProvider>,
   )
   const sidebar = screen.getByRole('complementary', { name: 'Navegación principal' })
@@ -48,8 +66,57 @@ it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   expect(onNavigate).toHaveBeenCalledOnce()
 })
 
+it('mantiene accesibles las secciones, la búsqueda y el pie en modo compacto', () => {
+  const onClose = vi.fn()
+  const onOpenSearch = vi.fn()
+  const { rerender } = render(
+    <SidebarProvider>
+      <AppSidebar
+        open
+        collapsed
+        isMobile={false}
+        onClose={onClose}
+        onNavigate={vi.fn()}
+        onOpenSearch={onOpenSearch}
+        closeButtonRef={createRef()}
+      />
+    </SidebarProvider>,
+  )
+  const sidebar = screen.getByRole('complementary', { name: 'Navegación principal' })
+  expect(sidebar.getAttribute('data-collapsed')).toBe('true')
+  expect(sidebar.getAttribute('aria-hidden')).toBe('false')
+  const contacts = within(sidebar).getByRole('link', { name: 'Contactos' })
+  expect(contacts.getAttribute('title')).toBe('Contactos')
+  expect(contacts.getAttribute('aria-current')).toBe('page')
+  expect(within(sidebar).getByRole('link', { name: 'Facturación y cobros' })).toBeTruthy()
+  expect(within(sidebar).getByRole('link', { name: 'Abrir calendario' })).toBeTruthy()
+  expect(within(sidebar).getByRole('button', { name: 'Cuenta' }).getAttribute('data-compact')).toBe(
+    'true',
+  )
+  expect(within(sidebar).getByRole('button', { name: 'Avisos' })).toBeTruthy()
+  fireEvent.click(within(sidebar).getByRole('button', { name: 'Buscar' }))
+  expect(onOpenSearch).toHaveBeenCalledOnce()
+  fireEvent.click(within(sidebar).getByRole('button', { name: 'Expandir navegación' }))
+  expect(onClose).toHaveBeenCalledOnce()
+  rerender(
+    <SidebarProvider>
+      <AppSidebar
+        open
+        collapsed={false}
+        isMobile
+        onClose={onClose}
+        onNavigate={vi.fn()}
+        onOpenSearch={onOpenSearch}
+        closeButtonRef={createRef()}
+      />
+    </SidebarProvider>,
+  )
+  expect(within(sidebar).getByRole('button', { name: 'Ocultar navegación' })).toBeTruthy()
+  expect(within(sidebar).getByRole('link', { name: 'Contactos' }).getAttribute('title')).toBeNull()
+})
+
 it('mantiene el menú superpuesto en móvil y dentro del layout en escritorio', () => {
-  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8')
+  const css = readFileSync('src/styles.css', 'utf8')
   expect(css).toMatch(/\.app-shell \.app-sidebar\s*\{\s*position:\s*fixed;/)
   expect(css).toMatch(
     /@media\s*\(min-width:\s*48rem\)\s*\{\s*\.app-shell \.app-sidebar\s*\{\s*position:\s*relative;/,

@@ -41,10 +41,15 @@ export function PendingHandoffs({ firmId, userId }: { firmId: string; userId: st
     )
 
   return (
-    <section aria-label="Traspasos pendientes" className="bg-card rounded-lg border p-4">
-      <header className="mb-2 flex items-center gap-2">
-        <ArrowRightLeft className="text-primary size-4" aria-hidden="true" />
-        <h2 className="text-sm font-bold tracking-wide uppercase">Traspasos pendientes</h2>
+    <section
+      aria-label="Traspasos pendientes"
+      className="border-border/70 bg-card rounded-2xl border p-5 shadow-sm sm:p-6"
+    >
+      <header className="mb-4 flex items-center gap-3">
+        <span className="bg-primary/8 text-primary flex size-9 items-center justify-center rounded-xl">
+          <ArrowRightLeft className="size-4" aria-hidden="true" />
+        </span>
+        <h2 className="text-base font-semibold">Traspasos pendientes</h2>
         <Badge variant="secondary">{rows.length}</Badge>
       </header>
       {!rows.length ? (

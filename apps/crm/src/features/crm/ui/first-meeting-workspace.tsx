@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { estadoAsistente } from '@/features/crm/application/first-meeting-cycle'
+import { ShortTextList } from '@/features/crm/ui/short-text-list'
 import {
   MeetingInternalNotes,
   useActualizarReunionEspecial,
@@ -48,14 +49,15 @@ export function FirstMeetingWorkspace({
     <div className="space-y-4">
       <WorkspaceHeading />
       <FirstMeetingTimer reunion={task.reunion} />
+      <MeetingShortNotes key={task.id} firmId={firmId} task={task} canEdit={canEdit} />
       <TranscriptBlock
-        key={`${task.id}-${task.version}`}
+        key={`${task.id}-${String(task.reunion['transcription'] ?? '')}`}
         firmId={firmId}
         task={task}
         canEdit={canEdit}
       />
       <AiProposalBlock
-        key={`${task.id}-${task.version}`}
+        key={`${task.id}-${JSON.stringify(task.reunion['lexiaProposal'] ?? null)}`}
         firmId={firmId}
         task={task}
         canEdit={canEdit}
@@ -69,6 +71,56 @@ export function FirstMeetingWorkspace({
         />
       </div>
     </div>
+  )
+}
+
+function MeetingShortNotes({
+  firmId,
+  task,
+  canEdit,
+}: {
+  firmId: string
+  task: TareaPersistida
+  canEdit: boolean
+}) {
+  const update = useActualizarReunionEspecial(firmId)
+  const [savedTask, setSavedTask] = useState(task)
+  const [draft, setDraft] = useState('')
+  const current = task.version >= savedTask.version ? task : savedTask
+  const notes = Array.isArray(current.reunion['internalNotes'])
+    ? current.reunion['internalNotes'].filter(isString)
+    : []
+  const save = async (items: string[]) => {
+    try {
+      const saved = await update.mutateAsync({
+        task: current,
+        details: {
+          ...(current.reunion as unknown as DetallesReunion),
+          specialType: 'meeting',
+          internalNotes: items,
+        },
+      })
+      setSavedTask(saved)
+      return true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron guardar las notas.')
+      return false
+    }
+  }
+  return (
+    <section aria-label="Notas durante la cita" className="space-y-2 rounded-lg border p-4">
+      <h2 className="text-sm font-bold tracking-wide uppercase">Notas durante la cita</h2>
+      <p className="text-muted-foreground text-xs">Añade ideas breves; se guardan al añadirlas.</p>
+      <ShortTextList
+        label="Notas durante la cita"
+        items={notes}
+        draft={draft}
+        onDraftChange={setDraft}
+        disabled={!canEdit || estadoAsistente(current.reunion) === 'finalizada'}
+        onAdd={(value) => save([...notes, value])}
+        onRemove={(index) => save(notes.filter((_, i) => i !== index)).then(() => undefined)}
+      />
+    </section>
   )
 }
 
@@ -137,7 +189,7 @@ function TranscriptBlock({
               Transcripción de la Primera cita
             </h2>
             <Badge variant={hasTranscript ? 'default' : 'secondary'}>
-              {hasTranscript ? 'Transcripción incorporada' : 'Sin transcripción'}
+              {hasTranscript ? 'Incorporada' : 'Pendiente'}
             </Badge>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -161,8 +213,8 @@ function TranscriptBlock({
           </div>
         </header>
         <p className="text-muted-foreground text-xs">
-          Transcripción literal, separada de la valoración profesional. Admite .txt, .vtt, .srt, .md
-          o pegar texto.
+          Pega el texto o sube un archivo .txt, .vtt, .srt o .md. Se guarda separado de la
+          valoración profesional.
         </p>
         {editing ? (
           <>
@@ -172,7 +224,7 @@ function TranscriptBlock({
               maxLength={MAX_TRANSCRIPT_CHARS}
               value={draft}
               disabled={!canEdit}
-              placeholder="Pega aquí la transcripción…"
+              placeholder="Pega aquí el texto…"
               onChange={(event) => setDraft(event.target.value)}
             />
             <p className="text-muted-foreground text-right text-xs" aria-live="polite">
@@ -217,8 +269,8 @@ function TranscriptBlock({
           </>
         )}
         <p className="text-muted-foreground border-t pt-2 text-xs">
-          Guarda la transcripción antes de solicitar a LEXIA una propuesta de trabajo. El análisis
-          enviará el texto a OpenAI; la propuesta quedará separada de los datos del Lead.
+          Al solicitar una propuesta de LEXIA, el texto guardado se enviará a OpenAI. La propuesta
+          quedará separada de los datos del Lead.
         </p>
       </CardContent>
     </Card>

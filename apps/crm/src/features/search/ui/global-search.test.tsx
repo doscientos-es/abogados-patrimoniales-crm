@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ navigate: vi.fn(), useSearch: vi.fn() }))
@@ -12,7 +13,17 @@ vi.mock('../infrastructure/supabase-global-search', () => ({
   useGlobalSearch: mocks.useSearch,
 }))
 
-import { GlobalSearch } from './global-search'
+import { GlobalSearch, GlobalSearchTrigger } from './global-search'
+
+function SearchHarness() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <GlobalSearchTrigger onOpen={() => setOpen(true)} />
+      <GlobalSearch open={open} onOpenChange={setOpen} />
+    </>
+  )
+}
 
 afterEach(() => {
   cleanup()
@@ -22,14 +33,27 @@ afterEach(() => {
 })
 
 describe('GlobalSearch', () => {
+  it('opens search from the compact icon', () => {
+    const onOpen = vi.fn()
+    render(<GlobalSearchTrigger compact onOpen={onOpen} />)
+    const trigger = screen.getByRole('button', { name: 'Buscar en LEX' })
+    expect(trigger.getAttribute('title')).toBe('Buscar en LEX')
+    fireEvent.click(trigger)
+    expect(onOpen).toHaveBeenCalledOnce()
+  })
+
   it('opens from the sidebar search button', () => {
-    render(<GlobalSearch />)
+    render(<SearchHarness />)
     fireEvent.click(screen.getByRole('button', { name: 'Buscar en LEX' }))
-    expect(screen.getByRole('dialog', { name: 'Buscar en LEX' })).toBeTruthy()
+    const dialog = screen.getByRole('dialog', { name: 'Buscar en LEX' })
+    expect(dialog.className).toContain('w-screen')
+    expect(within(dialog).getByRole('textbox', { name: 'Buscar en todo LEX' })).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cerrar diálogo' }))
+    expect(screen.queryByRole('dialog', { name: 'Buscar en LEX' })).toBeNull()
   })
 
   it('opens with Ctrl+K and saves a selected module as a recent item', () => {
-    render(<GlobalSearch />)
+    render(<SearchHarness />)
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     expect(screen.getByRole('dialog', { name: 'Buscar en LEX' })).toBeTruthy()
@@ -56,7 +80,7 @@ describe('GlobalSearch', () => {
       isPending: false,
       isError: false,
     })
-    render(<GlobalSearch />)
+    render(<SearchHarness />)
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true })
     const input = screen.getByRole('textbox', { name: 'Buscar en todo LEX' })
@@ -68,7 +92,7 @@ describe('GlobalSearch', () => {
   })
 
   it('finds matching application modules while searching', () => {
-    render(<GlobalSearch />)
+    render(<SearchHarness />)
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     const input = screen.getByRole('textbox', { name: 'Buscar en todo LEX' })

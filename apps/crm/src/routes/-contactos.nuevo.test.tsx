@@ -56,6 +56,7 @@ import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   mocks.createContact.mockReset().mockResolvedValue({ id: 'contact-1' })
   mocks.createNote.mockReset().mockResolvedValue(undefined)
   mocks.navigate.mockClear()
@@ -64,6 +65,33 @@ afterEach(() => {
 })
 
 describe('NuevoContactoPage', () => {
+  it('guarda el municipio completado a partir del código postal', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ places: [{ 'place name': 'Bilbao' }] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<NuevoContactoPage />)
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '48001' } })
+    await waitFor(() =>
+      expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Bilbao'),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.zippopotam.us/es/48001',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    await waitFor(() =>
+      expect(mocks.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          valores: expect.objectContaining({ codigoPostal: '48001', municipio: 'Bilbao' }),
+        }),
+      ),
+    )
+  })
+
   it('configura valores iniciales, tipos de campo y ayudas accesibles', () => {
     render(<NuevoContactoPage />)
 

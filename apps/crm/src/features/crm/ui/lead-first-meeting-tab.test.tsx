@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   })),
 }))
 
+vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [] }) }))
+vi.mock('@/features/auth', () => ({
+  useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
+}))
 vi.mock('@/shared/infrastructure/supabase', () => ({
   getSupabaseBrowserClient: () => ({ functions: { invoke: mocks.invoke } }),
 }))
@@ -63,22 +67,78 @@ const meeting = (reunion: Record<string, unknown> = {}) =>
     },
   }) as Record<string, unknown>
 
-function renderTab() {
-  return render(
+function tabElement(members = [{ id: 'user-1', nombre: 'Ana Responsable' }]) {
+  return (
     <LeadFirstMeetingTab
       opportunity={opportunity}
       firmId="firm-1"
-      members={[{ id: 'user-1', nombre: 'Ana Responsable' }]}
+      members={members}
       contactId="contact-1"
       contactName="María Cliente"
       currentUserId="user-1"
       memberRole="paralegal"
       canEdit
-    />,
+    />
   )
 }
 
+function renderTab() {
+  return render(tabElement())
+}
+
 describe('LeadFirstMeetingTab', () => {
+  it('guarda notas breves en la reunión y permite seguir añadiendo sin esperar a la recarga', async () => {
+    mocks.appointments = [
+      meeting({
+        status: 'in_progress',
+        primeraCita: { estado: 'En curso', horaInicioReal: '2026-10-20T09:00:00Z' },
+        internalNotes: ['Nota previa'],
+      }),
+    ]
+    const tab = renderTab()
+    fireEvent.change(screen.getByLabelText('Texto de la transcripción'), {
+      target: { value: 'Transcripción todavía sin guardar' },
+    })
+    const input = screen.getByLabelText('Añadir notas durante la cita') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '  Nueva nota  ' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByText('Nueva nota')).toBeTruthy())
+    expect(input.value).toBe('')
+    fireEvent.change(input, { target: { value: 'Segunda nota' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByText('Segunda nota')).toBeTruthy())
+    expect(mocks.updateMeeting.mock.calls[1]?.[0]).toMatchObject({
+      task: { version: 2 },
+      details: { internalNotes: ['Nota previa', 'Nueva nota', 'Segunda nota'] },
+    })
+    mocks.appointments = [
+      mocks.updateMeeting.mock.results[1]?.value
+        ? await mocks.updateMeeting.mock.results[1]?.value
+        : {},
+    ]
+    tab.rerender(tabElement())
+    expect((screen.getByLabelText('Texto de la transcripción') as HTMLTextAreaElement).value).toBe(
+      'Transcripción todavía sin guardar',
+    )
+    tab.unmount()
+    renderTab()
+    expect(screen.getByText('Nueva nota')).toBeTruthy()
+    expect(screen.getByText('Segunda nota')).toBeTruthy()
+  })
+
+  it('conserva el borrador de la nota si falla su guardado', async () => {
+    mocks.appointments = [meeting()]
+    mocks.updateMeeting.mockRejectedValueOnce(new Error('Error al guardar'))
+    renderTab()
+    const input = screen.getByLabelText('Añadir notas durante la cita') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Texto pendiente' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
+    await waitFor(() => expect(input.disabled).toBe(false))
+    expect(input.value).toBe('Texto pendiente')
+    expect(screen.queryByText('Texto pendiente')).toBeNull()
+  })
+
   it('shows a compact appointment summary and the transcript workspace, without the long form', () => {
     mocks.appointments = [meeting()]
     renderTab()
@@ -86,7 +146,13 @@ describe('LeadFirstMeetingTab', () => {
     const block = screen.getByRole('region', { name: 'Datos de la cita' })
     for (const text of ['Ana Responsable', 'Despacho Rekalde', '30 min', 'Agendada'])
       expect(block.textContent).toContain(text)
-    expect(screen.getByText('Transcripción de la Primera cita')).toBeTruthy()
+    expect(
+      screen.getAllByRole('heading', { name: 'Transcripción de la Primera cita' }),
+    ).toHaveLength(1)
+    expect(screen.getByText('Pendiente')).toBeTruthy()
+    expect(screen.getByLabelText('Texto de la transcripción')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Guardar transcripción' })).toBeTruthy()
+    expect(screen.getByText(/se enviará a OpenAI/)).toBeTruthy()
     expect(screen.queryByText('Resultado y siguientes pasos')).toBeNull()
     expect(screen.queryByRole('button', { name: /Comenzar primera cita/i })).toBeNull()
   })
@@ -98,6 +164,8 @@ describe('LeadFirstMeetingTab', () => {
     fireEvent.change(screen.getByLabelText('Fecha'), { target: { value: '2026-10-22' } })
     fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '10:37' } })
     fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
+    expect((screen.getByLabelText('Abogado') as HTMLSelectElement).value).toBe('__legacy__')
+    fireEvent.change(screen.getByLabelText('Abogado'), { target: { value: 'user-1' } })
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cita' }))
 
     await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
@@ -107,6 +175,7 @@ describe('LeadFirstMeetingTab', () => {
       status: 'scheduled',
       durationMinutes: 45,
       abogadoPrimeraCita: 'Ana Responsable',
+      abogadoPrimeraCitaId: 'user-1',
       primeraCita: { estado: 'Programada', duracion: '45 minutos' },
     })
     expect(Date.parse(details.startsAt)).toBe(new Date('2026-10-22T10:37').getTime())
@@ -119,6 +188,37 @@ describe('LeadFirstMeetingTab', () => {
     expect(screen.queryByRole('button', { name: /Editar \/ reprogramar cita/ })).toBeNull()
   })
 
+  it('conserva el nombre antiguo sin asignarlo automáticamente a otro usuario', async () => {
+    mocks.appointments = [meeting({ abogadoPrimeraCita: 'Ana Responsable' })]
+    renderTab()
+    fireEvent.click(screen.getByRole('button', { name: /Editar \/ reprogramar cita/ }))
+    expect((screen.getByLabelText('Abogado') as HTMLSelectElement).value).toBe('__legacy__')
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cita' }))
+    await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
+    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
+      abogadoPrimeraCita: 'Ana Responsable',
+      abogadoPrimeraCitaId: '',
+    })
+  })
+
+  it('guarda el identificador del abogado elegido aunque sea distinto del responsable de la tarea', async () => {
+    mocks.appointments = [meeting({ abogadoPrimeraCitaId: 'user-1' })]
+    render(
+      tabElement([
+        { id: 'user-1', nombre: 'Ana Responsable' },
+        { id: 'user-2', nombre: 'Otro abogado' },
+      ]),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Editar \/ reprogramar cita/ }))
+    fireEvent.change(screen.getByLabelText('Abogado'), { target: { value: 'user-2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cita' }))
+    await waitFor(() => expect(mocks.updateMeeting).toHaveBeenCalledOnce())
+    expect(mocks.updateMeeting.mock.calls[0]?.[0].details).toMatchObject({
+      abogadoPrimeraCita: 'Otro abogado',
+      abogadoPrimeraCitaId: 'user-2',
+    })
+  })
+
   it('analyses a saved transcript without a separate authorization checkbox', async () => {
     mocks.appointments = [meeting({ transcription: 'Transcripción de prueba' })]
     mocks.invoke.mockResolvedValue({
@@ -127,6 +227,11 @@ describe('LeadFirstMeetingTab', () => {
     })
     renderTab()
 
+    expect(
+      screen.getAllByRole('heading', { name: 'Transcripción de la Primera cita' }),
+    ).toHaveLength(1)
+    expect(screen.getByText('Incorporada')).toBeTruthy()
+    expect(screen.getByText('Transcripción de prueba')).toBeTruthy()
     expect(screen.queryByLabelText(/Confirmo que puedo enviar/)).toBeNull()
     const analyze = screen.getByRole('button', { name: 'Analizar con LEXIA' })
     expect(analyze.hasAttribute('disabled')).toBe(false)
@@ -159,6 +264,14 @@ describe('LeadFirstMeetingTab', () => {
   it('offers to schedule a linked first meeting when none exists', async () => {
     renderTab()
     fireEvent.click(screen.getByRole('button', { name: /Programar primera cita/i }))
+    expect(mocks.create).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('radio', { name: 'Ana Responsable' }))
+    fireEvent.change(screen.getByLabelText('Fecha de la cita *'), {
+      target: { value: '2026-12-02' },
+    })
+    fireEvent.change(screen.getByLabelText('Hora *'), { target: { value: '10:37' } })
+    fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
+    fireEvent.click(screen.getByRole('button', { name: 'CREAR PRIMERA CITA' }))
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce())
     expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
@@ -169,7 +282,12 @@ describe('LeadFirstMeetingTab', () => {
         meetingType: 'Primera cita',
         status: 'scheduled',
         attendeeContactIds: ['contact-1'],
+        abogadoPrimeraCitaId: 'user-1',
+        startsAt: new Date('2026-12-02T10:37').toISOString(),
+        durationMinutes: 45,
       },
     })
+    const details = mocks.create.mock.calls[0]?.[0].detallesReunion
+    expect(Date.parse(details.endsAt) - Date.parse(details.startsAt)).toBe(45 * 60_000)
   })
 })

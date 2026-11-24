@@ -189,6 +189,7 @@ describe('NuevaOportunidadPage', () => {
           mode: 'phone',
           preferredDate: '2026-12-02',
           abogadoPrimeraCita: 'Jon',
+          abogadoPrimeraCitaId: 'lawyer-jon',
           primeraCita: expect.objectContaining({ estado: 'Programada' }),
         }),
       }),

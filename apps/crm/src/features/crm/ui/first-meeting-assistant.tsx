@@ -61,12 +61,14 @@ export function FirstMeetingAssistant({
   reference,
   contactName,
   canEdit,
+  onStarted,
 }: {
   firmId: string
   task: TareaPersistida
   reference: string
   contactName: string
   canEdit: boolean
+  onStarted: () => void
 }) {
   const updateMeeting = useActualizarReunionEspecial(firmId)
   const createTask = useCrearTarea(firmId)
@@ -105,6 +107,7 @@ export function FirstMeetingAssistant({
         details: comenzar(currentTask.reunion, new Date().toISOString()),
       })
       toast.success('Primera cita en curso.')
+      onStarted()
     } catch (error) {
       toast.error(errorMessage(error), { duration: 10000 })
     }

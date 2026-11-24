@@ -1,6 +1,7 @@
 import { CalendarPlus } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState } from 'react'
 
+import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { OportunidadPersistida } from '@/features/crm'
@@ -10,46 +11,12 @@ import { FirstMeetingWorkspace } from '@/features/crm/ui/first-meeting-workspace
 import {
   useCrearTarea,
   useTareasPersistentes,
-  type DetallesReunion,
+  type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
 
 export function isFirstMeetingTask(task: TareaPersistida) {
   return task.tipo === 'Evento' && isFirstMeeting(task)
-}
-
-/** Default draft: tomorrow at 10:00 for one hour; editable from «Datos de la cita». */
-function defaultMeetingDetails(opportunity: OportunidadPersistida, contactId: string) {
-  const start = new Date()
-  start.setDate(start.getDate() + 1)
-  start.setHours(10, 0, 0, 0)
-  const details: DetallesReunion = {
-    startsAt: start.toISOString(),
-    endsAt: new Date(start.getTime() + 60 * 60_000).toISOString(),
-    mode: 'office_bilbao',
-    location: '',
-    meetingUrl: '',
-    preparation: '',
-    specialType: 'meeting',
-    status: 'scheduled',
-    meetingType: 'Primera cita',
-    subject: opportunity.titulo,
-    durationMinutes: 60,
-    attendeeContactIds: contactId ? [contactId] : [],
-    attendeeUserIds: [],
-    primeraCita: {
-      estado: 'Programada',
-      duracion: '60 minutos',
-      asistentesAdicionales: '',
-      resumen: '',
-      documentacionAportada: '',
-      resultado: '',
-      observaciones: '',
-      autorizadaPresupuesto: false,
-      tipoServicioPreliminar: '',
-    },
-  }
-  return details
 }
 
 /**
@@ -77,6 +44,7 @@ export function LeadFirstMeetingTab({
 }) {
   const tasks = useTareasPersistentes(firmId)
   const createTask = useCrearTarea(firmId)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
   const task = pickFirstMeeting((tasks.data ?? []).filter(isFirstMeetingTask), opportunity.id)
   const canManage = Boolean(
     canEdit &&
@@ -86,27 +54,29 @@ export function LeadFirstMeetingTab({
       ['owner', 'admin', 'lawyer'].includes(memberRole)),
   )
 
-  const schedule = async () => {
-    const details = defaultMeetingDetails(opportunity, contactId)
-    try {
-      await createTask.mutateAsync({
-        expedienteId: null,
-        oportunidadId: opportunity.id,
-        tipo: 'Evento',
-        titulo: `Primera cita · ${opportunity.titulo}`,
-        descripcion: `Primera cita vinculada a ${opportunity.referencia}.`,
-        prioridad: 'Media',
-        venceEn: details.startsAt,
-        recordarEn: null,
-        clasePlazo: null,
-        critico: false,
-        asignadoId: opportunity.asignadoId ?? null,
-        detallesReunion: details,
-      })
-      toast.success('Primera cita programada. Ajusta fecha y hora en «Datos de la cita».')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo programar la primera cita.')
-    }
+  const schedule = async (input: CrearTareaInput) => {
+    const details = input.detallesReunion
+    if (!details) throw new Error('Faltan los datos de la primera cita.')
+    await createTask.mutateAsync({
+      ...input,
+      tipo: 'Evento',
+      venceEn: details.startsAt,
+      detallesReunion: {
+        ...details,
+        status: 'scheduled',
+        primeraCita: {
+          estado: 'Programada',
+          duracion: `${details.durationMinutes ?? 30} minutos`,
+          asistentesAdicionales: '',
+          resumen: '',
+          documentacionAportada: '',
+          resultado: '',
+          observaciones: '',
+          autorizadaPresupuesto: false,
+          tipoServicioPreliminar: '',
+        },
+      },
+    })
   }
 
   if (tasks.isPending) {
@@ -124,13 +94,34 @@ export function LeadFirstMeetingTab({
               Este Lead todavía no tiene una Primera cita vinculada.
             </p>
             {canEdit ? (
-              <Button type="button" disabled={createTask.isPending} onClick={() => void schedule()}>
+              <Button
+                type="button"
+                disabled={createTask.isPending}
+                onClick={() => setScheduleOpen(true)}
+              >
                 <CalendarPlus className="size-4" aria-hidden="true" />
                 {createTask.isPending ? 'Programando…' : 'Programar primera cita'}
               </Button>
             ) : null}
           </CardContent>
         </Card>
+        {scheduleOpen ? (
+          <TaskCreateDialog
+            firmId={firmId}
+            oportunidadId={opportunity.id}
+            members={members}
+            open={scheduleOpen}
+            onOpenChange={setScheduleOpen}
+            pending={createTask.isPending}
+            onCreate={schedule}
+            meetingPreset={{
+              meetingType: 'Primera cita',
+              subject: opportunity.titulo,
+              contactIds: contactId ? [contactId] : [],
+            }}
+            successMessage="Primera cita programada."
+          />
+        ) : null}
         <FirstMeetingWorkspace firmId={firmId} task={null} canEdit={false} />
       </div>
     )

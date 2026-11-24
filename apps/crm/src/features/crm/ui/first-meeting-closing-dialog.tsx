@@ -14,12 +14,12 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { CONTACT_DOCUMENT_CATEGORIES, uploadContactDocument } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
 import { terminar } from '@/features/crm/application/first-meeting-cycle'
 import { nextLeadAction } from '@/features/crm/application/lead-next-action'
-import { useGuardarNota, useNotasRemotas } from '@/features/notas'
+import { ShortTextList } from '@/features/crm/ui/short-text-list'
+import { useActualizarEstadoNota, useGuardarNota, useNotasRemotas } from '@/features/notas'
 import {
   useActualizarReunionEspecial,
   useCompletarTarea,
@@ -54,7 +54,9 @@ export function FirstMeetingClosingDialog({
   const updateMeeting = useActualizarReunionEspecial(firmId)
   const completeTask = useCompletarTarea(firmId)
   const saveNote = useGuardarNota(firmId)
-  const [noteContent, setNoteContent] = useState('')
+  const updateNoteStatus = useActualizarEstadoNota(firmId)
+  const [noteItems, setNoteItems] = useState<string[] | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
   const [uploadedNames, setUploadedNames] = useState<string[]>([])
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([])
   const [uploading, setUploading] = useState(false)
@@ -80,10 +82,21 @@ export function FirstMeetingClosingDialog({
       details &&
       typeof details === 'object' &&
       !Array.isArray(details) &&
+      note.status !== 'archived' &&
       details['taskId'] === task.id &&
       details['cierrePrimeraCita'] === 'true',
     )
   })
+  const details = closeNote?.details
+  const noteDetails =
+    details && typeof details === 'object' && !Array.isArray(details) ? details : {}
+  const savedItems = noteDetails['notasFinales']
+  const initialItems = Array.isArray(savedItems)
+    ? savedItems.filter((item): item is string => typeof item === 'string')
+    : closeNote?.content
+      ? [closeNote.content]
+      : []
+  const finalItems = noteItems ?? initialItems
 
   const addFiles = (files: FileList | null) => {
     const additions = Array.from(files ?? []).map((file) => ({
@@ -136,35 +149,58 @@ export function FirstMeetingClosingDialog({
   }
 
   const finish = async () => {
+    if (notes.isPending || notes.isError) return
     if (pendingDocs.length) {
-      toast.error('Hay archivos sin añadir. Pulsa «Añadir documentos» o quítalos antes de finalizar.')
+      toast.error(
+        'Hay archivos sin añadir. Pulsa «Añadir documentos» o quítalos antes de finalizar.',
+      )
       return
     }
     const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
+    const items = noteDraft.trim() ? [...finalItems, noteDraft.trim()] : finalItems
     setFinishing(true)
     try {
-      if (noteContent.trim()) {
+      if (items.length && (!closeNote || noteItems !== null || noteDraft.trim())) {
         await saveNote.mutateAsync({
           ...(closeNote ? { noteId: closeNote.id } : {}),
+          ...(closeNote ? { status: closeNote.status } : {}),
           scope: 'opportunity',
-          originId: opportunityId,
-          originLabel: reference,
-          title: `Notas finales · Primera cita ${reference}`,
-          content: noteContent.trim(),
-          contactIds: getMeetingContactId(task) ? [getMeetingContactId(task)] : [],
-          highlighted: false,
-          critical: false,
-          requiresAcknowledgement: false,
-          validity: 'permanent',
-          reviewOn: null,
-          expiresOn: null,
-          expiryAction: 'confirm',
-          triggers: [],
-          visibility: 'team',
-          permittedUserIds: [],
-          caseId: null,
+          originId: closeNote?.origin_id ?? opportunityId,
+          originLabel: closeNote?.origin_label ?? reference,
+          title: closeNote?.title ?? `Notas finales · Primera cita ${reference}`,
+          content: items.join('\n'),
+          contactIds:
+            closeNote?.contactIds ?? (getMeetingContactId(task) ? [getMeetingContactId(task)] : []),
+          highlighted: closeNote?.highlighted ?? false,
+          critical: closeNote?.critical ?? false,
+          requiresAcknowledgement: closeNote?.requires_acknowledgement ?? false,
+          validity: closeNote?.validity ?? 'permanent',
+          startsOn: closeNote?.starts_on ?? null,
+          reviewOn: closeNote?.review_on ?? null,
+          reviewPending: closeNote?.review_pending ?? false,
+          expiresOn: closeNote?.expires_on ?? null,
+          snoozedUntil: closeNote?.snoozed_until ?? null,
+          expiryAction: closeNote?.expiry_action ?? 'confirm',
+          triggers: Array.isArray(noteDetails['triggers'])
+            ? noteDetails['triggers'].filter((value): value is string => typeof value === 'string')
+            : [],
+          visibility: closeNote?.visibility ?? 'team',
+          permittedUserIds: closeNote?.permittedUserIds ?? [],
+          caseId: closeNote?.case_id ?? null,
           opportunityId,
-          extraDetails: { taskId: task.id, cierrePrimeraCita: 'true' },
+          extraDetails: {
+            ...noteDetails,
+            taskId: task.id,
+            cierrePrimeraCita: 'true',
+            notasFinales: items,
+          },
+        })
+      } else if (!items.length && closeNote && noteItems !== null) {
+        await updateNoteStatus.mutateAsync({
+          noteId: closeNote.id,
+          status: 'archived',
+          eventType: 'archived',
+          eventDetail: 'Notas finales retiradas al cerrar la Primera cita.',
         })
       }
       const finished = await updateMeeting.mutateAsync({
@@ -175,7 +211,9 @@ export function FirstMeetingClosingDialog({
         if (finished.estado !== 'Completada')
           await completeTask.mutateAsync({ task: finished, resultado: 'Primera cita celebrada.' })
       } catch {
-        toast.error('La Primera cita quedó finalizada, pero el evento del calendario no se pudo cerrar.')
+        toast.error(
+          'La Primera cita quedó finalizada, pero el evento del calendario no se pudo cerrar.',
+        )
       }
       toast.success('Primera cita finalizada.')
       onClose()
@@ -196,13 +234,28 @@ export function FirstMeetingClosingDialog({
           </DialogHeader>
 
           <Step number={1} title="Notas finales">
-            <Textarea
-              aria-label="Notas finales"
-              rows={5}
-              value={noteContent}
-              placeholder={closeNote?.content ?? 'Conclusiones internas de la reunión…'}
-              onChange={(event) => setNoteContent(event.target.value)}
-            />
+            {notes.isPending ? (
+              <p className="text-muted-foreground text-sm">Cargando notas…</p>
+            ) : null}
+            {notes.isError ? (
+              <p role="alert" className="text-destructive text-sm">
+                No se pudieron cargar las notas. Cierra el diálogo y vuelve a intentarlo.
+              </p>
+            ) : null}
+            {!notes.isPending && !notes.isError ? (
+              <ShortTextList
+                label="Notas finales"
+                items={finalItems}
+                draft={noteDraft}
+                onDraftChange={setNoteDraft}
+                disabled={finishing}
+                onAdd={(value) => {
+                  setNoteItems([...finalItems, value])
+                  return true
+                }}
+                onRemove={(index) => setNoteItems(finalItems.filter((_, i) => i !== index))}
+              />
+            ) : null}
             <p className="text-muted-foreground text-xs">Se guardan como nota interna del Lead.</p>
           </Step>
 
@@ -368,7 +421,13 @@ export function FirstMeetingClosingDialog({
             </Button>
             <Button
               type="button"
-              disabled={finishing || uploading || markNextAction.isPending}
+              disabled={
+                finishing ||
+                uploading ||
+                markNextAction.isPending ||
+                notes.isPending ||
+                notes.isError
+              }
               onClick={() => void finish()}
             >
               {finishing ? 'Finalizando…' : 'Finalizar primera cita'}

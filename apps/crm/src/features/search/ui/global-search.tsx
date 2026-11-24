@@ -198,12 +198,47 @@ function CommandRow({
   )
 }
 
-export function GlobalSearch() {
+export function GlobalSearchTrigger({
+  onOpen,
+  compact = false,
+}: {
+  onOpen: () => void
+  compact?: boolean
+}) {
+  return (
+    <Button
+      aria-label="Buscar en LEX"
+      aria-haspopup="dialog"
+      title={compact ? 'Buscar en LEX' : undefined}
+      className={cn(
+        'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-sidebar-border h-10 w-full min-w-0 gap-2 rounded-xl border bg-transparent font-normal shadow-none',
+        compact ? 'justify-center px-0' : 'justify-start px-3',
+      )}
+      variant="ghost"
+      onClick={onOpen}
+    >
+      <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {!compact ? <span className="flex-1 truncate text-left text-sm">Buscar en LEX…</span> : null}
+      {!compact ? (
+        <kbd className="bg-sidebar-accent rounded px-1.5 py-0.5 text-[10px] font-medium">
+          Ctrl K
+        </kbd>
+      ) : null}
+    </Button>
+  )
+}
+
+export function GlobalSearch({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const router = useRouter()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
-  const [open, setOpen] = useState(false)
   const [term, setTerm] = useState('')
   const [debouncedTerm, setDebouncedTerm] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -219,12 +254,13 @@ export function GlobalSearch() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
-        setOpen(true)
+        setActiveIndex(0)
+        onOpenChange(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [onOpenChange])
 
   const recent = useMemo(
     () => [...stored].sort((a, b) => b.selectedAt - a.selectedAt).slice(0, HISTORY_LIMIT),
@@ -258,8 +294,9 @@ export function GlobalSearch() {
 
   const select = (item: PaletteItem) => {
     saveStoredItem(firmId, item)
-    setOpen(false)
+    onOpenChange(false)
     setTerm('')
+    setActiveIndex(0)
     void router.navigate({ to: item.href as never })
   }
 
@@ -279,92 +316,74 @@ export function GlobalSearch() {
 
   let rowIndex = -1
   return (
-    <>
-      <Button
-        aria-label="Buscar en LEX"
-        className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-sidebar-border h-9 w-full min-w-0 justify-start gap-2 border bg-transparent px-2.5 font-normal shadow-none"
-        variant="ghost"
-        onClick={() => {
-          setActiveIndex(0)
-          setOpen(true)
-        }}
-      >
-        <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="flex-1 truncate text-left text-sm">Buscar en LEX…</span>
-        <kbd className="bg-sidebar-accent rounded px-1.5 py-0.5 text-[10px] font-medium">
-          Ctrl K
-        </kbd>
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="top-[12%] max-w-2xl translate-y-0 gap-0 overflow-hidden p-0 sm:top-[16%]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Buscar en LEX</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-3 border-b px-4">
-            <Search className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
-            <Input
-              autoComplete="off"
-              className="h-14 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
-              placeholder="Busca contactos, leads, expedientes, documentos…"
-              value={term}
-              onChange={(event) => {
-                setTerm(event.target.value)
-                setActiveIndex(0)
-              }}
-              onKeyDown={onInputKeyDown}
-              aria-label="Buscar en todo LEX"
-            />
-            <kbd className="text-muted-foreground hidden rounded border px-1.5 py-0.5 text-[10px] sm:block">
-              ESC
-            </kbd>
-          </div>
-          <div className="max-h-[min(60vh,480px)] overflow-y-auto p-2">
-            {groups.map((group) => (
-              <section key={group.label} className="py-1" aria-label={group.label}>
-                <p className="text-muted-foreground px-2 py-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  {group.label}
-                </p>
-                {group.items.map((item) => {
-                  rowIndex += 1
-                  return (
-                    <CommandRow
-                      key={`${item.entity_type}-${item.id}-${item.href}`}
-                      item={item}
-                      active={rowIndex === activeIndex}
-                      onSelect={() => select(item)}
-                    />
-                  )
-                })}
-              </section>
-            ))}
-            {hasSearch && results.isPending ? (
-              <p className="text-muted-foreground px-3 py-8 text-center text-sm">
-                Buscando en el despacho…
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="fixed inset-0 flex h-dvh max-h-none w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 pt-[env(safe-area-inset-top)] md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-2xl md:rounded-xl md:pt-0 [&_[data-slot=dialog-close]]:top-[calc(env(safe-area-inset-top)+0.75rem)] md:[&_[data-slot=dialog-close]]:top-3">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Buscar en LEX</DialogTitle>
+        </DialogHeader>
+        <div className="flex shrink-0 items-center gap-3 border-b py-1 pr-14 pl-4">
+          <Search className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
+          <Input
+            autoComplete="off"
+            className="h-14 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
+            placeholder="Busca contactos, leads, expedientes, documentos…"
+            value={term}
+            onChange={(event) => {
+              setTerm(event.target.value)
+              setActiveIndex(0)
+            }}
+            onKeyDown={onInputKeyDown}
+            aria-label="Buscar en todo LEX"
+          />
+          <kbd className="text-muted-foreground hidden rounded border px-1.5 py-0.5 text-[10px] sm:block">
+            ESC
+          </kbd>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-2 md:max-h-[min(60vh,480px)]">
+          {groups.map((group) => (
+            <section key={group.label} className="py-1" aria-label={group.label}>
+              <p className="text-muted-foreground px-2 py-1.5 text-[10px] font-semibold tracking-wider uppercase">
+                {group.label}
               </p>
-            ) : null}
-            {hasSearch && results.isError ? (
-              <p className="text-destructive px-3 py-8 text-center text-sm">
-                No se pudo realizar la búsqueda. Inténtalo de nuevo.
-              </p>
-            ) : null}
-            {hasSearch && !results.isPending && !results.isError && !selectable.length ? (
-              <p className="text-muted-foreground px-3 py-8 text-center text-sm">
-                No hay resultados para “{term.trim()}”.
-              </p>
-            ) : null}
-            {!hasSearch && !stored.length ? (
-              <p className="text-muted-foreground px-3 py-3 text-center text-sm">
-                Empieza a escribir para buscar en todo el despacho.
-              </p>
-            ) : null}
-          </div>
-          <footer className="text-muted-foreground flex items-center justify-between border-t px-4 py-2 text-[11px]">
-            <span>↑↓ para navegar · ↵ para abrir</span>
-            <span>Los accesos se guardan solo en este navegador.</span>
-          </footer>
-        </DialogContent>
-      </Dialog>
-    </>
+              {group.items.map((item) => {
+                rowIndex += 1
+                return (
+                  <CommandRow
+                    key={`${item.entity_type}-${item.id}-${item.href}`}
+                    item={item}
+                    active={rowIndex === activeIndex}
+                    onSelect={() => select(item)}
+                  />
+                )
+              })}
+            </section>
+          ))}
+          {hasSearch && results.isPending ? (
+            <p className="text-muted-foreground px-3 py-8 text-center text-sm">
+              Buscando en el despacho…
+            </p>
+          ) : null}
+          {hasSearch && results.isError ? (
+            <p className="text-destructive px-3 py-8 text-center text-sm">
+              No se pudo realizar la búsqueda. Inténtalo de nuevo.
+            </p>
+          ) : null}
+          {hasSearch && !results.isPending && !results.isError && !selectable.length ? (
+            <p className="text-muted-foreground px-3 py-8 text-center text-sm">
+              No hay resultados para “{term.trim()}”.
+            </p>
+          ) : null}
+          {!hasSearch && !stored.length ? (
+            <p className="text-muted-foreground px-3 py-3 text-center text-sm">
+              Empieza a escribir para buscar en todo el despacho.
+            </p>
+          ) : null}
+        </div>
+        <footer className="text-muted-foreground hidden items-center justify-between border-t px-4 py-2 text-[11px] md:flex">
+          <span>↑↓ para navegar · ↵ para abrir</span>
+          <span>Los accesos se guardan solo en este navegador.</span>
+        </footer>
+      </DialogContent>
+    </Dialog>
   )
 }

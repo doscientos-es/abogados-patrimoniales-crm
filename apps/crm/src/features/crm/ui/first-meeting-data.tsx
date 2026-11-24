@@ -14,7 +14,10 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ESTADO_ASISTENTE_LABEL, estadoAsistente } from '@/features/crm/application/first-meeting-cycle'
+import {
+  ESTADO_ASISTENTE_LABEL,
+  estadoAsistente,
+} from '@/features/crm/application/first-meeting-cycle'
 import {
   useActualizarReunionEspecial,
   type DetallesReunion,
@@ -107,12 +110,7 @@ export function FirstMeetingData({
         ) : null}
       </div>
       {open ? (
-        <EditDialog
-          firmId={firmId}
-          task={task}
-          members={members}
-          onClose={() => setOpen(false)}
-        />
+        <EditDialog firmId={firmId} task={task} members={members} onClose={() => setOpen(false)} />
       ) : null}
     </section>
   )
@@ -134,9 +132,13 @@ function EditDialog({
   const initial = localParts(reunion['startsAt'])
   const savedLawyer =
     typeof reunion['abogadoPrimeraCita'] === 'string' ? reunion['abogadoPrimeraCita'] : ''
-  const lawyerNames = [...new Set([savedLawyer, ...members.map((member) => member.nombre)])].filter(
-    Boolean,
-  )
+  const savedLawyerId =
+    typeof reunion['abogadoPrimeraCitaId'] === 'string' ? reunion['abogadoPrimeraCitaId'] : ''
+  const initialLawyerId = members.some((member) => member.id === savedLawyerId)
+    ? savedLawyerId
+    : savedLawyer || savedLawyerId
+      ? '__legacy__'
+      : (members.find((member) => member.id === task.asignadoId)?.id ?? '')
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -149,6 +151,7 @@ function EditDialog({
     }
     const minutes = Number(get('duration')) || 30
     const status = reunion['status']
+    const selectedLawyer = members.find((member) => member.id === get('lawyer'))
     try {
       await update.mutateAsync({
         task,
@@ -159,7 +162,10 @@ function EditDialog({
           startsAt: start.toISOString(),
           endsAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
           durationMinutes: minutes,
-          abogadoPrimeraCita: get('lawyer'),
+          abogadoPrimeraCita:
+            selectedLawyer?.nombre ?? (get('lawyer') === '__legacy__' ? savedLawyer : ''),
+          abogadoPrimeraCitaId:
+            selectedLawyer?.id ?? (get('lawyer') === '__legacy__' ? savedLawyerId : ''),
           mode: get('mode') as DetallesReunion['mode'],
           primeraCita: {
             ...(reunion['primeraCita'] as DetallesReunion['primeraCita']),
@@ -221,10 +227,20 @@ function EditDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fm-lawyer">Abogado</Label>
-              <select id="fm-lawyer" name="lawyer" className={selectClassName} defaultValue={savedLawyer}>
+              <select
+                id="fm-lawyer"
+                name="lawyer"
+                className={selectClassName}
+                defaultValue={initialLawyerId}
+              >
                 <option value="">Sin indicar</option>
-                {lawyerNames.map((name) => (
-                  <option key={name}>{name}</option>
+                {initialLawyerId === '__legacy__' ? (
+                  <option value="__legacy__">{savedLawyer || 'Abogado'} (sin vincular)</option>
+                ) : null}
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.nombre}
+                  </option>
                 ))}
               </select>
             </div>

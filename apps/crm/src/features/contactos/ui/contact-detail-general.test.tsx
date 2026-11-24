@@ -67,9 +67,39 @@ beforeEach(() => {
   mocks.contacts = []
   mocks.update.mockClear()
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 describe('Datos generales del contacto', () => {
+  it('permite escoger una localidad sugerida y guardarla al editar', async () => {
+    mocks.contact = { ...mocks.contact, pais: 'España', municipio: 'Anterior' }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          places: [{ 'place name': 'Burgelu' }, { 'place name': 'Elburgo' }],
+        }),
+      }),
+    )
+    render(<ContactDetail contactId="contact-1" activeTab="general" />)
+    fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '01192' } })
+    const selector = await screen.findByLabelText(/Localidades encontradas/)
+    expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Anterior')
+    fireEvent.change(selector, { target: { value: 'Elburgo' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contacto: expect.objectContaining({ cp: '01192', municipio: 'Elburgo' }),
+        }),
+      ),
+    )
+  })
+
   it('oculta razón social y recomendación ausente sin borrar datos al guardar', async () => {
     render(<ContactDetail contactId="contact-1" activeTab="general" />)
     expect(screen.queryByLabelText('Razón social')).toBeNull()

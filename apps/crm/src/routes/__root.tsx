@@ -16,7 +16,10 @@ import { Button } from '@/components/ui/button'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { AccessGate } from '@/features/auth'
+import { GlobalSearch } from '@/features/search'
 import { useIsMobile } from '@/hooks/use-mobile'
+
+import { MobileNavigation } from '../app/ui/mobile-navigation'
 
 import appCss from '../styles.css?url'
 
@@ -167,19 +170,14 @@ function RootComponent() {
 function AuthenticatedRoot() {
   const [desktopOpen, setDesktopOpen] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const isMobile = useIsMobile()
-  const sidebarOpen = isMobile ? mobileOpen : desktopOpen
   const mobileTriggerRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
-  const desktopTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (isMobile && mobileOpen) closeButtonRef.current?.focus()
   }, [isMobile, mobileOpen])
-
-  useEffect(() => {
-    if (!isMobile && !desktopOpen) desktopTriggerRef.current?.focus()
-  }, [isMobile, desktopOpen])
 
   useEffect(() => {
     if (!isMobile || !mobileOpen) return
@@ -197,6 +195,10 @@ function AuthenticatedRoot() {
     setMobileOpen(false)
     mobileTriggerRef.current?.focus()
   }
+  const openSearch = () => {
+    if (isMobile && mobileOpen) closeMobile()
+    setSearchOpen(true)
+  }
 
   return (
     <SidebarProvider className="app-shell h-dvh min-h-0 overflow-hidden">
@@ -210,11 +212,14 @@ function AuthenticatedRoot() {
           />
         ) : null}
         <AppSidebar
-          open={sidebarOpen}
-          onClose={() => (isMobile ? closeMobile() : setDesktopOpen(false))}
+          open={!isMobile || mobileOpen}
+          collapsed={!isMobile && !desktopOpen}
+          isMobile={isMobile}
+          onClose={() => (isMobile ? closeMobile() : setDesktopOpen((open) => !open))}
           onNavigate={() => {
             if (isMobile) closeMobile()
           }}
+          onOpenSearch={openSearch}
           closeButtonRef={closeButtonRef}
         />
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -233,28 +238,15 @@ function AuthenticatedRoot() {
               <PanelLeft className="h-4 w-4" />
             </Button>
           </header>
-          {!desktopOpen && !isMobile ? (
-            <Button
-              ref={desktopTriggerRef}
-              aria-label="Mostrar navegación"
-              title="Mostrar navegación"
-              size="icon"
-              variant="ghost"
-              className="absolute top-2 left-2 z-10"
-              onClick={() => setDesktopOpen(true)}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          ) : null}
           <NavigationProgress />
-          <main
-            className={`min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5 ${!desktopOpen && !isMobile ? 'pt-14 sm:pt-14 lg:pt-14' : ''}`}
-          >
+          <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
             {/* Required: nested routes render here. */}
             <Outlet />
           </main>
+          <MobileNavigation searchOpen={searchOpen} onOpenSearch={openSearch} />
         </div>
       </div>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </SidebarProvider>
   )
 }
