@@ -23,6 +23,10 @@ import {
   type DuplicateContactField,
   type DuplicateContactValues,
 } from '@/features/contactos/application/contact-duplicates'
+import {
+  spanishDocumentWarning,
+  validContactEmail,
+} from '@/features/contactos/application/contact-validation'
 import { useCrearNotaPersona } from '@/features/notas'
 import { cn } from '@/lib/utils'
 
@@ -73,7 +77,7 @@ const CONTACT_FIELD_PLACEHOLDERS: Partial<Record<ContactFieldName, string>> = {
   nombre: 'Ej. Ana',
   primerApellido: 'Ej. García López',
   razonSocial: 'Ej. Acme S.L.',
-  documento: 'Ej. 12345678A o B12345678',
+  documento: 'Ej. 12345678Z o B12345674',
   email: 'Ej. nombre@dominio.es',
   telefono: 'Ej. 600 000 000',
   direccion: 'Ej. Calle, número, piso',
@@ -125,6 +129,7 @@ export function NuevoContactoPage() {
     telefono2: '',
   })
   const [confirmedDuplicates, setConfirmedDuplicates] = useState<string[]>([])
+  const [confirmedDocument, setConfirmedDocument] = useState('')
   const [notes, setNotes] = useState<
     { title: string; content: string; highlighted: boolean; critical: boolean }[]
   >([])
@@ -132,6 +137,7 @@ export function NuevoContactoPage() {
   const submitting = useRef(false)
   const duplicateContacts = findContactDuplicates(duplicateCandidates.data ?? [], duplicateValues)
   const hasDocumentDuplicate = duplicateContacts.some(({ fields }) => fields.includes('documento'))
+  const documentWarning = spanishDocumentWarning(duplicateValues.documento)
 
   const updateDuplicateValues = () => {
     if (!formRef.current) return
@@ -147,6 +153,7 @@ export function NuevoContactoPage() {
   }
 
   const applyAIValues = (values: Record<string, string>, newDocuments: File[]) => {
+    setConfirmedDocument('')
     postalLookup.reset()
     setDocuments((current) => [...current, ...newDocuments])
     const extractedNature = values['naturaleza']
@@ -191,6 +198,17 @@ export function NuevoContactoPage() {
     }
     if (nature === 'Órgano judicial' && !values['partidoJudicial']) {
       toast.error('Indica el partido judicial.')
+      return
+    }
+    if (!validContactEmail(values.email) || !validContactEmail(values.email2)) {
+      setSaveError(
+        'Introduce una dirección de correo con dominio completo, por ejemplo nombre@dominio.es.',
+      )
+      return
+    }
+    const warning = spanishDocumentWarning(values.documento)
+    if (warning && confirmedDocument !== values.documento) {
+      setSaveError(`${warning} Confirma el documento para continuar.`)
       return
     }
     setSaveError(null)
@@ -287,6 +305,8 @@ export function NuevoContactoPage() {
         aria-busy={saving}
         aria-label="Formulario de nuevo contacto"
         onInput={(event) => {
+          if (event.target instanceof HTMLInputElement && event.target.name === 'documento')
+            setConfirmedDocument('')
           if (
             event.target instanceof HTMLInputElement &&
             DUPLICATE_CONTACT_FIELDS.includes(
@@ -381,6 +401,21 @@ export function NuevoContactoPage() {
               autoCapitalize="characters"
               spellCheck={false}
             />
+            {documentWarning ? (
+              <div className="text-destructive text-sm sm:col-span-2 lg:col-span-3" role="alert">
+                <p>{documentWarning}</p>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={confirmedDocument === duplicateValues.documento}
+                    onChange={(event) =>
+                      setConfirmedDocument(event.target.checked ? duplicateValues.documento : '')
+                    }
+                  />
+                  Confirmo que deseo guardar este documento igualmente.
+                </label>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

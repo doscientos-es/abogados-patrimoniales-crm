@@ -65,6 +65,27 @@ afterEach(() => {
 })
 
 describe('NuevoContactoPage', () => {
+  it('avisa del documento español incorrecto y solo lo guarda tras confirmarlo', async () => {
+    render(<NuevoContactoPage />)
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.input(screen.getByLabelText('NIF'), { target: { value: '12345678A' } })
+    expect(screen.getByText('La letra de control del DNI o NIE no es válida.')).toBeTruthy()
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    expect(mocks.createContact).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('checkbox', { name: /confirmo que deseo guardar/i }))
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    await waitFor(() => expect(mocks.createContact).toHaveBeenCalledTimes(1))
+  })
+
+  it('impide guardar correos sin dominio completo', () => {
+    render(<NuevoContactoPage />)
+    fireEvent.change(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.input(screen.getByLabelText('Correo'), { target: { value: 'ana@ejemplo' } })
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    expect(screen.getByText(/introduce una dirección de correo con dominio completo/i)).toBeTruthy()
+    expect(mocks.createContact).not.toHaveBeenCalled()
+  })
+
   it('guarda el municipio completado a partir del código postal', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
