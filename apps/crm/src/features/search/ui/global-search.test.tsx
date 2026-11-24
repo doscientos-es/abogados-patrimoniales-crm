@@ -37,7 +37,7 @@ describe('GlobalSearch', () => {
     const onOpen = vi.fn()
     render(<GlobalSearchTrigger compact onOpen={onOpen} />)
     const trigger = screen.getByRole('button', { name: 'Buscar en LEX' })
-    expect(trigger.getAttribute('title')).toBe('Buscar en LEX')
+    expect(trigger.parentElement?.getAttribute('title')).toBe('Buscar en LEX')
     fireEvent.click(trigger)
     expect(onOpen).toHaveBeenCalledOnce()
   })

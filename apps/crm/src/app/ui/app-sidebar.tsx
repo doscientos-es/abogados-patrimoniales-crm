@@ -154,47 +154,49 @@ export function AppSidebar({
           <GlobalSearchTrigger onOpen={onOpenSearch} compact={collapsed} />
         </SidebarHeader>
 
-        <SidebarContent role="navigation" aria-label="Secciones" className="gap-0 py-3">
-          {groups.map((g) => (
-            <SidebarGroup key={g.label} className={cn('px-3 py-1', collapsed && 'py-2')}>
-              <SidebarGroupLabel
-                className={cn(
-                  'text-sidebar-foreground/60 h-7 px-3 text-[10px] font-semibold tracking-[0.12em] uppercase',
-                  collapsed && 'sr-only',
-                )}
-              >
-                {g.label}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-0.5">
-                  {g.items.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active(item.url)}
-                        className={cn(
-                          'text-sidebar-foreground/80 hover:text-sidebar-foreground relative h-9 rounded-lg text-[13px] transition-colors hover:bg-white/8 data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] motion-reduce:transition-none',
-                          'before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-sky-300 before:opacity-0 data-[active=true]:before:opacity-100',
-                          '[&>svg]:text-sidebar-foreground/65 data-[active=true]:[&>svg]:text-sky-200',
-                          collapsed ? 'justify-center px-0' : 'gap-3 px-3',
-                        )}
-                      >
-                        <Link
-                          to={item.url}
-                          onClick={onNavigate}
-                          aria-current={active(item.url) ? 'page' : undefined}
-                          title={collapsed ? item.title : undefined}
+        <SidebarContent className="gap-0 py-3">
+          <nav aria-label="Secciones">
+            {groups.map((g) => (
+              <SidebarGroup key={g.label} className={cn('px-3 py-1', collapsed && 'py-2')}>
+                <SidebarGroupLabel
+                  className={cn(
+                    'text-sidebar-foreground/60 h-7 px-3 text-[10px] font-semibold tracking-[0.12em] uppercase',
+                    collapsed && 'sr-only',
+                  )}
+                >
+                  {g.label}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="gap-0.5">
+                    {g.items.map((item) => (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active(item.url)}
+                          className={cn(
+                            'text-sidebar-foreground/80 hover:text-sidebar-foreground relative h-9 rounded-lg text-[13px] transition-colors hover:bg-white/8 data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] motion-reduce:transition-none',
+                            'before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-sky-300 before:opacity-0 data-[active=true]:before:opacity-100',
+                            '[&>svg]:text-sidebar-foreground/65 data-[active=true]:[&>svg]:text-sky-200',
+                            collapsed ? 'justify-center px-0' : 'gap-3 px-3',
+                          )}
                         >
-                          <item.icon />
-                          <span className={collapsed ? 'sr-only' : undefined}>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
+                          <Link
+                            to={item.url}
+                            onClick={onNavigate}
+                            aria-current={active(item.url) ? 'page' : undefined}
+                            title={collapsed ? item.title : undefined}
+                          >
+                            <item.icon />
+                            <span className={collapsed ? 'sr-only' : undefined}>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </nav>
         </SidebarContent>
         <SidebarFooter className="border-sidebar-foreground/10 shrink-0 border-t bg-black/10 p-3">
           <div className={cn('flex items-center gap-1', collapsed && 'flex-col')}>
