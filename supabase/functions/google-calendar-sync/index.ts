@@ -55,6 +55,7 @@ Deno.serve(async (request) => {
       if (token) {
         try {
           await synchronizeCalendarJob(job, { calendarId, accessToken: token, staffDomain })
+          if (job.active && job.emails.length !== job.staff_count) errorCode = 'staff_email'
         } catch {
           errorCode = 'calendar_request'
         }

@@ -16,6 +16,7 @@ const job: CalendarJob = {
   revision: 1,
   lease_id: 'test-lease',
   emails: ['HELENA@despacho.example', 'helena@despacho.example', 'external@example.com'],
+  staff_count: 1,
 }
 const id = job.id.replaceAll('-', '')
 const event = {

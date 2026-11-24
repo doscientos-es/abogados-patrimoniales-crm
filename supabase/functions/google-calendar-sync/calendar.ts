@@ -8,6 +8,7 @@ export type CalendarJob = {
   revision: number
   lease_id: string
   emails: string[]
+  staff_count: number
 }
 
 type Attendee = { email: string; responseStatus?: string; organizer?: boolean }

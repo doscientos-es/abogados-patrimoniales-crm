@@ -13,7 +13,7 @@ create table public.crm_google_calendar_jobs (
   next_attempt_at timestamptz default now(),
   lease_id uuid,
   lease_until timestamptz,
-  last_error text check (last_error in ('google_auth', 'calendar_request')),
+  last_error text check (last_error in ('google_auth', 'calendar_request', 'staff_email')),
   synced_at timestamptz
 );
 
@@ -102,7 +102,7 @@ for each row execute function public.crm_enqueue_google_calendar_meeting();
 create function public.crm_claim_google_calendar_jobs(target_firm uuid, staff_domain text)
 returns table (
   id uuid, active boolean, starts_at timestamptz, ends_at timestamptz,
-  revision integer, lease_id uuid, emails text[]
+  revision integer, lease_id uuid, emails text[], staff_count integer
 )
 language sql security definer set search_path = ''
 as $$
@@ -125,7 +125,7 @@ as $$
       where job.active and member.firm_id = job.firm_id and member.status = 'active'
         and member.user_id::text = any(job.staff_ids) and account.email_confirmed_at is not null
         and lower(split_part(account.email, '@', 2)) = lower(staff_domain)
-      order by lower(account.email))
+      order by lower(account.email)), cardinality(job.staff_ids)
   from claimed job;
 $$;
 
@@ -180,3 +180,50 @@ select cron.schedule('crm-google-calendar-sync', '* * * * *', $cron$
   ) conf
   where conf.worker_url is not null and length(conf.worker_secret) >= 32;
 $cron$);
+
+-- Called only by the server after validating an active firm administrator.
+-- Values never leave the server and are stored encrypted by Vault.
+create function public.crm_enable_google_calendar_sync(worker_url text, worker_secret text)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  saved_id uuid;
+begin
+  if worker_url !~ '^https://[a-z0-9]+\.supabase\.co/functions/v1/google-calendar-sync$'
+    or length(worker_secret) not between 32 and 256 then
+    raise exception 'Invalid calendar worker configuration';
+  end if;
+  select id into saved_id from vault.secrets where name = 'crm_google_calendar_worker_url';
+  if saved_id is null then
+    perform vault.create_secret(worker_url, 'crm_google_calendar_worker_url');
+  else
+    perform vault.update_secret(saved_id, worker_url);
+  end if;
+  select id into saved_id from vault.secrets where name = 'crm_google_calendar_worker_secret';
+  if saved_id is null then
+    perform vault.create_secret(worker_secret, 'crm_google_calendar_worker_secret');
+  else
+    perform vault.update_secret(saved_id, worker_secret);
+  end if;
+  update cron.job set active = true where jobname = 'crm-google-calendar-sync';
+  if not found then raise exception 'Calendar schedule is not installed'; end if;
+end;
+$$;
+
+create function public.crm_google_calendar_sync_status(target_firm uuid)
+returns table (enabled boolean, pending bigint, failed bigint)
+language sql security definer set search_path = ''
+as $$
+  select exists (select 1 from cron.job where jobname = 'crm-google-calendar-sync' and active)
+    and (select count(distinct name) = 2 from vault.secrets
+      where name in ('crm_google_calendar_worker_url', 'crm_google_calendar_worker_secret')),
+    count(*) filter (where next_attempt_at is not null),
+    count(*) filter (where last_error is not null)
+  from public.crm_google_calendar_jobs where firm_id = target_firm;
+$$;
+
+revoke all on function public.crm_enable_google_calendar_sync(text, text) from public, anon, authenticated;
+revoke all on function public.crm_google_calendar_sync_status(uuid) from public, anon, authenticated;
+grant execute on function public.crm_enable_google_calendar_sync(text, text) to service_role;
+grant execute on function public.crm_google_calendar_sync_status(uuid) to service_role;
