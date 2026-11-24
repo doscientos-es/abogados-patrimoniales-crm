@@ -19,7 +19,9 @@ import {
   caseDependency,
   caseLastMovement,
   caseMegaphase,
+  caseNextAction,
   casePhaseForColumn,
+  caseStatusLabel,
   relativeDays,
   type CaseControlColumnId,
 } from '@/features/expedientes/application/case-control'
@@ -102,7 +104,7 @@ export function CasesPage({
     },
     status !== 'all' && {
       label: 'Estado',
-      value: status,
+      value: caseStatusLabel(status),
       onRemove: () => setStatus('all'),
     },
     dependency !== 'all' && {
@@ -234,7 +236,7 @@ export function CasesPage({
                     onChange={setStatus}
                     options={[
                       ['all', 'Cualquier estado'],
-                      ...statusOptions.map((item) => [item, item]),
+                      ...statusOptions.map((item) => [item, caseStatusLabel(item)]),
                     ]}
                   />
                 </FilterField>
@@ -395,6 +397,7 @@ function CaseColumn({
             contactName={contactNames.get(item.contactoPrincipalId) ?? 'Contacto no disponible'}
             assigneeName={memberNames.get(item.asignadoId ?? '') ?? 'Sin responsable'}
             alerts={caseAlerts(item, tasks, activities, now)}
+            nextAction={caseNextAction(tasks, item.id)?.titulo}
             lastMovement={caseLastMovement(item, activities)}
             moving={moving}
             onDragStart={onDragStart}
@@ -417,6 +420,7 @@ function CaseCard({
   contactName,
   assigneeName,
   alerts,
+  nextAction,
   lastMovement,
   moving,
   onDragStart,
@@ -427,6 +431,7 @@ function CaseCard({
   contactName: string
   assigneeName: string
   alerts: string[]
+  nextAction: string | undefined
   lastMovement: string
   moving: boolean
   onDragStart: (id: string) => void
@@ -495,7 +500,7 @@ function CaseCard({
           </p>
           <p>
             <span className="text-muted-foreground">Próxima:</span>{' '}
-            {item.proximaAccion || 'Sin próxima acción definida'}
+            {nextAction || 'Sin próxima acción definida'}
           </p>
           <p>
             <span className="text-muted-foreground">Último movimiento:</span>{' '}

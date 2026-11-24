@@ -136,6 +136,66 @@ describe('CasesPage', () => {
     expect(screen.getByText('1 activos')).toBeTruthy()
   })
 
+  it('labels the stored status in the filter without changing its value', () => {
+    render(
+      <CasesPage
+        expedientes={[caseworkCase]}
+        contactos={[]}
+        miembros={[]}
+        tareas={[]}
+        actuaciones={[]}
+        moving={false}
+        onMove={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Filtros' }))
+    const status = screen.getByLabelText('Filtrar por estado')
+    expect(screen.getByRole('option', { name: 'Activo' }).getAttribute('value')).toBe('active')
+    fireEvent.change(status, { target: { value: 'active' } })
+    expect(screen.getByText('EXP-001')).toBeTruthy()
+    expect(screen.getByLabelText('Quitar filtro Estado: Activo')).toBeTruthy()
+  })
+
+  it('shows the open next task instead of the stale case text and updates when it completes', () => {
+    const item = { ...(caseworkCase as object), proximaAccion: 'Acción antigua' } as never
+    const tasks = [
+      {
+        expedienteId: 'casework-1',
+        titulo: 'Tarea completada',
+        estado: 'Completada',
+        esSiguienteAccion: true,
+      },
+      {
+        expedienteId: 'other',
+        titulo: 'Otro expediente',
+        estado: 'Pendiente',
+        esSiguienteAccion: true,
+      },
+      {
+        expedienteId: 'casework-1',
+        titulo: 'Continuación',
+        estado: 'Pendiente',
+        esSiguienteAccion: true,
+      },
+    ] as never[]
+    const page = (tareas: never[]) => (
+      <CasesPage
+        expedientes={[item]}
+        contactos={[]}
+        miembros={[]}
+        tareas={tareas}
+        actuaciones={[]}
+        moving={false}
+        onMove={vi.fn()}
+      />
+    )
+    const { rerender } = render(page(tasks))
+    expect(screen.getByText('Continuación')).toBeTruthy()
+    expect(screen.queryByText('Acción antigua')).toBeNull()
+    rerender(page(tasks.slice(0, 2)))
+    expect(screen.getByText('Sin próxima acción definida')).toBeTruthy()
+  })
+
   it('advances a case to the next control phase from its card', () => {
     const onMove = vi.fn().mockResolvedValue(undefined)
     render(

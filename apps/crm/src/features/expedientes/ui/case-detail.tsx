@@ -48,7 +48,9 @@ import {
   caseAlerts,
   caseDependency,
   caseLastMovement,
+  caseNextAction,
   casePhaseLabel,
+  caseStatusLabel,
   relativeDays,
 } from '@/features/expedientes/application/case-control'
 import type {
@@ -883,7 +885,7 @@ function CaseSummary({
         .map((item) => (item && typeof item === 'object' && 'nombre' in item ? item.nombre : null))
         .filter((item): item is string => typeof item === 'string' && item.length > 0)
     : []
-  const nextAction = tareas.find((task) => task.esSiguienteAccion) ?? null
+  const nextAction = caseNextAction(tareas, expediente.id)
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
@@ -963,7 +965,7 @@ function CaseSummary({
               <Summary label="Apertura" value={formatDate(expediente.fechaApertura)} />
               <Summary label="Último movimiento" value={formatDate(lastMovement)} />
               <Summary label="Responsable" value={memberName ?? 'Sin asignar'} />
-              <Summary label="Estado" value={expediente.estadoGeneral} />
+              <Summary label="Estado" value={caseStatusLabel(expediente.estadoGeneral)} />
             </dl>
           </CardContent>
         </Card>

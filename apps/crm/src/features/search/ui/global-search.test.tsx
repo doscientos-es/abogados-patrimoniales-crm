@@ -91,6 +91,34 @@ describe('GlobalSearch', () => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/oportunidades/opportunity-1' })
   })
 
+  it('translates a case status in search results and recent items', () => {
+    mocks.useSearch.mockReturnValue({
+      data: [
+        {
+          id: 'case-1',
+          entity_type: 'case',
+          title: 'Herencia',
+          subtitle: 'AP_8 · Sucesiones · active',
+          href: '/expedientes/case-1',
+          rank: 100,
+        },
+      ],
+      isPending: false,
+      isError: false,
+    })
+    render(<SearchHarness />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Buscar en todo LEX' }), {
+      target: { value: 'herencia' },
+    })
+    expect(screen.getByText('AP_8 · Sucesiones · Activo')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /herencia.*activo/i }))
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(
+      within(screen.getByLabelText('Recientes')).getByText('AP_8 · Sucesiones · Activo'),
+    ).toBeTruthy()
+  })
+
   it('finds matching application modules while searching', () => {
     render(<SearchHarness />)
 

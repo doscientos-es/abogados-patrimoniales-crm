@@ -33,7 +33,7 @@ const expediente = {
   area: 'Inmobiliario',
   tipoAsunto: 'Inmobiliario',
   naturaleza: 'Extrajudicial',
-  estadoGeneral: 'En curso',
+  estadoGeneral: 'active',
   fase: 'Diagnóstico – Objetivos – Estrategia',
   estadoOperativo: 'pending',
   prioridad: 'Alta',
@@ -146,6 +146,7 @@ describe('CaseDetail', () => {
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
+    expect(screen.getByText('Activo')).toBeTruthy()
     expect(screen.getByText('Preparar firma')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: /documentos\s*1/i }))

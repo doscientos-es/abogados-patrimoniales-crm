@@ -78,6 +78,19 @@ export function casePhaseLabel(phase: string) {
   return phase
 }
 
+export function caseStatusLabel(status: string) {
+  return status === 'active' ? 'Activo' : status
+}
+
+export function caseNextAction(tasks: TareaPersistida[], caseId: string) {
+  return tasks.find(
+    (task) =>
+      task.expedienteId === caseId &&
+      task.esSiguienteAccion &&
+      !['Completada', 'Cancelada'].includes(task.estado),
+  )
+}
+
 export function caseMegaphase(column: CaseControlColumnId) {
   return CASE_CONTROL_COLUMNS.find((item) => item.id === column)?.megafase ?? 'F3 · CASEWORK'
 }

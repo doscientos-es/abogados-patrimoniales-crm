@@ -18,12 +18,20 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { caseStatusLabel } from '@/features/expedientes/application/case-control'
 import { cn } from '@/lib/utils'
 
 import { type GlobalSearchResult, useGlobalSearch } from '../application'
 
 type PaletteItem = Pick<GlobalSearchResult, 'id' | 'entity_type' | 'title' | 'subtitle' | 'href'>
 type StoredItem = PaletteItem & { selectedAt: number; visits: number }
+
+function subtitleLabel(item: PaletteItem) {
+  if (item.entity_type !== 'case') return item.subtitle
+  const separator = item.subtitle.lastIndexOf(' · ')
+  if (separator < 0) return item.subtitle
+  return item.subtitle.slice(0, separator + 3) + caseStatusLabel(item.subtitle.slice(separator + 3))
+}
 
 const HISTORY_LIMIT = 6
 const STORAGE_PREFIX = 'lex-global-search:v1:'
@@ -187,7 +195,7 @@ function CommandRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{item.title}</span>
-        <span className="text-muted-foreground block truncate text-xs">{item.subtitle}</span>
+        <span className="text-muted-foreground block truncate text-xs">{subtitleLabel(item)}</span>
       </span>
       {LABELS[item.entity_type] ? (
         <span className="text-muted-foreground hidden text-[10px] font-medium tracking-wide uppercase sm:block">
