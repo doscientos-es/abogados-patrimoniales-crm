@@ -62,6 +62,7 @@ export function FirstMeetingAssistant({
   contactName,
   canEdit,
   onStarted,
+  compact = false,
 }: {
   firmId: string
   task: TareaPersistida
@@ -69,6 +70,7 @@ export function FirstMeetingAssistant({
   contactName: string
   canEdit: boolean
   onStarted: () => void
+  compact?: boolean
 }) {
   const updateMeeting = useActualizarReunionEspecial(firmId)
   const createTask = useCrearTarea(firmId)
@@ -79,6 +81,9 @@ export function FirstMeetingAssistant({
   const reunion = task.reunion
   const estado = estadoAsistente(reunion)
   const firstMeeting = asRecord(reunion['primeraCita'])
+  const leadNoShow = Boolean(
+    task.oportunidadId && !task.expedienteId && Object.keys(firstMeeting).length,
+  )
   const activeReminder = (tasks.data ?? []).find(
     (item) =>
       item.oportunidadId === task.oportunidadId &&
@@ -132,6 +137,10 @@ export function FirstMeetingAssistant({
         task,
         details: marcarNoAsistencia(reunion, new Date().toISOString()),
       })
+      if (!leadNoShow) {
+        toast.success('No asistencia registrada.')
+        return
+      }
       if (!(await ensureReminder())) {
         toast.error('La falta de asistencia quedó guardada; no se pudo preparar el recordatorio.')
         return
@@ -144,34 +153,37 @@ export function FirstMeetingAssistant({
 
   return (
     <section
-      aria-label="Asistente de Primera cita"
+      aria-label={compact ? 'Acciones de la cita' : 'Asistente de Primera cita'}
       className={`rounded-lg border-2 p-4 ${estado === 'en_curso' ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="text-primary size-5" aria-hidden="true" />
-            <h2 className="text-sm font-bold tracking-wide uppercase">Asistente de Primera cita</h2>
-            <Badge variant={estado === 'en_curso' ? 'default' : 'secondary'}>
-              {ESTADO_ASISTENTE_LABEL[estado]}
-            </Badge>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            {fmt(reunion['startsAt'], { dateStyle: 'full' })} ·{' '}
-            {fmt(reunion['startsAt'], { hour: '2-digit', minute: '2-digit' })} · Abogado: {lawyer} ·{' '}
-            {MODE_LABEL[String(reunion['mode'])] ?? '—'}
-          </p>
-          {firstMeeting['horaInicioReal'] ? (
-            <p className="text-muted-foreground text-xs">
-              Inicio real:{' '}
-              {fmt(firstMeeting['horaInicioReal'], { hour: '2-digit', minute: '2-digit' })}
-              {firstMeeting['horaFinReal']
-                ? ` · Fin real: ${fmt(firstMeeting['horaFinReal'], { hour: '2-digit', minute: '2-digit' })}`
-                : ''}
-            </p>
-          ) : null}
-          {estado === 'en_curso' ? (
-            <p className="text-sm">Recorre las pestañas del Lead durante la cita.</p>
+          {!compact ? (
+            <>
+              <div className="flex items-center gap-2">
+                <CalendarClock className="text-primary size-5" aria-hidden="true" />
+                <h2 className="text-sm font-bold tracking-wide uppercase">
+                  Asistente de Primera cita
+                </h2>
+                <Badge variant={estado === 'en_curso' ? 'default' : 'secondary'}>
+                  {ESTADO_ASISTENTE_LABEL[estado]}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {fmt(reunion['startsAt'], { dateStyle: 'full' })} ·{' '}
+                {fmt(reunion['startsAt'], { hour: '2-digit', minute: '2-digit' })} · Abogado:{' '}
+                {lawyer} · {MODE_LABEL[String(reunion['mode'])] ?? '—'}
+              </p>
+              {firstMeeting['horaInicioReal'] ? (
+                <p className="text-muted-foreground text-xs">
+                  Inicio real:{' '}
+                  {fmt(firstMeeting['horaInicioReal'], { hour: '2-digit', minute: '2-digit' })}
+                  {firstMeeting['horaFinReal']
+                    ? ` · Fin real: ${fmt(firstMeeting['horaFinReal'], { hour: '2-digit', minute: '2-digit' })}`
+                    : ''}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </div>
         {canEdit ? (
@@ -188,16 +200,18 @@ export function FirstMeetingAssistant({
                   <UserX className="size-4" aria-hidden="true" /> No ha acudido
                 </Button>
                 <Button type="button" size="lg" disabled={busy} onClick={() => void start()}>
-                  <Play className="size-5" aria-hidden="true" /> Comenzar primera cita
+                  <Play className="size-5" aria-hidden="true" />{' '}
+                  {compact ? 'Comenzar cita' : 'Comenzar primera cita'}
                 </Button>
               </>
             ) : null}
             {estado === 'en_curso' ? (
               <Button type="button" size="lg" disabled={busy} onClick={() => setClosingOpen(true)}>
-                <Square className="size-5" aria-hidden="true" /> Terminar primera cita
+                <Square className="size-5" aria-hidden="true" />{' '}
+                {compact ? 'Terminar cita' : 'Terminar primera cita'}
               </Button>
             ) : null}
-            {estado === 'no_asistencia' ? (
+            {estado === 'no_asistencia' && leadNoShow ? (
               <>
                 {!activeReminder || !activeReminder.esSiguienteAccion ? (
                   <Button

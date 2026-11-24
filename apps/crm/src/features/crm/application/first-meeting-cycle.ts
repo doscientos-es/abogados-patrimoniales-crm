@@ -1,12 +1,20 @@
 import type { CrearTareaInput, DetallesReunion, TareaPersistida } from '@/features/tareas'
 
-export type EstadoAsistente = 'programada' | 'en_curso' | 'finalizada' | 'no_asistencia'
+export type EstadoAsistente =
+  | 'pendiente'
+  | 'programada'
+  | 'en_curso'
+  | 'finalizada'
+  | 'no_asistencia'
+  | 'cancelada'
 
 export const ESTADO_ASISTENTE_LABEL: Record<EstadoAsistente, string> = {
   programada: 'Agendada',
+  pendiente: 'Pendiente de confirmar',
   en_curso: 'En curso',
   finalizada: 'Finalizada',
   no_asistencia: 'No ha acudido',
+  cancelada: 'Cancelada',
 }
 
 export const REMINDER_TITLE = 'REVISAR / CERRAR LEAD POR FALTA DE RESPUESTA'
@@ -14,6 +22,25 @@ export const REMINDER_DAYS = 15
 export const NO_SHOW_REASON = 'No ha acudido a la Primera cita.'
 
 type Reunion = Record<string, unknown>
+
+export function isAppointment(task: TareaPersistida) {
+  return (
+    task.tipo === 'Evento' && (task.reunion['specialType'] === 'meeting' || isFirstMeeting(task))
+  )
+}
+
+export function meetingHosts(reunion: Reunion): string[] {
+  const legacyHost = reunion['abogadoPrimeraCitaId']
+  const attendees = reunion['attendeeUserIds']
+  return [
+    ...new Set([
+      ...(typeof legacyHost === 'string' && legacyHost ? [legacyHost] : []),
+      ...(Array.isArray(attendees)
+        ? attendees.filter((id): id is string => typeof id === 'string' && Boolean(id))
+        : []),
+    ]),
+  ]
+}
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -53,6 +80,9 @@ export function pickFirstMeeting<
 export function estadoAsistente(reunion: Reunion): EstadoAsistente {
   const status = reunion['status']
   const estado = record(reunion['primeraCita'])['estado']
+  if (status === 'cancelled') return 'cancelada'
+  if (status === 'preparation') return 'pendiente'
+  if (status === 'scheduled') return 'programada'
   if (status === 'not_held' || estado === 'No comparece') return 'no_asistencia'
   if (status === 'finished' || estado === 'Celebrada') return 'finalizada'
   if (status === 'in_progress' || estado === 'En curso') return 'en_curso'
@@ -80,8 +110,7 @@ function withPrimeraCita(
 }
 
 export function comenzar(reunion: Reunion, now: string): DetallesReunion {
-  if (!puedeComenzar(reunion))
-    throw new Error('La Primera cita no se puede comenzar en su estado actual.')
+  if (!puedeComenzar(reunion)) throw new Error('La cita no se puede comenzar en su estado actual.')
   return withPrimeraCita(
     reunion,
     { estado: 'En curso', horaInicioReal: now },
@@ -90,7 +119,7 @@ export function comenzar(reunion: Reunion, now: string): DetallesReunion {
 }
 
 export function terminar(reunion: Reunion, now: string): DetallesReunion {
-  if (!puedeTerminar(reunion)) throw new Error('Solo se puede terminar una Primera cita en curso.')
+  if (!puedeTerminar(reunion)) throw new Error('Solo se puede terminar una cita en curso.')
   const startedAt = record(reunion['primeraCita'])['horaInicioReal'] ?? reunion['startedAt']
   const started = typeof startedAt === 'string' ? Date.parse(startedAt) : Number.NaN
   return withPrimeraCita(

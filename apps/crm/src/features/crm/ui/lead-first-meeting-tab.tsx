@@ -5,7 +5,13 @@ import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { OportunidadPersistida } from '@/features/crm'
-import { isFirstMeeting, pickFirstMeeting } from '@/features/crm/application/first-meeting-cycle'
+import {
+  ESTADO_ASISTENTE_LABEL,
+  estadoAsistente,
+  isAppointment,
+  meetingHosts,
+} from '@/features/crm/application/first-meeting-cycle'
+import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { FirstMeetingData } from '@/features/crm/ui/first-meeting-data'
 import { FirstMeetingWorkspace } from '@/features/crm/ui/first-meeting-workspace'
 import {
@@ -15,121 +21,192 @@ import {
   type TareaPersistida,
 } from '@/features/tareas'
 
-export function isFirstMeetingTask(task: TareaPersistida) {
-  return task.tipo === 'Evento' && isFirstMeeting(task)
-}
-
-/**
- * Minimal tab used during and after the first meeting: appointment summary plus the workspace for
- * the transcript, LEXIA proposal and internal notes. The assistant (start / finish) lives above
- * the tabs on the Lead page.
- */
 export function LeadFirstMeetingTab({
   opportunity,
-  firmId,
-  members,
-  contactId,
-  currentUserId,
-  memberRole,
-  canEdit,
-}: {
-  opportunity: OportunidadPersistida
+  ...props
+}: AppointmentTabProps & { opportunity: OportunidadPersistida }) {
+  return <AppointmentsTab {...props} scope="lead" parent={opportunity} />
+}
+
+type AppointmentTabProps = {
   firmId: string
   members: Array<{ id: string; nombre: string }>
   contactId: string
-  contactName?: string
+  contactName?: string | undefined
   currentUserId: string
   memberRole: string
   canEdit: boolean
+  appointmentId?: string | undefined
+  onOpenTask?: (id: string) => void
+}
+
+/** Lead and case appointments share the workspace, but never inherit each other's meetings. */
+export function AppointmentsTab({
+  scope,
+  parent,
+  firmId,
+  members,
+  contactId,
+  contactName = 'Cliente',
+  currentUserId,
+  memberRole,
+  canEdit,
+  appointmentId,
+  onOpenTask,
+}: AppointmentTabProps & {
+  scope: 'lead' | 'case'
+  parent: { id: string; titulo: string; referencia: string }
 }) {
   const tasks = useTareasPersistentes(firmId)
   const createTask = useCrearTarea(firmId)
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const task = pickFirstMeeting((tasks.data ?? []).filter(isFirstMeetingTask), opportunity.id)
-  const canManage = Boolean(
-    canEdit &&
-    (!task ||
-      task.creadaPorId === currentUserId ||
-      task.asignadoId === currentUserId ||
-      ['owner', 'admin', 'lawyer'].includes(memberRole)),
+  const [selected, setSelected] = useState<string>()
+  const meetings = (tasks.data ?? []).filter(
+    (task) =>
+      isAppointment(task) &&
+      (scope === 'case'
+        ? task.expedienteId === parent.id
+        : !task.expedienteId && task.oportunidadId === parent.id),
   )
+  const task =
+    meetings.find((item) => item.id === (selected ?? appointmentId)) ??
+    meetings.find((item) => estadoAsistente(item.reunion) === 'en_curso') ??
+    meetings.find((item) => estadoAsistente(item.reunion) === 'programada') ??
+    meetings[0]
+  const state = task ? estadoAsistente(task.reunion) : undefined
+  const canManage =
+    canEdit &&
+    (task?.creadaPorId === currentUserId || ['owner', 'admin', 'lawyer'].includes(memberRole))
+  const hosts = task ? meetingHosts(task.reunion) : []
+  const canHold =
+    canEdit &&
+    (hosts.length > 0
+      ? hosts.includes(currentUserId) || ['owner', 'admin'].includes(memberRole)
+      : canManage || task?.asignadoId === currentUserId)
+  const first = scope === 'lead' && meetings.length === 0
 
   const schedule = async (input: CrearTareaInput) => {
     const details = input.detallesReunion
-    if (!details) throw new Error('Faltan los datos de la primera cita.')
-    await createTask.mutateAsync({
-      ...input,
-      tipo: 'Evento',
-      venceEn: details.startsAt,
-      detallesReunion: {
-        ...details,
-        status: 'scheduled',
-        primeraCita: {
-          estado: 'Programada',
-          duracion: `${details.durationMinutes ?? 30} minutos`,
-          asistentesAdicionales: '',
-          resumen: '',
-          documentacionAportada: '',
-          resultado: '',
-          observaciones: '',
-          autorizadaPresupuesto: false,
-          tipoServicioPreliminar: '',
-        },
-      },
-    })
+    if (!details) throw new Error('Faltan los datos de la cita.')
+    const created = await createTask.mutateAsync(
+      first
+        ? {
+            ...input,
+            tipo: 'Evento',
+            venceEn: details.startsAt,
+            detallesReunion: {
+              ...details,
+              status: 'scheduled',
+              primeraCita: {
+                estado: 'Programada',
+                duracion: `${details.durationMinutes ?? 30} minutos`,
+                asistentesAdicionales: '',
+                resumen: '',
+                documentacionAportada: '',
+                resultado: '',
+                observaciones: '',
+                autorizadaPresupuesto: false,
+                tipoServicioPreliminar: '',
+              },
+            },
+          }
+        : input,
+    )
+    if (created?.id) setSelected(created.id)
   }
 
   if (tasks.isPending) {
-    return <p className="text-muted-foreground py-8 text-sm">Cargando la primera cita…</p>
+    return <p className="text-muted-foreground py-8 text-sm">Cargando citas…</p>
   }
   if (tasks.isError) {
     return <p className="text-destructive py-8 text-sm">No se pudieron cargar las citas.</p>
   }
-  if (!task) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
-            <p className="text-muted-foreground text-sm">
-              Este Lead todavía no tiene una Primera cita vinculada.
-            </p>
-            {canEdit ? (
-              <Button
-                type="button"
-                disabled={createTask.isPending}
-                onClick={() => setScheduleOpen(true)}
-              >
-                <CalendarPlus className="size-4" aria-hidden="true" />
-                {createTask.isPending ? 'Programando…' : 'Programar primera cita'}
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-        {scheduleOpen ? (
-          <TaskCreateDialog
-            firmId={firmId}
-            oportunidadId={opportunity.id}
-            members={members}
-            open={scheduleOpen}
-            onOpenChange={setScheduleOpen}
-            pending={createTask.isPending}
-            onCreate={schedule}
-            meetingPreset={{
-              meetingType: 'Primera cita',
-              subject: opportunity.titulo,
-              contactIds: contactId ? [contactId] : [],
-            }}
-            successMessage="Primera cita programada."
-          />
-        ) : null}
-        <FirstMeetingWorkspace firmId={firmId} task={null} canEdit={false} />
-      </div>
-    )
-  }
   return (
-    <div className="space-y-6">
-      <FirstMeetingData firmId={firmId} task={task} members={members} canEdit={canManage} />
-      <FirstMeetingWorkspace firmId={firmId} task={task} canEdit={canManage} />
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          {task ? (
+            <label className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium">Cita</span>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-2"
+                value={task.id}
+                onChange={(event) => setSelected(event.target.value)}
+              >
+                {meetings.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.titulo} ·{' '}
+                    {item.venceEn ? `${new Date(item.venceEn).toLocaleString('es-ES')} · ` : ''}
+                    {ESTADO_ASISTENTE_LABEL[estadoAsistente(item.reunion)]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="text-muted-foreground text-sm">Todavía no hay citas vinculadas.</p>
+          )}
+          {canEdit ? (
+            <Button
+              type="button"
+              disabled={createTask.isPending}
+              onClick={() => setScheduleOpen(true)}
+            >
+              <CalendarPlus className="size-4" aria-hidden="true" />
+              {first ? 'Programar primera cita' : 'Solicitar cita'}
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+      {scheduleOpen ? (
+        <TaskCreateDialog
+          firmId={firmId}
+          oportunidadId={scope === 'lead' ? parent.id : null}
+          expedienteId={scope === 'case' ? parent.id : null}
+          members={members}
+          open={scheduleOpen}
+          onOpenChange={setScheduleOpen}
+          pending={createTask.isPending}
+          onCreate={schedule}
+          meetingPreset={{
+            meetingType: first ? 'Primera cita' : 'Seguimiento',
+            subject: parent.titulo,
+            contactIds: contactId ? [contactId] : [],
+          }}
+          successMessage={first ? 'Primera cita programada.' : 'Solicitud de cita creada.'}
+        />
+      ) : null}
+      {task ? (
+        <div key={task.id} className="space-y-4">
+          {state !== 'en_curso' ? (
+            <FirstMeetingData firmId={firmId} task={task} members={members} canEdit={canManage} />
+          ) : null}
+          {state === 'pendiente' && onOpenTask ? (
+            <Button variant="outline" onClick={() => onOpenTask(task.id)}>
+              Abrir encargo de agenda
+            </Button>
+          ) : null}
+          {canHold &&
+          (state === 'en_curso' || state === 'programada' || state === 'no_asistencia') &&
+          !['Completada', 'Cancelada'].includes(task.estado) ? (
+            <FirstMeetingAssistant
+              firmId={firmId}
+              task={task}
+              reference={parent.referencia}
+              contactName={contactName}
+              canEdit
+              compact
+              onStarted={() => setSelected(task.id)}
+            />
+          ) : null}
+          <FirstMeetingWorkspace
+            firmId={firmId}
+            task={task}
+            canEdit={canManage}
+            canTakeNotes={canHold}
+            canFollowUp={canEdit && task.reunion['followUpAssigneeId'] === currentUserId}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

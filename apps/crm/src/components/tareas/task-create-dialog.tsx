@@ -256,6 +256,7 @@ export function TaskCreateDialog({
                 firmId={firmId}
                 caseId={caseId}
                 members={members}
+                preset={meetingPreset}
                 currentUserId={currentUserId}
                 defaultAssigneeId={defaultAssigneeId}
                 onBack={() => setSpecial('none')}
@@ -497,6 +498,7 @@ function MeetingFields({
   firmId,
   caseId,
   members,
+  preset,
   currentUserId,
   defaultAssigneeId,
   onBack,
@@ -504,6 +506,7 @@ function MeetingFields({
   firmId?: string | undefined
   caseId: string
   members: Array<{ id: string; nombre: string }>
+  preset?: MeetingPreset | undefined
   currentUserId?: string | undefined
   defaultAssigneeId?: string | null | undefined
   onBack: () => void
@@ -538,7 +541,12 @@ function MeetingFields({
               'Externa',
             ].map((value) => [value, value] as const)}
           />
-          <Field name="meetingSubject" label="Objeto de la reunión *" required />
+          <Field
+            name="meetingSubject"
+            label="Objeto de la reunión *"
+            defaultValue={preset?.subject}
+            required
+          />
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Con quién *</Label>
             <MeetingAttendeesPicker
@@ -547,6 +555,7 @@ function MeetingFields({
               members={members}
               contactsName="meetingContacts"
               usersName="meetingUsers"
+              defaultContactIds={preset?.contactIds ?? []}
             />
           </div>
           <Field
