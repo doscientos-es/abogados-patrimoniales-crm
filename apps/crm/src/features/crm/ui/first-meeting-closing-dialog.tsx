@@ -1,5 +1,5 @@
-import { CheckCircle2, FilePlus2, ListPlus, Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { CheckCircle2, ListPlus, Plus } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
@@ -12,9 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CONTACT_DOCUMENT_CATEGORIES, uploadContactDocument } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
 import { terminar } from '@/features/crm/application/first-meeting-cycle'
 import { nextLeadAction } from '@/features/crm/application/lead-next-action'
@@ -29,11 +27,7 @@ import {
   type CrearTareaInput,
   type TareaPersistida,
 } from '@/features/tareas'
-import type { ContactDocumentType } from '@/shared/infrastructure/supabase'
-
-type PendingDoc = { key: string; file: File; name: string; type: ContactDocumentType }
-
-/** Cierre de Primera cita: nota final, documentos persistentes y acciones derivadas. */
+/** Cierre profesional: notas finales, acciones derivadas y encargo administrativo. */
 export function FirstMeetingClosingDialog({
   firmId,
   task,
@@ -45,7 +39,8 @@ export function FirstMeetingClosingDialog({
   reference: string
   onClose: () => void
 }) {
-  const opportunityId = task.oportunidadId ?? ''
+  const caseId = task.expedienteId ?? null
+  const opportunityId = caseId ? null : task.oportunidadId
   const tasks = useTareasPersistentes(firmId)
   const notes = useNotasRemotas(firmId)
   const members = useMiembrosDespacho(firmId)
@@ -57,22 +52,26 @@ export function FirstMeetingClosingDialog({
   const updateNoteStatus = useActualizarEstadoNota(firmId)
   const [noteItems, setNoteItems] = useState<string[] | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
-  const [uploadedNames, setUploadedNames] = useState<string[]>([])
-  const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([])
-  const [uploading, setUploading] = useState(false)
+  const [followUpAssigneeId, setFollowUpAssigneeId] = useState('')
+  const [finishedAt] = useState(() => new Date().toISOString())
+  const finishingRef = useRef(false)
   const [createdTasks, setCreatedTasks] = useState<TareaPersistida[]>([])
   const [taskMode, setTaskMode] = useState<'derived' | 'next' | null>(null)
   const [marked, setMarked] = useState<TareaPersistida | null>(null)
   const [finishing, setFinishing] = useState(false)
   const openTasks = (tasks.data ?? []).filter(
     (item) =>
-      item.oportunidadId === opportunityId &&
+      (caseId
+        ? item.expedienteId === caseId
+        : !item.expedienteId && item.oportunidadId === opportunityId) &&
       item.id !== task.id &&
       !['Completada', 'Cancelada'].includes(item.estado),
   )
-  const createdThisSession = createdTasks.map(
-    (created) => openTasks.find((item) => item.id === created.id) ?? created,
-  )
+  const linkedDerived = (tasks.data ?? []).filter((item) => item.tareaPadreId === task.id)
+  const createdThisSession = [
+    ...linkedDerived,
+    ...createdTasks.filter((item) => !linkedDerived.some((linked) => linked.id === item.id)),
+  ].map((created) => openTasks.find((item) => item.id === created.id) ?? created)
   const currentNext = marked
     ? (openTasks.find((item) => item.id === marked.id) ?? marked)
     : nextLeadAction(openTasks)
@@ -84,7 +83,7 @@ export function FirstMeetingClosingDialog({
       !Array.isArray(details) &&
       note.status !== 'archived' &&
       details['taskId'] === task.id &&
-      details['cierrePrimeraCita'] === 'true',
+      (details['cierreCita'] === 'true' || details['cierrePrimeraCita'] === 'true'),
     )
   })
   const details = closeNote?.details
@@ -98,46 +97,6 @@ export function FirstMeetingClosingDialog({
       : []
   const finalItems = noteItems ?? initialItems
 
-  const addFiles = (files: FileList | null) => {
-    const additions = Array.from(files ?? []).map((file) => ({
-      key: crypto.randomUUID(),
-      file,
-      name: file.name.replace(/\.[^.]+$/, ''),
-      type: 'other' as ContactDocumentType,
-    }))
-    setPendingDocs((current) => [...current, ...additions])
-  }
-
-  const uploadDocs = async () => {
-    const contactId = getMeetingContactId(task)
-    if (!contactId) {
-      toast.error('La cita no tiene contacto asistente para guardar documentos.')
-      return
-    }
-    setUploading(true)
-    let savedCount = 0
-    for (const doc of pendingDocs) {
-      try {
-        const saved = await uploadContactDocument({
-          firmId,
-          contactId,
-          file: doc.file,
-          name: doc.name || doc.file.name,
-          type: doc.type,
-          observations: `Recibido en la Primera cita · ${reference}`,
-        })
-        savedCount += 1
-        setUploadedNames((current) => [...current, saved.name])
-        setPendingDocs((current) => current.filter((item) => item.key !== doc.key))
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : `No se pudo subir «${doc.file.name}».`)
-      }
-    }
-    setUploading(false)
-    if (savedCount)
-      toast.success(`${savedCount} documento(s) guardado(s) en el archivo del contacto.`)
-  }
-
   const markAsNext = async (target: TareaPersistida) => {
     try {
       const saved = await markNextAction.mutateAsync({ task: target, enabled: true })
@@ -149,25 +108,21 @@ export function FirstMeetingClosingDialog({
   }
 
   const finish = async () => {
-    if (notes.isPending || notes.isError) return
-    if (pendingDocs.length) {
-      toast.error(
-        'Hay archivos sin añadir. Pulsa «Añadir documentos» o quítalos antes de finalizar.',
-      )
+    if (notes.isPending || notes.isError || finishingRef.current || (!caseId && !opportunityId))
       return
-    }
     const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
     const items = noteDraft.trim() ? [...finalItems, noteDraft.trim()] : finalItems
+    finishingRef.current = true
     setFinishing(true)
     try {
       if (items.length && (!closeNote || noteItems !== null || noteDraft.trim())) {
         await saveNote.mutateAsync({
           ...(closeNote ? { noteId: closeNote.id } : {}),
           ...(closeNote ? { status: closeNote.status } : {}),
-          scope: 'opportunity',
-          originId: closeNote?.origin_id ?? opportunityId,
+          scope: closeNote?.scope ?? (caseId ? 'case' : 'opportunity'),
+          originId: closeNote?.origin_id ?? caseId ?? opportunityId ?? '',
           originLabel: closeNote?.origin_label ?? reference,
-          title: closeNote?.title ?? `Notas finales · Primera cita ${reference}`,
+          title: closeNote?.title ?? `Notas finales · ${task.titulo}`,
           content: items.join('\n'),
           contactIds:
             closeNote?.contactIds ?? (getMeetingContactId(task) ? [getMeetingContactId(task)] : []),
@@ -186,12 +141,12 @@ export function FirstMeetingClosingDialog({
             : [],
           visibility: closeNote?.visibility ?? 'team',
           permittedUserIds: closeNote?.permittedUserIds ?? [],
-          caseId: closeNote?.case_id ?? null,
+          caseId: closeNote?.case_id ?? caseId,
           opportunityId,
           extraDetails: {
             ...noteDetails,
             taskId: task.id,
-            cierrePrimeraCita: 'true',
+            ...(closeNote ? {} : { cierreCita: 'true' }),
             notasFinales: items,
           },
         })
@@ -200,26 +155,28 @@ export function FirstMeetingClosingDialog({
           noteId: closeNote.id,
           status: 'archived',
           eventType: 'archived',
-          eventDetail: 'Notas finales retiradas al cerrar la Primera cita.',
+          eventDetail: 'Notas finales retiradas al cerrar la cita.',
         })
       }
       const finished = await updateMeeting.mutateAsync({
         task: liveMeeting,
-        details: terminar(liveMeeting.reunion, new Date().toISOString()),
+        details: {
+          ...terminar(liveMeeting.reunion, finishedAt),
+          ...(followUpAssigneeId ? { followUpAssigneeId } : {}),
+        },
       })
       try {
         if (finished.estado !== 'Completada')
-          await completeTask.mutateAsync({ task: finished, resultado: 'Primera cita celebrada.' })
+          await completeTask.mutateAsync({ task: finished, resultado: 'Cita celebrada.' })
       } catch {
-        toast.error(
-          'La Primera cita quedó finalizada, pero el evento del calendario no se pudo cerrar.',
-        )
+        toast.error('La cita quedó finalizada, pero no se pudo marcar el evento como completado.')
       }
-      toast.success('Primera cita finalizada.')
+      toast.success(followUpAssigneeId ? 'Cita finalizada. Encargo enviado.' : 'Cita finalizada.')
       onClose()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo finalizar la Primera cita.')
+      toast.error(error instanceof Error ? error.message : 'No se pudo finalizar la cita.')
     } finally {
+      finishingRef.current = false
       setFinishing(false)
     }
   }
@@ -229,7 +186,7 @@ export function FirstMeetingClosingDialog({
       <Dialog open={taskMode === null} onOpenChange={(open) => !open && !finishing && onClose()}>
         <DialogContent size="lg" className="max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Cierre de Primera cita</DialogTitle>
+            <DialogTitle>Cierre de cita</DialogTitle>
             <DialogDescription>{reference}</DialogDescription>
           </DialogHeader>
 
@@ -256,99 +213,12 @@ export function FirstMeetingClosingDialog({
                 onRemove={(index) => setNoteItems(finalItems.filter((_, i) => i !== index))}
               />
             ) : null}
-            <p className="text-muted-foreground text-xs">Se guardan como nota interna del Lead.</p>
+            <p className="text-muted-foreground text-xs">
+              Se guardan como nota interna vinculada a la cita.
+            </p>
           </Step>
 
-          <Step number={2} title="Documentación recibida">
-            {uploadedNames.length ? (
-              <ul className="text-sm">
-                {uploadedNames.map((name, index) => (
-                  <li key={`${name}-${index}`}>✓ {name}</li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="space-y-1">
-              <Label htmlFor="closing-doc-files">Archivos</Label>
-              <Input
-                id="closing-doc-files"
-                type="file"
-                multiple
-                accept="application/pdf,image/jpeg,image/png"
-                onChange={(event) => {
-                  addFiles(event.target.files)
-                  event.target.value = ''
-                }}
-              />
-            </div>
-            {pendingDocs.length ? (
-              <ul className="space-y-2" aria-label="Archivos pendientes de añadir">
-                {pendingDocs.map((doc) => (
-                  <li
-                    key={doc.key}
-                    className="grid gap-2 rounded-md border p-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center"
-                  >
-                    <span className="text-muted-foreground truncate text-xs" title={doc.file.name}>
-                      {doc.file.name}
-                    </span>
-                    <Input
-                      aria-label={`Nombre de ${doc.file.name}`}
-                      value={doc.name}
-                      onChange={(event) =>
-                        setPendingDocs((items) =>
-                          items.map((item) =>
-                            item.key === doc.key ? { ...item, name: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                    <select
-                      aria-label={`Tipo de ${doc.file.name}`}
-                      className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-                      value={doc.type}
-                      onChange={(event) =>
-                        setPendingDocs((items) =>
-                          items.map((item) =>
-                            item.key === doc.key
-                              ? { ...item, type: event.target.value as ContactDocumentType }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      {CONTACT_DOCUMENT_CATEGORIES.map((category) => (
-                        <option key={category.type} value={category.type}>
-                          {category.label}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Quitar ${doc.file.name}`}
-                      onClick={() =>
-                        setPendingDocs((items) => items.filter((item) => item.key !== doc.key))
-                      }
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={uploading || !pendingDocs.length}
-              onClick={() => void uploadDocs()}
-            >
-              <FilePlus2 className="size-4" aria-hidden="true" />{' '}
-              {uploading ? 'Subiendo…' : 'Añadir documentos'}
-            </Button>
-          </Step>
-
-          <Step number={3} title="Tareas derivadas">
+          <Step number={2} title="Tareas derivadas">
             {createdThisSession.length ? (
               <ul className="text-sm">
                 {createdThisSession.map((item) => (
@@ -357,7 +227,7 @@ export function FirstMeetingClosingDialog({
                     className="flex flex-wrap items-center justify-between gap-2 py-0.5"
                   >
                     <span>✓ {item.titulo}</span>
-                    {currentNext?.id === item.id ? (
+                    {!opportunityId ? null : currentNext?.id === item.id ? (
                       <span className="text-primary text-xs font-semibold uppercase">
                         Siguiente acción
                       </span>
@@ -386,33 +256,57 @@ export function FirstMeetingClosingDialog({
             </Button>
           </Step>
 
-          <Step number={4} title="Siguiente acción">
-            {currentNext ? (
-              <div
-                aria-label="Siguiente acción actual"
-                className="border-primary/40 bg-primary/5 flex items-start gap-2 rounded-md border px-4 py-3"
-              >
-                <CheckCircle2 className="text-primary mt-0.5 size-4" aria-hidden="true" />
-                <div className="text-sm">
-                  <p className="font-semibold">{currentNext.titulo}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {currentNext.venceEn
-                      ? new Date(currentNext.venceEn).toLocaleDateString('es-ES')
-                      : 'Sin fecha de vencimiento'}
-                  </p>
+          {opportunityId ? (
+            <Step number={3} title="Siguiente acción">
+              {currentNext ? (
+                <div
+                  aria-label="Siguiente acción actual"
+                  className="border-primary/40 bg-primary/5 flex items-start gap-2 rounded-md border px-4 py-3"
+                >
+                  <CheckCircle2 className="text-primary mt-0.5 size-4" aria-hidden="true" />
+                  <div className="text-sm">
+                    <p className="font-semibold">{currentNext.titulo}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {currentNext.venceEn
+                        ? new Date(currentNext.venceEn).toLocaleDateString('es-ES')
+                        : 'Sin fecha de vencimiento'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-muted-foreground rounded-md border border-dashed p-3 text-sm">
-                  Sin siguiente acción. Este Lead todavía no tiene definida ninguna actuación para
-                  avanzar.
-                </p>
-                <Button type="button" size="sm" onClick={() => setTaskMode('next')}>
-                  <Plus className="size-4" aria-hidden="true" /> Crear siguiente acción
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground rounded-md border border-dashed p-3 text-sm">
+                    Sin siguiente acción. Este Lead todavía no tiene definida ninguna actuación para
+                    avanzar.
+                  </p>
+                  <Button type="button" size="sm" onClick={() => setTaskMode('next')}>
+                    <Plus className="size-4" aria-hidden="true" /> Crear siguiente acción
+                  </Button>
+                </div>
+              )}
+            </Step>
+          ) : null}
+
+          <Step number={opportunityId ? 4 : 3} title="Documentación y transcripción">
+            <Label htmlFor="meeting-follow-up">Responsable administrativo</Label>
+            <select
+              id="meeting-follow-up"
+              className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              value={followUpAssigneeId}
+              disabled={finishing || members.isPending || members.isError}
+              onChange={(event) => setFollowUpAssigneeId(event.target.value)}
+            >
+              <option value="">No asignar ahora</option>
+              {(members.data ?? []).map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.nombre}
+                </option>
+              ))}
+            </select>
+            <p className="text-muted-foreground text-xs">
+              Si eliges a alguien, recibirá una tarea para subir el material desde la ficha de esta
+              cita.
+            </p>
           </Step>
 
           <DialogFooter>
@@ -421,16 +315,10 @@ export function FirstMeetingClosingDialog({
             </Button>
             <Button
               type="button"
-              disabled={
-                finishing ||
-                uploading ||
-                markNextAction.isPending ||
-                notes.isPending ||
-                notes.isError
-              }
+              disabled={finishing || markNextAction.isPending || notes.isPending || notes.isError}
               onClick={() => void finish()}
             >
-              {finishing ? 'Finalizando…' : 'Finalizar primera cita'}
+              {finishing ? 'Finalizando…' : 'Finalizar cita'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -438,7 +326,8 @@ export function FirstMeetingClosingDialog({
       {taskMode ? (
         <TaskCreateDialog
           firmId={firmId}
-          oportunidadId={opportunityId}
+          expedienteId={caseId ?? undefined}
+          oportunidadId={opportunityId ?? undefined}
           contextLabel={reference}
           members={members.data ?? []}
           open
@@ -447,13 +336,14 @@ export function FirstMeetingClosingDialog({
           successMessage={
             taskMode === 'next'
               ? 'Siguiente acción creada y vinculada al Lead.'
-              : 'Tarea creada y vinculada al Lead.'
+              : 'Tarea creada y vinculada a la cita.'
           }
           onCreate={async (input: CrearTareaInput) => {
             const created = await createTask.mutateAsync({
               ...input,
-              expedienteId: null,
-              oportunidadId: opportunityId,
+              expedienteId: caseId,
+              oportunidadId,
+              tareaPadreId: task.id,
             })
             setCreatedTasks((current) => [...current, created])
             if (taskMode === 'next') {

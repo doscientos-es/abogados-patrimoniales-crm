@@ -67,6 +67,10 @@ export type DetallesReunion = {
   outcome?: string
   decisions?: string
   transcription?: string
+  followUpAssigneeId?: string
+  followUpTaskId?: string
+  receivedDocuments?: Array<{ id: string; name: string }>
+  confirmedAt?: string
   summary?: string
   communicationChannel?: 'Email' | 'WhatsApp' | 'Llamada'
   communicationDirection?: 'Entrada' | 'Salida'
@@ -143,6 +147,7 @@ export type CrearTareaInput = {
   expedienteId: string | null
   oportunidadId: string | null
   lineaId?: string | null
+  tareaPadreId?: string
   tipo: TipoTarea
   titulo: string
   descripcion: string
