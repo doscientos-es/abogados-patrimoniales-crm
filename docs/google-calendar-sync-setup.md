@@ -27,6 +27,8 @@ Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_C
 
 Antes de aplicar migraciones, comparar el historial remoto con el repositorio: este proyecto tiene versiones históricas que no coinciden y no debe ejecutarse `supabase db push` a ciegas. Desplegar las funciones `google-calendar-sync` y `google-calendar-connection`. La primera valida el secreto propio de Cron; la segunda exige una sesión y un administrador activo del despacho.
 
+La migración comprueba los permisos de `net.http_request_queue`, que contiene las cabeceras del trabajador, y falla de forma segura si permiten el acceso de los roles normales. Supabase no admite modificar individualmente los permisos predeterminados de `pg_net`; no intentar revocarlos a ciegas porque puede dejar de funcionar. Hay que resolver este bloqueo de seguridad antes de desplegar o activar la sincronización. Véase la [documentación de Supabase sobre los permisos de pg_net](https://supabase.com/kb/troubleshooting/revoking-access-to-pg_net-objects-has-no-effect-0bbc16).
+
 Abrir **CRM → Configuración → Conexiones → Google Calendar** como administrador y pulsar **Probar conexión**. La prueba comprueba la autorización y acceso al calendario sin crear eventos. Una vez verificada, pulsar **Activar sincronización**: el servidor configura Vault con la URL y el secreto sin mostrarlos en el CRM. Al activarla se pueden enviar invitaciones de citas futuras ya confirmadas.
 
 Como alternativa administrativa, las entradas de Vault son `crm_google_calendar_worker_url` y `crm_google_calendar_worker_secret`. La primera es la URL HTTPS de `google-calendar-sync`; la segunda contiene el mismo valor que `CRM_GOOGLE_CALENDAR_WORKER_SECRET`. No copiarlas a tickets ni chat.

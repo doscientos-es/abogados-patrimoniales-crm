@@ -165,11 +165,18 @@ $$;
 create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 
--- pg_net stores request headers in its queue. Keep the worker secret and the
--- HTTP primitives inaccessible to ordinary CRM users.
-revoke all on schema net from public, anon, authenticated;
-revoke all on all tables in schema net from public, anon, authenticated;
-revoke execute on all functions in schema net from public, anon, authenticated;
+-- pg_net stores request headers in its queue. Fail closed unless access to
+-- the queue has been restricted without breaking the pg_net worker.
+do $$
+begin
+  if (has_schema_privilege('anon', 'net', 'USAGE') and
+      has_table_privilege('anon', 'net.http_request_queue', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'))
+    or (has_schema_privilege('authenticated', 'net', 'USAGE') and
+      has_table_privilege('authenticated', 'net.http_request_queue', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')) then
+    raise exception 'pg_net request queue permissions are not restricted; Calendar cannot be enabled safely';
+  end if;
+end;
+$$;
 
 -- Nothing is sent until both Vault entries have been configured.
 select cron.schedule('crm-google-calendar-sync', '* * * * *', $cron$
