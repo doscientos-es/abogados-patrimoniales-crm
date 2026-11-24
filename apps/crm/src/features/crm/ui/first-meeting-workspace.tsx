@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { estadoAsistente } from '@/features/crm/application/first-meeting-cycle'
+import { AppointmentDocuments } from '@/features/crm/ui/appointment-documents'
 import { ShortTextList } from '@/features/crm/ui/short-text-list'
 import {
   MeetingInternalNotes,
@@ -24,24 +25,20 @@ export function FirstMeetingWorkspace({
   firmId,
   task,
   canEdit,
+  canTakeNotes = canEdit,
+  canFollowUp = false,
+  contactId = '',
 }: {
   firmId: string
-  task: TareaPersistida | null
+  task: TareaPersistida
   canEdit: boolean
+  canTakeNotes?: boolean
+  canFollowUp?: boolean
+  contactId?: string
 }) {
-  if (!task) {
-    return (
-      <div className="space-y-4">
-        <WorkspaceHeading />
-        <AiProposalBlock firmId={firmId} task={null} canEdit={canEdit} />
-        <Card>
-          <CardContent className="text-muted-foreground pt-6 text-sm">
-            Programa una Primera cita para incorporar su transcripción y notas internas.
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const state = estadoAsistente(task.reunion)
+  const inProgress = state === 'en_curso'
+  const finished = state === 'finalizada'
   const attendeeIds = Array.isArray(task.reunion['attendeeContactIds'])
     ? task.reunion['attendeeContactIds'].filter(isString)
     : []
@@ -49,25 +46,37 @@ export function FirstMeetingWorkspace({
     <div className="space-y-4">
       <WorkspaceHeading />
       <FirstMeetingTimer reunion={task.reunion} />
-      <MeetingShortNotes key={task.id} firmId={firmId} task={task} canEdit={canEdit} />
-      <TranscriptBlock
-        key={`${task.id}-${String(task.reunion['transcription'] ?? '')}`}
-        firmId={firmId}
-        task={task}
-        canEdit={canEdit}
-      />
-      <AiProposalBlock
-        key={`${task.id}-${JSON.stringify(task.reunion['lexiaProposal'] ?? null)}`}
-        firmId={firmId}
-        task={task}
-        canEdit={canEdit}
-      />
+      {inProgress || finished ? (
+        <MeetingShortNotes key={task.id} firmId={firmId} task={task} canEdit={canTakeNotes} />
+      ) : null}
+      {finished ? (
+        <>
+          <AppointmentDocuments
+            firmId={firmId}
+            task={task}
+            contactId={contactId || attendeeIds[0] || ''}
+            canEdit={canFollowUp || (canEdit && !task.reunion['followUpAssigneeId'])}
+          />
+          <TranscriptBlock
+            key={`${task.id}-${String(task.reunion['transcription'] ?? '')}`}
+            firmId={firmId}
+            task={task}
+            canEdit={canFollowUp || (canEdit && !task.reunion['followUpAssigneeId'])}
+          />
+          <AiProposalBlock
+            key={`${task.id}-${JSON.stringify(task.reunion['lexiaProposal'] ?? null)}`}
+            firmId={firmId}
+            task={task}
+            canEdit={canEdit}
+          />
+        </>
+      ) : null}
       <div className="pt-2">
         <MeetingInternalNotes
           firmId={firmId}
           task={task}
           contactIds={attendeeIds}
-          canWork={canEdit}
+          canWork={inProgress && canTakeNotes}
         />
       </div>
     </div>
@@ -185,38 +194,38 @@ function TranscriptBlock({
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText className="text-primary size-5" aria-hidden="true" />
-            <h2 className="text-sm font-bold tracking-wide uppercase">
-              Transcripción de la Primera cita
-            </h2>
+            <h2 className="text-sm font-bold tracking-wide uppercase">Transcripción de la cita</h2>
             <Badge variant={hasTranscript ? 'default' : 'secondary'}>
               {hasTranscript ? 'Incorporada' : 'Pendiente'}
             </Badge>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={fileInput}
-              type="file"
-              accept={TRANSCRIPT_ACCEPT}
-              className="hidden"
-              aria-label="Archivo de transcripción"
-              onChange={(event) => void loadFile(event.target.files?.[0])}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!canEdit}
-              onClick={() => fileInput.current?.click()}
-            >
-              <Upload className="size-4" aria-hidden="true" /> Subir archivo
-            </Button>
-          </div>
+          {canEdit ? (
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={fileInput}
+                type="file"
+                accept={TRANSCRIPT_ACCEPT}
+                className="hidden"
+                aria-label="Archivo de transcripción"
+                onChange={(event) => void loadFile(event.target.files?.[0])}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!canEdit}
+                onClick={() => fileInput.current?.click()}
+              >
+                <Upload className="size-4" aria-hidden="true" /> Subir archivo
+              </Button>
+            </div>
+          ) : null}
         </header>
         <p className="text-muted-foreground text-xs">
           Pega el texto o sube un archivo .txt, .vtt, .srt o .md. Se guarda separado de la
           valoración profesional.
         </p>
-        {editing ? (
+        {editing && canEdit ? (
           <>
             <Textarea
               aria-label="Texto de la transcripción"
@@ -257,7 +266,7 @@ function TranscriptBlock({
         ) : (
           <>
             <div className="bg-muted/40 max-h-64 overflow-y-auto rounded-md border p-3 text-sm whitespace-pre-wrap">
-              {saved}
+              {saved || 'Todavía no hay transcripción.'}
             </div>
             {canEdit ? (
               <div className="flex justify-end">
@@ -270,7 +279,7 @@ function TranscriptBlock({
         )}
         <p className="text-muted-foreground border-t pt-2 text-xs">
           Al solicitar una propuesta de LEXIA, el texto guardado se enviará a OpenAI. La propuesta
-          quedará separada de los datos del Lead.
+          quedará separada de los datos de la ficha.
         </p>
       </CardContent>
     </Card>
@@ -592,7 +601,7 @@ function readProposal(value: unknown): LexiaProposal | null {
 function WorkspaceHeading() {
   return (
     <h2 className="border-primary text-primary border-l-4 pl-3 text-lg font-bold tracking-wide uppercase">
-      Espacio de trabajo · Primera cita
+      Espacio de trabajo de la cita
     </h2>
   )
 }
@@ -620,13 +629,11 @@ export function FirstMeetingTimer({ reunion }: { reunion: Record<string, unknown
   if (!running) return null
   return (
     <section
-      aria-label="Primera cita en curso"
+      aria-label="Cita en curso"
       className="border-primary bg-primary/5 flex flex-wrap items-center justify-between gap-4 rounded-lg border-2 px-6 py-5"
     >
       <div>
-        <p className="text-primary text-sm font-bold tracking-wide uppercase">
-          Primera cita en curso
-        </p>
+        <p className="text-primary text-sm font-bold tracking-wide uppercase">Cita en curso</p>
         <p className="text-muted-foreground text-sm">
           Inicio real:{' '}
           {new Date(start).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}

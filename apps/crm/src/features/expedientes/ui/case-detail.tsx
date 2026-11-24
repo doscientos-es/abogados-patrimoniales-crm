@@ -85,6 +85,7 @@ export type CaseDetailTab =
   | 'documents'
   | 'economic'
   | 'communications'
+  | 'appointments'
   | 'tasks'
   | 'deadlines'
   | 'history'
@@ -96,6 +97,7 @@ const TABS: ReadonlyArray<{ id: CaseDetailTab; label: string; Icon: typeof Activ
   { id: 'documents', label: 'Documentos', Icon: FileText },
   { id: 'economic', label: 'Económico', Icon: Receipt },
   { id: 'communications', label: 'Comunicaciones', Icon: MessageSquareText },
+  { id: 'appointments', label: 'Citas', Icon: CalendarClock },
   { id: 'tasks', label: 'Tareas', Icon: CheckSquare2 },
   { id: 'deadlines', label: 'Agenda', Icon: CalendarClock },
   { id: 'history', label: 'Histórico', Icon: History },
@@ -136,6 +138,7 @@ export function CaseDetail({
   firmId,
   taskLabels = [],
   tasksPanel,
+  appointmentsPanel,
   onOpenTask,
   currentUserId,
   onAcknowledgeNote,
@@ -148,6 +151,7 @@ export function CaseDetail({
   firmId?: string | undefined
   taskLabels?: TaskLabelOption[]
   tasksPanel?: ReactNode
+  appointmentsPanel?: ReactNode
   expediente: ExpedientePersistido
   activeTab?: CaseDetailTab
   onSelectTab?: (tab: CaseDetailTab) => void
@@ -350,6 +354,7 @@ export function CaseDetail({
             onRegisterClientReport={onRegisterClientReport}
           />
         ) : null}
+        {activeTab === 'appointments' ? appointmentsPanel : null}
         {activeTab === 'tasks'
           ? (tasksPanel ?? (
               <TasksSection

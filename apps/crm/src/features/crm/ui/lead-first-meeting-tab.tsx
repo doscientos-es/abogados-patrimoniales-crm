@@ -1,8 +1,9 @@
+import { Link } from '@tanstack/react-router'
 import { CalendarPlus } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { OportunidadPersistida } from '@/features/crm'
 import {
@@ -14,12 +15,7 @@ import {
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { FirstMeetingData } from '@/features/crm/ui/first-meeting-data'
 import { FirstMeetingWorkspace } from '@/features/crm/ui/first-meeting-workspace'
-import {
-  useCrearTarea,
-  useTareasPersistentes,
-  type CrearTareaInput,
-  type TareaPersistida,
-} from '@/features/tareas'
+import { useCrearTarea, useTareasPersistentes, type CrearTareaInput } from '@/features/tareas'
 
 export function LeadFirstMeetingTab({
   opportunity,
@@ -37,7 +33,6 @@ type AppointmentTabProps = {
   memberRole: string
   canEdit: boolean
   appointmentId?: string | undefined
-  onOpenTask?: (id: string) => void
 }
 
 /** Lead and case appointments share the workspace, but never inherit each other's meetings. */
@@ -52,7 +47,6 @@ export function AppointmentsTab({
   memberRole,
   canEdit,
   appointmentId,
-  onOpenTask,
 }: AppointmentTabProps & {
   scope: 'lead' | 'case'
   parent: { id: string; titulo: string; referencia: string }
@@ -180,10 +174,14 @@ export function AppointmentsTab({
           {state !== 'en_curso' ? (
             <FirstMeetingData firmId={firmId} task={task} members={members} canEdit={canManage} />
           ) : null}
-          {state === 'pendiente' && onOpenTask ? (
-            <Button variant="outline" onClick={() => onOpenTask(task.id)}>
+          {state === 'pendiente' ? (
+            <Link
+              className={buttonVariants({ variant: 'outline' })}
+              to="/tareas/$taskId"
+              params={{ taskId: task.id }}
+            >
               Abrir encargo de agenda
-            </Button>
+            </Link>
           ) : null}
           {canHold &&
           (state === 'en_curso' || state === 'programada' || state === 'no_asistencia') &&
@@ -193,6 +191,7 @@ export function AppointmentsTab({
               task={task}
               reference={parent.referencia}
               contactName={contactName}
+              currentUserId={currentUserId}
               canEdit
               compact
               onStarted={() => setSelected(task.id)}
@@ -201,6 +200,7 @@ export function AppointmentsTab({
           <FirstMeetingWorkspace
             firmId={firmId}
             task={task}
+            contactId={contactId}
             canEdit={canManage}
             canTakeNotes={canHold}
             canFollowUp={canEdit && task.reunion['followUpAssigneeId'] === currentUserId}

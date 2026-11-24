@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import {
   ESTADO_ASISTENTE_LABEL,
   estadoAsistente,
+  meetingHosts,
 } from '@/features/crm/application/first-meeting-cycle'
 import {
   useActualizarReunionEspecial,
@@ -72,9 +73,12 @@ export function FirstMeetingData({
   const lawyer =
     typeof reunion['abogadoPrimeraCita'] === 'string' && reunion['abogadoPrimeraCita']
       ? reunion['abogadoPrimeraCita']
-      : (members.find((member) => member.id === task.asignadoId)?.nombre ?? '—')
+      : members
+          .filter((member) => meetingHosts(reunion).includes(member.id))
+          .map((member) => member.nombre)
+          .join(', ') || '—'
   const estado = estadoAsistente(reunion)
-  const editable = canEdit && (estado === 'programada' || estado === 'en_curso')
+  const editable = canEdit && estado === 'programada'
   const items: Array<[string, string]> = [
     ['Fecha', date ? new Date(`${date}T00:00`).toLocaleDateString('es-ES') : '—'],
     ['Hora', time || '—'],
@@ -167,10 +171,14 @@ function EditDialog({
           abogadoPrimeraCitaId:
             selectedLawyer?.id ?? (get('lawyer') === '__legacy__' ? savedLawyerId : ''),
           mode: get('mode') as DetallesReunion['mode'],
-          primeraCita: {
-            ...(reunion['primeraCita'] as DetallesReunion['primeraCita']),
-            duracion: `${minutes} minutos`,
-          } as NonNullable<DetallesReunion['primeraCita']>,
+          ...(reunion['primeraCita']
+            ? {
+                primeraCita: {
+                  ...(reunion['primeraCita'] as DetallesReunion['primeraCita']),
+                  duracion: `${minutes} minutos`,
+                } as NonNullable<DetallesReunion['primeraCita']>,
+              }
+            : {}),
         },
       })
       toast.success('Cita actualizada.')
@@ -189,7 +197,7 @@ function EditDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar / reprogramar cita</DialogTitle>
-          <DialogDescription>Solo los datos básicos de la Primera cita.</DialogDescription>
+          <DialogDescription>Actualiza los datos básicos de la cita.</DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={(event) => void submit(event)}>
           <div className="grid gap-3 sm:grid-cols-2">

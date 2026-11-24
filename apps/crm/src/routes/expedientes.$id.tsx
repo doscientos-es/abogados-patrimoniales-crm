@@ -7,6 +7,7 @@ import { TaskWorkspace } from '@/components/tareas/task-workspace'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
+import { AppointmentsTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import {
   CaseEditForm,
   CaseRelatedForms,
@@ -49,9 +50,13 @@ export const Route = createFileRoute('/expedientes/$id')({
     search: Record<string, unknown>,
   ): {
     tab?: CaseDetailTab | undefined
+    appointmentId?: string | undefined
     traspaso?: boolean
   } => ({
     ...(isCaseTab(search['tab']) ? { tab: search['tab'] } : {}),
+    ...(search['tab'] === 'appointments' && typeof search['appointmentId'] === 'string'
+      ? { appointmentId: search['appointmentId'] }
+      : {}),
     ...(search['traspaso'] === true ? { traspaso: true } : {}),
   }),
   head: ({ params }) => ({
@@ -66,7 +71,7 @@ export const Route = createFileRoute('/expedientes/$id')({
 
 function CaseRoute() {
   const { id } = Route.useParams()
-  const { tab, traspaso } = Route.useSearch()
+  const { tab, traspaso, appointmentId } = Route.useSearch()
   const navigate = Route.useNavigate()
   const selectedTab = isCaseTab(tab) && tab !== 'participants' ? tab : 'summary'
   useEffect(() => {
@@ -202,6 +207,20 @@ function CaseRoute() {
         currentUserId={session.user?.id}
         onAcknowledgeNote={(noteId) => acknowledgeNote.mutateAsync(noteId)}
         taskLabels={taskLabels.data ?? []}
+        appointmentsPanel={
+          <AppointmentsTab
+            key={appointmentId ?? expediente.id}
+            scope="case"
+            parent={expediente}
+            firmId={firmId}
+            members={members.data ?? []}
+            contactId={expediente.contactoPrincipalId}
+            currentUserId={session.user?.id ?? ''}
+            memberRole={membership.data?.role ?? ''}
+            appointmentId={appointmentId}
+            canEdit={!expediente.fechaCierre}
+          />
+        }
         tasksPanel={
           <TaskWorkspace
             expedienteId={expediente.id}
@@ -305,6 +324,7 @@ function isCaseTab(tab: unknown): tab is CaseDetailTab {
     'documents',
     'economic',
     'communications',
+    'appointments',
     'tasks',
     'deadlines',
     'history',

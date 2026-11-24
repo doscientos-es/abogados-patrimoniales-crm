@@ -48,7 +48,7 @@ import { MeetingAttendeesPicker } from '@/components/tareas/meeting-attendees-pi
 import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { TaskHoldDialog } from '@/components/tareas/task-hold-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -64,6 +64,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useMiembrosDespacho } from '@/features/crm'
+import { isAppointment, meetingHosts } from '@/features/crm/application/first-meeting-cycle'
 import { leerMarcador } from '@/features/crm/application/quote-editor'
 import { leerMarcadorEnvio } from '@/features/crm/application/quote-send-task'
 import { QuoteReviewPanel } from '@/features/crm/ui/quote-review-panel'
@@ -388,6 +389,8 @@ export function TaskDetail({
       ['owner', 'admin', 'lawyer'].includes(membership.data?.role ?? '')),
   )
   const canWork = Boolean(task && (canManage || task.asignadoId === session.user?.id))
+  const parentTask = task?.tareaPadreId ? taskById.get(task.tareaPadreId) : undefined
+  const appointmentParent = parentTask && isAppointment(parentTask) ? parentTask : undefined
   const predecessors = (dependencies.data ?? []).filter((item) => item.successor_task_id === taskId)
   const successors = (dependencies.data ?? []).filter((item) => item.predecessor_task_id === taskId)
   const linkedDocumentIds = new Set(
@@ -783,6 +786,7 @@ export function TaskDetail({
             >
               {task.descripcion || 'Sin descripción adicional.'}
             </p>
+            {appointmentParent ? <AppointmentLink task={appointmentParent} /> : null}
             {task.origenSubtareaDeId ? (
               <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <ListChecks className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -854,6 +858,10 @@ export function TaskDetail({
                 ) : null}
               </CardContent>
             </Card>
+          ) : isAppointment(task) &&
+            task.reunion['status'] !== 'preparation' &&
+            task.reunion['status'] !== 'scheduled' ? (
+            <AppointmentLink task={task} />
           ) : task.tipo === 'Evento' && task.reunion['specialType'] === 'meeting' ? (
             <SpecialMeetingWorkspace
               firmId={firmId}
@@ -862,13 +870,15 @@ export function TaskDetail({
               members={members.data ?? []}
               participants={participants.data ?? []}
               actorId={session.user?.id ?? ''}
-              canManage={canManage}
+              canManage={canManage || (canWork && task.reunion['status'] === 'preparation')}
               canWork={canWork}
               pending={updateSpecialMeeting.isPending}
               onSave={(details) =>
                 run(
                   () => updateSpecialMeeting.mutateAsync({ task, details }),
-                  'Reunión actualizada.',
+                  details.status === 'scheduled' && task.reunion['status'] === 'preparation'
+                    ? 'Cita confirmada y visible en la agenda del CRM.'
+                    : 'Reunión actualizada.',
                 )
               }
             />
@@ -2027,6 +2037,35 @@ function TaskReminderDialog({
   )
 }
 
+function AppointmentLink({ task }: { task: TareaPersistida }) {
+  const className = buttonVariants({ variant: 'outline', size: 'sm' })
+  if (task.expedienteId)
+    return (
+      <Link
+        reloadDocument
+        className={className}
+        to="/expedientes/$id"
+        params={{ id: task.expedienteId }}
+        search={{ tab: 'appointments', appointmentId: task.id }}
+      >
+        Abrir ficha de la cita
+      </Link>
+    )
+  if (task.oportunidadId)
+    return (
+      <Link
+        reloadDocument
+        className={className}
+        to="/oportunidades/$id"
+        params={{ id: task.oportunidadId }}
+        search={{ tab: 'firstMeeting', appointmentId: task.id }}
+      >
+        Abrir ficha de la cita
+      </Link>
+    )
+  return null
+}
+
 function SpecialMeetingWorkspace({
   firmId,
   task,
@@ -2258,6 +2297,13 @@ function SpecialMeetingWorkspace({
         canManage && data.has('meetingSummary')
           ? formText(data, 'meetingSummary')
           : detailsText(details, 'summary'),
+    }
+    if (status === 'preparation' && nextStatus === 'scheduled') {
+      if (!meetingHosts(result as unknown as Record<string, unknown>).length) {
+        toast.error('Selecciona al menos a una persona del despacho que vaya a celebrar la cita.')
+        return
+      }
+      result.durationMinutes = Math.round((Date.parse(endsAt) - Date.parse(startsAt)) / 60_000)
     }
     void onSave(result)
   }
@@ -2538,6 +2584,12 @@ function SpecialMeetingWorkspace({
           ) : null}
           <div className="border-t pt-4">
             <h3 className="font-medium">Concretar la reunión</h3>
+            {status === 'preparation' ? (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Cuando el cliente acepte, indica la hora acordada y confirma la cita. Quedará en la
+                agenda de los asistentes del despacho.
+              </p>
+            ) : null}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Label>
                 Inicio
@@ -2640,19 +2692,12 @@ function SpecialMeetingWorkspace({
                 value="scheduled"
                 disabled={!canManage || pending}
               >
-                Agendar reunión
+                Confirmar cita con el cliente
               </Button>
             ) : null}
             {status === 'scheduled' ? (
               <>
-                <Button
-                  type="submit"
-                  name="meetingStatus"
-                  value="in_progress"
-                  disabled={!canWork || pending}
-                >
-                  Comenzar reunión
-                </Button>
+                <AppointmentLink task={task} />
                 <Button
                   type="submit"
                   variant="outline"

@@ -42,6 +42,31 @@ export function meetingHosts(reunion: Reunion): string[] {
   ]
 }
 
+export function canHoldAppointment(task: TareaPersistida, userId: string, role: string) {
+  const hosts = meetingHosts(task.reunion)
+  return (
+    ['owner', 'admin'].includes(role) ||
+    (hosts.length
+      ? hosts.includes(userId)
+      : task.asignadoId === userId || task.creadaPorId === userId || role === 'lawyer')
+  )
+}
+
+/** Manual fallback: don't send client names or notes to an external calendar. */
+export function googleCalendarDraft(reunion: Reunion) {
+  if (estadoAsistente(reunion) !== 'programada') return null
+  const start = Date.parse(String(reunion['startsAt'] ?? ''))
+  const end = Date.parse(String(reunion['endsAt'] ?? ''))
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return null
+  const compactUtc = (value: number) => new Date(value).toISOString().replace(/[-:]|\.\d{3}/g, '')
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: 'Cita del despacho',
+    dates: `${compactUtc(start)}/${compactUtc(end)}`,
+  })
+  return `https://calendar.google.com/calendar/render?${params}`
+}
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)

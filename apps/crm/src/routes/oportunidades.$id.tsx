@@ -42,7 +42,11 @@ import {
   useTransicionarOportunidad,
   type OportunidadPersistida,
 } from '@/features/crm'
-import { estadoAsistente, pickFirstMeeting } from '@/features/crm/application/first-meeting-cycle'
+import {
+  estadoAsistente,
+  meetingHosts,
+  pickFirstMeeting,
+} from '@/features/crm/application/first-meeting-cycle'
 import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadChatgptAction } from '@/features/crm/ui/lead-chatgpt-action'
@@ -80,7 +84,7 @@ function isLeadTab(tab: unknown): tab is LeadDetailTab {
 const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
   { id: 'summary', label: 'Resumen' },
   { id: 'contact', label: 'Contacto' },
-  { id: 'firstMeeting', label: 'Primera cita' },
+  { id: 'firstMeeting', label: 'Citas' },
   { id: 'qualification', label: 'Cualificación' },
   { id: 'quote', label: 'Presupuesto' },
   { id: 'sent', label: 'Enviar al cliente' },
@@ -93,10 +97,19 @@ const LEAD_DETAIL_TABS: ReadonlyArray<{ id: LeadDetailTab; label: string }> = [
 ]
 
 export const Route = createFileRoute('/oportunidades/$id')({
-  validateSearch: (search: Record<string, unknown>): { tab?: LeadDetailTab | undefined } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: LeadDetailTab | undefined; appointmentId?: string | undefined } => {
     const tab = search['tab']
     if (tab === 'engagement') return { tab: 'acceptance' }
-    return isLeadTab(tab) ? { tab } : {}
+    return isLeadTab(tab)
+      ? {
+          tab,
+          ...(tab === 'firstMeeting' && typeof search['appointmentId'] === 'string'
+            ? { appointmentId: search['appointmentId'] }
+            : {}),
+        }
+      : {}
   },
   head: () => ({
     meta: [
@@ -120,7 +133,7 @@ export const Route = createFileRoute('/oportunidades/$id')({
 
 function FichaOportunidadPage() {
   const { id } = Route.useParams()
-  const { tab } = Route.useSearch()
+  const { tab, appointmentId } = Route.useSearch()
   const navigate = Route.useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(
@@ -188,7 +201,10 @@ function FichaOportunidadPage() {
 
   const data = oportunidad.data
   const relatedTasks = (tareas.data ?? []).filter((task) => task.oportunidadId === data.id)
-  const firstMeetingTask = pickFirstMeeting(tareas.data ?? [], data.id)
+  const firstMeetingTask = pickFirstMeeting(
+    relatedTasks.filter((task) => !task.expedienteId),
+    data.id,
+  )
   const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
   const initialViability = asRecord(asRecord(data.detalles)['viabilidadInicial'])['resultado']
   const viabilityAllowsMeeting = permitePrimeraCita(
@@ -200,8 +216,11 @@ function FichaOportunidadPage() {
   )
   const showFirstMeetingAssistant = Boolean(
     firstMeetingTask &&
+    activeTab !== 'firstMeeting' &&
     viabilityAllowsMeeting &&
-    estadoAsistente(firstMeetingTask.reunion) !== 'finalizada' &&
+    ['programada', 'en_curso', 'no_asistencia'].includes(
+      estadoAsistente(firstMeetingTask.reunion),
+    ) &&
     !['Completada', 'Cancelada'].includes(firstMeetingTask.estado) &&
     ['entry', 'qualification', 'first_meeting'].includes(data.fase) &&
     !asRecord(data.detalles)['presupuesto'] &&
@@ -267,8 +286,19 @@ function FichaOportunidadPage() {
           task={firstMeetingTask}
           reference={data.referencia}
           contactName={contacto.data ? contactName(contacto.data) : ''}
-          canEdit={!data.archivadoEn}
-          onStarted={() => setActiveTab('firstMeeting')}
+          canEdit={
+            !data.archivadoEn &&
+            (meetingHosts(firstMeetingTask.reunion).includes(session.user.id) ||
+              ['owner', 'admin'].includes(membership.data.role) ||
+              (!meetingHosts(firstMeetingTask.reunion).length &&
+                (firstMeetingTask.asignadoId === session.user.id ||
+                  firstMeetingTask.creadaPorId === session.user.id ||
+                  membership.data.role === 'lawyer')))
+          }
+          currentUserId={session.user.id}
+          onStarted={() =>
+            void navigate({ search: { tab: 'firstMeeting', appointmentId: firstMeetingTask.id } })
+          }
         />
       ) : null}
       {!data.archivadoEn &&
@@ -355,6 +385,8 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === 'firstMeeting' ? (
           <LeadFirstMeetingTab
+            key={appointmentId ?? data.id}
+            appointmentId={appointmentId}
             opportunity={data}
             firmId={membership.data.firmId}
             members={miembros.data ?? []}

@@ -68,6 +68,7 @@ export type DetallesReunion = {
   decisions?: string
   transcription?: string
   followUpAssigneeId?: string
+  derivedTaskTitles?: string[]
   followUpTaskId?: string
   receivedDocuments?: Array<{ id: string; name: string }>
   confirmedAt?: string
@@ -147,7 +148,6 @@ export type CrearTareaInput = {
   expedienteId: string | null
   oportunidadId: string | null
   lineaId?: string | null
-  tareaPadreId?: string
   tipo: TipoTarea
   titulo: string
   descripcion: string

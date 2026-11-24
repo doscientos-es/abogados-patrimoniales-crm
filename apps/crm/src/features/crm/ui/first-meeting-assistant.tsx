@@ -63,6 +63,7 @@ export function FirstMeetingAssistant({
   canEdit,
   onStarted,
   compact = false,
+  currentUserId,
 }: {
   firmId: string
   task: TareaPersistida
@@ -71,6 +72,7 @@ export function FirstMeetingAssistant({
   canEdit: boolean
   onStarted: () => void
   compact?: boolean
+  currentUserId?: string | undefined
 }) {
   const updateMeeting = useActualizarReunionEspecial(firmId)
   const createTask = useCrearTarea(firmId)
@@ -242,6 +244,7 @@ export function FirstMeetingAssistant({
           firmId={firmId}
           task={task}
           reference={reference}
+          currentUserId={currentUserId}
           onClose={() => setClosingOpen(false)}
         />
       ) : null}

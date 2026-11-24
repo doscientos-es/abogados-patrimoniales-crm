@@ -13,6 +13,7 @@ export function ShortTextList({
   onAdd,
   onRemove,
   disabled = false,
+  placeholder = 'Escribe una nota breve…',
 }: {
   label: string
   items: string[]
@@ -21,6 +22,7 @@ export function ShortTextList({
   onAdd: (value: string) => boolean | Promise<boolean>
   onRemove: (index: number) => void | Promise<void>
   disabled?: boolean
+  placeholder?: string
 }) {
   const [busy, setBusy] = useState(false)
   const add = async () => {
@@ -74,7 +76,7 @@ export function ShortTextList({
             aria-label={`Añadir ${label.toLocaleLowerCase('es')}`}
             value={draft}
             maxLength={500}
-            placeholder="Escribe una nota breve…"
+            placeholder={placeholder}
             disabled={busy}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={(event) => {

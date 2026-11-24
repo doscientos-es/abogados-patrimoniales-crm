@@ -31,6 +31,7 @@ export function MeetingInternalNotes({
     .filter((note) => {
       const details = note.details
       return (
+        note.status !== 'archived' &&
         details &&
         typeof details === 'object' &&
         !Array.isArray(details) &&
@@ -46,14 +47,14 @@ export function MeetingInternalNotes({
     critical: boolean
   }) => {
     const primaryContact = contactIds[0]
-    if (!task.expedienteId && !primaryContact) {
+    if (!task.expedienteId && !task.oportunidadId && !primaryContact) {
       toast.error('Vincula la reunión a un expediente o añade un contacto asistente.')
       return
     }
     try {
       await save.mutateAsync({
-        scope: task.expedienteId ? 'case' : 'person',
-        originId: task.expedienteId ?? primaryContact ?? '',
+        scope: task.expedienteId ? 'case' : task.oportunidadId ? 'opportunity' : 'person',
+        originId: task.expedienteId ?? task.oportunidadId ?? primaryContact ?? '',
         originLabel: task.expedienteId ? (caseLabel ?? task.titulo) : task.titulo,
         title: note.title,
         content: note.content,
@@ -69,6 +70,7 @@ export function MeetingInternalNotes({
         visibility: 'team',
         permittedUserIds: [],
         caseId: task.expedienteId ?? null,
+        opportunityId: task.expedienteId ? null : task.oportunidadId,
         extraDetails: { taskId: task.id },
       })
       toast.success('Nota interna añadida.')
@@ -82,8 +84,8 @@ export function MeetingInternalNotes({
       <header>
         <h3 className="text-sm font-bold tracking-wide uppercase">Notas internas</h3>
         <p className="text-muted-foreground text-sm">
-          Contexto privado para el equipo. Nunca forma parte de las comunicaciones con el cliente
-          ni del portal.
+          Contexto privado para el equipo. Nunca forma parte de las comunicaciones con el cliente ni
+          del portal.
         </p>
       </header>
       <div className="flex flex-wrap items-start gap-4">
