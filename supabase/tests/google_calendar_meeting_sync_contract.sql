@@ -78,4 +78,47 @@ begin
 end;
 $$;
 
+-- This test temporarily changes Vault and Cron and must only run on an
+-- isolated test database. The transaction rolls every change back.
+do $$
+declare
+  scheduled_job_id bigint;
+  test_secret text := repeat('s', 32);
+  valid_token text := repeat('a', 64);
+  expired_token text := repeat('b', 64);
+begin
+  if has_table_privilege('authenticated', 'public.crm_google_calendar_invocations', 'SELECT')
+    or has_function_privilege('authenticated', 'public.crm_consume_google_calendar_invocation(text)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.crm_dispatch_google_calendar_sync()', 'EXECUTE') then
+    raise exception 'CRM users must not issue or consume worker credentials';
+  end if;
+  select jobid into strict scheduled_job_id from cron.job
+  where jobname = 'crm-google-calendar-sync' and username = current_user;
+  perform cron.alter_job(scheduled_job_id, active := false);
+  perform public.crm_enable_google_calendar_sync(
+    'https://example.supabase.co/functions/v1/google-calendar-sync', test_secret);
+  if not exists (select 1 from cron.job where jobid = scheduled_job_id and active) then
+    raise exception 'Activation must re-enable the scheduled job';
+  end if;
+  if not (select enabled from public.crm_google_calendar_sync_status(gen_random_uuid())) then
+    raise exception 'Activation must report that synchronization is enabled';
+  end if;
+  insert into public.crm_google_calendar_invocations (token_hash, expires_at) values
+    (extensions.hmac(valid_token, test_secret, 'sha256'), now() + interval '2 minutes'),
+    (extensions.hmac(expired_token, test_secret, 'sha256'), now() - interval '1 second');
+  if public.crm_consume_google_calendar_invocation(null)
+    or public.crm_consume_google_calendar_invocation('invalid')
+    or public.crm_consume_google_calendar_invocation(repeat('c', 64))
+    or public.crm_consume_google_calendar_invocation(expired_token) then
+    raise exception 'Invalid, unknown and expired credentials must be rejected';
+  end if;
+  if not public.crm_consume_google_calendar_invocation(valid_token) then
+    raise exception 'A valid worker credential must be accepted';
+  end if;
+  if public.crm_consume_google_calendar_invocation(valid_token) then
+    raise exception 'A valid worker credential must be consumed exactly once';
+  end if;
+end;
+$$;
+
 rollback;

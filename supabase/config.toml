@@ -2,6 +2,6 @@
 [functions.lex-mcp]
 verify_jwt = false
 
-# Supabase Cron authenticates with a separate secret stored in Vault.
+# Supabase Cron authenticates with a short-lived, single-use credential.
 [functions.google-calendar-sync]
 verify_jwt = false

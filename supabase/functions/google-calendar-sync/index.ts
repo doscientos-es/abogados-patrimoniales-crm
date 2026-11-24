@@ -1,29 +1,13 @@
-import { timingSafeEqual } from 'node:crypto'
-
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { isDedicatedCalendar, synchronizeCalendarJob, type CalendarJob } from './calendar.ts'
 import { calendarAccessToken } from './oauth.ts'
+import { consumeInvocationToken } from './worker-auth.ts'
 
 const env = (name: string) => Deno.env.get(name)?.trim() ?? ''
 
-function authorized(provided: string | null, expected: string) {
-  if (!provided || provided.length !== expected.length || provided.length > 256) return false
-  const encoder = new TextEncoder()
-  const left = encoder.encode(provided)
-  const right = encoder.encode(expected)
-  return left.length === right.length && timingSafeEqual(left, right)
-}
-
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response(null, { status: 405 })
-  const cronSecret = env('CRM_GOOGLE_CALENDAR_WORKER_SECRET')
-  if (
-    cronSecret.length < 32 ||
-    !authorized(request.headers.get('x-crm-calendar-secret'), cronSecret)
-  )
-    return new Response(null, { status: 401 })
-
   const url = env('SUPABASE_URL')
   const serviceKey = env('SUPABASE_SERVICE_ROLE_KEY')
   const firmId = env('GOOGLE_CALENDAR_FIRM_ID')
@@ -40,6 +24,17 @@ Deno.serve(async (request) => {
 
   try {
     const client = createClient(url, serviceKey, { auth: { persistSession: false } })
+    const authorized = await consumeInvocationToken(
+      request.headers.get('x-crm-calendar-token'),
+      async (invocationToken) => {
+        const { data, error } = await client.rpc('crm_consume_google_calendar_invocation', {
+          invocation_token: invocationToken,
+        })
+        if (error) throw error
+        return data === true
+      },
+    )
+    if (!authorized) return new Response(null, { status: 401 })
     const { data, error } = await client.rpc('crm_claim_google_calendar_jobs', {
       target_firm: firmId,
       staff_domain: staffDomain,

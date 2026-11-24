@@ -165,34 +165,76 @@ $$;
 create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 
--- pg_net stores request headers in its queue. Fail closed unless access to
--- the queue has been restricted without breaking the pg_net worker.
-do $$
+-- The HTTP queue can be read by database login roles. Never put the permanent
+-- worker secret there: issue a short-lived, single-use credential instead.
+create table public.crm_google_calendar_invocations (
+  token_hash bytea primary key,
+  expires_at timestamptz not null
+);
+alter table public.crm_google_calendar_invocations enable row level security;
+revoke all on public.crm_google_calendar_invocations from public, anon, authenticated;
+
+create function public.crm_dispatch_google_calendar_sync()
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  worker_url text;
+  worker_secret text;
+  invocation_token text;
 begin
-  if (has_schema_privilege('anon', 'net', 'USAGE') and
-      has_table_privilege('anon', 'net.http_request_queue', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'))
-    or (has_schema_privilege('authenticated', 'net', 'USAGE') and
-      has_table_privilege('authenticated', 'net.http_request_queue', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')) then
-    raise exception 'pg_net request queue permissions are not restricted; Calendar cannot be enabled safely';
+  delete from public.crm_google_calendar_invocations where expires_at <= now();
+  select max(decrypted_secret) filter (where name = 'crm_google_calendar_worker_url'),
+    max(decrypted_secret) filter (where name = 'crm_google_calendar_worker_secret')
+  into worker_url, worker_secret
+  from vault.decrypted_secrets
+  where name in ('crm_google_calendar_worker_url', 'crm_google_calendar_worker_secret');
+  if worker_url is null or coalesce(length(worker_secret), 0) < 32 then
+    return;
   end if;
+  invocation_token := encode(extensions.gen_random_bytes(32), 'hex');
+  insert into public.crm_google_calendar_invocations (token_hash, expires_at)
+  values (extensions.hmac(invocation_token, worker_secret, 'sha256'), now() + interval '2 minutes');
+  perform net.http_post(url := worker_url,
+    headers := jsonb_build_object('x-crm-calendar-token', invocation_token),
+    timeout_milliseconds := 90000);
 end;
 $$;
 
--- Nothing is sent until both Vault entries have been configured.
-select cron.schedule('crm-google-calendar-sync', '* * * * *', $cron$
-  select net.http_post(
-    url := conf.worker_url,
-    headers := jsonb_build_object('x-crm-calendar-secret', conf.worker_secret),
-    timeout_milliseconds := 90000
-  )
-  from (
-    select max(decrypted_secret) filter (where name = 'crm_google_calendar_worker_url') as worker_url,
-      max(decrypted_secret) filter (where name = 'crm_google_calendar_worker_secret') as worker_secret
-    from vault.decrypted_secrets
-    where name in ('crm_google_calendar_worker_url', 'crm_google_calendar_worker_secret')
-  ) conf
-  where conf.worker_url is not null and length(conf.worker_secret) >= 32;
-$cron$);
+create function public.crm_consume_google_calendar_invocation(invocation_token text)
+returns boolean
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  worker_secret text;
+  consumed boolean;
+begin
+  if coalesce(invocation_token !~ '^[0-9a-f]{64}$', true) then return false; end if;
+  select decrypted_secret into worker_secret from vault.decrypted_secrets
+  where name = 'crm_google_calendar_worker_secret' limit 1;
+  if coalesce(length(worker_secret), 0) < 32 then return false; end if;
+  delete from public.crm_google_calendar_invocations
+  where token_hash = extensions.hmac(invocation_token, worker_secret, 'sha256')
+    and expires_at > now()
+  returning true into consumed;
+  return coalesce(consumed, false);
+end;
+$$;
+
+revoke all on function public.crm_dispatch_google_calendar_sync() from public, anon, authenticated;
+revoke all on function public.crm_consume_google_calendar_invocation(text) from public, anon, authenticated;
+grant execute on function public.crm_consume_google_calendar_invocation(text) to service_role;
+
+-- Keep the schedule disabled until an administrator explicitly activates it.
+do $$
+declare
+  scheduled_job_id bigint;
+begin
+  scheduled_job_id := cron.schedule('crm-google-calendar-sync', '* * * * *',
+    'select public.crm_dispatch_google_calendar_sync();');
+  perform cron.alter_job(scheduled_job_id, active := false);
+end;
+$$;
 
 -- Called only by the server after validating an active firm administrator.
 -- Values never leave the server and are stored encrypted by Vault.
@@ -202,6 +244,7 @@ language plpgsql security definer set search_path = ''
 as $$
 declare
   saved_id uuid;
+  scheduled_job_id bigint;
 begin
   if worker_url !~ '^https://[a-z0-9]+\.supabase\.co/functions/v1/google-calendar-sync$'
     or length(worker_secret) not between 32 and 256 then
@@ -219,8 +262,10 @@ begin
   else
     perform vault.update_secret(saved_id, worker_secret);
   end if;
-  update cron.job set active = true where jobname = 'crm-google-calendar-sync';
+  select jobid into scheduled_job_id from cron.job
+  where jobname = 'crm-google-calendar-sync' and username = current_user;
   if not found then raise exception 'Calendar schedule is not installed'; end if;
+  perform cron.alter_job(scheduled_job_id, active := true);
 end;
 $$;
 
@@ -228,7 +273,8 @@ create function public.crm_google_calendar_sync_status(target_firm uuid)
 returns table (enabled boolean, pending bigint, failed bigint)
 language sql security definer set search_path = ''
 as $$
-  select exists (select 1 from cron.job where jobname = 'crm-google-calendar-sync' and active)
+  select exists (select 1 from cron.job
+      where jobname = 'crm-google-calendar-sync' and username = current_user and active)
     and (select count(distinct name) = 2 from vault.secrets
       where name in ('crm_google_calendar_worker_url', 'crm_google_calendar_worker_secret')),
     count(*) filter (where next_attempt_at is not null),
