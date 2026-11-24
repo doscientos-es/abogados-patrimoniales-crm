@@ -211,7 +211,7 @@ export function GlobalSearchTrigger({
       aria-haspopup="dialog"
       title={compact ? 'Buscar en LEX' : undefined}
       className={cn(
-        'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-sidebar-border h-10 w-full min-w-0 gap-2 rounded-xl border bg-transparent font-normal shadow-none',
+        'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full min-w-0 gap-2 rounded-lg border border-white/10 bg-white/5 font-normal shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]',
         compact ? 'justify-center px-0' : 'justify-start px-3',
       )}
       variant="ghost"
@@ -220,7 +220,7 @@ export function GlobalSearchTrigger({
       <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
       {!compact ? <span className="flex-1 truncate text-left text-sm">Buscar en LEX…</span> : null}
       {!compact ? (
-        <kbd className="bg-sidebar-accent rounded px-1.5 py-0.5 text-[10px] font-medium">
+        <kbd className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium">
           Ctrl K
         </kbd>
       ) : null}

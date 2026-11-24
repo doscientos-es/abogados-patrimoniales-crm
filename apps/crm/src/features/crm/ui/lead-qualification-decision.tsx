@@ -40,6 +40,7 @@ import {
   type TipoDecision,
 } from '@/features/crm/application/qualification-decision'
 import { MatterNatureCard } from '@/features/crm/ui/matter-nature-card'
+import { ShortTextList } from '@/features/crm/ui/short-text-list'
 import { useCrearTarea, useMarcarSiguienteAccion, useTareasPersistentes } from '@/features/tareas'
 
 const selectClassName =
@@ -101,7 +102,7 @@ export function LeadQualificationDecision({
                 {new Date(current.fecha).toLocaleDateString('es-ES')}
               </span>
             </div>
-            <p>
+            <p className="whitespace-pre-wrap">
               <span className="font-medium">{current.motivo}</span>
               {current.detalle ? ` · ${current.detalle}` : ''}
             </p>
@@ -208,6 +209,8 @@ function DecisionDialog({
   const advance = useAvanzarLeadPorHito(firmId)
   const inProgress = useRef(false)
   const [motivo, setMotivo] = useState('')
+  const [instrucciones, setInstrucciones] = useState<string[]>([])
+  const [instruccionDraft, setInstruccionDraft] = useState('')
   const busy =
     saveDetails.isPending || transition.isPending || createTask.isPending || markNext.isPending
   const closing = tipo === 'cliente_no_continua' || tipo === 'no_atendible'
@@ -230,7 +233,10 @@ function DecisionDialog({
       const raw = form.get(name)
       return typeof raw === 'string' ? raw.trim() : ''
     }
-    const detail = value('detail')
+    const instructions = instruccionDraft.trim()
+      ? [...instrucciones, instruccionDraft.trim()]
+      : instrucciones
+    const detail = budget ? instructions.join('\n') : value('detail')
     const service = value('service')
     const date = value('date')
     const assigned = value('assigned')
@@ -251,6 +257,7 @@ function DecisionDialog({
       fecha: new Date().toISOString(),
       motivo,
       detalle: detail,
+      ...(budget ? { instrucciones: instructions } : {}),
       ...(assigned ? { responsableId: assigned } : {}),
       ...(date ? { fechaRevision: date } : {}),
       ...(currentUserId ? { decididoPor: currentUserId } : {}),
@@ -381,10 +388,22 @@ function DecisionDialog({
           ) : null}
           {budget ? (
             <div className="space-y-1.5">
-              <Label htmlFor="decision-instructions">
-                Instrucciones del abogado para el presupuesto
-              </Label>
-              <Textarea id="decision-instructions" name="detail" rows={3} />
+              <p className="text-sm font-medium">Instrucciones del abogado para el presupuesto</p>
+              <ShortTextList
+                label="Instrucciones del abogado para el presupuesto"
+                items={instrucciones}
+                draft={instruccionDraft}
+                onDraftChange={setInstruccionDraft}
+                disabled={busy}
+                onAdd={(value) => {
+                  setInstrucciones((items) => [...items, value])
+                  setInstruccionDraft('')
+                  return true
+                }}
+                onRemove={(index) =>
+                  setInstrucciones((items) => items.filter((_, i) => i !== index))
+                }
+              />
             </div>
           ) : null}
           {!closing ? (

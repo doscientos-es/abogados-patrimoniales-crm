@@ -107,12 +107,12 @@ export function AppSidebar({
       inert={!open || undefined}
       data-collapsed={collapsed}
       className={cn(
-        'app-sidebar bg-sidebar text-sidebar-foreground flex h-full shrink-0 overflow-hidden border-r transition-[width,border-color] duration-200 ease-linear motion-reduce:transition-none',
+        'app-sidebar bg-sidebar text-sidebar-foreground border-sidebar-border/70 flex h-full shrink-0 overflow-hidden border-r shadow-[8px_0_28px_-20px_rgba(0,0,0,0.45)] transition-[width,border-color] duration-200 ease-linear motion-reduce:transition-none',
         !open ? 'w-0 border-r-0' : collapsed ? 'w-[4.5rem]' : 'w-(--sidebar-width)',
       )}
     >
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <SidebarHeader className="border-sidebar-border gap-3 border-b p-3">
+        <SidebarHeader className="border-sidebar-foreground/10 gap-4 border-b px-3 pt-5 pb-4">
           <div className={cn('flex items-center gap-1', collapsed && 'flex-col gap-2')}>
             <Link
               to="/"
@@ -123,15 +123,15 @@ export function AppSidebar({
               )}
               onClick={onNavigate}
             >
-              <span className="bg-sidebar-primary ring-sidebar-foreground/10 flex size-10 shrink-0 items-center justify-center rounded-xl p-2 shadow-sm ring-1">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
                 <img src="/logo-lex.svg" alt="" className="h-full w-full object-contain" />
               </span>
               {!collapsed ? (
                 <span className="min-w-0">
-                  <span className="text-sidebar-foreground block truncate font-serif text-lg font-semibold tracking-wide">
+                  <span className="text-sidebar-foreground block truncate font-serif text-lg leading-tight font-semibold tracking-wide">
                     LEX.EUS
                   </span>
-                  <span className="text-sidebar-foreground/60 block truncate text-[11px]">
+                  <span className="text-sidebar-foreground/65 mt-0.5 block truncate text-[11px] tracking-wide">
                     Gestión del despacho
                   </span>
                 </span>
@@ -145,7 +145,7 @@ export function AppSidebar({
               title={toggleLabel}
               variant="ghost"
               size="icon"
-              className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground shrink-0"
+              className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground size-9 shrink-0 rounded-lg"
               onClick={onClose}
             >
               <PanelLeft className="size-4" aria-hidden="true" />
@@ -154,26 +154,28 @@ export function AppSidebar({
           <GlobalSearchTrigger onOpen={onOpenSearch} compact={collapsed} />
         </SidebarHeader>
 
-        <SidebarContent className="gap-0 py-2">
+        <SidebarContent role="navigation" aria-label="Secciones" className="gap-0 py-3">
           {groups.map((g) => (
-            <SidebarGroup key={g.label} className="px-3 py-1">
+            <SidebarGroup key={g.label} className={cn('px-3 py-1', collapsed && 'py-2')}>
               <SidebarGroupLabel
                 className={cn(
-                  'h-8 px-2 text-[10px] font-semibold tracking-wider uppercase',
+                  'text-sidebar-foreground/60 h-7 px-3 text-[10px] font-semibold tracking-[0.12em] uppercase',
                   collapsed && 'sr-only',
                 )}
               >
                 {g.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="gap-0.5">
                   {g.items.map((item) => (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton
                         asChild
                         isActive={active(item.url)}
                         className={cn(
-                          'h-10 rounded-xl transition-colors',
+                          'text-sidebar-foreground/80 hover:text-sidebar-foreground relative h-9 rounded-lg text-[13px] transition-colors hover:bg-white/8 data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] motion-reduce:transition-none',
+                          'before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-sky-300 before:opacity-0 data-[active=true]:before:opacity-100',
+                          '[&>svg]:text-sidebar-foreground/65 data-[active=true]:[&>svg]:text-sky-200',
                           collapsed ? 'justify-center px-0' : 'gap-3 px-3',
                         )}
                       >
@@ -194,7 +196,7 @@ export function AppSidebar({
             </SidebarGroup>
           ))}
         </SidebarContent>
-        <SidebarFooter className="border-sidebar-border shrink-0 border-t p-3">
+        <SidebarFooter className="border-sidebar-foreground/10 shrink-0 border-t bg-black/10 p-3">
           <div className={cn('flex items-center gap-1', collapsed && 'flex-col')}>
             <div className={cn('min-w-0', collapsed ? 'w-full' : 'flex-1')}>
               <AccountMenu compact={collapsed} />
@@ -204,7 +206,7 @@ export function AppSidebar({
               aria-label="Abrir calendario"
               title="Abrir calendario"
               onClick={onNavigate}
-              className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2"
+              className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring inline-flex size-9 shrink-0 items-center justify-center rounded-lg outline-none focus-visible:ring-2"
             >
               <CalendarDays className="size-4" aria-hidden="true" />
             </Link>

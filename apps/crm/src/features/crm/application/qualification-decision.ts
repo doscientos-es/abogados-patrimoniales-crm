@@ -111,6 +111,7 @@ export type DecisionCualificacion = {
   fecha: string
   motivo: string
   detalle: string
+  instrucciones?: string[]
   tareaId?: string
   responsableId?: string
   fechaRevision?: string
@@ -180,9 +181,15 @@ export const preparaYo = (responsableId: string | null, currentUserId: string | 
 export function instruccionesPresupuesto(details: Json) {
   const decision = decisionActual(details)
   if (!decision || decision.tipo !== 'preparar_presupuesto') return null
+  const instruccionesLista = Array.isArray(decision.instrucciones)
+    ? decision.instrucciones.filter((item): item is string => typeof item === 'string')
+    : decision.detalle
+      ? [decision.detalle]
+      : []
   return {
     servicio: decision.motivo,
     instrucciones: decision.detalle,
+    instruccionesLista,
     decididoPor: decision.decididoPor ?? null,
     fechaObjetivo: decision.fechaRevision ?? null,
   }

@@ -18,6 +18,7 @@ describe('decisiones de cualificación', () => {
     expect(instruccionesPresupuesto(details)).toEqual({
       servicio: 'Herencia',
       instrucciones: 'Fases separadas',
+      instruccionesLista: ['Fases separadas'],
       decididoPor: 'user-1',
       fechaObjetivo: '2026-11-12',
     })
@@ -35,6 +36,23 @@ describe('decisiones de cualificación', () => {
       oportunidadId: 'lead-1',
       asignadoId: 'user-2',
     })
+  })
+
+  it('recupera cada instrucción de una decisión nueva', () => {
+    const details = conDecision(
+      {},
+      {
+        tipo: 'preparar_presupuesto',
+        fecha: '2026-10-13',
+        motivo: 'Herencia',
+        detalle: 'Fases separadas\nIncluir impuestos',
+        instrucciones: ['Fases separadas', 'Incluir impuestos'],
+      },
+    )
+    expect(instruccionesPresupuesto(details)?.instruccionesLista).toEqual([
+      'Fases separadas',
+      'Incluir impuestos',
+    ])
   })
 
   it('does not show instructions for another current decision', () => {

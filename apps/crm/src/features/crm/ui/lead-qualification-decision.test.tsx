@@ -28,6 +28,7 @@ vi.mock('@/features/tareas', () => ({
 }))
 
 import { LeadQualificationDecision } from './lead-qualification-decision'
+import { InstruccionesAbogado } from './quote-editor-dialogs'
 
 const lead = (extra: Record<string, unknown> = {}) =>
   ({
@@ -100,23 +101,64 @@ describe('Cualificación · decisión del despacho', () => {
       target: { value: 'u-igor' },
     })
     fireEvent.change(screen.getByLabelText('Fecha objetivo *'), { target: { value: '2026-11-12' } })
-    fireEvent.change(screen.getByLabelText('Instrucciones del abogado para el presupuesto'), {
+    const input = screen.getByLabelText('Añadir instrucciones del abogado para el presupuesto')
+    fireEvent.change(input, {
       target: { value: 'Fases separadas' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+    await waitFor(() => expect(screen.getByText('Fases separadas')).toBeTruthy())
+    fireEvent.change(input, { target: { value: 'Eliminar esta instrucción' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByText('Eliminar esta instrucción')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar nota 2' }))
+    await waitFor(() => expect(screen.queryByText('Eliminar esta instrucción')).toBeNull())
+    fireEvent.change(input, { target: { value: ' Incluir impuestos ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Guardar y asignar preparación →' }))
     await waitFor(() => expect(onOpenQuote).toHaveBeenCalledOnce())
     expect(mocks.createTask.mock.calls[0]?.[0]).toMatchObject({
       oportunidadId: 'op-1',
       titulo: 'PREPARAR PRESUPUESTO',
       asignadoId: 'u-igor',
-      descripcion: expect.stringContaining('Fases separadas'),
+      descripcion: expect.stringContaining('Fases separadas\nIncluir impuestos'),
+      mensajeInicial: expect.stringContaining('Fases separadas\nIncluir impuestos'),
     })
     expect(mocks.markNext).toHaveBeenCalledWith({ task: { id: 'task-new' }, enabled: true })
     expect(mocks.save.mock.calls[0]?.[0].detalles.decisionCualificacion).toMatchObject({
       tipo: 'preparar_presupuesto',
       motivo: 'Herencia familia Pérez',
       tareaId: 'task-new',
+      detalle: 'Fases separadas\nIncluir impuestos',
+      instrucciones: ['Fases separadas', 'Incluir impuestos'],
     })
     expect(mocks.transition).not.toHaveBeenCalled()
+  })
+
+  it('muestra las instrucciones nuevas como lista y conserva el texto antiguo', () => {
+    const base = { tipo: 'preparar_presupuesto', fecha: '2026-11-12', motivo: 'Herencia' }
+    const { rerender } = render(
+      <InstruccionesAbogado
+        detalles={{
+          decisionCualificacion: {
+            ...base,
+            detalle: 'Primera\nSegunda',
+            instrucciones: ['Primera', 'Segunda'],
+          },
+        }}
+        miembros={[]}
+      />,
+    )
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Primera',
+      'Segunda',
+    ])
+    rerender(
+      <InstruccionesAbogado
+        detalles={{
+          decisionCualificacion: { ...base, detalle: 'Texto antiguo\ncon varias líneas' },
+        }}
+        miembros={[]}
+      />,
+    )
+    expect(screen.getAllByRole('listitem')[0]?.textContent).toBe('Texto antiguo\ncon varias líneas')
   })
 })

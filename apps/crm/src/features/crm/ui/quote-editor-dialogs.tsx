@@ -59,7 +59,9 @@ export function InstruccionesAbogado({
 }) {
   const data = instruccionesPresupuesto(detalles)
   if (!data) return null
-  const who = data.decididoPor ? miembros.find((member) => member.id === data.decididoPor)?.nombre : null
+  const who = data.decididoPor
+    ? miembros.find((member) => member.id === data.decididoPor)?.nombre
+    : null
   return (
     <div
       className="bg-muted/40 space-y-1 rounded-lg border px-4 py-2.5 text-sm"
@@ -74,11 +76,17 @@ export function InstruccionesAbogado({
       <p>
         <span className="font-medium">Servicio:</span> {data.servicio}
       </p>
-      <p className="whitespace-pre-wrap">
-        {data.instrucciones || (
-          <span className="text-muted-foreground italic">Sin instrucciones adicionales.</span>
-        )}
-      </p>
+      {data.instruccionesLista.length ? (
+        <ul className="list-disc space-y-1 pl-5">
+          {data.instruccionesLista.map((instruction, index) => (
+            <li key={`${index}-${instruction}`} className="whitespace-pre-wrap">
+              {instruction}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted-foreground italic">Sin instrucciones adicionales.</p>
+      )}
     </div>
   )
 }
@@ -104,7 +112,9 @@ export function CatalogDialog({
       (service) =>
         service.active &&
         (!needle ||
-          `${service.code} ${service.name} ${service.family}`.toLocaleLowerCase('es').includes(needle)),
+          `${service.code} ${service.name} ${service.family}`
+            .toLocaleLowerCase('es')
+            .includes(needle)),
     )
   }, [query, services])
   return (
@@ -224,8 +234,8 @@ export function RequestReviewDialog({
         <DialogHeader>
           <DialogTitle>Solicitar revisión / validación · v{version.version}</DialogTitle>
           <DialogDescription>
-            Se crea una tarea real asignada al responsable, con copia fija de esta versión. Solo
-            esa tarea puede validarla o devolverla.
+            Se crea una tarea real asignada al responsable, con copia fija de esta versión. Solo esa
+            tarea puede validarla o devolverla.
           </DialogDescription>
         </DialogHeader>
         {problemas.length ? (
@@ -242,8 +252,8 @@ export function RequestReviewDialog({
           <p className="rounded-md border px-3 py-2 text-sm">
             Ya existe una tarea abierta de revisión para esta versión. Se reutilizará con su
             responsable real: <strong>{existente.asignadoNombre}</strong>
-            {existente.venceEn ? ` · plazo ${existente.venceEn.slice(0, 10)}` : ''}. Para
-            cambiarlo, reasigna la tarea.
+            {existente.venceEn ? ` · plazo ${existente.venceEn.slice(0, 10)}` : ''}. Para cambiarlo,
+            reasigna la tarea.
           </p>
         ) : (
           <div className="space-y-3">
@@ -295,7 +305,9 @@ export function RequestReviewDialog({
               problemas.length > 0 ||
               (!existente && !asignadoId)
             }
-            onClick={() => void onConfirm({ asignadoId, fecha, observaciones: observaciones.trim() })}
+            onClick={() =>
+              void onConfirm({ asignadoId, fecha, observaciones: observaciones.trim() })
+            }
           >
             {pending ? 'Creando…' : 'Crear tarea de revisión'}
           </Button>

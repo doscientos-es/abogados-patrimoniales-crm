@@ -58,12 +58,20 @@ it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   const header = sidebar.querySelector('[data-sidebar="header"]') as HTMLElement
   const footer = sidebar.querySelector('[data-sidebar="footer"]') as HTMLElement
   expect(within(header).getByRole('button', { name: 'Buscar' })).toBeTruthy()
+  const navigation = within(sidebar).getByRole('navigation', { name: 'Secciones' })
+  const contacts = within(navigation).getByRole('link', { name: 'Contactos' })
+  expect(contacts.getAttribute('aria-current')).toBe('page')
+  expect(
+    within(navigation).getByRole('link', { name: 'Expedientes' }).getAttribute('aria-current'),
+  ).toBeNull()
+  fireEvent.click(contacts)
+  expect(onNavigate).toHaveBeenCalledOnce()
   expect(within(footer).getByRole('button', { name: 'Cuenta' })).toBeTruthy()
   expect(within(footer).getByRole('button', { name: 'Avisos' })).toBeTruthy()
   const calendar = within(footer).getByRole('link', { name: 'Abrir calendario' })
   expect(calendar.getAttribute('href')).toBe('/calendario')
   fireEvent.click(calendar)
-  expect(onNavigate).toHaveBeenCalledOnce()
+  expect(onNavigate).toHaveBeenCalledTimes(2)
 })
 
 it('mantiene accesibles las secciones, la búsqueda y el pie en modo compacto', () => {
