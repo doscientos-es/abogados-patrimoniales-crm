@@ -27,12 +27,9 @@ Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_C
 
 Con el proyecto ya enlazado, revisar las migraciones con `supabase db push --dry-run` y aplicar las aprobadas con `supabase db push`. Desplegar con `supabase functions deploy google-calendar-sync`. Esta función valida el secreto propio de Cron en lugar de un JWT; no comparte el secreto con el CRM ni con Google.
 
-En **Vault** de ese mismo proyecto, crear estas dos entradas al final, cuando ya se quieran enviar invitaciones:
+Abrir **CRM → Configuración → Conexiones → Google Calendar** como administrador y pulsar **Probar conexión**. La prueba comprueba la autorización y acceso al calendario sin crear eventos. Una vez verificada, pulsar **Activar sincronización**: el servidor configura Vault con la URL y el secreto sin mostrarlos en el CRM. Al activarla se pueden enviar invitaciones de citas futuras ya confirmadas.
 
-| Nombre                              | Valor                                                             |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| `crm_google_calendar_worker_url`    | URL HTTPS de la función `google-calendar-sync` del mismo proyecto |
-| `crm_google_calendar_worker_secret` | El mismo valor que `CRM_GOOGLE_CALENDAR_WORKER_SECRET`            |
+Como alternativa administrativa, las entradas de Vault son `crm_google_calendar_worker_url` y `crm_google_calendar_worker_secret`. La primera es la URL HTTPS de `google-calendar-sync`; la segunda contiene el mismo valor que `CRM_GOOGLE_CALENDAR_WORKER_SECRET`. No copiarlas a tickets ni chat.
 
 Cron procesa la cola cada minuto. La migración encola también las citas futuras ya confirmadas, así que al activar Vault se pueden enviar invitaciones de citas existentes. Para pausar nuevos envíos, desactivar **`crm-google-calendar-sync`** en Supabase Cron; los cambios del CRM seguirán quedando en cola. Evitar cambiar el ID del calendario después de empezar a sincronizar: cambiarlo no retira los eventos del calendario anterior.
 
@@ -41,4 +38,4 @@ Cron procesa la cola cada minuto. La migración encola también las citas futura
 1. Confirmar una cita de prueba con uno o dos asistentes cuyo correo verificado del CRM coincida con su cuenta corporativa de Google. Comprobar el evento en `LEX · Citas` y la invitación en el correo de cada asistente.
 2. **Comprueba la agenda personal:** Google decide si muestra la cita automáticamente según **Añadir invitaciones a mi calendario**. Si no se muestra, aceptar la invitación o añadir la cuenta de integración como remitente conocido. No hace falta conectar cada cuenta al CRM.
 3. Reprogramar, reconfirmar y luego cancelar desde el CRM. Comprobar que no quedan duplicados y que Google notifica los cambios. Para evitar duplicados, no guardar también la misma cita con el botón manual de Google Calendar del CRM.
-4. Si no se crea el evento, revisar el historial de Cron y `crm_google_calendar_jobs`: `last_error = 'google_auth'` indica que hay que revisar el OAuth; `calendar_request` apunta al calendario, sus permisos o una petición rechazada. Si el evento existe pero alguien no recibe invitación, revisar primero su cuenta activa, su correo verificado, el dominio y la configuración de invitaciones de Google.
+4. Si no se crea el evento, revisar el historial de Cron y `crm_google_calendar_jobs`: `last_error = 'google_auth'` indica que hay que revisar el OAuth; `calendar_request` apunta al calendario, sus permisos o una petición rechazada; `staff_email` indica que falta un correo verificado en el dominio configurado. Si el evento existe pero alguien no recibe invitación, revisar primero su cuenta activa, su correo verificado, el dominio y la configuración de invitaciones de Google.
