@@ -28,7 +28,7 @@ it('mantiene el árbol y guarda el rol elegido para un contacto interno', async 
   const update = vi.fn().mockResolvedValue(undefined)
   const contacts = [
     { id: 'c1', nombre: 'Empresa' },
-    { id: 'c2', nombre: 'Ana' },
+    { id: 'c2', nombre: 'Ana', apellidos: 'López' },
   ] as ContactoPersistido[]
   const participants: ParticipantePersistido[] = [
     {
@@ -70,6 +70,7 @@ it('mantiene el árbol y guarda el rol elegido para un contacto interno', async 
     />,
   )
   const children = screen.getByRole('list', { name: 'Contactos de Empresa' })
+  expect(within(children).getByText('Ana López')).toBeTruthy()
   expect(within(children).getByText('Representante legal')).toBeTruthy()
   fireEvent.click(within(children).getByRole('button', { name: 'Editar intervención' }))
   fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'Mediador' } })

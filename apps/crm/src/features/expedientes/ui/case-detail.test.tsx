@@ -231,6 +231,7 @@ describe('CaseDetail', () => {
     expect(screen.queryByLabelText('Título de tarea')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Añadir tarea' }))
     expect(screen.getByRole('dialog', { name: 'Nueva tarea para el expediente' })).toBeTruthy()
+    expect(screen.getByText('Quedará vinculada al expediente AP_11.')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Título de tarea'), {
       target: { value: 'Enviar borrador' },
     })

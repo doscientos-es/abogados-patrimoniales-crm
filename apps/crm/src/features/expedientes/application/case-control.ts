@@ -137,7 +137,15 @@ export function caseAlerts(
 }
 
 export function relativeDays(timestamp: string, now = Date.now()) {
-  const difference = Math.round((now - Date.parse(timestamp)) / DAY_MS)
+  const parsed = new Date(timestamp)
+  const today = new Date(now)
+  if (Number.isNaN(parsed.getTime()) || Number.isNaN(today.getTime())) return 'sin fecha'
+  const dateOnly = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(timestamp)
+  const targetDay = dateOnly
+    ? Date.parse(`${timestamp}T00:00:00Z`)
+    : Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+  const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const difference = (todayDay - targetDay) / DAY_MS
   if (!Number.isFinite(difference)) return 'sin fecha'
   if (difference === 0) return 'hoy'
   if (difference === 1) return 'hace 1 día'

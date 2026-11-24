@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AnchorHTMLAttributes } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -32,7 +32,7 @@ afterEach(() => {
 
 async function selectContact(query: string, option: string) {
   const input = screen.getByRole('combobox', { name: 'Cliente *' })
-  input.focus()
+  act(() => input.focus())
   fireEvent.change(input, {
     target: { value: query },
   })

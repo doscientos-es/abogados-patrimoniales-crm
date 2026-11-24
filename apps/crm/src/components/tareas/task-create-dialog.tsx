@@ -252,7 +252,7 @@ export function TaskCreateDialog({
           <DialogDescription>
             {description ??
               (contextLabel
-                ? `Quedará vinculada a ${contextLabel}.`
+                ? `Quedará vinculada ${contextLabel.startsWith('el ') ? `al ${contextLabel.slice(3)}` : `a ${contextLabel}`}.`
                 : 'Sólo el título es obligatorio; el resto puede completarse después.')}
           </DialogDescription>
         </DialogHeader>

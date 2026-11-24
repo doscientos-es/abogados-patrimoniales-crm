@@ -84,4 +84,12 @@ describe('case control workflow', () => {
     expect(relativeDays('2026-09-07T12:00:00Z', now)).toBe('hoy')
     expect(relativeDays('2026-09-09T12:00:00Z', now)).toBe('dentro de 2 días')
   })
+
+  it('compares calendar dates instead of rounding elapsed hours', () => {
+    const lateToday = new Date(2026, 10, 24, 22, 48).getTime()
+    expect(relativeDays('2026-11-24', lateToday)).toBe('hoy')
+    expect(relativeDays('2026-11-23', lateToday)).toBe('hace 1 día')
+    expect(relativeDays('2026-11-25', lateToday)).toBe('mañana')
+    expect(relativeDays('invalid', lateToday)).toBe('sin fecha')
+  })
 })

@@ -7,6 +7,7 @@ import { TaskWorkspace } from '@/components/tareas/task-workspace'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
+import { nombreCompletoContacto } from '@/features/crm/application/contact-autocomplete'
 import { AppointmentsTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import {
   CaseEditForm,
@@ -230,8 +231,9 @@ function CaseRoute() {
           />
         }
         clienteNombre={
-          contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)?.nombre ??
-          'Contacto principal'
+          nombreCompletoContacto(
+            contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId),
+          ) || 'Contacto principal'
         }
         taskPending={createTask.isPending}
         onCreateTask={(input) => createTask.mutateAsync(input)}
@@ -259,8 +261,9 @@ function CaseRoute() {
             expedienteId={expediente.id}
             principalId={expediente.contactoPrincipalId}
             clienteNombre={
-              contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId)
-                ?.nombre ?? 'Cliente'
+              nombreCompletoContacto(
+                contacts.data?.find((contact) => contact.id === expediente.contactoPrincipalId),
+              ) || 'Cliente'
             }
             participantes={participants.data ?? []}
             contactos={contacts.data ?? []}

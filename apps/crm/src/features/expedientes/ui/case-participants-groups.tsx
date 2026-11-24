@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCrearContacto, type ContactoPersistido } from '@/features/contactos'
+import { nombreCompletoContacto } from '@/features/crm/application/contact-autocomplete'
 import type { MiembroDespacho } from '@/features/crm/application/opportunity-types'
 import { useParticipantRoles } from '@/features/expedientes'
 import type {
@@ -157,7 +158,9 @@ export function CaseParticipantsPanel({
 
   const displayName = (r: Row) =>
     (r.miembroId ? membersById.get(r.miembroId)?.nombre : undefined) ??
-    (r.contactoId ? contactsById.get(r.contactoId)?.nombre : undefined) ??
+    (r.contactoId
+      ? nombreCompletoContacto(contactsById.get(r.contactoId)) || undefined
+      : undefined) ??
     r.nombre
 
   /** Convierte el cliente principal mostrado por defecto en una intervención real. */
@@ -526,7 +529,7 @@ function PersonDataDialog({
         <DialogHeader>
           <DialogTitle>Datos de la persona</DialogTitle>
           <DialogDescription>
-            {contacto?.nombre ?? miembro?.nombre ?? row?.nombre}
+            {nombreCompletoContacto(contacto) || miembro?.nombre || row?.nombre}
             {row ? ` · ${row.tipoResuelto}` : ''}
           </DialogDescription>
         </DialogHeader>
