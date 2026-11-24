@@ -1,6 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-import { isDedicatedCalendar, synchronizeCalendarJob, type CalendarJob } from './calendar.ts'
+import {
+  isDedicatedCalendar,
+  synchronizeCalendarJob,
+  type CalendarJob,
+  type CalendarJobDetails,
+} from './calendar.ts'
+import { calendarJobDetails } from './details.ts'
 import { calendarAccessToken } from './oauth.ts'
 import { consumeInvocationToken } from './worker-auth.ts'
 
@@ -49,7 +55,23 @@ Deno.serve(async (request) => {
       let errorCode = token ? null : 'google_auth'
       if (token) {
         try {
-          await synchronizeCalendarJob(job, { calendarId, accessToken: token, staffDomain })
+          const details = await calendarJobDetails(job, async (query) => {
+            const { data: rows, error: detailsError } = await client.rpc(
+              'crm_google_calendar_job_details',
+              query,
+            )
+            if (detailsError || !Array.isArray(rows) || !rows[0]) return null
+            return rows[0] as CalendarJobDetails
+          })
+          await synchronizeCalendarJob(
+            { ...job, details },
+            {
+              calendarId,
+              accessToken: token,
+              staffDomain,
+              crmBaseUrl: env('CRM_PUBLIC_URL') || undefined,
+            },
+          )
           if (job.active && job.emails.length !== job.staff_count) errorCode = 'staff_email'
         } catch {
           errorCode = 'calendar_request'

@@ -1,6 +1,6 @@
 # Google Calendar · Citas del despacho
 
-El CRM crea una **Cita del despacho** en un calendario privado al confirmar la fecha y hora en el CRM. Google invita a los asistentes del despacho con una cuenta activa y un correo corporativo verificado en el CRM. No se envían nombres de clientes, notas, expedientes ni enlaces. Preparar una cita no envía invitaciones; reprogramarla o cancelarla desde el CRM actualiza o retira el evento. Los cambios que se hagan en Google no se importan al CRM.
+El CRM crea un evento privado al confirmar la fecha y hora de una cita. El evento incluye el título de la cita, los nombres del responsable y del equipo, y enlaces a la cita y a sus fichas de lead o expediente. El título puede contener datos introducidos por el equipo; no se envían notas ni el contenido del expediente. Google invita a los asistentes del despacho con una cuenta activa y un correo corporativo verificado en el CRM. Preparar una cita no envía invitaciones; reprogramarla o cancelarla desde el CRM actualiza o retira el evento. Los cambios que se hagan en Google no se importan al CRM.
 
 ## 1. Google: crear un calendario y autorizar el acceso
 
@@ -24,6 +24,8 @@ Verificar el proyecto Supabase enlazado para **Nuestro** antes de hacer cambios.
 | `CRM_GOOGLE_CALENDAR_WORKER_SECRET` | Secreto aleatorio y exclusivo, de 32 a 256 caracteres ASCII     |
 
 Si Calendar usa el mismo cliente OAuth de Drive, la función reutiliza `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Para usar un cliente OAuth distinto, configurar juntos `GOOGLE_CALENDAR_CLIENT_ID` y `GOOGLE_CALENDAR_CLIENT_SECRET`; ambos tienen prioridad sobre los de Drive.
+
+Los enlaces apuntan por defecto a `https://www.lex.eus`. Para otra instalación se puede configurar `CRM_PUBLIC_URL` con el origen HTTPS público del CRM.
 
 Antes de aplicar migraciones, comparar el historial remoto con el repositorio: este proyecto tiene versiones históricas que no coinciden y no debe ejecutarse `supabase db push` a ciegas. Desplegar las funciones `google-calendar-sync` y `google-calendar-connection`. La primera valida una credencial de un solo uso; la segunda exige una sesión y un administrador activo del despacho.
 
