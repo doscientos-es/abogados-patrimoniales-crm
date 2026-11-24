@@ -53,6 +53,7 @@ import {
   caseStatusLabel,
   relativeDays,
 } from '@/features/expedientes/application/case-control'
+import { readGastos, readTrabajos } from '@/features/expedientes/application/case-economics'
 import type {
   ActuacionPersistida,
   EventoExpediente,
@@ -199,7 +200,8 @@ export function CaseDetail({
     workstreams: lineas.length,
     activities: actuaciones.length,
     documents: documentos.length,
-    economic: facturas.length,
+    economic:
+      facturas.length + readGastos(item.detalles).length + readTrabajos(item.detalles).length,
     communications:
       comunicaciones.length +
       notas.filter((note) => note.scope === 'case' && note.case_id === item.id).length,

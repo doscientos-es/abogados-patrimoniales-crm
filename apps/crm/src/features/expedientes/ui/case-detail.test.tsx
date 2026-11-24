@@ -54,10 +54,10 @@ function renderDetail(
   canManageNextAction = () => true,
   onUpdateWorkstream = vi.fn().mockResolvedValue(undefined),
 ) {
-  return render(
+  const detail = (caseData: typeof expediente) => (
     <QueryClientProvider client={new QueryClient()}>
       <CaseDetail
-        expediente={expediente}
+        expediente={caseData}
         lineas={
           [
             {
@@ -137,12 +137,32 @@ function renderDetail(
           workstream: <div>Nueva línea</div>,
         }}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const result = render(detail(expediente))
+  return {
+    ...result,
+    updateCase: (caseData: typeof expediente) => result.rerender(detail(caseData)),
+  }
 }
 
 describe('CaseDetail', () => {
   afterEach(cleanup)
+
+  it('updates the economic tab count when expenses and extra work change', () => {
+    const { updateCase } = renderDetail()
+    expect(screen.getByRole('tab', { name: /económico\s*0/i })).toBeTruthy()
+    updateCase({
+      ...(expediente as object),
+      detalles: {
+        gastos: [{ id: 'expense-1', importe: 9.64 }],
+        trabajosExtras: [{ id: 'extra-1' }],
+      },
+    } as never)
+    expect(screen.getByRole('tab', { name: /económico\s*2/i })).toBeTruthy()
+    updateCase({ ...(expediente as object), detalles: { gastos: [], trabajosExtras: [] } } as never)
+    expect(screen.getByRole('tab', { name: /económico\s*0/i })).toBeTruthy()
+  })
 
   it('opens each operational feature using data linked to the expediente', () => {
     renderDetail()
