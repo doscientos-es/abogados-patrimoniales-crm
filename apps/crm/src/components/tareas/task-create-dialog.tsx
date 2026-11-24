@@ -201,7 +201,9 @@ export function TaskCreateDialog({
       })
       toast.success(
         successMessage ??
-          (kind === 'Plazo' ? 'Plazo propuesto; requiere validación.' : 'Tarea creada.'),
+          (!meetingRequest && kind === 'Plazo'
+            ? 'Plazo propuesto; requiere validación.'
+            : 'Tarea creada.'),
       )
       form.reset()
       reset()

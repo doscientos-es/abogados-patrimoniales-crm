@@ -71,6 +71,50 @@ describe('TaskCreateDialog', () => {
     )
   })
 
+  it('crea una solicitud de reunión sin fecha confirmada y vinculada al expediente elegido', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    renderDialog(
+      <TaskCreateDialog
+        cases={[{ id: 'case-1', referencia: 'EXP-1', titulo: 'Consulta' }]}
+        members={members}
+        defaultAssigneeId="other"
+        defaultKind="Plazo"
+        defaultDueDate="2026-12-01"
+        pending={false}
+        onCreate={onCreate}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea' }))
+    fireEvent.change(screen.getByLabelText('Expediente *'), { target: { value: 'case-1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tareas preestablecidas' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reunión' }))
+    fireEvent.change(screen.getByLabelText('Objeto de la reunión *'), {
+      target: { value: 'Seguimiento' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir compañero' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mi nombre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Crear reunión' }))
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expedienteId: 'case-1',
+          tipo: 'Evento',
+          asignadoId: 'other',
+          venceEn: null,
+          clasePlazo: null,
+          detallesReunion: expect.objectContaining({
+            specialType: 'meeting',
+            status: 'preparation',
+            startsAt: '',
+            attendeeUserIds: ['me'],
+          }),
+        }),
+      ),
+    )
+  })
+
   it('identifica al abogado elegido por su identificador aunque haya nombres iguales', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     renderDialog(
@@ -90,7 +134,9 @@ describe('TaskCreateDialog', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea' }))
-    fireEvent.click(screen.getAllByRole('radio', { name: 'Ana' })[1]!)
+    const [, lawyer] = screen.getAllByRole('radio', { name: 'Ana' })
+    if (!lawyer) throw new Error('No aparece el segundo abogado con el mismo nombre.')
+    fireEvent.click(lawyer)
     fireEvent.change(screen.getByLabelText('Fecha de la cita *'), {
       target: { value: '2026-12-02' },
     })
