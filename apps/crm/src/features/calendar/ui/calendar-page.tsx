@@ -34,7 +34,7 @@ import {
   type CalendarEntryFilters,
 } from '@/features/calendar/application/calendar-model'
 import { useMiembrosDespacho } from '@/features/crm'
-import { isAppointment } from '@/features/crm/application/first-meeting-cycle'
+import { estadoAsistente, isAppointment } from '@/features/crm/application/first-meeting-cycle'
 import { AppointmentLink } from '@/features/crm/ui/appointment-link'
 import { useExpedientesPersistentes } from '@/features/expedientes'
 import {
@@ -637,6 +637,7 @@ function CalendarEvent({
   const time = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(
     entry.date,
   )
+  const pendingConfirmation = isAppointment(task) && estadoAsistente(task.reunion) === 'pendiente'
 
   return (
     <button
@@ -645,7 +646,7 @@ function CalendarEvent({
         event.stopPropagation()
         onSelect()
       }}
-      title={`${eventLabel[task.tipo]} · ${time} · ${task.titulo}`}
+      title={`${eventLabel[task.tipo]} · ${time} · ${task.titulo}${pendingConfirmation ? ' · Pendiente de confirmar' : ''}`}
       aria-label={`Ver detalles de ${task.titulo}`}
       className={cn(
         'focus-visible:ring-ring block w-full rounded-md border text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
@@ -658,12 +659,14 @@ function CalendarEvent({
         <span className="flex items-center gap-2">
           <span className="w-10 shrink-0 text-xs font-semibold tabular-nums">{time}</span>
           <span className="min-w-0 truncate font-medium">{task.titulo}</span>
+          {pendingConfirmation && <span className="shrink-0 text-xs">Pendiente de confirmar</span>}
           <span className="ml-auto shrink-0 text-[11px] opacity-75">{eventLabel[task.tipo]}</span>
         </span>
       ) : (
         <span className="block truncate">
           <span className="mr-1 opacity-70">{time}</span>
           {task.titulo}
+          {pendingConfirmation && ' · Pendiente de confirmar'}
         </span>
       )}
     </button>
@@ -705,6 +708,9 @@ function EventDetailDialog({
               <DialogTitle>{task.titulo}</DialogTitle>
               <DialogDescription>
                 {eventLabel[task.tipo]} · {formatEventDate(entry.date)}
+                {appointment &&
+                  estadoAsistente(task.reunion) === 'pendiente' &&
+                  ' · Pendiente de confirmar'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 text-sm">

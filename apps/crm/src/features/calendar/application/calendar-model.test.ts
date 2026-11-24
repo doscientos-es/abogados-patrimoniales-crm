@@ -43,13 +43,18 @@ describe('calendarEntries', () => {
     expect(entries.map((entry) => entry.task.id)).toEqual(['critical', 'normal'])
   })
 
-  it('only displays confirmed appointments and puts them in the host’s agenda, not the scheduler’s', () => {
+  it('displays dated pending and confirmed appointments in the host’s agenda, not the scheduler’s', () => {
     const appointment = (status: string) =>
       task({
         id: status,
         tipo: 'Evento',
         asignadoId: 'secretary-1',
-        reunion: { specialType: 'meeting', status, attendeeUserIds: ['lawyer-1'] },
+        reunion: {
+          specialType: 'meeting',
+          status,
+          startsAt: '2026-09-14T10:00:00',
+          attendeeUserIds: ['lawyer-1'],
+        },
       })
     const confirmed = appointment('scheduled')
     const entries = calendarEntries([
@@ -57,9 +62,17 @@ describe('calendarEntries', () => {
       appointment('not_held'),
       confirmed,
     ])
-    expect(entries.map((entry) => entry.task.id)).toEqual(['scheduled'])
+    expect(entries.map((entry) => entry.task.id)).toEqual(['preparation', 'scheduled'])
     expect(isPersonalAppointment(confirmed, 'lawyer-1')).toBe(true)
     expect(isPersonalAppointment(confirmed, 'secretary-1')).toBe(false)
+  })
+
+  it('does not put an undated pending appointment on its task due date', () => {
+    const pending = task({
+      tipo: 'Evento',
+      reunion: { specialType: 'meeting', status: 'preparation' },
+    })
+    expect(calendarEntries([pending])).toEqual([])
   })
 })
 

@@ -191,4 +191,33 @@ describe('CalendarPage', () => {
     )
     expect(screen.queryByRole('button', { name: 'Actualizar fecha' })).toBeNull()
   })
+
+  it('shows a pending lead appointment with its confirmation status and link', () => {
+    mocks.tasks = [
+      {
+        id: 'lead-appointment',
+        oportunidadId: 'lead-1',
+        tipo: 'Evento',
+        titulo: 'Primera cita',
+        estado: 'Pendiente',
+        reunion: {
+          specialType: 'meeting',
+          status: 'preparation',
+          startsAt: new Date().toISOString(),
+          attendeeUserIds: ['user-1'],
+        },
+      },
+    ]
+    renderCalendar()
+    fireEvent.click(screen.getByRole('button', { name: 'Mis citas' }))
+    const event = screen.getByRole('button', { name: 'Ver detalles de Primera cita' })
+    expect(event.textContent).toContain('Pendiente de confirmar')
+    fireEvent.click(event)
+    expect(screen.getByRole('dialog', { name: 'Primera cita' }).textContent).toContain(
+      'Pendiente de confirmar',
+    )
+    expect(
+      screen.getByRole('link', { name: 'Abrir ficha de la cita' }).getAttribute('href'),
+    ).toContain('/oportunidades/lead-1')
+  })
 })

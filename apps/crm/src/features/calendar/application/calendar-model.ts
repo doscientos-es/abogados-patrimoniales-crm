@@ -75,6 +75,9 @@ export function calendarEntries(tasks: TareaPersistida[]): CalendarEntry[] {
       (task) =>
         task.estado !== 'Cancelada' &&
         (!isAppointment(task) ||
+          (estadoAsistente(task.reunion) === 'pendiente' &&
+            typeof task.reunion['startsAt'] === 'string' &&
+            task.reunion['startsAt'].length > 0) ||
           ['programada', 'en_curso', 'finalizada'].includes(estadoAsistente(task.reunion))),
     )
     .flatMap((task) => {
