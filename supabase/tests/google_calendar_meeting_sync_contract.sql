@@ -156,4 +156,30 @@ begin
 end;
 $$;
 
+-- Simulate an unavailable dispatcher without making a network request.
+-- This replacement and every other test change are rolled back below.
+create or replace function public.crm_dispatch_google_calendar_sync()
+returns void language plpgsql security definer set search_path = ''
+as $$
+begin
+  raise exception 'Simulated dispatch failure';
+end;
+$$;
+
+do $$
+declare
+  scheduled_job_id bigint;
+  job_id uuid := gen_random_uuid();
+begin
+  select jobid into strict scheduled_job_id from cron.job
+  where jobname = 'crm-google-calendar-sync' and username = current_user;
+  perform cron.alter_job(scheduled_job_id, active := true);
+  insert into public.crm_google_calendar_jobs (id, firm_id, task_id, starts_at, ends_at, staff_ids)
+  values (job_id, gen_random_uuid(), gen_random_uuid(), now(), now() + interval '1 hour', '{}');
+  if not exists (select 1 from public.crm_google_calendar_jobs where id = job_id and next_attempt_at is not null) then
+    raise exception 'Dispatch failures must not prevent the meeting from being queued';
+  end if;
+end;
+$$;
+
 rollback;
