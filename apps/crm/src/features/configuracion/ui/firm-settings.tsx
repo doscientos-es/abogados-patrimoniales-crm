@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { requestPasswordReset, useActiveMembership, useAuthSession } from '@/features/auth'
-import { QuoteCatalogAdmin } from '@/features/crm/ui/quote-catalog-admin'
 import { DocumentTypesCatalog } from '@/features/configuracion/ui/document-types-catalog'
+import { QuoteCatalogAdmin } from '@/features/crm/ui/quote-catalog-admin'
 import {
   getSupabaseBrowserClient,
   type FirmSettingsRow,
@@ -19,6 +19,7 @@ import {
   type MemberStatus,
 } from '@/shared/infrastructure/supabase'
 
+import { CalendarSettings } from './calendar-settings'
 import { CatalogsSettings } from './catalogs-settings'
 import { ChangelogSettings } from './changelog-settings'
 import { DriveSettings } from './drive-settings'
@@ -236,7 +237,7 @@ export function FirmSettings({
           { id: 'services', label: 'Servicios' },
           { id: 'blocks', label: 'Bloques del encargo' },
           { id: 'quoteTemplates', label: 'Plantillas · Presupuestos' },
-          { id: 'drive', label: 'Google Drive' },
+          { id: 'drive', label: 'Conexiones' },
           { id: 'changelog', label: 'Novedades' },
         ]}
         value={tab}
@@ -410,7 +411,10 @@ export function FirmSettings({
 
       {tab === 'catalogs' ? (
         <div className="grid gap-4">
-          <CatalogsSettings firmId={firmId ?? ''} actorRole={membership.data?.role ?? 'paralegal'} />
+          <CatalogsSettings
+            firmId={firmId ?? ''}
+            actorRole={membership.data?.role ?? 'paralegal'}
+          />
           <DocumentTypesCatalog
             firmId={firmId ?? ''}
             canManage={membership.data?.role === 'owner' || membership.data?.role === 'admin'}
@@ -419,7 +423,13 @@ export function FirmSettings({
       ) : null}
 
       {tab === 'drive' ? (
-        <DriveSettings actorRole={membership.data?.role ?? 'paralegal'} firmId={firmId ?? ''} />
+        <div className="grid gap-4">
+          <DriveSettings actorRole={membership.data?.role ?? 'paralegal'} firmId={firmId ?? ''} />
+          <CalendarSettings
+            actorRole={membership.data?.role ?? 'paralegal'}
+            firmId={firmId ?? ''}
+          />
+        </div>
       ) : null}
 
       {tab === 'changelog' ? <ChangelogSettings /> : null}
