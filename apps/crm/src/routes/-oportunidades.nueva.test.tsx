@@ -104,6 +104,15 @@ describe('NuevaOportunidadPage', () => {
     expect(screen.queryByRole('button', { name: 'Actualizar contactos' })).toBeNull()
   })
 
+  it('avisa cuando no hay contactos que coincidan con la búsqueda', async () => {
+    render(<NuevaOportunidadPage />)
+    const input = screen.getByLabelText('Contacto principal')
+    fireEvent.change(input, { target: { value: 'Koldo Arregi' } })
+    expect(await screen.findByText(/Sin resultados\. Puedes crear el contacto/)).toBeTruthy()
+    fireEvent.change(input, { target: { value: 'Ana' } })
+    expect(screen.queryByText(/Sin resultados\. Puedes crear el contacto/)).toBeNull()
+  })
+
   it('allows creating a Lead when the contact origin exceeds the Lead limit', async () => {
     mocks.contactOrigin = 'A'.repeat(170)
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })

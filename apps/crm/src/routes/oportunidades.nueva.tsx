@@ -310,6 +310,14 @@ export function NuevaOportunidadPage() {
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
+              {hasChangedContact &&
+              !selectedContactId &&
+              contactSearch.trim() &&
+              !contactOptions.length ? (
+                <p role="status" className="text-muted-foreground text-xs">
+                  Sin resultados. Puedes crear el contacto en otra pestaña y actualizar la lista.
+                </p>
+              ) : null}
             </div>
             <p className="text-muted-foreground text-xs">
               El contacto seleccionado mantiene su relación actual con el despacho.
