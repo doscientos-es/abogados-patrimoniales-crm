@@ -256,7 +256,7 @@ function FichaOportunidadPage() {
               {data.titulo}
             </h1>
             <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-relaxed break-words">
-              {data.descripcion || 'Sin descripción registrada.'}
+              {leadDescription(data)}
             </p>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -557,7 +557,9 @@ export function LeadSummary({
             <div>
               <p className="text-sm font-medium">{nextAction.titulo}</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                {nextAction.venceEn ? `Prevista: ${formatDate(nextAction.venceEn)}` : 'Sin fecha'}
+                {nextAction.venceEn
+                  ? `Prevista: ${nextAction.tipo === 'Evento' ? formatDateTime(nextAction.venceEn) : formatDate(nextAction.venceEn)}`
+                  : 'Sin fecha'}
               </p>
             </div>
           ) : (
@@ -996,6 +998,17 @@ function taskDateValue(value: string | null) {
   return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
 }
 
+export function leadDescription(
+  opportunity: Pick<OportunidadPersistida, 'descripcion' | 'detalles'>,
+) {
+  const initial = asRecord(asRecord(opportunity.detalles)['informacionInicial'])
+  return (
+    textValue(opportunity.descripcion) ||
+    textValue(initial['queHaOcurrido']) ||
+    'Sin descripción registrada.'
+  )
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime())
@@ -1006,6 +1019,13 @@ function formatDate(value: string) {
         year: 'numeric',
         timeZone: 'UTC',
       }).format(date)
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? 'Sin fecha'
+    : new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

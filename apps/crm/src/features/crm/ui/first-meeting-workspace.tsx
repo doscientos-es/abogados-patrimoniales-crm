@@ -19,6 +19,7 @@ import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const TRANSCRIPT_ACCEPT = '.txt,.md,.vtt,.srt,text/plain'
 export const MAX_TRANSCRIPT_CHARS = 60_000
+const LONG_MEETING_MS = 12 * 60 * 60 * 1000
 
 /** Transcripción persistente, propuesta revisable de LEXIA y notas internas. */
 export function FirstMeetingWorkspace({
@@ -642,6 +643,12 @@ export function FirstMeetingTimer({ reunion }: { reunion: Record<string, unknown
       <p className="font-mono text-5xl font-semibold tabular-nums" aria-label="Tiempo transcurrido">
         {formatElapsed(now - start)}
       </p>
+      {now - start >= LONG_MEETING_MS ? (
+        <p role="status" className="text-warning-foreground basis-full text-sm font-medium">
+          Esta cita lleva 12 horas o más en curso. Revisa si debes finalizarla; no se cerrará
+          automáticamente.
+        </p>
+      ) : null}
     </section>
   )
 }

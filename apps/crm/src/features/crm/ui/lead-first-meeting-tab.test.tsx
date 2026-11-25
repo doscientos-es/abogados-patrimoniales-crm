@@ -1,5 +1,5 @@
 import type * as Router from '@tanstack/react-router'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -65,10 +65,12 @@ vi.mock('@/features/tareas', () => ({
   MeetingInternalNotes: () => <div>Notas internas de la reunión</div>,
 }))
 
+import { FirstMeetingTimer } from './first-meeting-workspace'
 import { AppointmentsTab, LeadFirstMeetingTab } from './lead-first-meeting-tab'
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.clearAllMocks()
   mocks.appointments = []
   mocks.origins = { leads: [], cases: [] }
@@ -127,6 +129,16 @@ function renderTab() {
 }
 
 describe('LeadFirstMeetingTab', () => {
+  it('avisa al cumplir 12 horas sin cerrar la cita', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-11-25T09:00:00Z'))
+    const reunion = { status: 'in_progress', startedAt: '2026-11-24T21:00:01Z' }
+    render(<FirstMeetingTimer reunion={reunion} />)
+    expect(screen.queryByRole('status')).toBeNull()
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('status').textContent).toContain('12 horas o más')
+    expect(screen.getByLabelText('Tiempo transcurrido').textContent).toBe('12:00:00')
+  })
   it('guarda notas breves en la reunión y permite seguir añadiendo sin esperar a la recarga', async () => {
     mocks.appointments = [
       meeting({

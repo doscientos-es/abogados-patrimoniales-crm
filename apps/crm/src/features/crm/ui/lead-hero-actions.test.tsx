@@ -35,11 +35,46 @@ import {
   LeadDetailTabs,
   LeadHeroActions,
   LeadSummary,
+  leadDescription,
 } from '@/routes/oportunidades.$id'
 
 afterEach(cleanup)
 
 describe('LeadHeroActions', () => {
+  it('usa el relato inicial solo si no hay descripción explícita', () => {
+    const detalles = { informacionInicial: { queHaOcurrido: 'Relato inicial' } }
+    expect(leadDescription({ descripcion: '', detalles })).toBe('Relato inicial')
+    expect(leadDescription({ descripcion: 'Descripción propia', detalles })).toBe(
+      'Descripción propia',
+    )
+    expect(leadDescription({ descripcion: '', detalles: {} })).toBe('Sin descripción registrada.')
+  })
+
+  it('muestra la hora de la siguiente acción cuando es una cita', () => {
+    const date = '2026-11-27T10:00:00Z'
+    render(
+      <LeadSummary
+        opportunity={{ fase: 'entry', creada: date, detalles: {} } as never}
+        memberName={undefined}
+        tasks={[
+          {
+            estado: 'Pendiente',
+            tipo: 'Evento',
+            titulo: 'Primera cita',
+            venceEn: date,
+            reunion: {},
+          } as TareaPersistida,
+        ]}
+        tasksLoading={false}
+        onSelectTab={() => undefined}
+      />,
+    )
+    const expected = new Intl.DateTimeFormat('es-ES', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(date))
+    expect(screen.getByText(`Prevista: ${expected}`)).toBeTruthy()
+  })
   it('links the active Lead to its edit form, task form and stage transition', () => {
     const onSelectTab = vi.fn()
     render(<LeadHeroActions stage="entry" onSelectTab={onSelectTab} />)

@@ -81,7 +81,7 @@ describe('NuevaOportunidadPage', () => {
     expect((screen.getByRole('button', { name: 'Crear Lead' }) as HTMLButtonElement).disabled).toBe(
       false,
     )
-    expect(screen.queryByLabelText('Origen')).toBeNull()
+    expect(screen.getByLabelText('Origen del Lead')).toBeTruthy()
     expect(screen.queryByLabelText('Otras personas o entidades relacionadas')).toBeNull()
   })
 
@@ -126,6 +126,23 @@ describe('NuevaOportunidadPage', () => {
 
     await waitFor(() => expect(mocks.createOpportunity).toHaveBeenCalledOnce())
     expect(mocks.createOpportunity.mock.calls[0]?.[0].source).toBe('A'.repeat(160))
+  })
+
+  it('permite indicar un origen diferente del contacto', async () => {
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    mocks.advanceLead.mockResolvedValue({})
+    const { container } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.change(screen.getByLabelText('Origen del Lead'), { target: { value: 'Web' } })
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'Web' }),
+      ),
+    )
   })
 
   it('pregunta por la siguiente acción tras guardar y permite continuar a la ficha', async () => {

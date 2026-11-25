@@ -163,9 +163,11 @@ export function NuevaOportunidadPage() {
         contactId: selectedContactId,
         title,
         area: formText(form, 'area'),
-        source: ((contacts.data ?? []).find((item) => item.id === selectedContactId)?.origen ?? '')
-          .trim()
-          .slice(0, 160),
+        source: (
+          formText(form, 'source') ||
+          (contacts.data ?? []).find((item) => item.id === selectedContactId)?.origen?.trim() ||
+          ''
+        ).slice(0, 160),
         description: formText(form, 'description'),
         details: {
           rolContacto: { rol: formText(form, 'role') },
@@ -345,6 +347,12 @@ export function NuevaOportunidadPage() {
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field name="title" label="Título del Lead" maxLength={300} required />
+              <div className="space-y-1.5">
+                <Field name="source" label="Origen del Lead" maxLength={160} />
+                <p className="text-muted-foreground text-xs">
+                  Si lo dejas vacío, se usará el origen del contacto cuando esté disponible.
+                </p>
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="lead-area">Materia</Label>
                 <select id="lead-area" name="area" className={selectClassName} defaultValue="">
