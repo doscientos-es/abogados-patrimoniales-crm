@@ -161,7 +161,7 @@ const onboardingEventLabel = (type: string, payload: Json) => {
   return `${labels[type] ?? type}${typeof summary === 'string' && summary ? `: ${summary}` : ''}`
 }
 
-export function OnboardingPage() {
+export function OnboardingPage({ abrir }: { abrir?: string | undefined }) {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
@@ -222,6 +222,7 @@ export function OnboardingPage() {
       />
     )
   const items = (onboardings.data ?? []).filter((item) => {
+    if (abrir) return item.id === abrir
     if (!mostrarCompletados && !esOnboardingActivo(item)) return false
     return responsable === 'todos' || item.responsableId === responsable
   })
@@ -264,39 +265,52 @@ export function OnboardingPage() {
         }
       />
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Filtrar por responsable"
-            value={responsable}
-            onChange={(event) => setResponsable(event.target.value)}
-            className="border-input bg-card h-9 rounded-md border px-3 text-sm"
+      {abrir ? (
+        <div className="mb-5 flex items-center justify-between gap-3 border-b pb-4">
+          <p className="text-muted-foreground text-sm">Mostrando el onboarding seleccionado.</p>
+          <Link
+            to="/onboarding"
+            search={{ abrir: undefined }}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
-            <option value="todos">Todos los responsables</option>
-            {(miembros.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.nombre}
-              </option>
-            ))}
-          </select>
-          <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={mostrarCompletados}
-              onChange={(event) => setMostrarCompletados(event.target.checked)}
-            />
-            Mostrar completados
-          </label>
+            Ver todos los onboardings
+          </Link>
         </div>
-        <ViewSwitch
-          value={vista}
-          onChange={setVista}
-          options={[
-            { id: 'kanban', label: 'Kanban' },
-            { id: 'lista', label: 'Lista' },
-          ]}
-        />
-      </div>
+      ) : (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Filtrar por responsable"
+              value={responsable}
+              onChange={(event) => setResponsable(event.target.value)}
+              className="border-input bg-card h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="todos">Todos los responsables</option>
+              {(miembros.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+            <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={mostrarCompletados}
+                onChange={(event) => setMostrarCompletados(event.target.checked)}
+              />
+              Mostrar completados
+            </label>
+          </div>
+          <ViewSwitch
+            value={vista}
+            onChange={setVista}
+            options={[
+              { id: 'kanban', label: 'Kanban' },
+              { id: 'lista', label: 'Lista' },
+            ]}
+          />
+        </div>
+      )}
 
       {onboardings.isError || eventos.isError || leadsCompletos.isError ? (
         <p role="alert" className="text-destructive mb-4 text-sm">
@@ -304,10 +318,13 @@ export function OnboardingPage() {
         </p>
       ) : null}
       {isLoading || items.length ? (
-        vista === 'kanban' ? (
+        abrir || vista === 'kanban' ? (
           <section aria-label="Kanban de Onboarding" className="overflow-x-auto pb-4">
             <div className="flex min-w-max items-stretch gap-4 [&>section]:w-[21rem]">
-              {COLUMNAS_ONBOARDING.map((columna) => {
+              {COLUMNAS_ONBOARDING.filter(
+                (columna) =>
+                  !abrir || isLoading || items.some((item) => columnaOnboarding(item) === columna),
+              ).map((columna) => {
                 const columnItems = items.filter((item) => columnaOnboarding(item) === columna)
                 return (
                   <OnboardingColumn
@@ -327,9 +344,13 @@ export function OnboardingPage() {
             miembrosPorId={miembrosPorId}
           />
         )
-      ) : (
+      ) : abrir && !onboardings.isError ? (
+        <p role="status" className="text-muted-foreground text-sm">
+          No se ha encontrado el onboarding seleccionado.
+        </p>
+      ) : !abrir ? (
         <EmptyOnboarding hasOnboardings={Boolean(onboardings.data?.length)} />
-      )}
+      ) : null}
       <p className="text-muted-foreground mt-5 rounded-md border border-dashed px-4 py-3 text-xs leading-5">
         <strong className="text-foreground">Cómo funciona:</strong> al confirmar el pago de la
         provisión se abre el expediente en CASEWORK. Solo por excepción (urgencia, cliente habitual
@@ -348,7 +369,9 @@ export function OnboardingPage() {
     items: OnboardingPersistido[]
     loading: boolean
   }) {
-    const [abierta, setAbierta] = useState(columna !== 'completados')
+    const [abierta, setAbierta] = useState(
+      columna !== 'completados' || Boolean(abrir && columnItems.length),
+    )
     const stageClass =
       columna === 'esperando_provision'
         ? 'fase-ambar'
@@ -838,7 +861,7 @@ export function CreateOnboardingDialog({
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Plus className="h-4 w-4" />
-          Registrar proforma
+          Iniciar onboarding
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto p-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-2xl">
@@ -847,7 +870,7 @@ export function CreateOnboardingDialog({
             <div className="bg-primary/10 text-primary mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
               <FilePlus2 className="h-5 w-5" aria-hidden="true" />
             </div>
-            <DialogTitle>Registrar proforma enviada</DialogTitle>
+            <DialogTitle>Iniciar onboarding con proforma enviada</DialogTitle>
             <DialogDescription className="mt-1.5 max-w-xl">
               Vincula la proforma a un Lead aceptado para iniciar su seguimiento comercial. No se
               enviará ningún documento ni se creará una factura.

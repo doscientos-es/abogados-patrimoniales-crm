@@ -3,6 +3,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { OnboardingPage } from '@/features/onboarding'
 
 export const Route = createFileRoute('/onboarding')({
+  validateSearch: (search: Record<string, unknown>): { abrir?: string } =>
+    typeof search['abrir'] === 'string' ? { abrir: search['abrir'] } : {},
   head: () => ({
     meta: [
       { title: 'Onboarding — LEX' },
@@ -14,5 +16,5 @@ export const Route = createFileRoute('/onboarding')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: OnboardingPage,
+  component: () => <OnboardingPage abrir={Route.useSearch().abrir} />,
 })

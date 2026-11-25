@@ -619,6 +619,7 @@ export function QuoteAcceptancePanel({
                 Onboarding <strong>{onboarding.referencia}</strong> ya está vinculado.{' '}
                 <Link
                   to="/onboarding"
+                  search={{ abrir: onboarding.id }}
                   className={buttonVariants({ variant: 'outline', size: 'sm' })}
                 >
                   <ClipboardCheck className="h-4 w-4" /> Abrir onboarding
