@@ -43,6 +43,18 @@ vi.mock('@/features/contactos', () => ({
     refetch: mocks.contactRefetch,
   }),
 }))
+vi.mock('@/features/contactos/ui/nuevo-contacto-page', () => ({
+  NuevoContactoPage: ({ onCreated }: { onCreated: (contact: object) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onCreated({ id: 'contact-2', nombre: 'Koldo', apellidos: 'Arregi', origen: 'Web' })
+      }
+    >
+      Guardar contacto de prueba
+    </button>
+  ),
+}))
 vi.mock('@/features/crm', () => ({
   useAvanzarLeadPorHito: () => ({ isPending: false, mutateAsync: mocks.advanceLead }),
   useCrearOportunidad: () => ({ isPending: false, mutateAsync: mocks.createOpportunity }),
@@ -72,6 +84,32 @@ afterEach(() => {
 })
 
 describe('NuevaOportunidadPage', () => {
+  it('crea y selecciona un contacto en el diálogo sin perder el formulario del Lead', async () => {
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    mocks.advanceLead.mockResolvedValue({})
+    const { container } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), {
+      target: { value: 'Consulta inicial' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear contacto' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar contacto de prueba' }))
+    expect((screen.getByLabelText('Título del Lead') as HTMLInputElement).value).toBe(
+      'Consulta inicial',
+    )
+    expect((screen.getByLabelText('Contacto principal') as HTMLInputElement).value).toBe(
+      'Koldo Arregi',
+    )
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ contactId: 'contact-2', source: 'Web' }),
+      ),
+    )
+  })
+
   it('preselecciona el contacto indicado al abrir el formulario', async () => {
     render(<NuevaOportunidadPage />)
 

@@ -137,6 +137,18 @@ describe('detección de contactos duplicados al dar de alta', () => {
 })
 
 describe('documentos del alta', () => {
+  it('devuelve el contacto creado al diálogo sin navegar', async () => {
+    const onCreated = vi.fn()
+    mocks.create.mockResolvedValue({ id: 'new-contact', nombre: 'Ana' })
+    render(<NuevoContactoPage onCreated={onCreated} />)
+    fireEvent.input(screen.getByLabelText(/^Nombre/), { target: { value: 'Ana' } })
+    fireEvent.submit(screen.getByRole('form', { name: 'Formulario de nuevo contacto' }))
+    await waitFor(() =>
+      expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'new-contact' })),
+    )
+    expect(mocks.navigate).not.toHaveBeenCalled()
+  })
+
   it.each([false, true])(
     'adjunta el documento y comunica el fallo si ocurre: %s',
     async (fails) => {

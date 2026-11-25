@@ -14,11 +14,13 @@ import { toast } from 'sonner'
 import { PendingPanel, SectionHeader } from '@/components/common'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
-import { useContactos } from '@/features/contactos'
+import { useContactos, type ContactoPersistido } from '@/features/contactos'
+import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
 import {
   useAvanzarLeadPorHito,
   useCrearOportunidad,
@@ -73,6 +75,8 @@ export function NuevaOportunidadPage() {
   const [contactSearch, setContactSearch] = useState('')
   const [hasChangedContact, setHasChangedContact] = useState(false)
   const [contactCreationOpened, setContactCreationOpened] = useState(false)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
+  const [createdContact, setCreatedContact] = useState<ContactoPersistido | null>(null)
   const [createdOpportunity, setCreatedOpportunity] = useState<{
     id: string
     reference: string
@@ -88,9 +92,15 @@ export function NuevaOportunidadPage() {
   )
   const selectedContactId = hasChangedContact ? contactId : (preselectedContact?.id ?? '')
   const selectedContactSearch = hasChangedContact ? contactSearch : contactName(preselectedContact)
+  const allContacts = useMemo(() => {
+    const items = contacts.data ?? []
+    return createdContact && !items.some((contact) => contact.id === createdContact.id)
+      ? [...items, createdContact]
+      : items
+  }, [contacts.data, createdContact])
   const contactOptions = useMemo(
-    () => contactosParaAutocompletado(contacts.data ?? [], contactSearch),
-    [contactSearch, contacts.data],
+    () => contactosParaAutocompletado(allContacts, contactSearch),
+    [contactSearch, allContacts],
   )
   const leadRoles = useLeadRoles(firmId)
   const areas = usePracticeAreas(firmId)
@@ -147,7 +157,7 @@ export function NuevaOportunidadPage() {
         area: formText(form, 'area'),
         source: (
           formText(form, 'source') ||
-          (contacts.data ?? []).find((item) => item.id === selectedContactId)?.origen?.trim() ||
+          allContacts.find((item) => item.id === selectedContactId)?.origen?.trim() ||
           ''
         ).slice(0, 160),
         description: formText(form, 'description'),
@@ -248,6 +258,14 @@ export function NuevaOportunidadPage() {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label htmlFor="lead-contact">Contacto principal *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContactDialogOpen(true)}
+                >
+                  <UserPlus className="size-3.5" aria-hidden="true" /> Crear contacto
+                </Button>
                 <Link
                   to="/contactos/nuevo"
                   target="_blank"
@@ -267,8 +285,7 @@ export function NuevaOportunidadPage() {
                   setHasChangedContact(true)
                   setContactSearch(value)
                   if (
-                    value !==
-                    contactName((contacts.data ?? []).find((item) => item.id === selectedContactId))
+                    value !== contactName(allContacts.find((item) => item.id === selectedContactId))
                   ) {
                     setContactId('')
                   } else {
@@ -281,7 +298,7 @@ export function NuevaOportunidadPage() {
                   setContactId(selectedId)
                   setContactSearch(
                     selectedId
-                      ? contactName((contacts.data ?? []).find((item) => item.id === selectedId))
+                      ? contactName(allContacts.find((item) => item.id === selectedId))
                       : '',
                   )
                 }}
@@ -299,7 +316,7 @@ export function NuevaOportunidadPage() {
               contactSearch.trim() &&
               !contactOptions.length ? (
                 <p role="status" className="text-muted-foreground text-xs">
-                  Sin resultados. Puedes crear el contacto en otra pestaña y actualizar la lista.
+                  Sin resultados. Puedes crear el contacto sin salir del Lead.
                 </p>
               ) : null}
             </div>
@@ -464,6 +481,22 @@ export function NuevaOportunidadPage() {
           </Button>
         </div>
       </form>
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent size="5xl">
+          <DialogHeader>
+            <DialogTitle>Crear contacto</DialogTitle>
+          </DialogHeader>
+          <NuevoContactoPage
+            onCreated={(contact) => {
+              setCreatedContact(contact)
+              setHasChangedContact(true)
+              setContactId(contact.id)
+              setContactSearch(contactName(contact))
+              setContactDialogOpen(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       {createdOpportunity ? (
         <LeadCreatedDialog
           firmId={firmId}

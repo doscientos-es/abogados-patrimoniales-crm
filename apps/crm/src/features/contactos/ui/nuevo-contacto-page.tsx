@@ -14,6 +14,7 @@ import {
   uploadContactDocument,
   useContactDuplicateCandidates,
   useCrearContacto,
+  type ContactoPersistido,
   type Naturaleza,
   type RelacionDespacho,
 } from '@/features/contactos'
@@ -102,7 +103,9 @@ const DUPLICATE_FIELD_LABELS: Record<DuplicateContactField, string> = {
   telefono2: 'teléfono alternativo',
 }
 
-export function NuevoContactoPage() {
+export function NuevoContactoPage({
+  onCreated,
+}: { onCreated?: (contact: ContactoPersistido) => void } = {}) {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -276,7 +279,8 @@ export function NuevoContactoPage() {
         )
       }
       if (notesSaved && !failedDocuments.length) toast.success('Contacto creado correctamente.')
-      await navigate({ to: '/contactos/$id', params: { id: contact.id } })
+      if (onCreated) onCreated(contact)
+      else await navigate({ to: '/contactos/$id', params: { id: contact.id } })
     } catch (error) {
       const e = error as { code?: string; message?: string }
       const message =
@@ -293,9 +297,11 @@ export function NuevoContactoPage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-6">
-      <Link to="/contactos" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-        <ArrowLeft className="h-4 w-4" /> Volver
-      </Link>
+      {!onCreated ? (
+        <Link to="/contactos" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <ArrowLeft className="h-4 w-4" /> Volver
+        </Link>
+      ) : null}
       <SectionHeader
         title="Nuevo contacto"
         actions={<ContactAIIntake firmId={firmId} onApply={applyAIValues} />}
