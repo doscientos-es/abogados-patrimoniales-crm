@@ -270,7 +270,7 @@ export function OnboardingPage({ abrir }: { abrir?: string | undefined }) {
           <p className="text-muted-foreground text-sm">Mostrando el onboarding seleccionado.</p>
           <Link
             to="/onboarding"
-            search={{ abrir: undefined }}
+            search={{}}
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             Ver todos los onboardings
