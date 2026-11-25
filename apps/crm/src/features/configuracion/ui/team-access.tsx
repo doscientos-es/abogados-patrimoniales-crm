@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MEMBER_ROLE_LABELS } from '@/features/auth/application/member-role-labels'
 import {
   getSupabaseBrowserClient,
   type MemberRole,
@@ -34,12 +35,6 @@ import {
 type Member = { userId: string; role: MemberRole; status: MemberStatus; displayName: string }
 type Change = { userId: string; role: MemberRole; status: 'active' | 'disabled' }
 
-const ROLE_LABELS: Record<MemberRole, string> = {
-  owner: 'Propietario',
-  admin: 'Administrador',
-  lawyer: 'Abogado',
-  paralegal: 'Administrativo',
-}
 const ASSIGNABLE_ROLES: MemberRole[] = ['lawyer', 'paralegal']
 
 export function TeamAccess({
@@ -197,11 +192,11 @@ export function TeamAccess({
                   }
                 >
                   {member.role === 'admin' ? (
-                    <option value="admin">{ROLE_LABELS.admin}</option>
+                    <option value="admin">{MEMBER_ROLE_LABELS.admin}</option>
                   ) : null}
                   {ASSIGNABLE_ROLES.map((item) => (
                     <option key={item} value={item}>
-                      {ROLE_LABELS[item]}
+                      {MEMBER_ROLE_LABELS[item]}
                     </option>
                   ))}
                 </select>
@@ -235,7 +230,7 @@ export function TeamAccess({
                 ) : null}
               </div>
             ) : (
-              <Badge>{ROLE_LABELS[member.role]}</Badge>
+              <Badge>{MEMBER_ROLE_LABELS[member.role]}</Badge>
             )}
           </div>
         ))}
@@ -282,7 +277,7 @@ export function TeamAccess({
               >
                 {ASSIGNABLE_ROLES.map((item) => (
                   <option key={item} value={item}>
-                    {ROLE_LABELS[item]}
+                    {MEMBER_ROLE_LABELS[item]}
                   </option>
                 ))}
               </select>

@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { UnderlineTabs } from '@/components/ui/underline-tabs'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
+import { MEMBER_ROLE_LABELS } from '@/features/auth/application/member-role-labels'
 import {
   useActualizarContacto,
   useActualizarEstadoContacto,
@@ -50,6 +51,7 @@ import {
 import { InternalNoteSticker } from '@/features/notas/ui/internal-note-sticker'
 import { useOnboardings } from '@/features/onboarding'
 import { useTareasPersistentes } from '@/features/tareas'
+import type { MemberRole } from '@/shared/infrastructure/supabase'
 
 import { requiredDocumentsForContact } from '../application/lead-document-requirements'
 import { ContactBankingTab } from './contact-banking-tab'
@@ -918,7 +920,7 @@ export function LegacyContactInternalNotes({
   contactOptions: ContactoPersistido[]
   caseOptions: Array<{ id: string; referencia: string; titulo: string }>
   opportunityOptions: Array<{ id: string; referencia: string; titulo: string }>
-  memberOptions: Array<{ id: string; nombre: string; rol: string }>
+  memberOptions: Array<{ id: string; nombre: string; rol: MemberRole }>
   casesLoading: boolean
   opportunitiesLoading: boolean
   membersLoading: boolean
@@ -1274,7 +1276,7 @@ export function LegacyContactInternalNotes({
                               <NoteCheckbox
                                 key={member.id}
                                 name={`user-${member.id}`}
-                                label={`${member.nombre} · ${member.rol}`}
+                                label={`${member.nombre} · ${MEMBER_ROLE_LABELS[member.rol]}`}
                                 checked={permittedUsers.includes(member.id)}
                                 onChange={(checked) => toggleUser(member.id, checked)}
                               />
