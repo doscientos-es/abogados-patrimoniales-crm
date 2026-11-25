@@ -25,6 +25,8 @@ el archivo a la función `extract-contact-document` de Supabase, que lo remite a
 devuelve los campos propuestos. La petición a OpenAI incluye `store: false`; esto no permite afirmar
 por sí solo que no haya retención ni que el procesamiento sea en el EEE. Deben verificarse el contrato,
 la configuración de la cuenta, la residencia y las garantías de transferencia con los proveedores.
+El proyecto de Supabase de producción figura en Londres (`eu-west-2`), fuera del EEE; esto no
+determina por sí solo dónde procesa o conserva información cada proveedor externo.
 
 Se aceptan URLs HTTPS privadas de `chatgpt.com` y `chat.openai.com`, también conversaciones de GPTs,
 y deep links `chatgpt://c/<id>` o `chatgpt://conversation/<id>` copiados de la aplicación.

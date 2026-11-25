@@ -35,12 +35,61 @@ import {
   LeadDetailTabs,
   LeadHeroActions,
   LeadSummary,
+  PendingFirstMeetingWarning,
   leadDescription,
 } from '@/routes/oportunidades.$id'
 
 afterEach(cleanup)
 
 describe('LeadHeroActions', () => {
+  it('avisa si la primera cita de este lead sigue pendiente y permite revisarla', () => {
+    const onReview = vi.fn()
+    const task = {
+      oportunidadId: 'lead-1',
+      tipo: 'Evento',
+      estado: 'Pendiente',
+      reunion: { meetingType: 'Primera cita', status: 'preparation' },
+    } as unknown as TareaPersistida
+    const { rerender } = render(
+      <PendingFirstMeetingWarning
+        opportunityId="lead-1"
+        tasks={[task]}
+        tasksError={false}
+        onReview={onReview}
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toContain('primera cita sigue pendiente')
+    fireEvent.click(screen.getByRole('button', { name: 'Revisar citas' }))
+    expect(onReview).toHaveBeenCalledOnce()
+    rerender(
+      <PendingFirstMeetingWarning
+        opportunityId="lead-1"
+        tasks={[{ ...task, reunion: { ...task.reunion, status: 'finished' } }]}
+        tasksError={false}
+        onReview={onReview}
+      />,
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+    rerender(
+      <PendingFirstMeetingWarning
+        opportunityId="lead-2"
+        tasks={[task]}
+        tasksError={false}
+        onReview={onReview}
+      />,
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+    rerender(
+      <PendingFirstMeetingWarning
+        opportunityId="lead-1"
+        tasks={[]}
+        tasksError
+        onReview={onReview}
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toContain('No se pudo comprobar')
+  })
+
   it('usa el relato inicial solo si no hay descripción explícita', () => {
     const detalles = { informacionInicial: { queHaOcurrido: 'Relato inicial' } }
     expect(leadDescription({ descripcion: '', detalles })).toBe('Relato inicial')

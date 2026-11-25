@@ -45,6 +45,7 @@ import {
 import {
   canHoldAppointment,
   estadoAsistente,
+  isFirstMeeting,
   pickFirstMeeting,
 } from '@/features/crm/application/first-meeting-cycle'
 import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
@@ -440,6 +441,12 @@ function FichaOportunidadPage() {
         ) : null}
         {activeTab === 'acceptance' ? (
           <div className="space-y-4">
+            <PendingFirstMeetingWarning
+              opportunityId={data.id}
+              tasks={tareas.data ?? []}
+              tasksError={tareas.isError}
+              onReview={() => setActiveTab('firstMeeting')}
+            />
             <QuoteAcceptancePanel
               firmId={membership.data.firmId}
               opportunity={data}
@@ -470,6 +477,42 @@ function FichaOportunidadPage() {
         ) : null}
       </section>
     </main>
+  )
+}
+
+export function PendingFirstMeetingWarning({
+  opportunityId,
+  tasks,
+  tasksError,
+  onReview,
+}: {
+  opportunityId: string
+  tasks: TareaPersistida[]
+  tasksError: boolean
+  onReview: () => void
+}) {
+  const pending = tasks.some(
+    (task) =>
+      task.oportunidadId === opportunityId &&
+      !['Completada', 'Cancelada'].includes(task.estado) &&
+      isFirstMeeting(task) &&
+      ['pendiente', 'programada', 'en_curso'].includes(estadoAsistente(task.reunion)),
+  )
+  if (!pending && !tasksError) return null
+  return (
+    <div
+      role="status"
+      className="bg-warning/10 text-warning-foreground rounded-lg border p-4 text-sm"
+    >
+      <p>
+        {tasksError
+          ? 'No se pudo comprobar el estado de la primera cita.'
+          : 'La primera cita sigue pendiente o en curso. Aceptar el presupuesto no la cierra automáticamente.'}
+      </p>
+      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={onReview}>
+        Revisar citas
+      </Button>
+    </div>
   )
 }
 
