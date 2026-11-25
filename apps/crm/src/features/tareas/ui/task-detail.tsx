@@ -1513,6 +1513,7 @@ export function TaskDetail({
         open={completeOpen}
         onOpenChange={setCompleteOpen}
         nextAction={task.esSiguienteAccion}
+        pendingSubtasks={task.subtareas.filter((subtask) => !subtask.hecha)}
         pending={complete.isPending}
         onSubmit={(resultado, continuidad, relevancia) => {
           void run(async () => {
@@ -1629,12 +1630,14 @@ function TaskCompleteDialog({
   open,
   onOpenChange,
   nextAction,
+  pendingSubtasks,
   pending,
   onSubmit,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   nextAction: boolean
+  pendingSubtasks: Array<{ id: string; texto: string }>
   pending: boolean
   onSubmit: (
     result: string,
@@ -1645,6 +1648,7 @@ function TaskCompleteDialog({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    if (pendingSubtasks.length && !data.has('acknowledgeSubtasks')) return
     onSubmit(
       formText(data, 'result'),
       nextAction
@@ -1660,6 +1664,23 @@ function TaskCompleteDialog({
           <DialogTitle>Completar tarea</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={submit}>
+          {pendingSubtasks.length ? (
+            <div className="space-y-2 rounded-md border p-3 text-sm">
+              <p>
+                Hay subtareas pendientes
+                {nextAction ? ' que no se trasladarán a la siguiente tarea' : ''}:
+              </p>
+              <ul className="list-inside list-disc">
+                {pendingSubtasks.map((subtask) => (
+                  <li key={subtask.id}>{subtask.texto}</li>
+                ))}
+              </ul>
+              <label className="flex items-start gap-2">
+                <input type="checkbox" name="acknowledgeSubtasks" required />
+                <span>Entiendo que estas subtareas quedarán en la tarea completada.</span>
+              </label>
+            </div>
+          ) : null}
           <Label>
             Resultado
             <Textarea name="result" required />

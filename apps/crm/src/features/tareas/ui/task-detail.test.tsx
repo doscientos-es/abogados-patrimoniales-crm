@@ -411,6 +411,39 @@ describe('TaskDetail', () => {
     })
   })
 
+  it('requires acknowledging pending subtasks before completing', async () => {
+    mocks.subtasks = [
+      {
+        id: 'sub-1',
+        texto: 'Pedir escritura',
+        hecha: false,
+        creadaPorId: null,
+        creadaEn: '',
+        convertidaEnId: null,
+      },
+      {
+        id: 'sub-2',
+        texto: 'Revisar correo',
+        hecha: true,
+        creadaPorId: null,
+        creadaEn: '',
+        convertidaEnId: null,
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Completar' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Pedir escritura')).toBeTruthy()
+    expect(within(dialog).queryByText('Revisar correo')).toBeNull()
+    fireEvent.change(within(dialog).getByLabelText('Resultado'), { target: { value: 'Terminado' } })
+    const form = dialog.querySelector('form')!
+    fireEvent.submit(form)
+    expect(mocks.completeTask).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Entiendo que estas subtareas/ }))
+    fireEvent.submit(form)
+    await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
+  })
+
   it('preselects case contacts and saves enriched meeting details for a manager', async () => {
     mocks.role = 'owner'
     render(<TaskDetail taskId="task-1" />)
