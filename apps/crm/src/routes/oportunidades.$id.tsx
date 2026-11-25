@@ -49,6 +49,7 @@ import {
   pickFirstMeeting,
 } from '@/features/crm/application/first-meeting-cycle'
 import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
+import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadChatgptAction } from '@/features/crm/ui/lead-chatgpt-action'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
@@ -141,6 +142,7 @@ function FichaOportunidadPage() {
     session.status === 'signed-in' ? session.user.id : undefined,
   )
   const firmId = membership.data?.firmId
+  const practiceAreas = usePracticeAreas(firmId)
   const oportunidad = useOportunidad(firmId, id)
   const contacto = useContacto(firmId, oportunidad.data?.contactoId ?? '')
   const miembros = useMiembrosDespacho(firmId)
@@ -357,6 +359,7 @@ function FichaOportunidadPage() {
                 id="lead-edit-details"
                 oportunidad={data}
                 miembros={miembros.data ?? []}
+                practiceAreas={practiceAreas.data ?? []}
                 miembrosCargando={miembros.isPending}
                 miembrosError={miembros.isError}
                 guardando={actualizar.isPending}

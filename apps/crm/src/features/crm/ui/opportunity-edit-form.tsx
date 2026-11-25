@@ -26,6 +26,7 @@ export function OpportunityEditForm({
   id,
   oportunidad,
   miembros,
+  practiceAreas = [],
   miembrosCargando,
   miembrosError,
   guardando,
@@ -35,6 +36,7 @@ export function OpportunityEditForm({
   id?: string
   oportunidad: OportunidadPersistida
   miembros: MiembroDespacho[]
+  practiceAreas?: string[]
   miembrosCargando: boolean
   miembrosError: boolean
   guardando: boolean
@@ -98,12 +100,20 @@ export function OpportunityEditForm({
             />
           </FormField>
           <FormField id="opportunity-area" label="Área jurídica">
-            <Input
+            <select
               id="opportunity-area"
+              className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2"
               value={area}
               onChange={(event) => setArea(event.target.value)}
-              maxLength={160}
-            />
+            >
+              <option value="">Selecciona una materia…</option>
+              {area && !practiceAreas.includes(area) ? <option value={area}>{area}</option> : null}
+              {practiceAreas.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </FormField>
           <FormField id="opportunity-priority" label="Prioridad">
             <Select

@@ -1434,6 +1434,7 @@ function ContactGeneralForm({
   const lookup = usePostalMunicipality({
     codigoPostal: 'postalCode',
     municipio: 'city',
+    provincia: 'province',
     pais: 'country',
   })
   return (

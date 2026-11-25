@@ -1,11 +1,15 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import type * as OnboardingApplication from '@/features/onboarding/application'
 
 import { OnboardingPage } from './onboarding-page'
 
 const mocks = vi.hoisted(() => ({
   onboardings: [] as unknown[],
+  leads: [] as unknown[],
+  openCase: vi.fn().mockResolvedValue({ id: 'case-new' }),
   empty: () => ({ data: [], isLoading: false, isError: false }),
   mutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }))
@@ -36,7 +40,7 @@ vi.mock('@/features/crm', () => ({
   useActualizarDetallesOportunidad: mocks.mutation,
   useMiembrosDespacho: mocks.empty,
   useOportunidades: mocks.empty,
-  useOportunidadesCompletas: mocks.empty,
+  useOportunidadesCompletas: () => ({ ...mocks.empty(), data: mocks.leads }),
   useRefrescoTablerosEnVivo: vi.fn(),
 }))
 vi.mock('@/features/expedientes', () => ({ useExpedientesPersistentes: mocks.empty }))
@@ -47,10 +51,10 @@ vi.mock('@/features/onboarding/ui/payment-evidence', () => ({
   uploadPaymentEvidence: vi.fn(),
 }))
 vi.mock('@/features/onboarding/application', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/features/onboarding/application')>()),
+  ...(await importOriginal<typeof OnboardingApplication>()),
   useOnboardings: () => ({ ...mocks.empty(), data: mocks.onboardings }),
   useEventosOnboarding: mocks.empty,
-  useAbrirExpedienteDesdeOnboarding: mocks.mutation,
+  useAbrirExpedienteDesdeOnboarding: () => ({ isPending: false, mutateAsync: mocks.openCase }),
   useActualizarSiguienteAccion: mocks.mutation,
   useCrearOnboarding: mocks.mutation,
   useRegistrarComunicacionOnboarding: mocks.mutation,
@@ -81,6 +85,8 @@ const item = {
 afterEach(() => {
   cleanup()
   mocks.onboardings = []
+  mocks.leads = []
+  mocks.openCase.mockClear()
 })
 
 describe('enlace directo a onboarding', () => {
@@ -100,5 +106,26 @@ describe('enlace directo a onboarding', () => {
   it('avisa cuando el onboarding solicitado no existe', () => {
     render(<OnboardingPage abrir="desconocido" />)
     expect(screen.getByRole('status').textContent).toContain('No se ha encontrado')
+  })
+
+  it('transfiere la materia del lead al abrir el expediente', async () => {
+    mocks.onboardings = [{ ...item, expedienteId: null, fase: 'payment' }]
+    mocks.leads = [
+      {
+        id: 'lead-1',
+        area: 'SUCESIONES Y HERENCIAS',
+        detalles: { naturalezaAsunto: { valor: 'extrajudicial' } },
+      },
+    ]
+    render(<OnboardingPage abrir="onboarding-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir expediente' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Abrir expediente' }),
+    )
+    await waitFor(() =>
+      expect(mocks.openCase).toHaveBeenCalledWith(
+        expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS' }),
+      ),
+    )
   })
 })

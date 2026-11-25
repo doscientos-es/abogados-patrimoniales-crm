@@ -30,11 +30,13 @@ const selectClassName =
 export function CaseEditForm({
   expediente,
   miembros,
+  practiceAreas = [],
   pending,
   onSave,
 }: {
   expediente: ExpedientePersistido
   miembros: MiembroDespacho[]
+  practiceAreas?: string[]
   pending: boolean
   onSave: (input: ActualizarExpedienteInput) => Promise<void>
 }) {
@@ -85,11 +87,14 @@ export function CaseEditForm({
             required
             className="sm:col-span-2"
           />
-          <Field
+          <SelectField
             name="area"
             label="Área de práctica"
-            defaultValue={expediente.area}
-            placeholder="Ej. Sucesiones"
+            value={expediente.area}
+            options={withCurrentOption(expediente.area, [
+              ['', 'Selecciona una materia…'],
+              ...practiceAreas.map((area) => [area, area]),
+            ])}
             helper="Materia jurídica principal del asunto."
           />
           <Field

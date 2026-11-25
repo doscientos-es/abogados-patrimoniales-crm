@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -6,6 +5,7 @@ import { PendingPanel } from '@/components/common'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
+import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import {
   CaseCreateDialog,
   CasesPage,
@@ -15,7 +15,6 @@ import {
   useExpedientesPersistentes,
 } from '@/features/expedientes'
 import { useTareasPersistentes } from '@/features/tareas'
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/expedientes/')({
   validateSearch: (
@@ -53,23 +52,7 @@ function CasesRoute() {
   const updateCase = useActualizarExpediente(firmId)
   const tasks = useTareasPersistentes(firmId)
   const activities = useActuacionesDespacho(firmId)
-  const practiceAreas = useQuery({
-    queryKey: ['crm', 'practice-areas', firmId],
-    enabled: Boolean(firmId),
-    queryFn: async () => {
-      const client = getSupabaseBrowserClient()
-      if (!client || !firmId) return []
-      const { data, error } = await client
-        .from('crm_practice_areas')
-        .select('name')
-        .eq('firm_id', firmId)
-        .eq('archived', false)
-        .order('sort_order')
-        .order('name')
-      if (error) throw error
-      return data.map((item) => item.name)
-    },
-  })
+  const practiceAreas = usePracticeAreas(firmId)
 
   if (session.status === 'loading' || membership.isPending)
     return <PendingPanel title="Cargando expedientes" description="Consultando tu despacho…" />

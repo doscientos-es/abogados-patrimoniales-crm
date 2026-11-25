@@ -7,7 +7,12 @@ vi.mock('../infrastructure/postal-municipalities', () => ({ buscarLocalidades: m
 import { PostalMunicipalitySuggestions, usePostalMunicipality } from './postal-municipality'
 
 function Formulario() {
-  const lookup = usePostalMunicipality({ codigoPostal: 'cp', municipio: 'ciudad', pais: 'pais' })
+  const lookup = usePostalMunicipality({
+    codigoPostal: 'cp',
+    municipio: 'ciudad',
+    provincia: 'provincia',
+    pais: 'pais',
+  })
   return (
     <form onChange={lookup.onFormChange}>
       <label>
@@ -19,6 +24,10 @@ function Formulario() {
         <input name="ciudad" />
       </label>
       <PostalMunicipalitySuggestions lookup={lookup} />
+      <label>
+        Provincia
+        <input name="provincia" />
+      </label>
       <label>
         País
         <select name="pais" defaultValue="España">
@@ -40,11 +49,13 @@ describe('sugerencias por código postal', () => {
     mocks.buscar.mockResolvedValue(['Bilbao'])
     render(<Formulario />)
     fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '48001' } })
+    expect((screen.getByLabelText('Provincia') as HTMLInputElement).value).toBe('Bizkaia')
     await waitFor(() =>
       expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Bilbao'),
     )
     fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '4800' } })
     expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('Provincia') as HTMLInputElement).value).toBe('')
     expect(mocks.buscar).toHaveBeenCalledOnce()
   })
 
@@ -96,8 +107,26 @@ describe('sugerencias por código postal', () => {
     fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '75001' } })
     expect(mocks.buscar).not.toHaveBeenCalled()
     fireEvent.change(screen.getByLabelText('País'), { target: { value: 'España' } })
+    expect((screen.getByLabelText('Provincia') as HTMLInputElement).value).toBe('')
     expect(await screen.findByText(/No se pudo consultar/)).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Municipio'), { target: { value: 'Manual' } })
     expect((screen.getByLabelText('Municipio') as HTMLInputElement).value).toBe('Manual')
+  })
+
+  it('respeta una provincia escrita manualmente al cambiar el código o el país', () => {
+    render(<Formulario />)
+    fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '48009' } })
+    fireEvent.change(screen.getByLabelText('Provincia'), { target: { value: 'Mi provincia' } })
+    fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '28013' } })
+    fireEvent.change(screen.getByLabelText('País'), { target: { value: 'Francia' } })
+    expect((screen.getByLabelText('Provincia') as HTMLInputElement).value).toBe('Mi provincia')
+  })
+
+  it('sugiere la provincia incluso si falla la búsqueda de municipios', async () => {
+    mocks.buscar.mockRejectedValue(new Error('Sin conexión'))
+    render(<Formulario />)
+    fireEvent.change(screen.getByLabelText('Código postal'), { target: { value: '48009' } })
+    expect(await screen.findByText(/No se pudo consultar/)).toBeTruthy()
+    expect((screen.getByLabelText('Provincia') as HTMLInputElement).value).toBe('Bizkaia')
   })
 })

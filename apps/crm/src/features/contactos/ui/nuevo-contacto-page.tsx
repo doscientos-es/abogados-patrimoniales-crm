@@ -113,6 +113,7 @@ export function NuevoContactoPage() {
   const postalLookup = usePostalMunicipality({
     codigoPostal: 'codigoPostal',
     municipio: 'municipio',
+    provincia: 'provincia',
     pais: 'pais',
   })
   const [nature, setNature] = useState<Naturaleza>('Persona física')

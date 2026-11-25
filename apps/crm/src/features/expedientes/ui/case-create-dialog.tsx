@@ -222,20 +222,20 @@ export function CaseCreateDialog({
                 />
                 <div className="space-y-1.5">
                   <Label htmlFor="case-create-area">Área de práctica</Label>
-                  <Input
+                  <select
                     id="case-create-area"
                     name="area"
-                    list="case-create-area-options"
-                    placeholder="Ej. Sucesiones"
+                    className={selectClassName}
                     aria-describedby="case-create-area-help"
-                  />
-                  <datalist id="case-create-area-options">
+                    defaultValue=""
+                  >
+                    <option value="">Selecciona una materia…</option>
                     {(practiceAreas ?? []).map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
                     ))}
-                  </datalist>
+                  </select>
                   <p id="case-create-area-help" className="text-muted-foreground text-xs">
                     Materia jurídica principal del asunto.
                   </p>

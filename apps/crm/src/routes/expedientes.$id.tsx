@@ -8,6 +8,7 @@ import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos } from '@/features/contactos'
 import { useMiembrosDespacho } from '@/features/crm'
 import { nombreCompletoContacto } from '@/features/crm/application/contact-autocomplete'
+import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import { AppointmentsTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import {
   CaseEditForm,
@@ -96,6 +97,7 @@ function CaseRoute() {
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
+  const practiceAreas = usePracticeAreas(firmId)
   const caseQuery = useExpedientePersistente(firmId, id)
   useCaseDocumentTitle(id, caseQuery.data)
   const workstreams = useLineasPersistentes(firmId, id)
@@ -287,6 +289,7 @@ function CaseRoute() {
           <CaseEditForm
             expediente={expediente}
             miembros={members.data ?? []}
+            practiceAreas={practiceAreas.data ?? []}
             pending={updateCase.isPending}
             onSave={async (input) => {
               await updateCase.mutateAsync(input)

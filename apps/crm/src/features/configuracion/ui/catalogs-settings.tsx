@@ -82,8 +82,11 @@ export function CatalogsSettings({
       const result = await client.from(table).insert({ firm_id: firmId, ...payload } as never)
       if (result.error) throw result.error
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['crm', 'catalogs', firmId] })
+      if (variables.table === 'crm_practice_areas') {
+        void queryClient.invalidateQueries({ queryKey: ['crm', 'practice-areas', firmId] })
+      }
       toast.success('Catálogo actualizado.')
     },
     onError: () => toast.error('No se ha podido guardar. Comprueba que no exista ya.'),
@@ -106,7 +109,12 @@ export function CatalogsSettings({
         .eq('firm_id', firmId)
       if (result.error) throw result.error
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm', 'catalogs', firmId] }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'catalogs', firmId] })
+      if (variables.table === 'crm_practice_areas') {
+        void queryClient.invalidateQueries({ queryKey: ['crm', 'practice-areas', firmId] })
+      }
+    },
     onError: () => toast.error('No se ha podido actualizar el elemento.'),
   })
   const merge = useMutation({

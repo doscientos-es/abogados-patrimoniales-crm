@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 
 import { buscarLocalidades } from '../application/postal-municipalities'
+import { provinciaCodigoPostal } from '../application/postal-province'
 
-type PostalFields = { codigoPostal: string; municipio: string; pais: string }
+type PostalFields = { codigoPostal: string; municipio: string; provincia: string; pais: string }
 type Estado = 'idle' | 'loading' | 'empty' | 'error'
 
 function campo(form: HTMLFormElement, nombre: string): HTMLInputElement | HTMLSelectElement | null {
@@ -21,6 +22,7 @@ export function usePostalMunicipality(fields: PostalFields) {
   const [opciones, setOpciones] = useState<string[]>([])
   const formRef = useRef<HTMLFormElement | null>(null)
   const ultimoAutomatico = useRef<string | null>(null)
+  const provinciaAutomatica = useRef<string | null>(null)
   const consulta = useRef<{
     timer: ReturnType<typeof setTimeout>
     controller: AbortController
@@ -36,6 +38,7 @@ export function usePostalMunicipality(fields: PostalFields) {
     () => () => {
       cancelar()
       ultimoAutomatico.current = null
+      provinciaAutomatica.current = null
       formRef.current = null
     },
     [],
@@ -46,6 +49,10 @@ export function usePostalMunicipality(fields: PostalFields) {
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return
     if (target.name === fields.municipio) {
       if (target.value !== ultimoAutomatico.current) ultimoAutomatico.current = null
+      return
+    }
+    if (target.name === fields.provincia) {
+      if (target.value !== provinciaAutomatica.current) provinciaAutomatica.current = null
       return
     }
     if (target.name !== fields.codigoPostal && target.name !== fields.pais) return
@@ -64,9 +71,24 @@ export function usePostalMunicipality(fields: PostalFields) {
       municipio.value = ''
     }
     ultimoAutomatico.current = null
+    const provincia = campo(form, fields.provincia)
+    if (
+      provincia &&
+      provinciaAutomatica.current !== null &&
+      provincia.value === provinciaAutomatica.current
+    ) {
+      provincia.value = ''
+    }
+    provinciaAutomatica.current = null
     const codigo = campo(form, fields.codigoPostal)?.value.trim() ?? ''
     const pais = campo(form, fields.pais)?.value ?? ''
     if (!/^[0-9]{5}$/.test(codigo) || !esEspana(pais) || !municipio) return
+
+    const provinciaSugerida = provinciaCodigoPostal(codigo)
+    if (provincia && !provincia.value && provinciaSugerida) {
+      provincia.value = provinciaSugerida
+      provinciaAutomatica.current = provinciaSugerida
+    }
 
     const municipioInicial = municipio.value
     const controller = new AbortController()
@@ -114,6 +136,7 @@ export function usePostalMunicipality(fields: PostalFields) {
   const reset = () => {
     cancelar()
     ultimoAutomatico.current = null
+    provinciaAutomatica.current = null
     setEstado('idle')
     setOpciones([])
   }

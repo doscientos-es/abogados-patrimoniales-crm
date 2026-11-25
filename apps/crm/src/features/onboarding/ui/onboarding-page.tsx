@@ -505,7 +505,10 @@ export function OnboardingPage({ abrir }: { abrir?: string | undefined }) {
                     ) as Json,
                   })
                 }
-                const expediente = await abrirExpediente.mutateAsync(caseInput)
+                const expediente = await abrirExpediente.mutateAsync({
+                  ...caseInput,
+                  area: caseInput.area || lead?.area || '',
+                })
                 if (!expediente) throw new Error('No se pudo abrir el expediente.')
                 toast.success('Expediente en CASEWORK.')
                 await navigate({

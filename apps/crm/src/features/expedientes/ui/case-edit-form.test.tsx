@@ -28,12 +28,22 @@ const expediente = {
 afterEach(cleanup)
 
 describe('CaseEditForm', () => {
+  it('mantiene la materia guardada cuando el catálogo se carga después del formulario', () => {
+    const props = { expediente, miembros: [], pending: false, onSave: vi.fn() }
+    const view = render(<CaseEditForm {...props} practiceAreas={[]} />)
+    view.rerender(<CaseEditForm {...props} practiceAreas={['Sucesiones', 'Civil']} />)
+    expect((screen.getByLabelText('Área de práctica') as HTMLSelectElement).value).toBe(
+      'Sucesiones',
+    )
+  })
+
   it('groups workflow controls as selects and submits the edited values', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(
       <CaseEditForm
         expediente={expediente}
         miembros={[{ id: 'member-1', nombre: 'Ana López' }] as never}
+        practiceAreas={['SUCESIONES Y HERENCIAS']}
         pending={false}
         onSave={onSave}
       />,
@@ -42,9 +52,15 @@ describe('CaseEditForm', () => {
     expect(screen.getByText('Gestión operativa')).toBeTruthy()
     expect(screen.getByLabelText('Fase operativa *').tagName).toBe('SELECT')
     expect(screen.getByLabelText('De quién depende *').tagName).toBe('SELECT')
+    expect((screen.getByLabelText('Área de práctica') as HTMLSelectElement).value).toBe(
+      'Sucesiones',
+    )
     expect(screen.getByText(/Determina la columna de seguimiento/i)).toBeTruthy()
 
     fireEvent.change(screen.getByLabelText('Fase operativa *'), { target: { value: 'En curso' } })
+    fireEvent.change(screen.getByLabelText('Área de práctica'), {
+      target: { value: 'SUCESIONES Y HERENCIAS' },
+    })
     fireEvent.change(screen.getByLabelText('De quién depende *'), {
       target: { value: 'En espera de tercero' },
     })
@@ -55,6 +71,7 @@ describe('CaseEditForm', () => {
         expect.objectContaining({
           id: 'case-1',
           versionEsperada: 2,
+          area: 'SUCESIONES Y HERENCIAS',
           fase: 'En curso',
           estadoOperativo: 'En espera de tercero',
         }),

@@ -55,6 +55,7 @@ describe('CaseCreateDialog', () => {
       <CaseCreateDialog
         contactos={[{ id: 'contact-1', nombre: 'Ana López' }]}
         miembros={[]}
+        practiceAreas={['SUCESIONES Y HERENCIAS']}
         pending={false}
         onCreate={onCreate}
       />,
@@ -72,6 +73,9 @@ describe('CaseCreateDialog', () => {
     fireEvent.change(screen.getByLabelText('Nombre del expediente *'), {
       target: { value: 'Herencia familiar' },
     })
+    fireEvent.change(screen.getByLabelText('Área de práctica'), {
+      target: { value: 'SUCESIONES Y HERENCIAS' },
+    })
     fireEvent.click(screen.getByText('Creación avanzada'))
     fireEvent.change(screen.getByLabelText(/fecha de apertura/i), {
       target: { value: '2026-09-07' },
@@ -82,6 +86,7 @@ describe('CaseCreateDialog', () => {
         expect.objectContaining({
           contactoPrincipalId: 'contact-1',
           titulo: 'Herencia familiar',
+          area: 'SUCESIONES Y HERENCIAS',
           fechaApertura: '2026-09-07',
           naturaleza: 'Extrajudicial',
           prioridad: 'Media',

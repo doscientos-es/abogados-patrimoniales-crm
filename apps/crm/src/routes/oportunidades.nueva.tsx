@@ -6,7 +6,6 @@ import {
   ComboboxList,
   HighlightMatch,
 } from '@doscientos/ui'
-import { useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Check, Plus, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
@@ -35,8 +34,8 @@ import {
   type ViabilidadInicial,
 } from '@/features/crm/application/initial-viability'
 import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
+import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import { LeadCreatedDialog } from '@/features/crm/ui/lead-created-dialog'
-import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
 
 export const Route = createFileRoute('/oportunidades/nueva')({
   validateSearch: (search: Record<string, unknown>) => {
@@ -94,24 +93,7 @@ export function NuevaOportunidadPage() {
     [contactSearch, contacts.data],
   )
   const leadRoles = useLeadRoles(firmId)
-  const areas = useQuery({
-    queryKey: ['crm', 'practice-areas', firmId],
-    enabled: Boolean(firmId),
-    queryFn: async () => {
-      const client = getSupabaseBrowserClient()
-      if (!client || !firmId) return []
-      const { data, error } = await client
-        .from('crm_practice_areas')
-        .select('name')
-        .eq('firm_id', firmId)
-        .eq('archived', false)
-        .is('parent_id', null)
-        .order('sort_order')
-        .order('name')
-      if (error) throw error
-      return data.map((item) => item.name)
-    },
-  })
+  const areas = usePracticeAreas(firmId)
 
   const refreshContacts = async () => {
     const result = await contacts.refetch()
@@ -357,7 +339,7 @@ export function NuevaOportunidadPage() {
                 <Label htmlFor="lead-area">Materia</Label>
                 <select id="lead-area" name="area" className={selectClassName} defaultValue="">
                   <option value="">Selecciona una materia…</option>
-                  {(areas.data?.length ? areas.data : DEFAULT_AREAS).map((item) => (
+                  {(areas.data ?? []).map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -576,24 +558,6 @@ function BlockHeading({
     </div>
   )
 }
-
-const DEFAULT_AREAS = [
-  'CIVIL GENERAL',
-  'SUCESIONES Y HERENCIAS',
-  'ARRENDAMIENTOS',
-  'DESAHUCIOS',
-  'COMPRAVENTAS E INMUEBLES',
-  'DIVISIÓN DE COSA COMÚN',
-  'RECLAMACIÓN DE CANTIDAD',
-  'PROPIEDAD HORIZONTAL',
-  'CONTRATOS E INCUMPLIMIENTOS',
-  'FAMILIA Y DIVORCIOS',
-  'LIQUIDACIÓN DE GANANCIALES',
-  'RESPONSABILIDAD CIVIL Y DAÑOS',
-  'DERECHO BANCARIO',
-  'EJECUCIONES',
-  'VALORACIÓN Y PERITAJES',
-]
 
 const selectClassName =
   'border-input bg-background h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'

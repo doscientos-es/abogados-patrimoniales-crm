@@ -1,0 +1,16 @@
+// Los dos primeros dígitos identifican la provincia, no garantizan que exista el código completo.
+const PROVINCIAS = [
+  'Álava', 'Albacete', 'Alicante', 'Almería', 'Ávila', 'Badajoz', 'Illes Balears',
+  'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Castellón', 'Ciudad Real', 'Córdoba',
+  'A Coruña', 'Cuenca', 'Girona', 'Granada', 'Guadalajara', 'Gipuzkoa', 'Huelva',
+  'Huesca', 'Jaén', 'León', 'Lleida', 'La Rioja', 'Lugo', 'Madrid', 'Málaga',
+  'Murcia', 'Navarra', 'Ourense', 'Asturias', 'Palencia', 'Las Palmas', 'Pontevedra',
+  'Salamanca', 'Santa Cruz de Tenerife', 'Cantabria', 'Segovia', 'Sevilla', 'Soria',
+  'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'Valladolid', 'Bizkaia', 'Zamora',
+  'Zaragoza', 'Ceuta', 'Melilla',
+]
+
+export function provinciaCodigoPostal(codigo: string): string | null {
+  if (!/^[0-9]{5}$/.test(codigo)) return null
+  return PROVINCIAS[Number(codigo.slice(0, 2)) - 1] ?? null
+}

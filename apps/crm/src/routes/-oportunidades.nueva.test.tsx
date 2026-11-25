@@ -29,7 +29,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
   useNavigate: () => mocks.navigate,
 }))
 
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [] }) }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: ['SUCESIONES Y HERENCIAS'] }),
+}))
 vi.mock('@/features/auth', () => ({
   useActiveMembership: () => ({ data: { firmId: 'firm-1' }, isPending: false }),
   useAuthSession: () => ({ status: 'signed-in', user: { id: 'user-1' } }),
