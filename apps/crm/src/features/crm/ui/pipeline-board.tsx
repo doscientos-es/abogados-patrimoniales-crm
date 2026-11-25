@@ -165,7 +165,10 @@ export function PipelineBoard({
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="bg-muted text-muted-foreground max-w-[11rem] truncate rounded px-1.5 py-0.5 text-[11px] font-medium">
-                          {oportunidad.estadoOperativo || oportunidad.subestado || 'Sin estado'}
+                          {oportunidad.estadoOperativo ||
+                            oportunidad.subestadoMostrado ||
+                            oportunidad.subestado ||
+                            'Sin estado'}
                         </span>
                         <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
                           <CalendarClock className="size-3" aria-hidden="true" />

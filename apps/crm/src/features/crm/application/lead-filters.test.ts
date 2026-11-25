@@ -35,6 +35,14 @@ const noFilters = {
 }
 
 describe('filterLeads', () => {
+  it('searches the displayed review label rather than an obsolete substage', () => {
+    const leads = [
+      opportunity({ subestado: 'En revisión', subestadoMostrado: 'Presupuesto validado' }),
+    ]
+    expect(filterLeads(leads, new Map(), { ...noFilters, query: 'validado' })).toHaveLength(1)
+    expect(filterLeads(leads, new Map(), { ...noFilters, query: 'revisión' })).toHaveLength(0)
+  })
+
   it('combines text, owner, stage, status, source and priority filters using persistent fields', () => {
     const opportunities = [
       opportunity(),

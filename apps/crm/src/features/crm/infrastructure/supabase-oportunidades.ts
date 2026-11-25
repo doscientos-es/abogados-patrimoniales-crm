@@ -16,6 +16,7 @@ import type {
 import {
   esConflictoIdempotente,
   pasosHito,
+  subestadoVisible,
   type HitoLead,
 } from '@/features/crm/application/lead-milestones'
 import {
@@ -84,6 +85,7 @@ function resumenFromRow(row: OpportunityRow): OportunidadResumen {
     area: row.area,
     fase: row.stage,
     subestado: row.substage,
+    subestadoMostrado: subestadoVisible(row.stage, row.substage, row.details),
     prioridad: priorityFromDatabase[row.priority],
     estadoOperativo: row.operational_status,
     origen: row.source,

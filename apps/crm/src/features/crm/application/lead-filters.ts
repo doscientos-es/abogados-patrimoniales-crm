@@ -24,7 +24,7 @@ export function filterLeads(
       opportunity.referencia,
       opportunity.titulo,
       contactNames.get(opportunity.contactoId) ?? '',
-      opportunity.subestado,
+      opportunity.subestadoMostrado ?? opportunity.subestado,
       opportunity.estadoOperativo,
       opportunity.origen,
       opportunity.prioridad,

@@ -8,6 +8,7 @@ export type OportunidadResumen = {
   area: string
   fase: OpportunityStage
   subestado: string
+  subestadoMostrado?: string
   prioridad: 'Alta' | 'Media' | 'Baja'
   estadoOperativo: string
   origen: string

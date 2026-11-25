@@ -473,7 +473,7 @@ function LeadsPersistidos({
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {oportunidad.subestado}
+                      {oportunidad.subestadoMostrado ?? oportunidad.subestado}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {oportunidad.origen || '—'}
