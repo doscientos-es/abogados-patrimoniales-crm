@@ -439,9 +439,47 @@ describe('TaskDetail', () => {
     const form = dialog.querySelector('form')!
     fireEvent.submit(form)
     expect(mocks.completeTask).not.toHaveBeenCalled()
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Entiendo que estas subtareas/ }))
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /He revisado las subtareas/ }))
     fireEvent.submit(form)
     await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
+    expect(mocks.completeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ continuidad: 'create_next_task' }),
+    )
+  })
+
+  it('permite copiar las subtareas pendientes a la continuación sin incluir las convertidas', async () => {
+    mocks.subtasks = [
+      {
+        id: 'sub-1',
+        texto: 'Pedir escritura',
+        hecha: false,
+        creadaPorId: null,
+        creadaEn: '',
+        convertidaEnId: null,
+      },
+      {
+        id: 'sub-2',
+        texto: 'Solicitar informe',
+        hecha: false,
+        creadaPorId: null,
+        creadaEn: '',
+        convertidaEnId: 'task-2',
+      },
+    ]
+    render(<TaskDetail taskId="task-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Completar' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Solicitar informe (convertida en tarea)')).toBeTruthy()
+    fireEvent.change(within(dialog).getByLabelText('Resultado'), { target: { value: 'Terminado' } })
+    fireEvent.change(within(dialog).getByLabelText('Continuidad'), {
+      target: { value: 'create_next_task_with_subtasks' },
+    })
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /He revisado las subtareas/ }))
+    fireEvent.submit(dialog.querySelector('form')!)
+    await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
+    expect(mocks.completeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ continuidad: 'create_next_task_with_subtasks' }),
+    )
   })
 
   it('preselects case contacts and saves enriched meeting details for a manager', async () => {

@@ -172,7 +172,7 @@ export type TransicionEsperaInput = {
 export type CompletarTareaInput = {
   task: TareaPersistida
   resultado: string
-  continuidad?: 'create_next_task' | 'close_without_continuity'
+  continuidad?: 'create_next_task' | 'create_next_task_with_subtasks' | 'close_without_continuity'
   relevancia?: RelevanciaTarea
 }
 

@@ -1637,11 +1637,15 @@ function TaskCompleteDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   nextAction: boolean
-  pendingSubtasks: Array<{ id: string; texto: string }>
+  pendingSubtasks: Array<{ id: string; texto: string; convertidaEnId: string | null }>
   pending: boolean
   onSubmit: (
     result: string,
-    continuity: 'create_next_task' | 'close_without_continuity' | undefined,
+    continuity:
+      | 'create_next_task'
+      | 'create_next_task_with_subtasks'
+      | 'close_without_continuity'
+      | undefined,
     relevance: RelevanciaTarea,
   ) => void
 }) {
@@ -1652,7 +1656,10 @@ function TaskCompleteDialog({
     onSubmit(
       formText(data, 'result'),
       nextAction
-        ? (formText(data, 'continuity') as 'create_next_task' | 'close_without_continuity')
+        ? (formText(data, 'continuity') as
+            | 'create_next_task'
+            | 'create_next_task_with_subtasks'
+            | 'close_without_continuity')
         : undefined,
       (formText(data, 'relevance') || 'normal') as RelevanciaTarea,
     )
@@ -1666,19 +1673,27 @@ function TaskCompleteDialog({
         <form className="space-y-4" onSubmit={submit}>
           {pendingSubtasks.length ? (
             <div className="space-y-2 rounded-md border p-3 text-sm">
-              <p>
-                Hay subtareas pendientes
-                {nextAction ? ' que no se trasladarán a la siguiente tarea' : ''}:
-              </p>
+              <p>Hay subtareas pendientes:</p>
               <ul className="list-inside list-disc">
                 {pendingSubtasks.map((subtask) => (
-                  <li key={subtask.id}>{subtask.texto}</li>
+                  <li key={subtask.id}>
+                    {subtask.texto}
+                    {subtask.convertidaEnId ? ' (convertida en tarea)' : ''}
+                  </li>
                 ))}
               </ul>
               <label className="flex items-start gap-2">
                 <input type="checkbox" name="acknowledgeSubtasks" required />
-                <span>Entiendo que estas subtareas quedarán en la tarea completada.</span>
+                <span>He revisado las subtareas pendientes.</span>
               </label>
+              {nextAction ? (
+                <p>
+                  Las subtareas originales se conservan. Puedes copiar las no convertidas a la
+                  continuación.
+                </p>
+              ) : (
+                <p>Las subtareas quedarán en la tarea completada.</p>
+              )}
             </div>
           ) : null}
           <Label>
@@ -1706,6 +1721,11 @@ function TaskCompleteDialog({
                 className="border-input bg-background h-10 w-full rounded-md border px-3"
               >
                 <option value="create_next_task">Crear siguiente tarea</option>
+                {pendingSubtasks.some((subtask) => !subtask.convertidaEnId) ? (
+                  <option value="create_next_task_with_subtasks">
+                    Crear siguiente tarea y copiar subtareas pendientes
+                  </option>
+                ) : null}
                 <option value="close_without_continuity">Cerrar sin continuidad</option>
               </select>
             </Label>
