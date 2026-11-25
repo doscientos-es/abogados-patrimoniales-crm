@@ -624,7 +624,10 @@ export function OnboardingCard({
         <div className="border-border/70 text-muted-foreground space-y-1.5 border-y py-2 text-xs leading-5">
           <p className="flex min-w-0 items-center gap-1.5">
             <UserRound className="size-3 shrink-0" aria-hidden="true" />
-            <span className="truncate">{responsableNombre ?? 'Sin responsable'}</span>
+            <span className="truncate">
+              {responsableNombre ??
+                (item.responsableId ? 'Responsable no disponible' : 'Sin responsable')}
+            </span>
           </p>
           <p className="flex items-center justify-between gap-2">
             <span>Presupuesto: {item.presupuestoReferencia ?? '—'}</span>
@@ -828,10 +831,17 @@ export function CreateOnboardingDialog({
   const [open, setOpen] = useState(false)
   const [opportunityId, setOpportunityId] = useState('')
   const [asunto, setAsunto] = useState('')
+  const [responsableId, setResponsableId] = useState('')
   const selected = oportunidades.find((item) => item.id === opportunityId)
   const selectOpportunity = (id: string) => {
     setOpportunityId(id)
-    setAsunto(oportunidades.find((item) => item.id === id)?.titulo ?? '')
+    const opportunity = oportunidades.find((item) => item.id === id)
+    setAsunto(opportunity?.titulo ?? '')
+    setResponsableId(
+      miembros.some((member) => member.id === opportunity?.asignadoId)
+        ? (opportunity?.asignadoId ?? '')
+        : '',
+    )
   }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -855,6 +865,7 @@ export function CreateOnboardingDialog({
       setOpen(false)
       setOpportunityId('')
       setAsunto('')
+      setResponsableId('')
     } catch (error) {
       toast.error(onboardingErrorMessage(error))
     }
@@ -968,8 +979,10 @@ export function CreateOnboardingDialog({
                   label="Responsable"
                   name="responsable"
                   select
+                  value={responsableId}
+                  onChange={(event) => setResponsableId(event.target.value)}
                   options={[['', 'Sin asignar'], ...miembros.map((item) => [item.id, item.nombre])]}
-                  helper="Persona que realizará el seguimiento del pago."
+                  helper="Se propone el responsable del Lead si está disponible; puedes cambiarlo."
                   optional
                 />
                 <Field

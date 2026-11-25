@@ -105,7 +105,8 @@ const DUPLICATE_FIELD_LABELS: Record<DuplicateContactField, string> = {
 
 export function NuevoContactoPage({
   onCreated,
-}: { onCreated?: (contact: ContactoPersistido) => void } = {}) {
+  onCancel,
+}: { onCreated?: (contact: ContactoPersistido) => void; onCancel?: () => void } = {}) {
   const navigate = useNavigate()
   const session = useAuthSession()
   const membership = useActiveMembership(session.user?.id)
@@ -679,9 +680,15 @@ export function NuevoContactoPage({
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">
-          <Link to="/contactos" className={buttonVariants({ variant: 'outline' })}>
-            Cancelar
-          </Link>
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+              Cancelar
+            </Button>
+          ) : (
+            <Link to="/contactos" className={buttonVariants({ variant: 'outline' })}>
+              Cancelar
+            </Link>
+          )}
           <Button type="submit" disabled={saving}>
             {saving ? 'Creando…' : 'Crear contacto'}
           </Button>

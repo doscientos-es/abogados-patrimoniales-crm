@@ -487,6 +487,7 @@ export function NuevaOportunidadPage() {
             <DialogTitle>Crear contacto</DialogTitle>
           </DialogHeader>
           <NuevoContactoPage
+            onCancel={() => setContactDialogOpen(false)}
             onCreated={(contact) => {
               setCreatedContact(contact)
               setHasChangedContact(true)

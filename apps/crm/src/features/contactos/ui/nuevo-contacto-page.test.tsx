@@ -137,6 +137,14 @@ describe('detección de contactos duplicados al dar de alta', () => {
 })
 
 describe('documentos del alta', () => {
+  it('cancela el alta integrada sin navegar', () => {
+    const onCancel = vi.fn()
+    render(<NuevoContactoPage onCancel={onCancel} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(mocks.navigate).not.toHaveBeenCalled()
+  })
+
   it('devuelve el contacto creado al diálogo sin navegar', async () => {
     const onCreated = vi.fn()
     mocks.create.mockResolvedValue({ id: 'new-contact', nombre: 'Ana' })
