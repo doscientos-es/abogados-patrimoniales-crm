@@ -26,6 +26,13 @@ import { type GlobalSearchResult, useGlobalSearch } from '../application'
 type PaletteItem = Pick<GlobalSearchResult, 'id' | 'entity_type' | 'title' | 'subtitle' | 'href'>
 type StoredItem = PaletteItem & { selectedAt: number; visits: number }
 
+function normalizeSearch(value: string) {
+  return value
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
 function subtitleLabel(item: PaletteItem) {
   if (item.entity_type !== 'case') return item.subtitle
   const separator = item.subtitle.lastIndexOf(' · ')
@@ -286,9 +293,9 @@ export function GlobalSearch({
   )
   const hasSearch = term.trim().length >= 2
   const matchingModules = useMemo(() => {
-    const normalizedTerm = term.trim().toLocaleLowerCase()
+    const normalizedTerm = normalizeSearch(term.trim())
     return MODULES.filter((module) =>
-      `${module.title} ${module.subtitle}`.toLocaleLowerCase().includes(normalizedTerm),
+      normalizeSearch(`${module.title} ${module.subtitle}`).includes(normalizedTerm),
     )
   }, [term])
   const groups = hasSearch

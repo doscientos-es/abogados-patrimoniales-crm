@@ -135,4 +135,14 @@ describe('GlobalSearch', () => {
     fireEvent.click(screen.getByRole('button', { name: /crm.*cockpit comercial/i }))
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/crm' })
   })
+
+  it('finds modules regardless of accents and case', () => {
+    render(<SearchHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en LEX' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Buscar en todo LEX' }), {
+      target: { value: 'FACTURACION' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /facturación.*facturas y cobros/i }))
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/facturacion' })
+  })
 })
