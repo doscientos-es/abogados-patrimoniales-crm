@@ -34,6 +34,7 @@ import {
 import { CaseDetail, type CaseDetailTab } from '@/features/expedientes/ui/case-detail'
 import { CaseHandoffBar } from '@/features/expedientes/ui/case-handoff'
 import { CaseParticipantsPanel } from '@/features/expedientes/ui/case-participants-groups'
+import { useCaseDocumentTitle } from '@/features/expedientes/ui/use-case-document-title'
 import { useFacturas } from '@/features/facturacion'
 import { useConfirmarLectura, useNotasRemotas } from '@/features/notas'
 import {
@@ -60,9 +61,9 @@ export const Route = createFileRoute('/expedientes/$id')({
       : {}),
     ...(search['traspaso'] === true ? { traspaso: true } : {}),
   }),
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
-      { title: `Expediente ${params.id} — LEX` },
+      { title: 'Expediente — LEX' },
       { name: 'description', content: 'Ficha persistente y trazabilidad del expediente.' },
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
@@ -96,6 +97,7 @@ function CaseRoute() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const caseQuery = useExpedientePersistente(firmId, id)
+  useCaseDocumentTitle(id, caseQuery.data)
   const workstreams = useLineasPersistentes(firmId, id)
   const activities = useActuacionesPersistentes(firmId, id)
   const participants = useParticipantesPersistentes(firmId, id)
