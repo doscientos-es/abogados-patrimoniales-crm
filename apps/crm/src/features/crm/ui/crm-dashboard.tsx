@@ -223,6 +223,9 @@ export function CrmDashboard() {
           tone="aviso"
         />
       </section>
+      <p className="text-muted-foreground text-xs">
+        Los Leads activos excluyen los aceptados y los cerrados o perdidos.
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard

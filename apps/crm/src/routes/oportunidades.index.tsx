@@ -381,9 +381,8 @@ function LeadsPersistidos({
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="text-muted-foreground text-xs">
             {filtradas.length} {filtradas.length === 1 ? 'Lead' : 'Leads'}
-            {modo === 'kanban'
-              ? ' · Arrastra las tarjetas para cambiar de fase'
-              : ' en la vista actual'}
+            {' en la vista actual, incluidos aceptados y perdidos si coinciden con los filtros'}
+            {modo === 'kanban' ? ' · Arrastra las tarjetas para cambiar de fase' : ''}
           </p>
           {activeFilters.length ? (
             <>
