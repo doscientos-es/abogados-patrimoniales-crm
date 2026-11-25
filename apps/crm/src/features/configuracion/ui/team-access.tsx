@@ -37,9 +37,10 @@ type Change = { userId: string; role: MemberRole; status: 'active' | 'disabled' 
 const ROLE_LABELS: Record<MemberRole, string> = {
   owner: 'Propietario',
   admin: 'Administrador',
-  lawyer: 'Abogado/a',
-  paralegal: 'Paralegal',
+  lawyer: 'Abogado',
+  paralegal: 'Administrativo',
 }
+const ASSIGNABLE_ROLES: MemberRole[] = ['lawyer', 'paralegal']
 
 export function TeamAccess({
   firmId,
@@ -59,8 +60,6 @@ export function TeamAccess({
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
   const [assignmentCount, setAssignmentCount] = useState<number | null>(null)
   const canManage = actorRole === 'owner' || actorRole === 'admin'
-  const assignableRoles: MemberRole[] =
-    actorRole === 'owner' ? ['admin', 'lawyer', 'paralegal'] : ['lawyer', 'paralegal']
   const invite = useMutation({
     mutationFn: async () => {
       const client = getSupabaseBrowserClient()
@@ -183,6 +182,7 @@ export function TeamAccess({
             !(actorRole === 'admin' && member.role === 'admin') ? (
               <div className="flex items-center gap-2">
                 <select
+                  aria-label={`Rol de ${member.displayName}`}
                   className="border-input bg-background h-9 rounded-md border px-2 text-sm"
                   value={member.role}
                   disabled={
@@ -196,7 +196,10 @@ export function TeamAccess({
                     })
                   }
                 >
-                  {assignableRoles.map((item) => (
+                  {member.role === 'admin' ? (
+                    <option value="admin">{ROLE_LABELS.admin}</option>
+                  ) : null}
+                  {ASSIGNABLE_ROLES.map((item) => (
                     <option key={item} value={item}>
                       {ROLE_LABELS[item]}
                     </option>
@@ -277,7 +280,7 @@ export function TeamAccess({
                 value={role}
                 onChange={(e) => setRole(e.target.value as MemberRole)}
               >
-                {assignableRoles.map((item) => (
+                {ASSIGNABLE_ROLES.map((item) => (
                   <option key={item} value={item}>
                     {ROLE_LABELS[item]}
                   </option>

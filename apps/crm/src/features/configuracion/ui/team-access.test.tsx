@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { type ComponentProps, type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -25,6 +25,27 @@ function renderTeamAccess(members: ComponentProps<typeof TeamAccess>['members'] 
 }
 
 describe('TeamAccess', () => {
+  it('offers only abogado and administrativo while preserving existing administrative access', () => {
+    renderTeamAccess([
+      { userId: 'user-2', role: 'paralegal', status: 'active', displayName: 'María' },
+      { userId: 'user-3', role: 'admin', status: 'active', displayName: 'Carlos' },
+    ])
+    const existing = screen.getByRole('combobox', { name: 'Rol de María' }) as HTMLSelectElement
+    expect(existing.value).toBe('paralegal')
+    expect(within(existing).getByRole('option', { name: 'Administrativo' })).toBeTruthy()
+    expect(
+      (screen.getByRole('combobox', { name: 'Rol de Carlos' }) as HTMLSelectElement).value,
+    ).toBe('admin')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Invitar a un nuevo miembro' }))
+    const role = screen.getByRole('combobox', { name: 'Rol' })
+    expect(
+      within(role)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Abogado', 'Administrativo'])
+  })
+
   it('sends a passwordless invitation email', async () => {
     mocks.invoke.mockResolvedValue({ error: null })
     renderTeamAccess()
