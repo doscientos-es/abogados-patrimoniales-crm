@@ -41,10 +41,12 @@ import {
   type CopiaVersion,
   type Envio,
 } from '@/features/crm/application/quote-editor'
+import { guardarSeguimientoTrasEnvio } from '@/features/crm/application/quote-followup-save'
 import { documentoHtml, imprimir, type Cliente } from '@/features/crm/ui/quote-document'
 import { CrearTareaEnvioBox } from '@/features/crm/ui/quote-send-task'
 import { useCompletarTarea, useCrearTarea, useTareaPorId } from '@/features/tareas'
 import { getSupabaseBrowserClient } from '@/shared/infrastructure/supabase'
+import { errorMessage } from '@/shared/lib/error-message'
 
 type Rec = Record<string, unknown>
 const rec = (value: unknown): Rec =>
@@ -146,39 +148,45 @@ export function QuoteSendPanel({
         detalles: conEditor(opportunity.detalles, result.editor, result.extra),
         ...(stage === 'validation'
           ? {
-            transicionContratacion: {
-              fase: 'engagement' as const,
-              subestado: 'Pendiente de aceptación',
-            },
-          }
+              transicionContratacion: {
+                fase: 'engagement' as const,
+                subestado: 'Pendiente de aceptación',
+              },
+            }
           : {}),
       })
       setSending(false)
       toast.success('Envío externo registrado.')
-      try {
-        const ensured = await asegurarTareaSeguimiento({
-          detalles: sentOpp.detalles,
-          leadId: opportunity.id,
-          referencia: prepared.referencia,
-          cliente: prepared.instantanea?.cliente.nombre ?? cliente.nombre,
-          asignadoId: followup.assignedId,
-          asignadoNombre:
-            members.data?.find((member) => member.id === followup.assignedId)?.nombre ??
-            followup.assignedId,
-          venceEn: venceA18(followup.date),
-          ahora: new Date().toISOString(),
-          buscar: (marker) => buscarTareaRevisionAbierta(firmId, opportunity.id, marker),
-          crear: (input) => createTask.mutateAsync(input),
-        })
-        if (ensured)
-          await save.mutateAsync({
+      const followupResult = await guardarSeguimientoTrasEnvio({
+        asegurar: () =>
+          asegurarTareaSeguimiento({
+            detalles: sentOpp.detalles,
+            leadId: opportunity.id,
+            referencia: prepared.referencia,
+            cliente: prepared.instantanea?.cliente.nombre ?? cliente.nombre,
+            asignadoId: followup.assignedId,
+            asignadoNombre:
+              members.data?.find((member) => member.id === followup.assignedId)?.nombre ??
+              followup.assignedId,
+            venceEn: venceA18(followup.date),
+            ahora: new Date().toISOString(),
+            buscar: (marker) => buscarTareaRevisionAbierta(firmId, opportunity.id, marker),
+            crear: (input) => createTask.mutateAsync(input),
+          }),
+        guardar: (detalles) =>
+          save.mutateAsync({
             id: opportunity.id,
             versionEsperada: sentOpp.version,
-            detalles: ensured.detalles,
-          })
-      } catch (error) {
+            detalles,
+          }),
+      })
+      if (followupResult.estado === 'sin-tarea') {
         toast.error(
-          `Envío registrado, pero no se pudo crear la tarea de seguimiento: ${error instanceof Error ? error.message : 'error'}. Créala desde «Aceptación».`,
+          `Envío registrado, pero no se pudo verificar o crear la tarea de seguimiento: ${errorMessage(followupResult.error, 'causa desconocida')}. Revisa las tareas del Lead antes de crear otra.`,
+        )
+      } else if (followupResult.estado === 'sin-vincular') {
+        toast.error(
+          `La tarea de seguimiento existe, pero no se pudo vincular al presupuesto: ${errorMessage(followupResult.error, 'causa desconocida')}. Consulta la tarea en el módulo Tareas; la vinculación queda pendiente.`,
         )
       }
       const task = sendTask.data

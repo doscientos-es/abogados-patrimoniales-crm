@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -42,21 +42,27 @@ describe('GlobalSearch', () => {
     expect(onOpen).toHaveBeenCalledOnce()
   })
 
-  it('opens from the sidebar search button', () => {
+  it('opens from the sidebar search button and focuses the search field', async () => {
     render(<SearchHarness />)
     fireEvent.click(screen.getByRole('button', { name: 'Buscar en LEX' }))
     const dialog = screen.getByRole('dialog', { name: 'Buscar en LEX' })
     expect(dialog.className).toContain('w-screen')
-    expect(within(dialog).getByRole('textbox', { name: 'Buscar en todo LEX' })).toBeTruthy()
+    const input = within(dialog).getByRole('textbox', { name: 'Buscar en todo LEX' })
+    await waitFor(() => expect(document.activeElement).toBe(input))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cerrar diálogo' }))
     expect(screen.queryByRole('dialog', { name: 'Buscar en LEX' })).toBeNull()
   })
 
-  it('opens with Ctrl+K and saves a selected module as a recent item', () => {
+  it('opens with Ctrl+K, focuses the field and saves a selected module as a recent item', async () => {
     render(<SearchHarness />)
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
     expect(screen.getByRole('dialog', { name: 'Buscar en LEX' })).toBeTruthy()
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: 'Buscar en todo LEX' }),
+      ),
+    )
 
     fireEvent.click(screen.getByRole('button', { name: /contactos.*personas y entidades/i }))
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/contactos' })

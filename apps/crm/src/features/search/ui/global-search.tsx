@@ -335,6 +335,7 @@ export function GlobalSearch({
         <div className="flex shrink-0 items-center gap-3 border-b py-1 pr-14 pl-4">
           <Search className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
           <Input
+            autoFocus
             autoComplete="off"
             className="h-14 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
             placeholder="Busca contactos, leads, expedientes, documentos…"
