@@ -145,7 +145,12 @@ export function totales(lineas: LineaPresupuesto[]) {
 }
 
 export const euros = (cents: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+  new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    // The TypeScript Intl definitions in this project predate the 'always' option.
+    useGrouping: 'always' as unknown as boolean,
+  }).format(cents / 100)
 
 export function parseEuros(value: string): number | null {
   let normalized = value.replace(/€/g, '').replace(/\s/g, '')
@@ -164,6 +169,16 @@ export function parseEuros(value: string): number | null {
   }
   const amount = Number(normalized)
   return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null
+}
+
+/** Formats stored euro amounts for display without changing the stored value. */
+export function importeEnviadoEs(value: unknown): string {
+  if (typeof value === 'number')
+    return Number.isFinite(value) && value >= 0 ? euros(Math.round(value * 100)) : String(value)
+  const raw = typeof value === 'string' ? value.trim() : ''
+  if (!raw) return '—'
+  const cents = parseEuros(raw)
+  return cents === null ? raw : euros(cents)
 }
 
 /** Editable price text in Spanish format, e.g. 180000 → «1800,00». */

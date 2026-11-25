@@ -35,5 +35,7 @@ describe('documentoHtml', () => {
     expect(html).not.toContain(injection)
     expect(html.match(/&lt;img/g)).toHaveLength(11)
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;')
+    expect(html).toContain('Fecha 13/10/2026')
+    expect(version.fecha).toBe('2026-10-13')
   })
 })

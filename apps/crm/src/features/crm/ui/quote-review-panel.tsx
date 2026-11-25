@@ -14,6 +14,7 @@ import {
 import {
   conEditor,
   euros,
+  fechaEnvioEs,
   leerEditor,
   leerMarcador,
   resolverRevision,
@@ -191,7 +192,8 @@ export function QuoteReviewPanel({
         {review.revision.resolucion ? (
           <p className="rounded-md border p-2">
             Resuelta: {review.revision.resolucion.decision.toUpperCase()} por{' '}
-            {review.revision.resolucion.porNombre} · {review.revision.resolucion.fecha.slice(0, 10)}
+            {review.revision.resolucion.porNombre} ·{' '}
+            {fechaEnvioEs(review.revision.resolucion.fecha.slice(0, 10))}
             {review.revision.resolucion.observaciones
               ? ` · ${review.revision.resolucion.observaciones}`
               : ''}

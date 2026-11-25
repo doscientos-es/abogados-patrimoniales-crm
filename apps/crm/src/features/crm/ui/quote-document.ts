@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 
 import {
   euros,
+  fechaEnvioEs,
   totales,
   totalesLinea,
   type CopiaVersion,
@@ -34,11 +35,12 @@ const esc = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 export function documentoHtml(
-  version: CopiaVersion,
+  original: CopiaVersion,
   cliente: Cliente,
   despacho: string,
   standalone: boolean,
 ) {
+  const version = { ...original, fecha: fechaEnvioEs(original.fecha) }
   const total = totales(version.lineas)
   const rows = version.lineas
     .map((line) => {

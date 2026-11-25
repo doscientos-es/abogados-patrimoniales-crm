@@ -33,6 +33,7 @@ import {
   conEditor,
   copiaEnviada,
   euros,
+  importeEnviadoEs,
   leerEditor,
   preparadaParaEnviar,
   registrarEnvio,
@@ -104,9 +105,7 @@ export function QuoteSendPanel({
     const snapshot = sentCopy(version)
     return snapshot?.instantanea
       ? euros(snapshot.instantanea.totales.total)
-      : text(quote['importeEnviado'])
-        ? `${text(quote['importeEnviado'])} €`
-        : '—'
+      : importeEnviadoEs(quote['importeEnviado'])
   }
 
   const saveDraft = async (draft: BorradorEnvio) => {

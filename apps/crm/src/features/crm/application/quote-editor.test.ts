@@ -9,6 +9,7 @@ import {
   ENVIO_REGISTRADO,
   huella,
   importeEnvioCents,
+  importeEnviadoEs,
   leerEditor,
   lineaDesdeServicio,
   marcadorRevision,
@@ -108,6 +109,15 @@ describe('editor de presupuestos', () => {
     expect(parseEuros('1.800,00')).toBe(180000)
     expect(parseEuros('12.50')).toBe(1250)
     expect(parseEuros('1.80,00')).toBeNull()
+  })
+
+  it('muestra importes enviados en euros sin ocultar valores históricos no interpretables', () => {
+    expect(importeEnviadoEs(3303.3)).toBe('3.303,30 €')
+    expect(importeEnviadoEs(1.234)).toBe('1,23 €')
+    expect(importeEnviadoEs('1.234,50')).toBe('1.234,50 €')
+    expect(importeEnviadoEs(0)).toBe('0,00 €')
+    expect(importeEnviadoEs('pendiente')).toBe('pendiente')
+    expect(importeEnviadoEs(null)).toBe('—')
   })
 
   it('crea el borrador con bloques predeterminados y preserva un presupuesto manual comprometido', () => {

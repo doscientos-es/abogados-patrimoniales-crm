@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 type CaseTitleData = { id: string; referencia: string; titulo: string }
 
-export function useCaseDocumentTitle(id: string, expediente: CaseTitleData | undefined) {
+export function useCaseDocumentTitle(id: string, expediente: CaseTitleData | null | undefined) {
   useEffect(() => {
     document.title =
       expediente?.id === id

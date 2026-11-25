@@ -39,6 +39,7 @@ import {
   copiaEnviada,
   euros,
   fechaEnvioEs,
+  importeEnviadoEs,
   leerEditor,
   parseEuros,
   totales,
@@ -400,7 +401,7 @@ export function QuoteAcceptancePanel({
             </strong>
             <span>
               {text(quote['importeEnviado'])
-                ? `${text(quote['importeEnviado'])} €`
+                ? importeEnviadoEs(quote['importeEnviado'])
                 : snapshot?.instantanea
                   ? euros(snapshot.instantanea.totales.total)
                   : '—'}
@@ -733,8 +734,8 @@ function ManualAcceptanceDialog({
         <DialogHeader>
           <DialogTitle>Registrar aceptación manual</DialogTitle>
           <DialogDescription>
-            Se registrará la conformidad sobre la versión enviada{amount ? ` por ${amount} €` : ''}.
-            La evidencia se conserva en el Lead.
+            Se registrará la conformidad sobre la versión enviada
+            {amount ? ` por ${importeEnviadoEs(amount)}` : ''}. La evidencia se conserva en el Lead.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -812,7 +813,7 @@ function ManualAcceptanceDialog({
           ) : null}
           <div className="space-y-1">
             <Label>Importe aceptado</Label>
-            <Input readOnly value={amount ? `${amount} €` : '—'} />
+            <Input readOnly value={importeEnviadoEs(amount)} />
           </div>
         </div>
         {missing.length ? (
