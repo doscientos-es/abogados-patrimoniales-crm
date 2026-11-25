@@ -48,11 +48,13 @@ const lineaVacia = (): LineaEditable => ({
 
 export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }) {
   const printInvoice = () => {
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000')
+    const printWindow = window.open('', '_blank', 'width=900,height=1000')
     if (!printWindow) {
       toast.error('El navegador ha bloqueado la ventana de impresión.')
       return
     }
+    // noopener makes window.open return null; detach before writing our own document instead.
+    printWindow.opener = null
     const rows = factura.lineas
       .map(
         (linea) =>
@@ -62,6 +64,10 @@ export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }
     printWindow.document.write(
       `<!doctype html><html lang="es"><head><title>${escapeHtml(factura.referencia)}</title><style>body{font-family:Arial,sans-serif;color:#202833;max-width:820px;margin:48px auto;padding:0 24px}header{display:flex;justify-content:space-between;border-bottom:2px solid #202833;padding-bottom:24px;margin-bottom:32px}h1{font-size:28px;margin:0 0 8px}p{color:#667085;margin:4px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;margin-bottom:32px}.meta strong{display:block;color:#202833;margin-top:3px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:12px 8px}th{font-size:12px;text-transform:uppercase;color:#667085}.totals{margin:28px 0 0 auto;width:260px}.total{font-size:20px;font-weight:bold;border-top:2px solid #202833;padding-top:12px;margin-top:12px;display:flex;justify-content:space-between}@media print{body{margin:0}}</style></head><body><header><div><img src="${window.location.origin}/logo-lex.svg" alt="LEX" style="width:72px;height:72px;object-fit:contain"><p>Gestión jurídica patrimonial</p></div><div style="text-align:right"><h1>${escapeHtml(factura.referencia)}</h1><p>${escapeHtml(ESTADO_FACTURA_LABEL[factura.estado])}</p></div></header><div class="meta"><div>Cliente<strong>${escapeHtml(factura.cliente)}</strong></div><div>Expediente<strong>${escapeHtml(factura.asuntoReferencia)}</strong></div><div>Fecha<strong>${escapeHtml(formatDate(factura.emision))}</strong></div><div>Vencimiento<strong>${escapeHtml(factura.vencimiento ? formatDate(factura.vencimiento) : '—')}</strong></div></div><h2>${escapeHtml(factura.concepto)}</h2><table><thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div>Base imponible: ${formatCurrency(factura.baseImponible, factura.moneda)}</div><div>IVA: ${formatCurrency(factura.cuotaIva, factura.moneda)}</div><div class="total"><span>Total</span><span>${formatCurrency(factura.importeTotal, factura.moneda)}</span></div></div></body></html>`,
     )
+    const warning = printWindow.document.createElement('p')
+    warning.textContent =
+      'Vista preliminar: este documento no incluye los datos fiscales del emisor. No lo utilices como factura.'
+    printWindow.document.body.prepend(warning)
     printWindow.document.close()
     printWindow.focus()
     printWindow.print()
@@ -78,6 +84,9 @@ export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }
       wide
       render={() => (
         <div className="space-y-5">
+          <p role="alert" className="text-destructive text-sm">
+            Esta vista no incluye los datos fiscales del emisor. No la utilices como factura.
+          </p>
           <div className="flex items-start justify-between border-b pb-4">
             <div>
               <img src="/logo-lex.svg" alt="LEX" className="h-14 w-14 object-contain" />

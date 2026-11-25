@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExpedientePersistido } from '@/features/expedientes/application/case-types'
 import type { FacturaPersistida, GuardarBorradorInput } from '@/features/facturacion/application'
 
-import { BorradorFacturaDialog } from './factura-dialogs'
+import { BorradorFacturaDialog, FacturaPreviewDialog } from './factura-dialogs'
 
 const expediente = {
   id: 'case-1',
@@ -32,7 +32,48 @@ function abrirFormulario(
   fireEvent.click(screen.getByRole('button', { name: 'Abrir' }))
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
+
+describe('FacturaPreviewDialog', () => {
+  it('avisa de los datos ausentes y abre una ventana imprimible sin acceso al origen', () => {
+    const body = { prepend: vi.fn() }
+    const warning = { textContent: '' }
+    const printWindow = {
+      opener: window,
+      document: { write: vi.fn(), close: vi.fn(), createElement: vi.fn(() => warning), body },
+      focus: vi.fn(),
+      print: vi.fn(),
+    }
+    const open = vi.spyOn(window, 'open').mockReturnValue(printWindow as unknown as Window)
+    const factura = {
+      referencia: 'A-1',
+      estado: 'issued',
+      cliente: 'Ana',
+      asuntoReferencia: 'EXP-1',
+      emision: '2026-01-10',
+      vencimiento: null,
+      concepto: 'Servicio',
+      moneda: 'EUR',
+      baseImponible: 100,
+      cuotaIva: 21,
+      importeTotal: 121,
+      lineas: [],
+    } as FacturaPersistida
+    render(<FacturaPreviewDialog factura={factura} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Ver' }))
+    expect(screen.getByRole('alert').textContent).toContain('datos fiscales del emisor')
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir / Guardar PDF' }))
+    expect(open).toHaveBeenCalledWith('', '_blank', 'width=900,height=1000')
+    expect(printWindow.opener).toBeNull()
+    expect(printWindow.document.write).toHaveBeenCalledOnce()
+    expect(warning.textContent).toContain('no incluye los datos fiscales del emisor')
+    expect(body.prepend).toHaveBeenCalledWith(warning)
+    expect(printWindow.print).toHaveBeenCalledOnce()
+  })
+})
 
 describe('BorradorFacturaDialog', () => {
   it('calcula las líneas y guarda únicamente el borrador con los datos seleccionados', async () => {
