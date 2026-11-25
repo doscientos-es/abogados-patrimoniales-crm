@@ -92,7 +92,7 @@ describe('CreateOnboardingDialog', () => {
           pagoConfirmado: null,
           inicioProgramado: null,
           inicioRealizado: null,
-          responsableId: null,
+          responsableId: 'miembro-no-disponible',
           siguienteAccion: '',
           modalidad: 'pending',
           version: 1,
@@ -123,6 +123,7 @@ describe('CreateOnboardingDialog', () => {
     expect(screen.getByRole('button', { name: 'Crear tarea' }).className).toContain('size-8')
     expect(screen.getByRole('button', { name: 'Crear recordatorio' }).className).toContain('size-8')
     expect(screen.getByRole('link', { name: 'Ver Lead' })).toBeTruthy()
+    expect(screen.getByText('Responsable no disponible')).toBeTruthy()
     expect(screen.queryByText('Ver contacto')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Marcar pago confirmado' }))
     expect(screen.getByText(/no registra el importe ni el medio de pago/)).toBeTruthy()
@@ -192,11 +193,31 @@ describe('CreateOnboardingDialog', () => {
             origen: '',
             creada: '',
             actualizada: '',
+            asignadoId: 'user-1',
+          },
+          {
+            id: 'lead-2',
+            referencia: 'LEAD-002',
+            contactoId: 'contacto-1',
+            titulo: 'Sin responsable',
+            fase: 'won',
+            area: '',
+            subestado: '',
+            prioridad: 'Media',
+            estadoOperativo: '',
+            origen: '',
+            creada: '',
+            actualizada: '',
             asignadoId: null,
           },
         ]}
         contactosPorId={new Map([['contacto-1', { nombre: 'Ana López' }]]) as never}
-        miembros={[]}
+        miembros={
+          [
+            { id: 'user-1', nombre: 'Igor' },
+            { id: 'user-2', nombre: 'Ana' },
+          ] as never
+        }
         pending={false}
         onCreate={onCreate}
       />,
@@ -211,6 +232,15 @@ describe('CreateOnboardingDialog', () => {
     expect(screen.getByRole('option', { name: /lead-001.*reparto de herencia/i })).toBeTruthy()
 
     fireEvent.change(screen.getByLabelText('Lead *'), { target: { value: 'lead-1' } })
+    expect((screen.getByLabelText('Responsable (Opcional)') as HTMLSelectElement).value).toBe(
+      'user-1',
+    )
+    fireEvent.change(screen.getByLabelText('Lead *'), { target: { value: 'lead-2' } })
+    expect((screen.getByLabelText('Responsable (Opcional)') as HTMLSelectElement).value).toBe('')
+    fireEvent.change(screen.getByLabelText('Lead *'), { target: { value: 'lead-1' } })
+    fireEvent.change(screen.getByLabelText('Responsable (Opcional)'), {
+      target: { value: 'user-2' },
+    })
     fireEvent.change(screen.getByLabelText('Referencia del presupuesto *'), {
       target: { value: 'PR-2026-0004' },
     })
@@ -223,6 +253,7 @@ describe('CreateOnboardingDialog', () => {
           contactoId: 'contacto-1',
           oportunidadId: 'lead-1',
           presupuestoReferencia: 'PR-2026-0004',
+          responsableId: 'user-2',
         }),
       ),
     )

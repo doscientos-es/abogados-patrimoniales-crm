@@ -625,8 +625,7 @@ export function OnboardingCard({
           <p className="flex min-w-0 items-center gap-1.5">
             <UserRound className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {responsableNombre ??
-                (item.responsableId ? 'Responsable no disponible' : 'Sin responsable')}
+              {nombreResponsableOnboarding(item.responsableId, responsableNombre)}
             </span>
           </p>
           <p className="flex items-center justify-between gap-2">
@@ -1520,13 +1519,20 @@ function OnboardingList({
             <p className="text-muted-foreground text-sm">{item.asunto}</p>
           </div>
           <div className="text-muted-foreground text-sm">
-            {miembrosPorId.get(item.responsableId ?? '') ?? 'Sin responsable'}
+            {nombreResponsableOnboarding(
+              item.responsableId,
+              miembrosPorId.get(item.responsableId ?? ''),
+            )}
           </div>
           <Badge variant="secondary">{FASE_ONBOARDING_LABEL[item.fase]}</Badge>
         </div>
       ))}
     </div>
   )
+}
+
+function nombreResponsableOnboarding(id: string | null, nombre: string | undefined) {
+  return nombre ?? (id ? 'Responsable no disponible' : 'Sin responsable')
 }
 
 function EmptyOnboarding({ hasOnboardings }: { hasOnboardings: boolean }) {
