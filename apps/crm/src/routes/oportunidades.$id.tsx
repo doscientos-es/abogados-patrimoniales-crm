@@ -49,6 +49,7 @@ import {
   pickFirstMeeting,
 } from '@/features/crm/application/first-meeting-cycle'
 import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
+import { subestadoVisible } from '@/features/crm/application/lead-milestones'
 import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
 import { LeadChatgptAction } from '@/features/crm/ui/lead-chatgpt-action'
@@ -250,7 +251,7 @@ function FichaOportunidadPage() {
           </Badge>
           <Badge className="text-xs">{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
           <Badge variant="secondary" className="text-xs">
-            {data.subestado}
+            {subestadoVisible(data.fase, data.subestado, data.detalles)}
           </Badge>
         </div>
         <div className="mt-3 space-y-4 border-t pt-4">

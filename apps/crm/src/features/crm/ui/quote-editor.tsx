@@ -39,6 +39,7 @@ import type { OportunidadPersistida } from '@/features/crm/application/opportuni
 import {
   anularRevisionSinDecision,
   conEditor,
+  datosDespachoCompletos,
   datosLegado,
   datosRevision,
   editable,
@@ -121,9 +122,28 @@ export function QuoteEditor({
     queryKey: ['crm', 'firm-name', firmId],
     queryFn: async () => {
       const client = getSupabaseBrowserClient()
-      if (!client) return ''
-      const { data } = await client.from('crm_firms').select('name').eq('id', firmId).maybeSingle()
+      if (!client) throw new Error('No se pudo cargar el despacho.')
+      const { data, error } = await client
+        .from('crm_firms')
+        .select('name')
+        .eq('id', firmId)
+        .maybeSingle()
+      if (error) throw error
       return data?.name ?? ''
+    },
+  })
+  const firmDetails = useQuery({
+    queryKey: ['crm', 'quote-firm-details', firmId],
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client) throw new Error('No se pudieron cargar los datos del despacho.')
+      const { data, error } = await client
+        .from('crm_firm_settings')
+        .select('legal_name, tax_id, address, professional_registration')
+        .eq('firm_id', firmId)
+        .maybeSingle()
+      if (error) throw error
+      return data
     },
   })
   const [editor, setEditor] = useState<EditorPresupuesto | null>(() =>
@@ -349,6 +369,18 @@ export function QuoteEditor({
     fecha: string
     observaciones: string
   }) => {
+    const [currentFirm, currentDetails] = await Promise.all([firm.refetch(), firmDetails.refetch()])
+    if (currentFirm.isError || currentDetails.isError) {
+      toast.error('No se han podido cargar los datos del despacho. Inténtalo de nuevo.')
+      return
+    }
+    const identity = currentDetails.data
+    if (!currentFirm.data?.trim() || !datosDespachoCompletos(identity)) {
+      toast.error(
+        'Completa el nombre, razón social, NIF, domicilio y colegiación en Configuración antes de solicitar la revisión.',
+      )
+      return
+    }
     const now = new Date().toISOString()
     const marker = marcadorRevision(opportunity.id, version.version)
     // Safe retry: ask the SERVER (not the cache) for an open task of this exact version first.
@@ -406,7 +438,8 @@ export function QuoteEditor({
         observaciones,
         solicitadaPor: userId,
         cliente,
-        despacho: office,
+        despacho: currentFirm.data,
+        datosDespacho: identity,
         ahora: now,
       })
       await persist(next, {
@@ -944,11 +977,11 @@ export function QuoteEditor({
             <div
               className="rounded-md border bg-white p-6 text-black"
               dangerouslySetInnerHTML={{
-                __html: documentoHtml(version, client, officeName, false),
+                __html: documentoHtml(version, client, officeName, false, firmDetails.data),
               }}
             />
             <DialogFooter>
-              <Button onClick={() => imprimir(version, client, officeName)}>
+              <Button onClick={() => imprimir(version, client, officeName, firmDetails.data)}>
                 <FileDown className="mr-1 h-4 w-4" /> Descargar PDF / imprimir
               </Button>
             </DialogFooter>

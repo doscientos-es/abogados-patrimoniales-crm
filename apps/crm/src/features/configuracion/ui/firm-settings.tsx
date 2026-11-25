@@ -159,6 +159,8 @@ export function FirmSettings({
     onSuccess: () => {
       setFirmDraft(null)
       void invalidate()
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'firm-name', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'quote-firm-details', firmId] })
       toast.success('Datos del despacho guardados.')
     },
     onError: () => toast.error('No se han podido guardar los datos del despacho.'),

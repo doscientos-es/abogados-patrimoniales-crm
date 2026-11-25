@@ -4,6 +4,7 @@ import {
   anularRevisionSinDecision,
   conEditor,
   copiaEnviada,
+  datosDespachoCompletos,
   datosRevision,
   editarVersion,
   ENVIO_REGISTRADO,
@@ -99,6 +100,44 @@ const send = {
 }
 
 describe('editor de presupuestos', () => {
+  it('requiere los datos identificativos antes de solicitar revisión', () => {
+    const datos = {
+      legal_name: 'Despacho',
+      tax_id: '123',
+      address: 'Calle',
+      professional_registration: 'Colegiado',
+    }
+    expect(datosDespachoCompletos(datos)).toBe(true)
+    expect(datosDespachoCompletos(null)).toBe(false)
+    for (const campo of Object.keys(datos) as Array<keyof typeof datos>) {
+      expect(datosDespachoCompletos({ ...datos, [campo]: '  ' })).toBe(false)
+    }
+  })
+
+  it('congela los datos del despacho al solicitar la revisión', () => {
+    const editor = draft()
+    editor.actual.lineas = [lineaDesdeServicio(service)]
+    const datos = {
+      legal_name: 'Despacho',
+      tax_id: '123',
+      address: 'Calle',
+      professional_registration: 'Colegiado',
+    }
+    const result = solicitarRevision(editor, {
+      tareaId: 'T1',
+      asignadoId: 'reviewer',
+      asignadoNombre: 'Jon',
+      solicitadaPor: 'author',
+      observaciones: '',
+      cliente,
+      despacho: 'LEX',
+      datosDespacho: datos,
+      ahora: '2026-10-06',
+    })
+    datos.legal_name = 'Actualizado'
+    expect(result.actual.revision?.copia.instantanea?.datosDespacho?.legal_name).toBe('Despacho')
+  })
+
   it('calcula céntimos y acepta importes españoles sin admitir formatos ambiguos', () => {
     expect(totalesLinea({ cantidad: 3, precioCents: 3333, ivaPct: 21 })).toEqual({
       base: 9999,

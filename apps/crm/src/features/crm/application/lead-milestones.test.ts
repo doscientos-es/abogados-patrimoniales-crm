@@ -5,9 +5,30 @@ import {
   esConflictoIdempotente,
   HitoFueraDeOrden,
   pasosHito,
+  subestadoVisible,
 } from './lead-milestones'
 
 describe('avance del Lead por hitos', () => {
+  it('muestra la decisión del presupuesto sin modificar otros subestados', () => {
+    const detalles = (estado: string) => ({
+      presupuesto: { editor: { actual: { version: 1, lineas: [], estado } } },
+    })
+    expect(subestadoVisible('validation', 'En revisión', detalles('validado'))).toBe(
+      'Presupuesto validado',
+    )
+    expect(subestadoVisible('validation', 'En revisión', detalles('devuelto'))).toBe(
+      'Presupuesto devuelto',
+    )
+    expect(subestadoVisible('validation', 'En revisión', detalles('en_revision'))).toBe(
+      'En revisión',
+    )
+    expect(subestadoVisible('validation', 'En revisión', {})).toBe('En revisión')
+    expect(subestadoVisible('validation', 'Otra situación', detalles('validado'))).toBe(
+      'Otra situación',
+    )
+    expect(subestadoVisible('engagement', 'En revisión', detalles('validado'))).toBe('En revisión')
+  })
+
   it('mapea los hitos hacia delante por las fases existentes', () => {
     expect(pasosHito('entry', 'viabilidad_apta').map((step) => step.fase)).toEqual([
       'qualification',

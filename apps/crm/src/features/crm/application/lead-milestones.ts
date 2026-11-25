@@ -1,5 +1,16 @@
 import type { OpportunityStage } from '@/shared/infrastructure/supabase'
 
+import { leerEditor } from './quote-editor'
+
+/** Avoid showing an obsolete review label when the current quote has already been resolved. */
+export function subestadoVisible(fase: OpportunityStage, subestado: string, detalles: unknown) {
+  if (fase !== 'validation' || subestado !== 'En revisión') return subestado
+  const estado = leerEditor(detalles)?.actual.estado
+  if (estado === 'validado') return 'Presupuesto validado'
+  if (estado === 'devuelto') return 'Presupuesto devuelto'
+  return subestado
+}
+
 export type HitoLead =
   | 'viabilidad_pendiente'
   | 'viabilidad_apta'

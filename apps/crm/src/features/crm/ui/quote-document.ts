@@ -7,6 +7,7 @@ import {
   totales,
   totalesLinea,
   type CopiaVersion,
+  type DatosDespacho,
 } from '@/features/crm/application/quote-editor'
 
 export type Cliente = { nombre: string; email: string; nif?: string }
@@ -39,8 +40,22 @@ export function documentoHtml(
   cliente: Cliente,
   despacho: string,
   standalone: boolean,
+  datosBorrador?: DatosDespacho | null,
 ) {
   const version = { ...original, fecha: fechaEnvioEs(original.fecha) }
+  // A historical snapshot without firm details must not be rewritten with current settings.
+  const datos = original.instantanea ? original.instantanea.datosDespacho : datosBorrador
+  const firmDetails = datos
+    ? [
+        datos.legal_name,
+        datos.tax_id ? `NIF: ${datos.tax_id}` : '',
+        datos.address,
+        datos.professional_registration,
+      ]
+        .filter((value) => value.trim())
+        .map(esc)
+        .join('<br>')
+    : ''
   const total = totales(version.lineas)
   const rows = version.lineas
     .map((line) => {
@@ -54,13 +69,18 @@ export function documentoHtml(
     .join('')
   const css =
     '.document{font:12px/1.5 Georgia,serif;color:#111}.document h1{font-size:18px;margin:6px 0 0}.document h2{font-size:15px;margin-top:20px}.document h3{font-size:12px;margin:12px 0 2px}.document table{width:100%;border-collapse:collapse;margin-top:10px}.document th,.document td{border-bottom:1px solid #ccc;padding:6px;text-align:left;vertical-align:top}.document .number{text-align:right;white-space:nowrap}.document .muted{color:#555;font-size:11px}.document .preserve{white-space:pre-wrap;margin:0}.document .totals{width:270px;margin-left:auto}.document .totals td{border:0}.document header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #111;margin-bottom:16px;padding-bottom:10px}.document .logo{height:48px;width:auto;display:block}.document .meta{text-align:right;font-size:11px}.document .qr{width:64px;height:64px}.document footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ccc;margin-top:24px;padding-top:8px;font-size:10px;color:#555}'
-  const body = `<article class="document"><header><div><img class="logo" src="${logoUrl()}" alt="${esc(despacho)}"><h1>Presupuesto / nota de encargo</h1></div><div class="meta">Ref. ${esc(version.referencia)}<br>Fecha ${esc(version.fecha)}<br>Versión ${version.version}</div></header><p><strong>Cliente:</strong> ${esc(cliente.nombre)}${cliente.nif ? ` · <strong>NIF:</strong> ${esc(cliente.nif)}` : ''}<br><strong>Asunto:</strong> ${esc(version.asunto)}</p><h2>Servicios</h2><table><thead><tr><th>Servicio</th><th class="number">Cant.</th><th class="number">Precio</th><th class="number">IVA</th><th class="number">Total</th></tr></thead><tbody>${rows}</tbody></table><table class="totals"><tr><td>Base imponible</td><td class="number">${euros(total.base)}</td></tr><tr><td>IVA</td><td class="number">${euros(total.iva)}</td></tr><tr><td><strong>Total</strong></td><td class="number"><strong>${euros(total.total)}</strong></td></tr></table>${blocks}${version.condiciones.trim() ? `<h2>Condiciones</h2><p class="preserve">${esc(version.condiciones)}</p>` : ''}<footer><span>${esc(despacho)} · ${WEB}</span><img class="qr" src="${qrDataUri()}" alt="Código QR de ${WEB}"></footer></article>`
+  const body = `<article class="document"><header><div><img class="logo" src="${logoUrl()}" alt="${esc(despacho)}"><h1>Presupuesto / nota de encargo</h1></div><div class="meta">Ref. ${esc(version.referencia)}<br>Fecha ${esc(version.fecha)}<br>Versión ${version.version}</div></header>${firmDetails ? `<p><strong>Despacho:</strong><br>${firmDetails}</p>` : ''}<p><strong>Cliente:</strong> ${esc(cliente.nombre)}${cliente.nif ? ` · <strong>NIF:</strong> ${esc(cliente.nif)}` : ''}<br><strong>Asunto:</strong> ${esc(version.asunto)}</p><h2>Servicios</h2><table><thead><tr><th>Servicio</th><th class="number">Cant.</th><th class="number">Precio</th><th class="number">IVA</th><th class="number">Total</th></tr></thead><tbody>${rows}</tbody></table><table class="totals"><tr><td>Base imponible</td><td class="number">${euros(total.base)}</td></tr><tr><td>IVA</td><td class="number">${euros(total.iva)}</td></tr><tr><td><strong>Total</strong></td><td class="number"><strong>${euros(total.total)}</strong></td></tr></table>${blocks}${version.condiciones.trim() ? `<h2>Condiciones</h2><p class="preserve">${esc(version.condiciones)}</p>` : ''}<footer><span>${esc(despacho)} · ${WEB}</span><img class="qr" src="${qrDataUri()}" alt="Código QR de ${WEB}"></footer></article>`
   return standalone
     ? `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(version.referencia)}</title><style>@page{size:A4;margin:18mm}body{margin:0}${css}</style></head><body>${body}</body></html>`
     : `<style>${css}</style>${body}`
 }
 
-export function imprimir(version: CopiaVersion, cliente: Cliente, despacho: string) {
+export function imprimir(
+  version: CopiaVersion,
+  cliente: Cliente,
+  despacho: string,
+  datosBorrador?: DatosDespacho | null,
+) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) {
     toast.error(
@@ -68,7 +88,7 @@ export function imprimir(version: CopiaVersion, cliente: Cliente, despacho: stri
     )
     return
   }
-  printWindow.document.write(documentoHtml(version, cliente, despacho, true))
+  printWindow.document.write(documentoHtml(version, cliente, despacho, true, datosBorrador))
   printWindow.document.close()
   printWindow.focus()
   // Wait for the logo to load before printing.

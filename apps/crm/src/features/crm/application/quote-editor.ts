@@ -21,6 +21,24 @@ export type BloquePresupuesto = {
   incluido: boolean
 }
 
+export type DatosDespacho = {
+  legal_name: string
+  tax_id: string
+  address: string
+  professional_registration: string
+}
+
+export function datosDespachoCompletos(
+  datos: DatosDespacho | null | undefined,
+): datos is DatosDespacho {
+  return Boolean(
+    datos?.legal_name.trim() &&
+    datos.tax_id.trim() &&
+    datos.address.trim() &&
+    datos.professional_registration.trim(),
+  )
+}
+
 export type CopiaVersion = {
   version: number
   referencia: string
@@ -32,6 +50,7 @@ export type CopiaVersion = {
   instantanea?: {
     cliente: { nombre: string; email: string; nif?: string }
     despacho: string
+    datosDespacho?: DatosDespacho
     totales: { base: number; iva: number; total: number }
     finalizadoPor: string | null
   }
@@ -48,6 +67,7 @@ export type EstadoEditor =
 export type Instantanea = {
   cliente: { nombre: string; email: string; nif?: string }
   despacho: string
+  datosDespacho?: DatosDespacho
   totales: { base: number; iva: number; total: number }
   finalizadoPor: string | null
 }
@@ -564,6 +584,7 @@ export function solicitarRevision(
     observaciones: string
     cliente: Instantanea['cliente']
     despacho: string
+    datosDespacho?: DatosDespacho
     ahora: string
     venceEn?: string | null
   },
@@ -578,6 +599,7 @@ export function solicitarRevision(
     instantanea: {
       cliente: { ...input.cliente },
       despacho: input.despacho,
+      ...(input.datosDespacho ? { datosDespacho: { ...input.datosDespacho } } : {}),
       totales: totales(editor.actual.lineas),
       finalizadoPor: input.solicitadaPor,
     },
