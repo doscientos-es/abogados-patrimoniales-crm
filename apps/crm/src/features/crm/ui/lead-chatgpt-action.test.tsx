@@ -84,7 +84,13 @@ function renderAction(initialScope = scope) {
   return { ...result, changeScope: (current: LeadChatgptScope) => result.rerender(widget(current)) }
 }
 
-const openLink = () => screen.findByRole('link', { name: /Abrir con ChatGPT/ })
+const openAction = () => screen.findByRole('button', { name: /Abrir con ChatGPT/ })
+async function expectDestination(url: string) {
+  fireEvent.click(await openAction())
+  expect(screen.getByRole('link', { name: /Continuar a ChatGPT/ }).getAttribute('href')).toBe(url)
+  fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+}
 const input = () => screen.getByLabelText('Enlace privado de la conversación')
 const submit = () =>
   fireEvent.submit(screen.getByRole('form', { name: 'Vincular conversación de ChatGPT' }))
@@ -99,9 +105,13 @@ beforeEach(() => {
 describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
   it('opens a new chat, guides manual linking, and reopens the saved chat after a reload', async () => {
     const view = renderAction()
-    const link = await openLink()
+    fireEvent.click(await openAction())
+    expect(screen.getByRole('dialog', { name: 'Antes de abrir ChatGPT' })).toBeTruthy()
+    expect(screen.getByText(/LEX no envía datos del Lead al abrir el enlace/)).toBeTruthy()
+    const link = screen.getByRole('link', { name: /Continuar a ChatGPT/ })
     expect(link.getAttribute('href')).toBe('https://chatgpt.com/')
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+    link.addEventListener('click', (event) => event.preventDefault(), { once: true })
     fireEvent.click(link)
     expect(screen.getByRole('dialog', { name: 'Tu chat de este Lead' })).toBeTruthy()
     expect(screen.getByText(/Por ahora no envía información del Lead/)).toBeTruthy()
@@ -112,47 +122,59 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
       { opportunity_id: scope.leadId, user_id: scope.userId, conversation_url: url },
       { onConflict: 'opportunity_id,user_id' },
     )
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
     view.unmount()
     renderAction()
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
   })
 
   it('preserves an app deep link, allows changing it, and unlinks without deleting the conversation', async () => {
     db.rows.set('lead-a:user-a', appUrl)
     renderAction()
-    expect((await openLink()).getAttribute('href')).toBe(appUrl)
+    await expectDestination(appUrl)
     fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
     expect((input() as HTMLInputElement).value).toBe(appUrl)
     fireEvent.change(input(), { target: { value: url } })
     submit()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
     fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
     fireEvent.click(screen.getByRole('button', { name: 'Desvincular' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect((await openLink()).getAttribute('href')).toBe('https://chatgpt.com/')
+    await expectDestination('https://chatgpt.com/')
     expect(db.rows.size).toBe(0)
+  })
+
+  it('avisa también antes de abrir un chat nuevo desde el editor', async () => {
+    db.rows.set('lead-a:user-a', url)
+    renderAction()
+    await openAction()
+    fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
+    fireEvent.click(screen.getByRole('button', { name: /Abrir un chat nuevo/ }))
+    expect(screen.getByRole('dialog', { name: 'Antes de abrir ChatGPT' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Continuar a ChatGPT/ }).getAttribute('href')).toBe(
+      'https://chatgpt.com/',
+    )
   })
 
   it('never reuses another user or lead cached conversation', async () => {
     db.rows.set('lead-a:user-a', url)
     db.rows.set('lead-a:user-b', appUrl)
     const view = renderAction()
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
     view.changeScope({ ...scope, userId: 'user-b' })
-    expect((await openLink()).getAttribute('href')).toBe(appUrl)
+    await expectDestination(appUrl)
     view.changeScope({ ...scope, leadId: 'lead-b' })
-    expect((await openLink()).getAttribute('href')).toBe('https://chatgpt.com/')
+    await expectDestination('https://chatgpt.com/')
     expect(db.filters).toHaveBeenCalledWith('opportunity_id', 'lead-b')
     expect(db.filters).toHaveBeenCalledWith('user_id', 'user-b')
     view.changeScope(scope)
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
   })
 
   it('rejects invalid links before writing and keeps the draft so it can be corrected', async () => {
     renderAction()
-    await openLink()
+    await openAction()
     fireEvent.click(screen.getByRole('button', { name: 'Vincular chat' }))
     fireEvent.change(input(), { target: { value: 'javascript:alert(1)' } })
     submit()
@@ -168,7 +190,7 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
     db.rows.set('lead-a:user-a', url)
     db.writeError = true
     renderAction()
-    await openLink()
+    await openAction()
     fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
     fireEvent.change(input(), { target: { value: appUrl } })
     submit()
@@ -178,7 +200,7 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
     )
     expect((input() as HTMLInputElement).value).toBe(appUrl)
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
   })
 
   it('does not accidentally open a new chat when loading the saved link failed; retry recovers it', async () => {
@@ -189,9 +211,9 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
       'textContent',
       'No se pudo cargar tu enlace.',
     )
-    expect(screen.queryByRole('link', { name: /Abrir con ChatGPT/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Abrir con ChatGPT/ })).toBeNull()
     db.readError = false
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
-    expect((await openLink()).getAttribute('href')).toBe(url)
+    await expectDestination(url)
   })
 })

@@ -6,7 +6,7 @@ La web no puede leer la URL de otra pestaña de ChatGPT por las restricciones en
 
 ## Uso
 
-1. Pulsa **Abrir con ChatGPT** para abrir un chat nuevo.
+1. Pulsa **Abrir con ChatGPT**, revisa el aviso y elige **Continuar a ChatGPT**.
 2. Inicia la conversación en tu cuenta de ChatGPT y copia su URL privada de la barra de direcciones.
 3. Vuelve a LEX, pega el enlace y pulsa **Guardar enlace**.
 4. Las siguientes aperturas usarán ese enlace para tu usuario y ese Lead, también en otros dispositivos.
@@ -15,6 +15,16 @@ La web no puede leer la URL de otra pestaña de ChatGPT por las restricciones en
 **Editar enlace de ChatGPT** permite sustituirla o desvincularla. Desvincular no borra el chat en OpenAI.
 No se deben generar enlaces públicos con «Compartir» para datos confidenciales.
 El enlace requiere acceso a la cuenta o workspace de ChatGPT que contiene esa conversación.
+Lo que el usuario escriba o adjunte allí se trata en su cuenta de ChatGPT, bajo las condiciones
+de esa cuenta. El despacho debe comprobar las autorizaciones, el contrato y las garantías aplicables.
+
+## Lectura de documentos con LEXIA
+
+Es un flujo distinto: al solicitar la lectura de un documento para un contacto, la aplicación envía
+el archivo a la función `extract-contact-document` de Supabase, que lo remite a la API de OpenAI y
+devuelve los campos propuestos. La petición a OpenAI incluye `store: false`; esto no permite afirmar
+por sí solo que no haya retención ni que el procesamiento sea en el EEE. Deben verificarse el contrato,
+la configuración de la cuenta, la residencia y las garantías de transferencia con los proveedores.
 
 Se aceptan URLs HTTPS privadas de `chatgpt.com` y `chat.openai.com`, también conversaciones de GPTs,
 y deep links `chatgpt://c/<id>` o `chatgpt://conversation/<id>` copiados de la aplicación.

@@ -20,6 +20,7 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
   const link = useLeadChatgptLink(scope)
   const save = useSaveLeadChatgptLink(scope)
   const [open, setOpen] = useState(false)
+  const [openWarning, setOpenWarning] = useState<'saved' | 'new' | null>(null)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
   const ready = link.isSuccess && !save.isPending
@@ -56,18 +57,10 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Tu chat de este Lead">
       {ready ? (
-        <a
-          href={link.data ?? NEW_CHATGPT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          onClick={() => {
-            if (!link.data) changeOpen(true)
-          }}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpenWarning('saved')}>
           <MessageSquare className="h-4 w-4" aria-hidden="true" /> Abrir con ChatGPT
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
-        </a>
+        </Button>
       ) : (
         <Button type="button" variant="outline" size="sm" disabled>
           <MessageSquare className="h-4 w-4" aria-hidden="true" />
@@ -101,6 +94,41 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
           {link.data ? 'Editar enlace de ChatGPT' : 'Vincular chat'}
         </Button>
       )}
+      <Dialog
+        open={openWarning !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenWarning(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Antes de abrir ChatGPT</DialogTitle>
+            <DialogDescription>
+              LEX no envía datos del Lead al abrir el enlace. Lo que escribas o adjuntes en ChatGPT
+              se tratará en tu cuenta de ese servicio. No compartas datos del cliente sin comprobar
+              antes las condiciones y la autorización aplicables en el despacho.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpenWarning(null)}>
+              Cancelar
+            </Button>
+            <a
+              href={openWarning === 'new' ? NEW_CHATGPT_URL : (link.data ?? NEW_CHATGPT_URL)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ size: 'sm' })}
+              onClick={() => {
+                if (openWarning === 'new') setOpen(true)
+                else if (!link.data) changeOpen(true)
+                setOpenWarning(null)
+              }}
+            >
+              Continuar a ChatGPT <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent>
           <DialogHeader>
@@ -124,14 +152,17 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
               tu versión de ChatGPT lo admita y esté instalada.
             </p>
           </div>
-          <a
-            href={NEW_CHATGPT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setOpen(false)
+              setOpenWarning('new')
+            }}
           >
             Abrir un chat nuevo <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </a>
+          </Button>
           <form
             onSubmit={submit}
             className="space-y-4"

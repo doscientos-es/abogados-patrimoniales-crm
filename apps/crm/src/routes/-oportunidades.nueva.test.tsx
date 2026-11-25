@@ -101,7 +101,9 @@ describe('NuevaOportunidadPage', () => {
     expect(title.value).toBe('Consulta inicial')
     fireEvent.click(screen.getByRole('button', { name: 'Actualizar contactos' }))
     await waitFor(() => expect(mocks.contactRefetch).toHaveBeenCalledOnce())
-    expect(screen.queryByRole('button', { name: 'Actualizar contactos' })).toBeNull()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Actualizar contactos' })).toBeNull(),
+    )
   })
 
   it('avisa cuando no hay contactos que coincidan con la búsqueda', async () => {
