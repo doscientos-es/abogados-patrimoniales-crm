@@ -162,7 +162,7 @@ function RootComponent() {
           <AuthenticatedRoot />
         </AccessGate>
       )}
-      <Toaster />
+      <Toaster position="top-right" closeButton />
     </QueryClientProvider>
   )
 }
