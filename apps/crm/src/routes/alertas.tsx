@@ -49,7 +49,9 @@ function AlertasPage() {
     <main className="mx-auto max-w-6xl space-y-5">
       <SectionHeader title="Alertas y control" />
       <p className="text-muted-foreground text-sm">
-        Las alertas no validan plazos ni sustituyen el criterio del equipo.
+        Cuenta avisos de expedientes por falta de actividad, plazos sin validar y tareas vencidas.
+        No incluye incidencias de Leads, documentos ni facturas; no sustituye el criterio del
+        equipo.
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Alertas activas" value={allAlerts.length} />

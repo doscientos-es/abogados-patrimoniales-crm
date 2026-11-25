@@ -178,7 +178,8 @@ export function RequiresAttention({
             <div className="min-w-0">
               <CardTitle className="text-base">Requiere atención</CardTitle>
               <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                Incidencias pendientes de revisión.
+                Cuenta incidencias de tareas, expedientes, Leads y documentos; un mismo registro
+                puede tener varias.
               </p>
             </div>
           </div>

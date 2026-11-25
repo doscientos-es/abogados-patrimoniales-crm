@@ -114,7 +114,7 @@ describe('LeadHeroActions', () => {
     expect(screen.getByRole('tab', { name: 'Enviar al cliente' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Validación y aceptación' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Documentación' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('tab', { name: 'Primera cita' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Citas' }))
     expect(onSelectTab).toHaveBeenCalledWith('firstMeeting')
     fireEvent.click(screen.getByRole('tab', { name: 'Tareas' }))
     expect(onSelectTab).toHaveBeenCalledWith('tasks')

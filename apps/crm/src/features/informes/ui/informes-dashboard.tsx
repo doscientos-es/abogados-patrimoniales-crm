@@ -174,9 +174,9 @@ export function InformesDashboard() {
         />
         <MetricTile
           icon={CircleAlert}
-          label="Requiere atención"
+          label="Vencimientos"
           value={metrics.overdueTasks.length + metrics.overdueInvoices.length}
-          note={`${metrics.overdueTasks.length} tareas y ${metrics.overdueInvoices.length} cobros vencidos`}
+          note={`${metrics.overdueTasks.length} tareas y ${metrics.overdueInvoices.length} facturas vencidas`}
           tone="danger"
         />
       </section>
@@ -434,7 +434,12 @@ function AttentionCard({
 }) {
   const items = [
     { label: 'Tareas vencidas', value: overdueTasks, href: '/tareas' as const, icon: Clock3 },
-    { label: 'Cobros vencidos', value: overdueInvoices, href: '/facturacion' as const, icon: Euro },
+    {
+      label: 'Facturas vencidas',
+      value: overdueInvoices,
+      href: '/facturacion' as const,
+      icon: Euro,
+    },
   ]
   const hasAttention = overdueTasks > 0 || overdueInvoices > 0 || pending > 0
   return (
