@@ -830,17 +830,16 @@ export function CreateOnboardingDialog({
   const [open, setOpen] = useState(false)
   const [opportunityId, setOpportunityId] = useState('')
   const [asunto, setAsunto] = useState('')
-  const [responsableId, setResponsableId] = useState('')
+  const [responsableId, setResponsableId] = useState<string | null>(null)
   const selected = oportunidades.find((item) => item.id === opportunityId)
+  const proposedResponsable = miembros.some((member) => member.id === selected?.asignadoId)
+    ? (selected?.asignadoId ?? '')
+    : ''
   const selectOpportunity = (id: string) => {
     setOpportunityId(id)
     const opportunity = oportunidades.find((item) => item.id === id)
     setAsunto(opportunity?.titulo ?? '')
-    setResponsableId(
-      miembros.some((member) => member.id === opportunity?.asignadoId)
-        ? (opportunity?.asignadoId ?? '')
-        : '',
-    )
+    setResponsableId(null)
   }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -864,7 +863,7 @@ export function CreateOnboardingDialog({
       setOpen(false)
       setOpportunityId('')
       setAsunto('')
-      setResponsableId('')
+      setResponsableId(null)
     } catch (error) {
       toast.error(onboardingErrorMessage(error))
     }
@@ -978,7 +977,7 @@ export function CreateOnboardingDialog({
                   label="Responsable"
                   name="responsable"
                   select
-                  value={responsableId}
+                  value={responsableId ?? proposedResponsable}
                   onChange={(event) => setResponsableId(event.target.value)}
                   options={[['', 'Sin asignar'], ...miembros.map((item) => [item.id, item.nombre])]}
                   helper="Se propone el responsable del Lead si está disponible; puedes cambiarlo."

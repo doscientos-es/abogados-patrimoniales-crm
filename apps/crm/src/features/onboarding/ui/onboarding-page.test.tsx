@@ -258,4 +258,32 @@ describe('CreateOnboardingDialog', () => {
       ),
     )
   })
+
+  it('propone el responsable cuando los miembros llegan después, sin sobrescribir una elección manual', () => {
+    const lead = {
+      id: 'lead-1',
+      referencia: 'LEAD-001',
+      contactoId: 'contacto-1',
+      titulo: 'Asunto',
+      fase: 'won',
+      asignadoId: 'user-1',
+    } as never
+    const props = {
+      oportunidades: [lead],
+      contactosPorId: new Map(),
+      pending: false,
+      onCreate: vi.fn(),
+    }
+    const { rerender } = render(<CreateOnboardingDialog {...props} miembros={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar onboarding' }))
+    fireEvent.change(screen.getByLabelText('Lead *'), { target: { value: 'lead-1' } })
+    const responsable = screen.getByLabelText('Responsable (Opcional)') as HTMLSelectElement
+    expect(responsable.value).toBe('')
+    const members = [{ id: 'user-1', nombre: 'Igor' }] as never
+    rerender(<CreateOnboardingDialog {...props} miembros={members} />)
+    expect(responsable.value).toBe('user-1')
+    fireEvent.change(responsable, { target: { value: '' } })
+    rerender(<CreateOnboardingDialog {...props} miembros={members} />)
+    expect(responsable.value).toBe('')
+  })
 })
