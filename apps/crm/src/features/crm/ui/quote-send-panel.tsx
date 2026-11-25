@@ -33,6 +33,7 @@ import {
   conEditor,
   copiaEnviada,
   euros,
+  fechaEnvioEs,
   importeEnviadoEs,
   leerEditor,
   preparadaParaEnviar,
@@ -222,8 +223,8 @@ export function QuoteSendPanel({
                 · {importe(latestSent)} <Badge variant="outline">Enviada</Badge>
               </p>
               <p>
-                Enviado el {latestSent.envio.fecha.slice(0, 10)} · {latestSent.envio.destinatario} ·{' '}
-                {latestSent.envio.canal}
+                Enviado el {fechaEnvioEs(latestSent.envio.fecha.slice(0, 10))} ·{' '}
+                {latestSent.envio.destinatario} · {latestSent.envio.canal}
               </p>
               <details className="rounded-md border px-3 py-2">
                 <summary className="cursor-pointer">
@@ -336,8 +337,8 @@ export function QuoteSendPanel({
                 className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
               >
                 <span>
-                  {version.referencia} · v{version.version} · {version.envio?.fecha.slice(0, 10)} ·{' '}
-                  {version.envio?.destinatario}
+                  {version.referencia} · v{version.version} ·{' '}
+                  {fechaEnvioEs(version.envio?.fecha.slice(0, 10))} · {version.envio?.destinatario}
                 </span>
                 {sentCopy(version) ? (
                   <Button

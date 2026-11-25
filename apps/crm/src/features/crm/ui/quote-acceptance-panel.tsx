@@ -450,7 +450,7 @@ export function QuoteAcceptancePanel({
                 <dd>
                   {text(acceptance['fechaHora'])
                     ? new Date(text(acceptance['fechaHora'])).toLocaleString('es-ES')
-                    : text(acceptance['fecha'])}{' '}
+                    : fechaEnvioEs(text(acceptance['fecha']))}{' '}
                   · v{text(acceptance['version'])}
                 </dd>
               </div>
