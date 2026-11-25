@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { PanelLeft } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { Button } from '@/components/ui/button'
@@ -152,6 +153,23 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const previousPathname = useRef(pathname)
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) return
+    previousPathname.current = pathname
+    // Keep errors, warnings, loading states and actionable messages visible.
+    for (const notification of toast.getToasts()) {
+      if (
+        'type' in notification &&
+        notification.type === 'success' &&
+        !notification.action &&
+        !notification.cancel
+      ) {
+        toast.dismiss(notification.id)
+      }
+    }
+  }, [pathname])
 
   return (
     <QueryClientProvider client={queryClient}>

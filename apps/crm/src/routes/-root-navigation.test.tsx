@@ -2,7 +2,14 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import type { ReactNode, RefObject } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ mobile: false, pathname: '/' }))
+const mocks = vi.hoisted(() => ({
+  mobile: false,
+  pathname: '/',
+  getToasts: vi.fn(() => [] as Array<{ id: string; type: string; action?: object }>),
+  dismiss: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({ toast: { getToasts: mocks.getToasts, dismiss: mocks.dismiss } }))
 
 vi.mock('@tanstack/react-query', () => ({
   QueryClientProvider: ({ children }: { children: ReactNode }) => children,
@@ -90,9 +97,28 @@ afterEach(() => {
   cleanup()
   mocks.mobile = false
   mocks.pathname = '/'
+  mocks.getToasts.mockReset().mockReturnValue([])
+  mocks.dismiss.mockReset()
 })
 
 describe('navegación principal', () => {
+  it('cierra confirmaciones al cambiar de página sin ocultar errores ni acciones', () => {
+    mocks.getToasts.mockReturnValue([
+      { id: 'success', type: 'success' },
+      { id: 'error', type: 'error' },
+      { id: 'warning', type: 'warning' },
+      { id: 'action', type: 'success', action: {} },
+    ])
+    const { rerender } = render(<Root />)
+    expect(mocks.getToasts).not.toHaveBeenCalled()
+    rerender(<Root />)
+    expect(mocks.dismiss).not.toHaveBeenCalled()
+    mocks.pathname = '/contactos'
+    rerender(<Root />)
+    expect(mocks.dismiss).toHaveBeenCalledOnce()
+    expect(mocks.dismiss).toHaveBeenCalledWith('success')
+  })
+
   it('permite plegar y volver a mostrar la navegación en escritorio', () => {
     render(<Root />)
     const sidebar = screen.getByRole('complementary', { name: 'Navegación principal' })
