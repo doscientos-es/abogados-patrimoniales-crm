@@ -49,6 +49,19 @@ describe('FacturaPreviewDialog', () => {
     }
     const open = vi.spyOn(window, 'open').mockReturnValue(printWindow as unknown as Window)
     const factura = {
+      id: 'invoice-1',
+      contactoId: 'contact-1',
+      asuntoId: 'case-1',
+      serie: 'A',
+      ejercicio: 2026,
+      numero: 1,
+      importeCobrado: 0,
+      importePendiente: 121,
+      tipo: 'standard',
+      rectificaFacturaId: null,
+      motivoAnulacion: '',
+      version: 1,
+      cobros: [],
       referencia: 'A-1',
       estado: 'issued',
       cliente: 'Ana',
@@ -61,7 +74,7 @@ describe('FacturaPreviewDialog', () => {
       cuotaIva: 21,
       importeTotal: 121,
       lineas: [],
-    } as FacturaPersistida
+    } satisfies FacturaPersistida
     render(<FacturaPreviewDialog factura={factura} />)
     fireEvent.click(screen.getByRole('button', { name: 'Ver' }))
     expect(screen.getByRole('alert').textContent).toContain('datos fiscales del emisor')
