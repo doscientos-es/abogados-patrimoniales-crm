@@ -124,6 +124,8 @@ describe('CreateOnboardingDialog', () => {
     expect(screen.getByRole('button', { name: 'Crear recordatorio' }).className).toContain('size-8')
     expect(screen.getByRole('link', { name: 'Ver Lead' })).toBeTruthy()
     expect(screen.queryByText('Ver contacto')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar pago confirmado' }))
+    expect(screen.getByText(/no registra el importe ni el medio de pago/)).toBeTruthy()
   })
 
   it('abre y guarda la siguiente acción desde su botón de icono', async () => {

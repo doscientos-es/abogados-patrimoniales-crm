@@ -1057,6 +1057,9 @@ function PaymentDialog({
         Confirma la recepción real del pago de provisión. No equivale a la aceptación del
         presupuesto por el cliente.
       </p>
+      <p className="text-warning-foreground text-xs">
+        Este paso no registra el importe ni el medio de pago y no crea un cobro en Facturación.
+      </p>
       <Field
         label="Fecha de confirmación"
         name="fecha"
