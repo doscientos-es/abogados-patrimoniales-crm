@@ -1,4 +1,4 @@
-import { ExternalLink, Link2, MessageSquare } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -20,7 +20,6 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
   const link = useLeadChatgptLink(scope)
   const save = useSaveLeadChatgptLink(scope)
   const [open, setOpen] = useState(false)
-  const [openWarning, setOpenWarning] = useState<'saved' | 'new' | null>(null)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
   const ready = link.isSuccess && !save.isPending
@@ -56,17 +55,15 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Tu chat de este Lead">
-      {ready ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => setOpenWarning('saved')}>
-          <MessageSquare className="h-4 w-4" aria-hidden="true" /> Abrir con ChatGPT
-          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-        </Button>
-      ) : (
-        <Button type="button" variant="outline" size="sm" disabled>
-          <MessageSquare className="h-4 w-4" aria-hidden="true" />
-          {link.isError ? 'ChatGPT no disponible' : 'Cargando chat…'}
-        </Button>
-      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!ready}
+        onClick={() => changeOpen(true)}
+      >
+        <img src="/openai-blossom.svg" alt="" className="-mx-1 size-7 dark:invert" /> ChatGPT
+      </Button>
       {link.isError ? (
         <div className="flex items-center gap-1.5">
           <span role="alert" className="text-destructive text-xs">
@@ -82,87 +79,28 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
             Reintentar
           </Button>
         </div>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={!ready}
-          onClick={() => changeOpen(true)}
-        >
-          <Link2 className="h-4 w-4" aria-hidden="true" />
-          {link.data ? 'Editar enlace de ChatGPT' : 'Vincular chat'}
-        </Button>
-      )}
-      <Dialog
-        open={openWarning !== null}
-        onOpenChange={(next) => {
-          if (!next) setOpenWarning(null)
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Antes de abrir ChatGPT</DialogTitle>
-            <DialogDescription>
-              LEX no envía datos del Lead al abrir el enlace. Lo que escribas o adjuntes en ChatGPT
-              se tratará en tu cuenta de ese servicio. No compartas datos del cliente sin comprobar
-              antes las condiciones y la autorización aplicables en el despacho.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpenWarning(null)}>
-              Cancelar
-            </Button>
-            <a
-              href={openWarning === 'new' ? NEW_CHATGPT_URL : (link.data ?? NEW_CHATGPT_URL)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ size: 'sm' })}
-              onClick={() => {
-                if (openWarning === 'new') setOpen(true)
-                else if (!link.data) changeOpen(true)
-                setOpenWarning(null)
-              }}
-            >
-              Continuar a ChatGPT <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      ) : null}
       <Dialog open={open} onOpenChange={changeOpen}>
-        <DialogContent>
+        <DialogContent size="md">
           <DialogHeader>
-            <DialogTitle>Tu chat de este Lead</DialogTitle>
+            <DialogTitle className="tracking-normal normal-case">ChatGPT</DialogTitle>
             <DialogDescription>
-              Este enlace es privado para tu usuario y este Lead. Cada persona vincula su propia
-              conversación.
+              Vincula una conversación privada a este Lead. El enlace solo es visible para ti.
             </DialogDescription>
           </DialogHeader>
-          <div className="text-muted-foreground space-y-2 text-sm">
-            <p>
-              Abre ChatGPT, inicia una conversación y pega aquí su URL privada de la barra de
-              direcciones. No uses «Compartir» ni publiques datos del cliente.
-            </p>
-            <p>
-              LEX no puede recuperar el enlace automáticamente. Por ahora no envía información del
-              Lead a ChatGPT; la conexión MCP todavía no está disponible.
-            </p>
-            <p>
-              También puedes pegar un deep link copiado de la aplicación. Su apertura depende de que
-              tu versión de ChatGPT lo admita y esté instalada.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setOpen(false)
-              setOpenWarning('new')
-            }}
+          <p className="text-muted-foreground text-sm">
+            Al abrir este enlace, LEX no envía datos del Lead a ChatGPT. Antes de compartir datos
+            del cliente, comprueba las condiciones y autorizaciones aplicables en el despacho.
+          </p>
+          <a
+            href={link.data ?? NEW_CHATGPT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-fit' })}
           >
-            Abrir un chat nuevo <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </Button>
+            {link.data ? 'Abrir conversación' : 'Abrir ChatGPT'}
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </a>
           <form
             onSubmit={submit}
             className="space-y-4"
@@ -171,6 +109,9 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
           >
             <div className="space-y-2">
               <Label htmlFor="lead-chatgpt-url">Enlace privado de la conversación</Label>
+              <p id="lead-chatgpt-help" className="text-muted-foreground text-xs">
+                Copia la URL de la barra de direcciones, no el enlace de «Compartir».
+              </p>
               <Input
                 id="lead-chatgpt-url"
                 type="text"
@@ -183,7 +124,9 @@ export function LeadChatgptAction({ scope }: { scope: LeadChatgptScope }) {
                 required
                 disabled={save.isPending}
                 aria-invalid={Boolean(error)}
-                aria-describedby={error ? 'lead-chatgpt-error' : undefined}
+                aria-describedby={
+                  error ? 'lead-chatgpt-help lead-chatgpt-error' : 'lead-chatgpt-help'
+                }
               />
               {error ? (
                 <p id="lead-chatgpt-error" role="alert" className="text-destructive text-sm">

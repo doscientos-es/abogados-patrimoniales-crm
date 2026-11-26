@@ -84,10 +84,17 @@ function renderAction(initialScope = scope) {
   return { ...result, changeScope: (current: LeadChatgptScope) => result.rerender(widget(current)) }
 }
 
-const openAction = () => screen.findByRole('button', { name: /Abrir con ChatGPT/ })
+async function openAction() {
+  const button = await screen.findByRole('button', { name: 'ChatGPT' })
+  await waitFor(() => expect(button).not.toHaveProperty('disabled', true))
+  fireEvent.click(button)
+}
 async function expectDestination(url: string) {
-  fireEvent.click(await openAction())
-  expect(screen.getByRole('link', { name: /Continuar a ChatGPT/ }).getAttribute('href')).toBe(url)
+  await openAction()
+  const name = url === 'https://chatgpt.com/' ? 'Abrir ChatGPT' : 'Abrir conversación'
+  const link = screen.getByRole('link', { name })
+  expect(link.getAttribute('href')).toBe(url)
+  expect(link.getAttribute('rel')).toBe('noopener noreferrer')
   fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 }
@@ -105,16 +112,12 @@ beforeEach(() => {
 describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
   it('opens a new chat, guides manual linking, and reopens the saved chat after a reload', async () => {
     const view = renderAction()
-    fireEvent.click(await openAction())
-    expect(screen.getByRole('dialog', { name: 'Antes de abrir ChatGPT' })).toBeTruthy()
-    expect(screen.getByText(/LEX no envía datos del Lead al abrir el enlace/)).toBeTruthy()
-    const link = screen.getByRole('link', { name: /Continuar a ChatGPT/ })
+    await openAction()
+    expect(screen.getByRole('dialog', { name: 'ChatGPT' })).toBeTruthy()
+    expect(screen.getByText(/LEX no envía datos del Lead a ChatGPT/)).toBeTruthy()
+    const link = screen.getByRole('link', { name: 'Abrir ChatGPT' })
     expect(link.getAttribute('href')).toBe('https://chatgpt.com/')
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
-    link.addEventListener('click', (event) => event.preventDefault(), { once: true })
-    fireEvent.click(link)
-    expect(screen.getByRole('dialog', { name: 'Tu chat de este Lead' })).toBeTruthy()
-    expect(screen.getByText(/Por ahora no envía información del Lead/)).toBeTruthy()
     fireEvent.change(input(), { target: { value: ` ${url}/ ` } })
     submit()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -132,29 +135,17 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
     db.rows.set('lead-a:user-a', appUrl)
     renderAction()
     await expectDestination(appUrl)
-    fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
+    await openAction()
     expect((input() as HTMLInputElement).value).toBe(appUrl)
     fireEvent.change(input(), { target: { value: url } })
     submit()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await expectDestination(url)
-    fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
+    await openAction()
     fireEvent.click(screen.getByRole('button', { name: 'Desvincular' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await expectDestination('https://chatgpt.com/')
     expect(db.rows.size).toBe(0)
-  })
-
-  it('avisa también antes de abrir un chat nuevo desde el editor', async () => {
-    db.rows.set('lead-a:user-a', url)
-    renderAction()
-    await openAction()
-    fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
-    fireEvent.click(screen.getByRole('button', { name: /Abrir un chat nuevo/ }))
-    expect(screen.getByRole('dialog', { name: 'Antes de abrir ChatGPT' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Continuar a ChatGPT/ }).getAttribute('href')).toBe(
-      'https://chatgpt.com/',
-    )
   })
 
   it('never reuses another user or lead cached conversation', async () => {
@@ -175,7 +166,6 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
   it('rejects invalid links before writing and keeps the draft so it can be corrected', async () => {
     renderAction()
     await openAction()
-    fireEvent.click(screen.getByRole('button', { name: 'Vincular chat' }))
     fireEvent.change(input(), { target: { value: 'javascript:alert(1)' } })
     submit()
     expect(await screen.findByRole('alert')).toHaveProperty(
@@ -191,7 +181,6 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
     db.writeError = true
     renderAction()
     await openAction()
-    fireEvent.click(screen.getByRole('button', { name: 'Editar enlace de ChatGPT' }))
     fireEvent.change(input(), { target: { value: appUrl } })
     submit()
     expect(await screen.findByRole('alert')).toHaveProperty(
@@ -211,7 +200,7 @@ describe('LeadChatgptAction with persisted user/lead bookmarks', () => {
       'textContent',
       'No se pudo cargar tu enlace.',
     )
-    expect(screen.queryByRole('button', { name: /Abrir con ChatGPT/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'ChatGPT' })).toHaveProperty('disabled', true)
     db.readError = false
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
     await expectDestination(url)

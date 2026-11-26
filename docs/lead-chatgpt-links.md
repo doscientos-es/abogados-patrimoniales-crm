@@ -6,13 +6,13 @@ La web no puede leer la URL de otra pestaña de ChatGPT por las restricciones en
 
 ## Uso
 
-1. Pulsa **Abrir con ChatGPT**, revisa el aviso y elige **Continuar a ChatGPT**.
+1. Pulsa **ChatGPT**, revisa el aviso y elige **Abrir ChatGPT**.
 2. Inicia la conversación en tu cuenta de ChatGPT y copia su URL privada de la barra de direcciones.
 3. Vuelve a LEX, pega el enlace y pulsa **Guardar enlace**.
-4. Las siguientes aperturas usarán ese enlace para tu usuario y ese Lead, también en otros dispositivos.
+4. En las siguientes aperturas, **Abrir conversación** llevará al enlace guardado para tu usuario y ese Lead, también en otros dispositivos.
 
-**Vincular chat** permite guardar una conversación existente sin abrir una nueva.
-**Editar enlace de ChatGPT** permite sustituirla o desvincularla. Desvincular no borra el chat en OpenAI.
+El mismo diálogo permite guardar una conversación existente, sustituirla o desvincularla.
+Desvincular no borra el chat en OpenAI. El logotipo de ChatGPT es propiedad de OpenAI.
 No se deben generar enlaces públicos con «Compartir» para datos confidenciales.
 El enlace requiere acceso a la cuenta o workspace de ChatGPT que contiene esa conversación.
 Lo que el usuario escriba o adjunte allí se trata en su cuenta de ChatGPT, bajo las condiciones

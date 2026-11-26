@@ -1,4 +1,6 @@
 import {
+  DropdownMenu,
+  DropdownMenuItem,
   Select,
   SelectContent,
   SelectItem,
@@ -7,8 +9,16 @@ import {
   SelectValue,
 } from '@doscientos/ui'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Archive, ArrowLeft, ArrowRight, CalendarPlus, ContactRound, Pencil } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import {
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  ContactRound,
+  MoreHorizontal,
+  Pencil,
+} from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel } from '@/components/common'
@@ -233,55 +243,50 @@ function FichaOportunidadPage() {
   )
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
-      <header className="bg-card rounded-xl border px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <header className="space-y-4 pb-2">
+        <div>
           <Link
             to="/oportunidades"
             search={{ vista: 'todas', abrir: '' }}
             className={buttonVariants({
               variant: 'ghost',
               size: 'sm',
-              className: 'h-7 px-2 text-xs',
+              className: '-ml-2 text-muted-foreground',
             })}
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Volver a Leads
           </Link>
-          <Badge variant="outline" className="font-mono text-xs">
-            {data.referencia}
-          </Badge>
-          <Badge className="text-xs">{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
-          <Badge variant="secondary" className="text-xs">
-            {subestadoVisible(data.fase, data.subestado, data.detalles)}
-          </Badge>
         </div>
-        <div className="mt-3 space-y-4 border-t pt-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl leading-tight font-semibold text-balance break-words">
-              {data.titulo}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl leading-tight font-semibold text-balance break-words">
+                {data.titulo}
+              </h1>
+              <Badge variant="outline" className="font-mono text-xs">
+                {data.referencia}
+              </Badge>
+              <Badge className="text-xs">{OPPORTUNITY_STAGE_LABELS[data.fase]}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                {subestadoVisible(data.fase, data.subestado, data.detalles)}
+              </Badge>
+            </div>
             <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-relaxed break-words">
               {leadDescription(data)}
             </p>
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <LeadChatgptAction
-              key={`${membership.data.firmId}:${data.id}:${session.user.id}`}
-              scope={{ firmId: membership.data.firmId, leadId: data.id, userId: session.user.id }}
-            />
-            <Link
-              to="/contactos/$id"
-              params={{ id: data.contactoId }}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              <ContactRound className="h-4 w-4" aria-hidden="true" />
-              Ver contacto
-            </Link>
-            <LeadHeroActions
-              stage={data.fase}
-              canEdit={!data.archivadoEn}
-              onSelectTab={setActiveTab}
-            />
-          </div>
+          <LeadHeroActions
+            stage={data.fase}
+            contactId={data.contactoId}
+            canEdit={!data.archivadoEn}
+            onSelectTab={setActiveTab}
+            chatAction={
+              <LeadChatgptAction
+                key={`${membership.data.firmId}:${data.id}:${session.user.id}`}
+                scope={{ firmId: membership.data.firmId, leadId: data.id, userId: session.user.id }}
+              />
+            }
+          />
         </div>
       </header>
       {showFirstMeetingAssistant && firstMeetingTask ? (
@@ -523,26 +528,24 @@ export function PendingFirstMeetingWarning({
 
 export function LeadHeroActions({
   stage,
+  contactId,
   canEdit = true,
   onSelectTab,
+  chatAction,
 }: {
   stage: OpportunityStage
+  contactId: string
   canEdit?: boolean
   onSelectTab: (tab: LeadDetailTab) => void
+  chatAction?: ReactNode
 }) {
-  const canAdvance = OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== 'lost')
+  const canAdvance = canEdit && OPPORTUNITY_TRANSITIONS[stage].some((target) => target !== 'lost')
 
   return (
-    <div className="flex min-w-0 flex-wrap gap-2" aria-label="Acciones rápidas del Lead">
-      {canEdit ? (
-        <a
-          href="#lead-edit-details"
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          onClick={() => onSelectTab('contact')}
-        >
-          <Pencil className="h-4 w-4" aria-hidden="true" /> Editar Lead
-        </a>
-      ) : null}
+    <div
+      className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end"
+      aria-label="Acciones rápidas del Lead"
+    >
       <a
         href="#lead-new-task"
         className={buttonVariants({ size: 'sm' })}
@@ -559,6 +562,32 @@ export function LeadHeroActions({
           Avanzar de fase <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </a>
       ) : null}
+      {chatAction}
+      <DropdownMenu
+        trigger={
+          <Button type="button" variant="outline" size="sm">
+            <MoreHorizontal aria-hidden="true" /> Más opciones
+          </Button>
+        }
+        placement="bottom end"
+        className="min-w-44"
+      >
+        <DropdownMenuItem
+          href={`/contactos/${encodeURIComponent(contactId)}`}
+          textValue="Ver contacto"
+        >
+          <ContactRound aria-hidden="true" /> Ver contacto
+        </DropdownMenuItem>
+        {canEdit ? (
+          <DropdownMenuItem
+            href="#lead-edit-details"
+            onAction={() => onSelectTab('contact')}
+            textValue="Editar Lead"
+          >
+            <Pencil aria-hidden="true" /> Editar Lead
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenu>
     </div>
   )
 }

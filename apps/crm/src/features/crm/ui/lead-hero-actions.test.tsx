@@ -124,32 +124,51 @@ describe('LeadHeroActions', () => {
     }).format(new Date(date))
     expect(screen.getByText(`Prevista: ${expected}`)).toBeTruthy()
   })
-  it('links the active Lead to its edit form, task form and stage transition', () => {
+  it('keeps primary actions visible and groups secondary actions in a menu', async () => {
     const onSelectTab = vi.fn()
-    render(<LeadHeroActions stage="entry" onSelectTab={onSelectTab} />)
+    render(<LeadHeroActions stage="entry" contactId="contact-1" onSelectTab={onSelectTab} />)
 
-    expect(screen.getByRole('link', { name: /editar lead/i }).getAttribute('href')).toBe(
-      '#lead-edit-details',
-    )
+    expect(screen.queryByRole('menuitem', { name: /editar lead/i })).toBeNull()
     expect(screen.getByRole('link', { name: /añadir tarea/i }).getAttribute('href')).toBe(
       '#lead-new-task',
     )
     expect(screen.getByRole('link', { name: /avanzar de fase/i }).getAttribute('href')).toBe(
       '#lead-stage-transition',
     )
-    fireEvent.click(screen.getByRole('link', { name: /editar lead/i }))
-    expect(onSelectTab).toHaveBeenCalledWith('contact')
     fireEvent.click(screen.getByRole('link', { name: /añadir tarea/i }))
     expect(onSelectTab).toHaveBeenCalledWith('tasks')
     fireEvent.click(screen.getByRole('link', { name: /avanzar de fase/i }))
     expect(onSelectTab).toHaveBeenLastCalledWith('acceptance')
+    fireEvent.click(screen.getByRole('button', { name: 'Más opciones' }))
+    expect(
+      (await screen.findByRole('menuitem', { name: /ver contacto/i })).getAttribute('href'),
+    ).toBe('/contactos/contact-1')
+    const edit = screen.getByRole('menuitem', { name: /editar lead/i })
+    expect(edit.getAttribute('href')).toBe('#lead-edit-details')
+    fireEvent.click(edit)
+    expect(onSelectTab).toHaveBeenLastCalledWith('contact')
   })
 
   it('hides the advance action when the Lead is in a terminal stage', () => {
-    render(<LeadHeroActions stage="won" onSelectTab={() => undefined} />)
+    render(<LeadHeroActions stage="won" contactId="contact-1" onSelectTab={() => undefined} />)
 
     expect(screen.getByRole('link', { name: /añadir tarea/i })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /avanzar de fase/i })).toBeNull()
+  })
+
+  it('hides editing and stage transition for archived Leads', async () => {
+    render(
+      <LeadHeroActions
+        stage="entry"
+        contactId="contact-1"
+        canEdit={false}
+        onSelectTab={() => undefined}
+      />,
+    )
+    expect(screen.queryByRole('link', { name: /avanzar de fase/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Más opciones' }))
+    expect(await screen.findByRole('menuitem', { name: /ver contacto/i })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: /editar lead/i })).toBeNull()
   })
 
   it('selects the requested detail tab with the correct accessibility state', () => {
