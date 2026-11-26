@@ -51,6 +51,19 @@ export function OnboardingReceipts({
             />
           )
         })}
+        {receipts.data &&
+          onboardings
+            .filter(
+              (item) =>
+                item.pagoConfirmado &&
+                !receipts.data.some((receipt) => receipt.onboarding_id === item.id),
+            )
+            .map((item) => (
+              <p key={item.id} className="text-warning-foreground text-sm">
+                {item.referencia}: confirmación anterior sin importe ni medio registrados. Revisa el
+                pago antes de registrarlo en Facturación.
+              </p>
+            ))}
         {!receipts.isLoading && !receipts.isError && !receipts.data?.length ? (
           <p className="text-muted-foreground text-sm">
             No hay provisiones registradas con importe.
@@ -160,6 +173,12 @@ function ReceiptRow({
             </select>
           </label>
           {!eligible.length ? <p>No hay facturas del expediente y cliente vinculados.</p> : null}
+          {matches.length ? (
+            <p className="text-warning-foreground">
+              Hay cobros que coinciden en importe, fecha y medio. Revisa su referencia antes de
+              crear otro.
+            </p>
+          ) : null}
           {invoice ? (
             <label className="block">
               Aplicación

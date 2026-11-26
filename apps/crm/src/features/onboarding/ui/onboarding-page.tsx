@@ -153,6 +153,7 @@ const onboardingEventLabel = (type: string, payload: Json) => {
     created: 'Onboarding creado',
     updated: 'Datos actualizados',
     payment_confirmed: 'Pago confirmado',
+    receipt_applied: 'Provisión vinculada a factura',
     formal_start_scheduled: 'Inicio formal programado',
     formal_start_completed: 'Inicio formal completado',
     case_opened: 'Expediente abierto',

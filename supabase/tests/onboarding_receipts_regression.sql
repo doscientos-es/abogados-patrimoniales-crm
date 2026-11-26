@@ -4,6 +4,7 @@ do $$
 declare
   actor uuid := gen_random_uuid(); outsider uuid := gen_random_uuid(); lawyer uuid := gen_random_uuid();
   firm uuid := gen_random_uuid(); contact uuid := gen_random_uuid(); target_case uuid := gen_random_uuid();
+  lead uuid := gen_random_uuid(); second_lead uuid := gen_random_uuid();
   other_case uuid := gen_random_uuid(); onboarding public.crm_onboardings; second public.crm_onboardings;
   receipt public.crm_onboarding_receipts; second_receipt public.crm_onboarding_receipts;
   draft public.crm_invoices; invoice public.crm_invoices; other_invoice public.crm_invoices;
@@ -18,12 +19,15 @@ begin
   perform set_config('request.jwt.claim.sub', actor::text, true);
   insert into public.crm_contacts(id, firm_id, reference, nature, relationship, display_name)
     values (contact, firm, 'TEST-' || contact::text, 'person', 'client', 'Test');
+  insert into public.crm_opportunities(id, firm_id, contact_id, reference, title, stage, details) values
+    (lead, firm, contact, 'TEST-' || lead::text, 'Test', 'won', '{}'::jsonb),
+    (second_lead, firm, contact, 'TEST-' || second_lead::text, 'Second', 'won', '{}'::jsonb);
   insert into public.crm_cases(id, firm_id, primary_contact_id, case_number, title, nature) values
     (target_case, firm, contact, 1, 'Test', 'extrajudicial'),
     (other_case, firm, contact, 2, 'Other', 'extrajudicial');
   insert into public.crm_firm_settings(firm_id, legal_name, tax_id, address, professional_registration)
     values (firm, 'Test issuer', 'TEST', 'Address', 'Registration');
-  select * into onboarding from public.crm_create_onboarding(firm, contact, null, 'Test', 'PR-TEST', 100, actor, current_date, 'Test');
+  select * into onboarding from public.crm_create_onboarding(firm, contact, lead, 'Test', 'PR-TEST', 100, actor, current_date, 'Test');
   rejected := false;
   begin
     perform public.crm_transition_onboarding(onboarding.id, onboarding.version, 'payment_confirmed', current_date, null, null);
@@ -78,7 +82,7 @@ begin
   begin perform public.crm_apply_onboarding_receipt(receipt.id, invoice.id, null);
   exception when others then rejected := true; end;
   if not rejected then raise exception 'Receipt must not be applied twice'; end if;
-  select * into second from public.crm_create_onboarding(firm, contact, null, 'Second', 'PR-TEST2', 100, actor, current_date, 'Test');
+  select * into second from public.crm_create_onboarding(firm, contact, second_lead, 'Second', 'PR-TEST2', 100, actor, current_date, 'Test');
   select * into second from public.crm_confirm_onboarding_receipt(second.id, second.version, 100, current_date, 'transfer', '');
   update public.crm_onboardings set case_id = other_case where id = second.id;
   select * into second_receipt from public.crm_onboarding_receipts where onboarding_id = second.id;

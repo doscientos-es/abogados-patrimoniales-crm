@@ -6,6 +6,7 @@ declare
   actor uuid := gen_random_uuid();
   firm uuid := gen_random_uuid();
   contact uuid := gen_random_uuid();
+  lead uuid := gen_random_uuid();
   onboarding public.crm_onboardings;
 begin
   insert into auth.users(id, email) values (actor, actor::text || '@test.invalid');
@@ -15,7 +16,9 @@ begin
   perform set_config('request.jwt.claim.sub', actor::text, true);
   insert into public.crm_contacts(id, firm_id, reference, nature, relationship, display_name)
     values (contact, firm, 'TEST-' || contact::text, 'person', 'lead', 'Test');
-  select * into onboarding from public.crm_create_onboarding(firm, contact, null, 'Test', 'PR-TEST', 100, actor, current_date, 'Test');
+  insert into public.crm_opportunities(id, firm_id, contact_id, reference, title, stage, details)
+    values (lead, firm, contact, 'TEST-' || lead::text, 'Test', 'won', '{}'::jsonb);
+  select * into onboarding from public.crm_create_onboarding(firm, contact, lead, 'Test', 'PR-TEST', 100, actor, current_date, 'Test');
   select * into onboarding from public.crm_confirm_onboarding_receipt(onboarding.id, onboarding.version, 100, current_date, 'transfer', '');
   if not exists (select 1 from public.crm_onboarding_events where onboarding_id = onboarding.id and event_type = 'payment_confirmed' and actor_id = actor) then
     raise exception 'Payment event must identify its authenticated actor';

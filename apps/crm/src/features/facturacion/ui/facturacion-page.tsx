@@ -155,6 +155,10 @@ export function FacturacionPage() {
               recibidos.
             </li>
           </ol>
+          <p role="alert" className="text-warning-foreground text-sm">
+            Este módulo aún no calcula retenciones de IRPF ni incorpora suplidos. Revisa el
+            tratamiento fiscal antes de usar los importes.
+          </p>
           {!expedientesFacturables.length ? (
             <output className="text-sm">
               No hay expedientes abiertos con contacto principal. Abre o crea un expediente y

@@ -211,7 +211,12 @@ export function useTransicionarOnboarding(firmId: string | undefined) {
       if (error) throw error
       return onboardingFromRow(data)
     },
-    onSuccess: (item) => firmId && updateCache(queryClient, firmId, item),
+    onSuccess: (item) => {
+      if (!firmId) return
+      updateCache(queryClient, firmId, item)
+      void queryClient.invalidateQueries({ queryKey: ['onboarding-events', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['onboarding-receipts', firmId] })
+    },
   })
 }
 

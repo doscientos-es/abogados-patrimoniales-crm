@@ -50,7 +50,7 @@ begin
   if not found or not public.crm_is_firm_member(current_record.firm_id) then
     raise exception 'Onboarding not found';
   end if;
-  if current_record.version <> target_expected_version then
+  if current_record.version is distinct from target_expected_version then
     raise exception 'Onboarding changed by another user; reload before advancing' using errcode = '40001';
   end if;
   if current_record.phase <> 'proforma' or current_record.payment_confirmed_on is not null then
