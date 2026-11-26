@@ -1,7 +1,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), send: vi.fn(), accept: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  read: vi.fn(),
+  send: vi.fn(),
+  accept: vi.fn(),
+  document: vi.fn(() => '<p>Presupuesto</p>'),
+  print: vi.fn(),
+}))
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (options: object) => ({
     ...options,
@@ -15,18 +21,50 @@ vi.mock('@/lib/quote-acceptance.functions', () => ({
   confirmarAceptacionOnline: mocks.accept,
 }))
 vi.mock('@/features/crm/ui/quote-document', () => ({
-  documentoHtml: () => '<p>Presupuesto</p>',
-  imprimir: vi.fn(),
+  documentoHtml: mocks.document,
+  imprimir: mocks.print,
 }))
 
 import { AceptarPresupuestoPage } from './aceptar.$token'
 
 afterEach(() => {
   cleanup()
-  vi.resetAllMocks()
+  mocks.read.mockReset()
+  mocks.send.mockReset()
+  mocks.accept.mockReset()
+  vi.clearAllMocks()
 })
 
 describe('aceptación con código de correo', () => {
+  it('muestra e imprime los datos del despacho de la versión enviada', async () => {
+    const issuer = {
+      legal_name: 'Despacho',
+      tax_id: 'TEST',
+      address: 'Calle',
+      professional_registration: 'Colegiado',
+    }
+    const snapshot = {}
+    mocks.read.mockResolvedValue({
+      status: 'valid',
+      version: 1,
+      reference: 'P-1',
+      snapshot,
+      clientName: 'Ana',
+      firmName: 'LEX',
+      issuer,
+    })
+    render(<AceptarPresupuestoPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar PDF' }))
+    expect(mocks.document).toHaveBeenCalledWith(
+      snapshot,
+      { nombre: 'Ana', email: '' },
+      'LEX',
+      false,
+      issuer,
+    )
+    expect(mocks.print).toHaveBeenCalledWith(snapshot, { nombre: 'Ana', email: '' }, 'LEX', issuer)
+  })
+
   it('solicita el código y exige los seis dígitos antes de confirmar', async () => {
     mocks.read.mockResolvedValue({
       status: 'valid',

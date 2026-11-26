@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
-import type { CopiaVersion } from '@/features/crm/application/quote-editor'
+import type { CopiaVersion, DatosDespacho } from '@/features/crm/application/quote-editor'
 
 const tokenSchema = z.string().regex(/^[0-9a-f]{64}$/)
 const quoteLineSchema = z.object({
@@ -59,6 +59,15 @@ const acceptanceStateSchema = z.object({
   version: z.number().int().positive().optional(),
   reference: z.string().max(120).optional(),
   snapshot: z.unknown().optional(),
+  issuer: z
+    .object({
+      legal_name: z.string().max(240),
+      tax_id: z.string().max(40),
+      address: z.string().max(500),
+      professional_registration: z.string().max(240),
+    })
+    .nullable()
+    .optional(),
   clientName: z.string().max(500).optional(),
   firmName: z.string().max(500).optional(),
   totalCents: z.number().int().nonnegative().nullable().optional(),
@@ -80,6 +89,7 @@ export type EstadoEnlaceAceptacion = {
   version?: number
   reference?: string
   snapshot?: CopiaVersion
+  issuer?: DatosDespacho | null
   clientName?: string
   firmName?: string
   totalCents?: number | null

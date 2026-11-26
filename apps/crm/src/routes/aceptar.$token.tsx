@@ -126,13 +126,19 @@ export function AceptarPresupuestoPage() {
                   {state.totalCents == null ? '—' : euros(state.totalCents)}
                 </strong>
               </span>
-              <Button variant="outline" size="sm" onClick={() => imprimir(snapshot, client, firm)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => imprimir(snapshot, client, firm, state.issuer)}
+              >
                 Descargar PDF
               </Button>
             </div>
             <div
               className="overflow-x-auto rounded-md border bg-white p-4 text-black"
-              dangerouslySetInnerHTML={{ __html: documentoHtml(snapshot, client, firm, false) }}
+              dangerouslySetInnerHTML={{
+                __html: documentoHtml(snapshot, client, firm, false, state.issuer),
+              }}
             />
             {state.status === 'accepted' ? (
               <output aria-live="polite" className="bg-card block rounded-md border p-4 text-sm">
