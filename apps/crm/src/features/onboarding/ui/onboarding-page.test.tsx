@@ -126,7 +126,11 @@ describe('CreateOnboardingDialog', () => {
     expect(screen.getByText('Responsable no disponible')).toBeTruthy()
     expect(screen.queryByText('Ver contacto')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Marcar pago confirmado' }))
-    expect(screen.getByText(/no registra el importe ni el medio de pago/)).toBeTruthy()
+    const importe = screen.getByRole('spinbutton', { name: /Importe recibido/ })
+    const metodo = screen.getByRole('combobox', { name: /Medio de pago/ })
+    expect(importe.hasAttribute('required')).toBe(true)
+    expect(metodo.hasAttribute('required')).toBe(true)
+    expect(screen.getByText(/No se crea una factura/)).toBeTruthy()
   })
 
   it('abre y guarda la siguiente acción desde su botón de icono', async () => {

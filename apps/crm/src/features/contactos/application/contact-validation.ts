@@ -11,11 +11,12 @@ export function spanishDocumentWarning(raw: string): string | null {
       : 'La letra de control del DNI o NIE no es válida.'
   }
   if (!/^[ABCDEFGHJKLMNPQRSUVW][0-9]{7}[0-9A-Z]$/.test(value)) return null
-  const first = value[0]!
-  const sum = [...value.slice(1, 8)].reduce((total, char, index) => {
-    const digit = Number(char) * (index % 2 === 0 ? 2 : 1)
-    return total + (digit > 9 ? digit - 9 : digit)
-  }, 0)
+  const first = value.charAt(0)
+  let sum = 0
+  for (let index = 1; index <= 7; index++) {
+    const digit = Number(value.charAt(index)) * (index % 2 === 1 ? 2 : 1)
+    sum += digit > 9 ? digit - 9 : digit
+  }
   const control = (10 - (sum % 10)) % 10
   const last = value.at(-1)
   const valid = 'KPQRSW'.includes(first)

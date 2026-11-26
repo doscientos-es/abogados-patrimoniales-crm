@@ -26,6 +26,9 @@ export function OnboardingReceipts({
 }) {
   const receipts = useOnboardingReceipts(firmId)
   const apply = useApplyOnboardingReceipt(firmId)
+  const appliedPaymentIds = new Set(
+    receipts.data?.flatMap((item) => (item.invoice_payment_id ? [item.invoice_payment_id] : [])),
+  )
   return (
     <Card className="mb-4">
       <CardContent className="space-y-3 pt-6">
@@ -44,6 +47,7 @@ export function OnboardingReceipts({
               receipt={receipt}
               onboarding={onboarding}
               invoices={invoices}
+              appliedPaymentIds={appliedPaymentIds}
               pending={apply.isPending}
               onApply={(invoiceId, paymentId) =>
                 apply.mutateAsync({ receiptId: receipt.id, invoiceId, paymentId })
@@ -78,12 +82,14 @@ function ReceiptRow({
   receipt,
   onboarding,
   invoices,
+  appliedPaymentIds,
   pending,
   onApply,
 }: {
   receipt: OnboardingReceiptRow
   onboarding: OnboardingPersistido | undefined
   invoices: FacturaPersistida[]
+  appliedPaymentIds: Set<string>
   pending: boolean
   onApply: (invoiceId: string, paymentId: string | null) => Promise<unknown>
 }) {
@@ -103,7 +109,8 @@ function ReceiptRow({
       (payment) =>
         payment.importe === receipt.amount &&
         payment.fecha === receipt.received_on &&
-        payment.metodo === receipt.payment_method,
+        payment.metodo === receipt.payment_method &&
+        !appliedPaymentIds.has(payment.id),
     ) ?? []
   const mayCreate =
     invoice && puedeRegistrarCobro(invoice) && invoice.importePendiente >= receipt.amount

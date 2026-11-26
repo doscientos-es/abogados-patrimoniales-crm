@@ -10,22 +10,22 @@ const messageSchema = z
     jsonrpc: z.literal('2.0'),
     id: z.union([z.string().max(200), z.number().int()]).optional(),
     method: z.string().max(100),
-    params: z.record(z.unknown()).optional(),
+    params: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
 const identitySchema = z.object({ scopes: z.array(z.enum(MCP_SCOPES)) }).passthrough()
-const listSchema = z.object({ _meta: z.record(z.unknown()).optional() }).strict()
+const listSchema = z.object({ _meta: z.record(z.string(), z.unknown()).optional() }).strict()
 const callSchema = z
   .object({
     name: z.string(),
-    arguments: z.record(z.unknown()).default({}),
-    _meta: z.record(z.unknown()).optional(),
+    arguments: z.record(z.string(), z.unknown()).default({}),
+    _meta: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
 const initializeSchema = z
   .object({
     protocolVersion: z.string(),
-    capabilities: z.record(z.unknown()),
+    capabilities: z.record(z.string(), z.unknown()),
     clientInfo: z.object({ name: z.string().max(200), version: z.string().max(100) }).passthrough(),
   })
   .passthrough()

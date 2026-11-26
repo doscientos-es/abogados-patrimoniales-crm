@@ -25,7 +25,9 @@ export function InternalNoteSticker({ note }: { note: NotaInterna }) {
       </header>
       <h3 className="mt-2 text-base leading-snug font-semibold">{note.titulo || 'Nota interna'}</h3>
       <p className="mt-2 flex-1 text-base leading-relaxed whitespace-pre-wrap">{note.contenido}</p>
-      <p className="mt-3 text-sm opacity-70">{note.autor} · {note.creada}</p>
+      <p className="mt-3 text-sm opacity-70">
+        {note.autor} · {note.creada}
+      </p>
     </article>
   )
 }

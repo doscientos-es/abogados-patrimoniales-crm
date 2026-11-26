@@ -14,13 +14,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { DocumentNamingPanel } from '@/features/documentos/ui/document-naming-panel'
 import {
   getSupabaseBrowserClient,
   type CaseDocumentRow,
   type DocumentTaskLinkRow,
   type TaskRow,
 } from '@/shared/infrastructure/supabase'
-import { DocumentNamingPanel } from '@/features/documentos/ui/document-naming-panel'
 
 type DocumentTaskKind = Extract<TaskRow['kind'], 'task' | 'deadline'>
 
@@ -338,7 +338,11 @@ export function DocumentDetailSheet({
                 ) : null}
               </section>
               {firmId ? (
-                <DocumentNamingPanel document={document} firmId={firmId} stage={caseStage ?? null} />
+                <DocumentNamingPanel
+                  document={document}
+                  firmId={firmId}
+                  stage={caseStage ?? null}
+                />
               ) : null}
               <section aria-labelledby="document-detail-versions">
                 <div className="flex items-center gap-2">

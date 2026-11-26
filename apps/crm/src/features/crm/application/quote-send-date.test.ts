@@ -9,8 +9,6 @@ describe('fechas de presupuesto', () => {
   })
 
   it('conserva la hora local cuando existe', () => {
-    expect(fechaEnvioEs(new Date(2026, 10, 24, 10, 5).toISOString())).toBe(
-      '24/11/2026 a las 10:05',
-    )
+    expect(fechaEnvioEs(new Date(2026, 10, 24, 10, 5).toISOString())).toBe('24/11/2026 a las 10:05')
   })
 })

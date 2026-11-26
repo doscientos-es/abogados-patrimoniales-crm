@@ -80,7 +80,7 @@ describe('ContactAIIntake', () => {
     expect(screen.getByLabelText('Documentos procesados').textContent).toContain('dni.pdf')
     expect(onApply).not.toHaveBeenCalled()
 
-    const proposalCheckbox = screen.getByLabelText(/Nombre.*Ana/)
+    const proposalCheckbox = screen.getByRole('checkbox', { name: /Nombre.*Ana/ })
     if (!(proposalCheckbox instanceof HTMLInputElement)) {
       throw new Error('No se encontró la casilla para confirmar el dato.')
     }

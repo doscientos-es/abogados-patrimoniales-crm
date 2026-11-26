@@ -32,7 +32,7 @@
     "oxfmt": "0.65.0"
   },
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.19"
   },
   "packageManager": "pnpm@11.25.0"
 }

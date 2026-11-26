@@ -1,7 +1,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ContactInternalNotes } from './contact-detail'
+
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal()),
+  Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
+}))
 
 afterEach(cleanup)
 
@@ -41,11 +47,13 @@ describe('ContactInternalNotes', () => {
     fireEvent.click(screen.getByLabelText('Advertencia crítica'))
     fireEvent.click(screen.getByRole('button', { name: 'Añadir nota' }))
 
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({
-      title: 'Preferencias',
-      content: 'Información relevante',
-      highlighted: true,
-      critical: true,
-    }))
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith({
+        title: 'Preferencias',
+        content: 'Información relevante',
+        highlighted: true,
+        critical: true,
+      }),
+    )
   })
 })

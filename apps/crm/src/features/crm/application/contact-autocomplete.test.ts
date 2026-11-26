@@ -16,16 +16,17 @@ const contact = (id: string, overrides: Record<string, string> = {}) => ({
 
 describe('contactosParaAutocompletado', () => {
   it('encuentra coincidencias por datos de contacto sin distinguir tildes', () => {
-    const contacts = [
-      contact('contact-1', { nombre: 'María', email: 'maria@ejemplo.es' }),
-      contact('contact-2', { razonSocial: 'Asesoría López', nif: 'B12345678' }),
-    ]
+    const maria = contact('contact-1', {
+      nombre: 'María',
+      email: 'maria@ejemplo.es',
+      referencia: 'CT-001056',
+    })
+    const asesoría = contact('contact-2', { razonSocial: 'Asesoría López', nif: 'B12345678' })
+    const contacts = [maria, asesoría]
 
-    expect(contactosParaAutocompletado(contacts, 'maria')).toEqual([contacts[0]])
-    expect(contactosParaAutocompletado(contacts, 'b123')).toEqual([contacts[1]])
-    expect(
-      contactosParaAutocompletado([{ ...contacts[0]!, referencia: 'CT-001056' }], '001056'),
-    ).toHaveLength(1)
+    expect(contactosParaAutocompletado(contacts, 'maria')).toEqual([maria])
+    expect(contactosParaAutocompletado(contacts, 'b123')).toEqual([asesoría])
+    expect(contactosParaAutocompletado(contacts, '001056')).toEqual([maria])
   })
 
   it('excluye contactos y limita los resultados renderizados', () => {

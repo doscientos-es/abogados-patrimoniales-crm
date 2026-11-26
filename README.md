@@ -249,7 +249,7 @@ validación aislada antes de habilitarlo; no incluye todavía UI de claves ni OA
 
 ### Desarrollo local
 
-Node.js >=22.18 y pnpm 11.25.0. Ejecutar todos los comandos desde la raíz del repositorio.
+Node.js >=22.19 y pnpm 11.25.0. Ejecutar todos los comandos desde la raíz del repositorio.
 Instalar dependencias con `pnpm install --frozen-lockfile`.
 
 | Comando                             | Acción                                                           |

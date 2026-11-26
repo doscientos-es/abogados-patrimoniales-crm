@@ -1,5 +1,5 @@
 import { CheckCircle2, FileText, LoaderCircle, Upload, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -56,6 +56,7 @@ export function ContactAIIntake({
   firmId: string
   onApply: (values: Record<string, string>, documents: File[]) => void
 }) {
+  const proposalId = useId()
   const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [attachDocuments, setAttachDocuments] = useState(true)
@@ -315,7 +316,7 @@ export function ContactAIIntake({
             </div>
             {fields.length ? (
               <div className="space-y-2" aria-label="Propuestas encontradas">
-                {fields.map((field) => (
+                {fields.map((field, index) => (
                   <div
                     key={field.id}
                     className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-xl border p-3 text-sm transition-colors ${
@@ -324,18 +325,28 @@ export function ContactAIIntake({
                         : 'bg-background hover:border-primary/30'
                     }`}
                   >
-                    <label className="contents">
+                    <label
+                      className="contents"
+                      aria-labelledby={`${proposalId}-label-${index} ${proposalId}-value-${index}`}
+                    >
                       <input
                         type="checkbox"
+                        aria-labelledby={`${proposalId}-label-${index} ${proposalId}-value-${index}`}
                         checked={selected.has(field.id)}
                         onChange={() => toggleField(field)}
                         className="border-input accent-primary mt-0.5 h-4 w-4 rounded"
                       />
                       <span className="min-w-0 cursor-pointer space-y-1">
-                        <span className="text-muted-foreground block text-xs leading-snug font-medium">
+                        <span
+                          id={`${proposalId}-label-${index}`}
+                          className="text-muted-foreground block text-xs leading-snug font-medium"
+                        >
                           {field.label}
                         </span>
-                        <span className="text-foreground block text-base leading-snug font-semibold break-words">
+                        <span
+                          id={`${proposalId}-value-${index}`}
+                          className="text-foreground block text-base leading-snug font-semibold break-words"
+                        >
                           {field.value}
                         </span>
                         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">

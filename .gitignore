@@ -36,3 +36,6 @@ dist-ssr
 *.sw?
 .vercel
 !.env.example
+
+# Local test reports
+/apps/crm/notification-test-results.json

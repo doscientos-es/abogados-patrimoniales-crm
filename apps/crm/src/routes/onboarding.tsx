@@ -16,5 +16,10 @@ export const Route = createFileRoute('/onboarding')({
       { name: 'robots', content: 'noindex, nofollow, noarchive' },
     ],
   }),
-  component: () => <OnboardingPage abrir={Route.useSearch().abrir} />,
+  component: OnboardingRoute,
 })
+
+function OnboardingRoute() {
+  const { abrir } = Route.useSearch()
+  return <OnboardingPage abrir={abrir} />
+}

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Suspense, type AnchorHTMLAttributes, type ComponentType, type ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
@@ -53,11 +53,13 @@ afterEach(() => {
 })
 
 it('configura columnas desde la cabecera y conserva la preferencia', async () => {
-  render(
-    <Suspense fallback="Cargando">
-      <ContactosPage />
-    </Suspense>,
-  )
+  await act(async () => {
+    render(
+      <Suspense fallback="Cargando">
+        <ContactosPage />
+      </Suspense>,
+    )
+  })
   const trigger = await screen.findByRole(
     'button',
     { name: 'Columnas visibles' },
@@ -75,11 +77,13 @@ it('configura columnas desde la cabecera y conserva la preferencia', async () =>
 })
 
 it('muestra el valor de orden sin el prefijo y permite cambiarlo', async () => {
-  render(
-    <Suspense fallback="Cargando">
-      <ContactosPage />
-    </Suspense>,
-  )
+  await act(async () => {
+    render(
+      <Suspense fallback="Cargando">
+        <ContactosPage />
+      </Suspense>,
+    )
+  })
   await screen.findByRole('button', { name: 'Columnas visibles' }, { timeout: 15000 })
   const sort = screen.getByLabelText('Ordenar contactos')
   expect(sort.textContent).toContain('Nombre')
