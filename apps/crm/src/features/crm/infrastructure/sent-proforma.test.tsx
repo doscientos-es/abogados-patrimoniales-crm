@@ -23,7 +23,10 @@ function renderMutation() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  return { client, result: renderHook(() => useRegistrarProformaEnviada('firm'), { wrapper }).result }
+  return {
+    client,
+    result: renderHook(() => useRegistrarProformaEnviada('firm'), { wrapper }).result,
+  }
 }
 
 beforeEach(() => vi.resetAllMocks())
