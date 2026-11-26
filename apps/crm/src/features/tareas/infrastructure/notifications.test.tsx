@@ -87,6 +87,6 @@ it('pagina y filtra el historial en el servidor', async () => {
     await result.current.fetchNextPage()
   })
   expect(mocks.range).toHaveBeenCalledWith(30, 59)
-  expect(result.current.data?.pages.flat()).toHaveLength(31)
+  await waitFor(() => expect(result.current.data?.pages.flat()).toHaveLength(31))
   expect(result.current.hasNextPage).toBe(false)
 })

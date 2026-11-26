@@ -66,8 +66,8 @@ it('muestra los avisos recientes, el total sin leer y un enlace al historial', a
 it('filtra el historial completo, abre tareas y permite cargar más o marcar todo', () => {
   render(<NotificationsPage />)
   expect(screen.getByText('Tarea 2')).toBeTruthy()
-  expect(screen.getByText('Ana: Revisar')).toBeTruthy()
   const firstNotification = screen.getByText('Tarea 1').closest('article') as HTMLElement
+  expect(within(firstNotification).getByText('Ana: Revisar')).toBeTruthy()
   fireEvent.click(within(firstNotification).getByRole('button', { name: 'Abrir tarea' }))
   expect(mocks.markRead).toHaveBeenCalledWith('task-1', expect.any(Object))
   expect(screen.getByText('Detalle: task-1')).toBeTruthy()
