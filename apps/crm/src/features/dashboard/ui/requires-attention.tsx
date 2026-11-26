@@ -169,27 +169,19 @@ export function RequiresAttention({
 
   return (
     <Card data-testid="requires-attention" className="border-border/70 gap-0 rounded-2xl shadow-sm">
-      <CardHeader className="gap-4 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="bg-warning/15 text-warning-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <CardTitle className="text-base">Requiere atención</CardTitle>
-              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                Cuenta incidencias de tareas, expedientes, Leads y documentos; un mismo registro
-                puede tener varias.
-              </p>
-            </div>
-          </div>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="bg-warning/15 text-warning-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+            <AlertTriangle className="size-4" aria-hidden="true" />
+          </span>
+          <CardTitle className="text-base">Requiere atención</CardTitle>
           <Badge variant={allIncidents.length ? 'default' : 'outline'} className="shrink-0">
             {allIncidents.length} en total
           </Badge>
         </div>
         <div
           aria-label="Filtros de incidencias"
-          className="bg-muted/40 flex flex-wrap items-center gap-2 rounded-xl p-2 text-sm"
+          className="flex flex-wrap items-center gap-1 text-sm sm:gap-2"
         >
           <select
             aria-label="Responsable"

@@ -63,6 +63,14 @@ it('muestra el motivo y enlaza al origen de cada incidencia', () => {
     />,
   )
   const link = screen.getByRole('link', { name: /Tarea 1/ })
+  const header = screen
+    .getByText('Requiere atención')
+    .closest('[data-slot="card-header"]') as HTMLElement
+  expect(within(header).getByRole('combobox', { name: 'Responsable' })).toBeTruthy()
+  expect(within(header).getByRole('checkbox', { name: 'Mis tareas' })).toBeTruthy()
+  expect(within(header).getByRole('checkbox', { name: 'Siguientes acciones' })).toBeTruthy()
+  expect(within(header).getByText('1 en total')).toBeTruthy()
+  expect(screen.queryByText(/Cuenta incidencias de tareas/)).toBeNull()
   expect(link.getAttribute('href')).toBe('/tareas/1')
   expect(within(link).getByText(/Venció el/)).toBeTruthy()
   expect(within(link).getByText(/Ana/)).toBeTruthy()
