@@ -1,11 +1,15 @@
 const fs = require('node:fs')
 const path = require('node:path')
-const { PGlite } = require('@electric-sql/pglite')
+const { PGlite } = require(path.join(process.cwd(), 'node_modules/@electric-sql/pglite'))
 
 async function main() {
+  console.log('Preparing local database')
   const db = new PGlite()
   const statements = [
-    'create schema auth', 'create role anon', 'create role authenticated', 'create role service_role',
+    'create schema auth',
+    'create role anon',
+    'create role authenticated',
+    'create role service_role',
     "create type public.crm_member_role as enum ('owner','admin','lawyer','paralegal')",
     "create type public.crm_member_status as enum ('active','disabled','invited')",
     "create function auth.uid() returns uuid language sql stable as 'select nullif(current_setting(''request.jwt.claim.sub'', true), '''')::uuid'",
@@ -18,12 +22,32 @@ async function main() {
     'create function public.crm_delete_firm_member(uuid,uuid) returns integer language sql as $$ select 0 $$',
     'grant execute on function public.crm_delete_firm_member(uuid,uuid) to authenticated',
   ]
-  for (const name of ['crm_opportunities', 'crm_tasks', 'crm_cases', 'crm_case_tasks', 'crm_case_workstreams', 'crm_case_dates', 'crm_case_communications', 'crm_case_documents', 'crm_onboardings'])
+  for (const name of [
+    'crm_opportunities',
+    'crm_tasks',
+    'crm_cases',
+    'crm_case_tasks',
+    'crm_case_workstreams',
+    'crm_case_dates',
+    'crm_case_communications',
+    'crm_case_documents',
+    'crm_onboardings',
+  ])
     statements.push('create table public.' + name + ' (firm_id uuid, assigned_to uuid)')
   await db.exec(statements.join(';'))
-  await db.exec(fs.readFileSync(path.join(__dirname, '../migrations/20261126140000_team_member_removal.sql'), 'utf8'))
+  console.log('Applying migration')
+  await db.exec(
+    fs.readFileSync(
+      path.join(__dirname, '../migrations/20261126140000_team_member_removal.sql'),
+      'utf8',
+    ),
+  )
+  console.log('Running contract')
   await db.exec(fs.readFileSync(path.join(__dirname, 'team_member_removal_contract.sql'), 'utf8'))
   console.log('Offline PostgreSQL-compatible membership contract: passed')
   await db.close()
 }
-main().catch((error) => { console.error(error.message); process.exitCode = 1 })
+main().catch((error) => {
+  console.error(error.message)
+  process.exitCode = 1
+})
