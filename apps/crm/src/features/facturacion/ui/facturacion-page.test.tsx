@@ -84,6 +84,7 @@ describe('FacturacionPage', () => {
     expect(screen.getByRole('heading', { name: '¿Dónde y cómo se crea una factura?' })).toBeTruthy()
     expect(screen.getByText(/El borrador todavía no está emitido/)).toBeTruthy()
     expect(screen.getByText(/Revisa y emite para asignar numeración fiscal/)).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain('retenciones de IRPF')
     fireEvent.click(screen.getByRole('button', { name: 'Crear factura' }))
     expect(screen.getByRole('heading', { name: 'Crear borrador de factura' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Guardar borrador' })).toBeTruthy()
