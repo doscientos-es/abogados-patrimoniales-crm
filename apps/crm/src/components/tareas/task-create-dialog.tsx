@@ -248,10 +248,10 @@ export function TaskCreateDialog({
       ) : null}
       <DialogContent
         size={firstMeeting ? 'lg' : special === 'meeting' ? '2xl' : 'xl'}
-        className={firstMeeting ? 'first-meeting-dialog' : undefined}
+        className={firstMeeting ? 'first-meeting-dialog' : ''}
       >
         <DialogHeader>
-          <DialogTitle className={firstMeeting ? 'text-lg tracking-normal normal-case' : undefined}>
+          <DialogTitle className={firstMeeting ? 'text-lg tracking-normal normal-case' : ''}>
             {firstMeeting && title === 'Nueva tarea' ? 'Programar primera cita' : title}
           </DialogTitle>
           <DialogDescription>
