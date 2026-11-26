@@ -148,6 +148,7 @@ export type CrearTareaInput = {
   expedienteId: string | null
   oportunidadId: string | null
   lineaId?: string | null
+  tareaPadreId?: string | null
   tipo: TipoTarea
   titulo: string
   descripcion: string

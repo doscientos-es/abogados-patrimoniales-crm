@@ -396,6 +396,7 @@ export function useCrearTarea(firmId: string | undefined) {
           ? (input.clasePlazo.toLowerCase() as 'judicial' | 'extrajudicial')
           : null,
         initial_message: input.mensajeInicial?.trim() || null,
+        ...(input.tareaPadreId ? { new_parent_task_id: input.tareaPadreId } : {}),
         ...(input.detallesReunion ? { new_meeting_details: input.detallesReunion as Json } : {}),
         new_workstream_id: input.lineaId ?? null,
         new_critical: input.critico,

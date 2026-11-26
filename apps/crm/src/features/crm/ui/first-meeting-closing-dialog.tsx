@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { TaskCreateDialog } from '@/components/tareas/task-create-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,6 +22,7 @@ import { ShortTextList } from '@/features/crm/ui/short-text-list'
 import { useActualizarEstadoNota, useGuardarNota, useNotasRemotas } from '@/features/notas'
 import {
   useActualizarReunionEspecial,
+  useCrearTarea,
   useTareasPersistentes,
   type TareaPersistida,
 } from '@/features/tareas'
@@ -44,20 +46,23 @@ export function FirstMeetingClosingDialog({
   const notes = useNotasRemotas(firmId)
   const members = useMiembrosDespacho(firmId)
   const updateMeeting = useActualizarReunionEspecial(firmId)
+  const createTask = useCrearTarea(firmId)
   const saveNote = useGuardarNota(firmId)
   const updateNoteStatus = useActualizarEstadoNota(firmId)
   const [noteItems, setNoteItems] = useState<string[] | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
-  const [followUpAssigneeId, setFollowUpAssigneeId] = useState(() => {
-    const scheduler = task.asignadoId ?? ''
-    return scheduler !== currentUserId && !meetingHosts(task.reunion).includes(scheduler)
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null)
+  const finishingRef = useRef(false)
+  const [finishing, setFinishing] = useState(false)
+  const administrativeMembers = (members.data ?? []).filter((member) => member.rol === 'paralegal')
+  const scheduler = task.asignadoId ?? ''
+  const defaultAssigneeId =
+    scheduler !== currentUserId &&
+    !meetingHosts(task.reunion).includes(scheduler) &&
+    administrativeMembers.some((member) => member.id === scheduler)
       ? scheduler
       : ''
-  })
-  const finishingRef = useRef(false)
-  const [derivedTitles, setDerivedTitles] = useState<string[]>([])
-  const [derivedDraft, setDerivedDraft] = useState('')
-  const [finishing, setFinishing] = useState(false)
+  const followUpAssigneeId = selectedAssigneeId ?? defaultAssigneeId
   const closeNote = (notes.data ?? []).find((note) => closingNoteTaskId(note) === task.id)
   const details = closeNote?.details
   const noteDetails =
@@ -65,18 +70,24 @@ export function FirstMeetingClosingDialog({
   const finalItems = noteItems ?? closingNoteItems(closeNote)
 
   const finish = async () => {
-    if (notes.isPending || notes.isError || finishingRef.current || (!caseId && !opportunityId))
+    if (
+      notes.isPending ||
+      notes.isError ||
+      members.isPending ||
+      members.isError ||
+      finishingRef.current ||
+      (!caseId && !opportunityId)
+    )
       return
-    const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
-    const items = noteDraft.trim() ? [...finalItems, noteDraft.trim()] : finalItems
-    const derivedTaskTitles = [
-      ...derivedTitles,
-      ...(derivedDraft.trim() ? [derivedDraft.trim()] : []),
-    ]
-    if (derivedTaskTitles.length > 25 || derivedTaskTitles.some((title) => title.length > 500)) {
-      toast.error('Añade como máximo 25 tareas derivadas de hasta 500 caracteres.')
+    if (
+      followUpAssigneeId &&
+      !administrativeMembers.some((member) => member.id === followUpAssigneeId)
+    ) {
+      toast.error('Selecciona un responsable administrativo disponible.')
       return
     }
+    const liveMeeting = (tasks.data ?? []).find((item) => item.id === task.id) ?? task
+    const items = noteDraft.trim() ? [...finalItems, noteDraft.trim()] : finalItems
     finishingRef.current = true
     setFinishing(true)
     try {
@@ -128,8 +139,8 @@ export function FirstMeetingClosingDialog({
         task: liveMeeting,
         details: {
           ...closedMeeting,
-          ...(followUpAssigneeId ? { followUpAssigneeId } : {}),
-          derivedTaskTitles,
+          followUpAssigneeId,
+          derivedTaskTitles: [],
         },
       })
       toast.success(
@@ -183,21 +194,27 @@ export function FirstMeetingClosingDialog({
         </Step>
 
         <Step number={2} title="Tareas derivadas">
-          <ShortTextList
-            label="Tareas derivadas"
-            items={derivedTitles}
-            draft={derivedDraft}
-            onDraftChange={setDerivedDraft}
-            placeholder="Escribe una acción breve…"
-            disabled={finishing}
-            onAdd={(value) => {
-              setDerivedTitles([...derivedTitles, value])
-              return true
-            }}
-            onRemove={(index) => setDerivedTitles(derivedTitles.filter((_, i) => i !== index))}
+          <TaskCreateDialog
+            firmId={firmId}
+            expedienteId={caseId}
+            oportunidadId={opportunityId}
+            lineaId={caseId ? task.lineaId : null}
+            contextLabel={reference}
+            members={members.data ?? []}
+            pending={createTask.isPending}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                disabled={finishing || (!caseId && !opportunityId)}
+              >
+                Crear tarea
+              </Button>
+            }
+            onCreate={(input) => createTask.mutateAsync({ ...input, tareaPadreId: task.id })}
           />
           <p className="text-muted-foreground text-xs">
-            Se crean al cerrar la cita y quedan vinculadas a ella.
+            Las tareas se crean al momento y quedan vinculadas a la cita, aunque no la finalices.
           </p>
         </Step>
 
@@ -208,15 +225,25 @@ export function FirstMeetingClosingDialog({
             className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
             value={followUpAssigneeId}
             disabled={finishing || members.isPending || members.isError}
-            onChange={(event) => setFollowUpAssigneeId(event.target.value)}
+            onChange={(event) => setSelectedAssigneeId(event.target.value)}
           >
             <option value="">No asignar ahora</option>
-            {(members.data ?? []).map((member) => (
+            {administrativeMembers.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.nombre}
               </option>
             ))}
           </select>
+          {!members.isPending && !members.isError && administrativeMembers.length === 0 ? (
+            <p className="text-muted-foreground text-xs">
+              No hay personal administrativo disponible.
+            </p>
+          ) : null}
+          {members.isError ? (
+            <p role="alert" className="text-destructive text-xs">
+              No se pudo cargar el equipo. Cierra el diálogo y vuelve a intentarlo.
+            </p>
+          ) : null}
           <p className="text-muted-foreground text-xs">
             Si eliges a alguien, recibirá una tarea para subir el material desde la ficha de esta
             cita.
@@ -229,7 +256,9 @@ export function FirstMeetingClosingDialog({
           </Button>
           <Button
             type="button"
-            disabled={finishing || notes.isPending || notes.isError}
+            disabled={
+              finishing || notes.isPending || notes.isError || members.isPending || members.isError
+            }
             onClick={() => void finish()}
           >
             {finishing ? 'Finalizando…' : 'Finalizar cita'}

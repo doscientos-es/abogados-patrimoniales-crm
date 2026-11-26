@@ -1,4 +1,13 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  cleanup,
+  fireEvent,
+  render as renderUI,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -6,16 +15,25 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   archive: vi.fn(),
   update: vi.fn(),
+  create: vi.fn(),
   error: vi.fn(),
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: mocks.error } }))
-vi.mock('@/components/tareas/task-create-dialog', () => ({ TaskCreateDialog: () => null }))
+vi.mock('@/features/auth', () => ({
+  useAuthSession: () => ({ status: 'signed-in', user: { id: 'lawyer-1' } }),
+}))
 vi.mock('@/features/contactos', () => ({
   CONTACT_DOCUMENT_CATEGORIES: [],
   uploadContactDocument: vi.fn(),
 }))
 vi.mock('@/features/crm', () => ({
-  useMiembrosDespacho: () => ({ data: [{ id: 'secretary-1', nombre: 'Sara' }] }),
+  useMiembrosDespacho: () => ({
+    data: [
+      { id: 'secretary-1', nombre: 'Sara', rol: 'paralegal' },
+      { id: 'lawyer-1', nombre: 'Ana', rol: 'lawyer' },
+      { id: 'admin-1', nombre: 'Luis', rol: 'admin' },
+    ],
+  }),
 }))
 vi.mock('@/features/notas', () => ({
   useNotasRemotas: () => ({ data: mocks.notes, isPending: false, isError: false }),
@@ -24,12 +42,15 @@ vi.mock('@/features/notas', () => ({
 }))
 vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: [] }),
-  useCrearTarea: () => ({ isPending: false }),
+  useCrearTarea: () => ({ isPending: false, mutateAsync: mocks.create }),
   useMarcarSiguienteAccion: () => ({ isPending: false }),
   useActualizarReunionEspecial: () => ({ mutateAsync: mocks.update }),
 }))
 
 import { FirstMeetingClosingDialog } from './first-meeting-closing-dialog'
+
+const render = (element: ReactElement) =>
+  renderUI(<QueryClientProvider client={new QueryClient()}>{element}</QueryClientProvider>)
 
 const task = {
   id: 'meeting-1',
@@ -47,6 +68,7 @@ beforeEach(() => {
   mocks.save.mockResolvedValue(undefined)
   mocks.archive.mockResolvedValue(undefined)
   mocks.update.mockResolvedValue({ reunion: {} })
+  mocks.create.mockResolvedValue(undefined)
 })
 afterEach(() => {
   cleanup()
@@ -155,7 +177,7 @@ describe('Cierre de cita', () => {
     )
   })
 
-  it('closes a case appointment with its derived tasks and administrative assignee', async () => {
+  it('cierra una cita de expediente con el responsable administrativo seleccionado', async () => {
     const caseTask = {
       ...task,
       expedienteId: 'case-1',
@@ -172,9 +194,6 @@ describe('Cierre de cita', () => {
     expect(screen.queryByLabelText(/archivo de transcripción/i)).toBeNull()
     fireEvent.change(screen.getByLabelText('Añadir notas finales'), {
       target: { value: 'Cliente conforme' },
-    })
-    fireEvent.change(screen.getByLabelText('Añadir tareas derivadas'), {
-      target: { value: 'Revisar escritura' },
     })
     fireEvent.change(screen.getByLabelText('Responsable administrativo'), {
       target: { value: 'secretary-1' },
@@ -195,8 +214,100 @@ describe('Cierre de cita', () => {
       details: expect.objectContaining({
         status: 'finished',
         followUpAssigneeId: 'secretary-1',
-        derivedTaskTitles: ['Revisar escritura'],
+        derivedTaskTitles: [],
       }),
     })
+  })
+
+  it.each([
+    ['lead', task, { expedienteId: null, oportunidadId: 'lead-1' }],
+    [
+      'expediente',
+      { ...task, expedienteId: 'case-1', lineaId: 'line-1' },
+      {
+        expedienteId: 'case-1',
+        oportunidadId: null,
+        lineaId: 'line-1',
+      },
+    ],
+  ])(
+    'crea inmediatamente una tarea vinculada a la cita y al %s',
+    async (_label, meeting, context) => {
+      const onClose = vi.fn()
+      render(
+        <FirstMeetingClosingDialog
+          firmId="firm-1"
+          task={meeting}
+          reference="REF-1"
+          onClose={onClose}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
+      const dialog = screen.getByRole('dialog', { name: 'Nueva tarea' })
+      expect(within(dialog).getByText(/REF-1/)).toBeTruthy()
+      fireEvent.change(within(dialog).getByLabelText('Título *'), {
+        target: { value: 'Revisar escritura' },
+      })
+      fireEvent.change(within(dialog).getByLabelText('Asignada a'), {
+        target: { value: 'secretary-1' },
+      })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Crear tarea' }))
+      await waitFor(() =>
+        expect(mocks.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ...context,
+            tareaPadreId: 'meeting-1',
+            titulo: 'Revisar escritura',
+            asignadoId: 'secretary-1',
+          }),
+        ),
+      )
+      expect(mocks.update).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+    },
+  )
+
+  it('solo ofrece administrativos y no preselecciona un abogado o administrador de sistema', async () => {
+    render(
+      <FirstMeetingClosingDialog
+        firmId="firm-1"
+        task={{ ...task, asignadoId: 'admin-1' }}
+        reference="LEAD-1"
+        onClose={vi.fn()}
+      />,
+    )
+    const assignee = screen.getByLabelText('Responsable administrativo') as HTMLSelectElement
+    expect(Array.from(assignee.options, (option) => option.value)).toEqual(['', 'secretary-1'])
+    expect(assignee.value).toBe('')
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          details: expect.objectContaining({ followUpAssigneeId: '' }),
+        }),
+      ),
+    )
+  })
+
+  it('preselecciona al administrativo que organizó la cita y permite no asignarlo', async () => {
+    render(
+      <FirstMeetingClosingDialog
+        firmId="firm-1"
+        task={{ ...task, asignadoId: 'secretary-1' }}
+        reference="LEAD-1"
+        onClose={vi.fn()}
+      />,
+    )
+    const assignee = screen.getByLabelText('Responsable administrativo') as HTMLSelectElement
+    expect(assignee.value).toBe('secretary-1')
+    fireEvent.change(assignee, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar cita' }))
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          details: expect.objectContaining({ followUpAssigneeId: '' }),
+        }),
+      ),
+    )
   })
 })
