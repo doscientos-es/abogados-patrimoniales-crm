@@ -1,7 +1,18 @@
-import type { CaseNature, Json, OpportunityPriority } from '@/shared/infrastructure/supabase'
+import type {
+  CaseNature,
+  InvoicePaymentRow,
+  Json,
+  OpportunityPriority,
+} from '@/shared/infrastructure/supabase'
 
 export type FaseOnboarding = 'proforma' | 'payment' | 'formal_start' | 'completed'
 export type ModalidadInicio = 'pending' | 'in_person' | 'video_call' | 'phone_call'
+
+export type DatosCobroProvisiones = {
+  importe: number
+  metodo: InvoicePaymentRow['payment_method']
+  referencia: string
+}
 
 export type OnboardingPersistido = {
   id: string

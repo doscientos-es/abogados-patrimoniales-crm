@@ -16,7 +16,7 @@ begin
   insert into public.crm_contacts(id, firm_id, reference, nature, relationship, display_name)
     values (contact, firm, 'TEST-' || contact::text, 'person', 'lead', 'Test');
   select * into onboarding from public.crm_create_onboarding(firm, contact, null, 'Test', 'PR-TEST', 100, actor, current_date, 'Test');
-  select * into onboarding from public.crm_transition_onboarding(onboarding.id, onboarding.version, 'payment_confirmed', current_date, null, null);
+  select * into onboarding from public.crm_confirm_onboarding_receipt(onboarding.id, onboarding.version, 100, current_date, 'transfer', '');
   if not exists (select 1 from public.crm_onboarding_events where onboarding_id = onboarding.id and event_type = 'payment_confirmed' and actor_id = actor) then
     raise exception 'Payment event must identify its authenticated actor';
   end if;

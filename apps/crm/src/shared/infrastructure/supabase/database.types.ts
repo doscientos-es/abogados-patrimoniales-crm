@@ -127,6 +127,7 @@ export type Database = {
       >
       crm_onboardings: Table<OnboardingRow, OnboardingInsert, never>
       crm_onboarding_events: Table<OnboardingEventRow, never, never>
+      crm_onboarding_receipts: Table<OnboardingReceiptRow, never, never>
       crm_task_labels: Table<
         TaskLabelRow,
         TaskLabelInsert,
@@ -725,6 +726,25 @@ export type Database = {
           new_engagement_mode: string | null
         }
         Returns: OnboardingRow
+      }
+      crm_confirm_onboarding_receipt: {
+        Args: {
+          target_onboarding_id: string
+          target_expected_version: number
+          new_amount: number
+          new_received_on: string
+          new_payment_method: string
+          new_external_reference: string
+        }
+        Returns: OnboardingRow
+      }
+      crm_apply_onboarding_receipt: {
+        Args: {
+          target_receipt_id: string
+          target_invoice_id: string
+          existing_payment_id: string | null
+        }
+        Returns: undefined
       }
       crm_log_onboarding_communication: {
         Args: {
@@ -1777,6 +1797,21 @@ export type OpportunityEventRow = {
 
 export type OnboardingPhase = 'proforma' | 'payment' | 'formal_start' | 'completed'
 export type OnboardingEngagementMode = 'pending' | 'in_person' | 'video_call' | 'phone_call'
+
+export type OnboardingReceiptRow = {
+  id: string
+  firm_id: string
+  onboarding_id: string
+  amount: number
+  received_on: string
+  payment_method: InvoicePaymentRow['payment_method']
+  external_reference: string
+  invoice_payment_id: string | null
+  created_by: string | null
+  created_at: string
+  applied_by: string | null
+  applied_at: string | null
+}
 
 export type OnboardingRow = {
   id: string

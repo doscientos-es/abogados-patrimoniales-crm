@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   onboardings: [] as unknown[],
   leads: [] as unknown[],
   openCase: vi.fn().mockResolvedValue({ id: 'case-new' }),
+  transition: vi.fn(),
   empty: () => ({ data: [], isLoading: false, isError: false }),
   mutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }))
@@ -58,7 +59,7 @@ vi.mock('@/features/onboarding/application', async (importOriginal) => ({
   useActualizarSiguienteAccion: mocks.mutation,
   useCrearOnboarding: mocks.mutation,
   useRegistrarComunicacionOnboarding: mocks.mutation,
-  useTransicionarOnboarding: mocks.mutation,
+  useTransicionarOnboarding: () => ({ isPending: false, mutateAsync: mocks.transition }),
 }))
 
 const item = {
@@ -87,6 +88,7 @@ afterEach(() => {
   mocks.onboardings = []
   mocks.leads = []
   mocks.openCase.mockClear()
+  mocks.transition.mockReset()
 })
 
 describe('enlace directo a onboarding', () => {
@@ -125,6 +127,34 @@ describe('enlace directo a onboarding', () => {
     await waitFor(() =>
       expect(mocks.openCase).toHaveBeenCalledWith(
         expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS' }),
+      ),
+    )
+  })
+
+  it('confirma el pago con importe y medio reales', async () => {
+    mocks.onboardings = [{ ...item, expedienteId: null, fase: 'proforma', pagoConfirmado: null }]
+    mocks.transition.mockResolvedValue({
+      ...item,
+      expedienteId: 'case-1',
+      pagoConfirmado: '2026-11-25',
+    })
+    render(<OnboardingPage abrir="onboarding-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar pago confirmado' }))
+    const dialog = within(screen.getByRole('dialog'))
+    fireEvent.change(dialog.getByLabelText(/Importe recibido/), { target: { value: '250.50' } })
+    fireEvent.change(dialog.getByLabelText(/Medio de pago/), { target: { value: 'card' } })
+    fireEvent.change(dialog.getByLabelText(/Fecha de confirmación/), {
+      target: { value: '2026-11-25' },
+    })
+    fireEvent.change(dialog.getByLabelText(/Referencia de pago/), { target: { value: 'OPER-1' } })
+    fireEvent.click(dialog.getByRole('button', { name: 'Confirmar pago' }))
+    await waitFor(() =>
+      expect(mocks.transition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accion: 'payment_confirmed',
+          fecha: '2026-11-25',
+          cobro: { importe: 250.5, metodo: 'card', referencia: 'OPER-1' },
+        }),
       ),
     )
   })

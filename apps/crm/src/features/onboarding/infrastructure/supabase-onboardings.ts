@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AbrirExpedienteDesdeOnboardingInput,
   CrearOnboardingInput,
+  DatosCobroProvisiones,
   EventoOnboardingPersistido,
   OnboardingPersistido,
 } from '@/features/onboarding/application/onboarding-types'
@@ -181,17 +182,30 @@ export function useTransicionarOnboarding(firmId: string | undefined) {
       fecha?: string | null
       programado?: string | null
       modalidad?: string | null
+      cobro?: DatosCobroProvisiones
     }) => {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
-      const { data, error } = await client.rpc('crm_transition_onboarding', {
-        target_onboarding_id: input.id,
-        target_expected_version: input.version,
-        transition_action: input.accion,
-        occurred_on: input.fecha ?? null,
-        scheduled_at: input.programado ?? null,
-        new_engagement_mode: input.modalidad ?? null,
-      })
+      if (input.accion === 'payment_confirmed' && (!input.cobro || !input.fecha))
+        throw new Error('Indica el importe, la fecha y el medio del cobro.')
+      const { data, error } =
+        input.accion === 'payment_confirmed' && input.cobro && input.fecha
+          ? await client.rpc('crm_confirm_onboarding_receipt', {
+              target_onboarding_id: input.id,
+              target_expected_version: input.version,
+              new_amount: input.cobro.importe,
+              new_received_on: input.fecha,
+              new_payment_method: input.cobro.metodo,
+              new_external_reference: input.cobro.referencia,
+            })
+          : await client.rpc('crm_transition_onboarding', {
+              target_onboarding_id: input.id,
+              target_expected_version: input.version,
+              transition_action: input.accion,
+              occurred_on: input.fecha ?? null,
+              scheduled_at: input.programado ?? null,
+              new_engagement_mode: input.modalidad ?? null,
+            })
       if (error?.code === '40001')
         throw new Error('Otro usuario modificó el onboarding. Recarga antes de avanzar.')
       if (error) throw error

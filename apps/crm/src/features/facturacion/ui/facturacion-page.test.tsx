@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type * as FacturacionApplication from '@/features/facturacion/application'
 
+vi.mock('@/features/facturacion/ui/onboarding-receipts', () => ({ OnboardingReceipts: () => null }))
+
 const mocks = vi.hoisted(() => ({ cases: [] as unknown[] }))
 
 vi.mock('@tanstack/react-router', () => ({

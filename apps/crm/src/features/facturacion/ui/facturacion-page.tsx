@@ -45,6 +45,7 @@ import {
   MotivoFacturaDialog,
   RegistrarCobroDialog,
 } from '@/features/facturacion/ui/factura-dialogs'
+import { OnboardingReceipts } from '@/features/facturacion/ui/onboarding-receipts'
 import { useOnboardings } from '@/features/onboarding'
 
 const EMPTY_FACTURAS: FacturaPersistida[] = []
@@ -256,6 +257,11 @@ export function FacturacionPage() {
           </Table>
         </CardContent>
       </Card>
+      <OnboardingReceipts
+        firmId={firmId}
+        onboardings={onboardingsQuery.data ?? []}
+        invoices={facturas}
+      />
       <Card>
         <CardContent className="pt-6">
           <Table>

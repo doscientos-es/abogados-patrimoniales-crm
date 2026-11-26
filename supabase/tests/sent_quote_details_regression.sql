@@ -52,8 +52,8 @@ begin
   select * into onboarding from public.crm_create_onboarding(
     firm, contact, lead, 'Test', 'PR-TEST', 100, actor, current_date, 'Test'
   );
-  select * into onboarding from public.crm_transition_onboarding(
-    onboarding.id, onboarding.version, 'payment_confirmed', current_date, null, null
+  select * into onboarding from public.crm_confirm_onboarding_receipt(
+    onboarding.id, onboarding.version, 100, current_date, 'transfer', ''
   );
   select * into opened from public.crm_open_onboarding_case(
     onboarding.id, onboarding.version, 'Test', '', '', 'extrajudicial', 'medium', actor, 'Test', 'Test'

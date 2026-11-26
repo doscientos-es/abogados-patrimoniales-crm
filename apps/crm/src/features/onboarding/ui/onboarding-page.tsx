@@ -62,6 +62,7 @@ import {
   type NaturalezaAsunto,
 } from '@/features/crm/application/matter-nature'
 import { useExpedientesPersistentes } from '@/features/expedientes'
+import { METODOS_COBRO, METODO_COBRO_LABEL } from '@/features/facturacion/application/factura-ciclo'
 import {
   COLUMNAS_ONBOARDING,
   COLUMNA_ONBOARDING_LABEL,
@@ -83,6 +84,7 @@ import {
   useRegistrarComunicacionOnboarding,
   useTransicionarOnboarding,
   type EventoOnboardingPersistido,
+  type DatosCobroProvisiones,
   type OnboardingPersistido,
 } from '@/features/onboarding/application'
 import { siguienteReferenciaExpediente } from '@/features/onboarding/application/next-case-reference'
@@ -355,7 +357,7 @@ export function OnboardingPage({ abrir }: { abrir?: string | undefined }) {
         <strong className="text-foreground">Cómo funciona:</strong> al confirmar el pago de la
         provisión se abre el expediente en CASEWORK. Solo por excepción (urgencia, cliente habitual
         o interés comercial), el abogado puede usar el menú «···» de la tarjeta indicando el motivo.
-        No se generan facturas ni cobros reales.
+        El pago se registra como provisión; aplica el cobro a una factura desde Facturación.
       </p>
     </main>
   )
@@ -553,7 +555,12 @@ export function OnboardingCard({
   pending: boolean
   onAction: (
     accion: 'payment_confirmed' | 'formal_start_scheduled' | 'formal_start_completed',
-    payload?: { fecha?: string; programado?: string; modalidad?: string },
+    payload?: {
+      fecha?: string
+      programado?: string
+      modalidad?: string
+      cobro?: DatosCobroProvisiones
+    },
   ) => Promise<unknown>
   onNextAction: (value: string) => Promise<unknown>
   onCommunication: (tipo: 'email_draft' | 'phone_call', resumen: string) => Promise<unknown>
@@ -671,7 +678,7 @@ export function OnboardingCard({
         {item.fase === 'proforma' ? (
           <PaymentDialog
             pending={pending}
-            onConfirm={async (fecha, files) => {
+            onConfirm={async (fecha, cobro, files) => {
               if (files.length) {
                 if (!firmId) throw new Error('No hay un despacho activo para subir justificantes.')
                 await uploadPaymentEvidence({
@@ -683,7 +690,7 @@ export function OnboardingCard({
                   files,
                 })
               }
-              const updated = (await onAction('payment_confirmed', { fecha })) as
+              const updated = (await onAction('payment_confirmed', { fecha, cobro })) as
                 | OnboardingPersistido
                 | undefined
               if (updated?.pagoConfirmado && !updated.expedienteId) {
@@ -1044,7 +1051,7 @@ function PaymentDialog({
   onConfirm,
 }: {
   pending: boolean
-  onConfirm: (date: string, files: File[]) => Promise<unknown>
+  onConfirm: (date: string, cobro: DatosCobroProvisiones, files: File[]) => Promise<unknown>
 }) {
   const [files, setFiles] = useState<File[]>([])
   return (
@@ -1063,7 +1070,23 @@ function PaymentDialog({
       pending={pending}
       primary="Confirmar pago"
       onSubmit={async (form) => {
-        await onConfirm(text(form, 'fecha'), files)
+        const importe = Number(text(form, 'importe'))
+        const metodo = text(form, 'metodo')
+        if (
+          !Number.isFinite(importe) ||
+          importe <= 0 ||
+          !METODOS_COBRO.some((item) => item === metodo)
+        )
+          throw new Error('Indica un importe válido y un medio de pago.')
+        await onConfirm(
+          text(form, 'fecha'),
+          {
+            importe,
+            metodo: metodo as DatosCobroProvisiones['metodo'],
+            referencia: text(form, 'referencia').trim(),
+          },
+          files,
+        )
         setFiles([])
       }}
     >
@@ -1072,8 +1095,25 @@ function PaymentDialog({
         presupuesto por el cliente.
       </p>
       <p className="text-warning-foreground text-xs">
-        Este paso no registra el importe ni el medio de pago y no crea un cobro en Facturación.
+        No se crea una factura. Aplica después la provisión en Facturación; revisa antes si el cobro
+        ya existe.
       </p>
+      <Field
+        label="Importe recibido (€)"
+        name="importe"
+        type="number"
+        min="0.01"
+        step="0.01"
+        required
+      />
+      <Field
+        label="Medio de pago"
+        name="metodo"
+        select
+        options={METODOS_COBRO.map((item) => [item, METODO_COBRO_LABEL[item]])}
+        required
+      />
+      <Field label="Referencia de pago" name="referencia" maxLength={240} optional />
       <Field
         label="Fecha de confirmación"
         name="fecha"
