@@ -20,14 +20,14 @@ export async function handleMemberRemoval(req: Request, deps: Dependencies): Pro
   if (req.method === 'OPTIONS') return new Response('ok', { headers })
   if (req.method !== 'POST') return response('method_not_allowed', 405)
   const authorization = req.headers.get('Authorization') ?? ''
-  const match = /^Bearer\s+(\S+)$/i.exec(authorization)
-  if (!match) return response('unauthorized', 401)
+  const token = /^Bearer\s+(\S+)$/i.exec(authorization)?.[1]
+  if (!token) return response('unauthorized', 401)
   try {
     const body = (await req.json()) as { firmId?: unknown; userId?: unknown } | null
     const firmId = typeof body?.firmId === 'string' ? body.firmId : ''
     const userId = typeof body?.userId === 'string' ? body.userId : ''
     if (!uuidPattern.test(firmId) || !uuidPattern.test(userId)) return response('invalid', 400)
-    const actorId = await deps.identify(authorization, match[1]!)
+    const actorId = await deps.identify(authorization, token)
     if (!actorId) return response('unauthorized', 401)
     const releasedAssignments = await deps.count(authorization, firmId, userId)
     if (releasedAssignments === null) return response('forbidden', 403)
