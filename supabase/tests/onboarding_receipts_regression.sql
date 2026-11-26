@@ -39,10 +39,18 @@ begin
   rejected := false;
   begin
     perform public.crm_confirm_onboarding_receipt(onboarding.id, onboarding.version, 0, current_date, 'transfer', '');
-  exception when others then rejected := true; end;
+  exception when others then
+    if sqlerrm <> 'Valid receipt amount, date and method are required' then raise; end if;
+    rejected := true;
+  end;
   if not rejected or exists (select 1 from public.crm_onboarding_receipts where onboarding_id = onboarding.id) then
     raise exception 'Invalid payment must not be stored';
   end if;
+  rejected := false;
+  begin
+    perform public.crm_confirm_onboarding_receipt(onboarding.id, onboarding.version - 1, 100, current_date, 'transfer', '');
+  exception when serialization_failure then rejected := true; end;
+  if not rejected then raise exception 'Stale onboarding version must be rejected'; end if;
   select * into onboarding from public.crm_confirm_onboarding_receipt(onboarding.id, onboarding.version, 100, current_date - 1, 'transfer', 'TEST');
   select * into receipt from public.crm_onboarding_receipts where onboarding_id = onboarding.id;
   if receipt.amount <> 100 or onboarding.payment_confirmed_on <> current_date - 1 or receipt.created_by <> actor then
@@ -57,19 +65,22 @@ begin
   select * into other_invoice from public.crm_issue_invoice(draft.id, draft.version, current_date, null);
   rejected := false;
   begin perform public.crm_apply_onboarding_receipt(receipt.id, other_invoice.id, null);
-  exception when others then rejected := true; end;
+  exception when others then
+    if sqlerrm <> 'Invoice must belong to the same case and client and use EUR' then raise; end if;
+    rejected := true;
+  end;
   if not rejected then raise exception 'Other case must be rejected'; end if;
   perform set_config('request.jwt.claim.sub', lawyer::text, true);
   perform set_config('request.jwt.claims', jsonb_build_object('sub', lawyer, 'role', 'authenticated')::text, true);
   rejected := false;
   begin perform public.crm_apply_onboarding_receipt(receipt.id, invoice.id, null);
-  exception when others then rejected := true; end;
+  exception when others then if sqlerrm <> 'Receipt not found' then raise; end if; rejected := true; end;
   if not rejected then raise exception 'Non-admin must not apply a receipt'; end if;
   perform set_config('request.jwt.claim.sub', outsider::text, true);
   perform set_config('request.jwt.claims', jsonb_build_object('sub', outsider, 'role', 'authenticated')::text, true);
   rejected := false;
   begin perform public.crm_apply_onboarding_receipt(receipt.id, invoice.id, null);
-  exception when others then rejected := true; end;
+  exception when others then if sqlerrm <> 'Receipt not found' then raise; end if; rejected := true; end;
   if not rejected then raise exception 'Outsider must not apply a receipt'; end if;
   perform set_config('request.jwt.claim.sub', actor::text, true);
   perform set_config('request.jwt.claims', jsonb_build_object('sub', actor, 'role', 'authenticated')::text, true);
@@ -80,13 +91,21 @@ begin
   end if;
   rejected := false;
   begin perform public.crm_apply_onboarding_receipt(receipt.id, invoice.id, null);
-  exception when others then rejected := true; end;
+  exception when others then if sqlerrm <> 'Receipt already applied' then raise; end if; rejected := true; end;
   if not rejected then raise exception 'Receipt must not be applied twice'; end if;
   select * into second from public.crm_create_onboarding(firm, contact, second_lead, 'Second', 'PR-TEST2', 100, actor, current_date, 'Test');
   select * into second from public.crm_confirm_onboarding_receipt(second.id, second.version, 100, current_date, 'transfer', '');
   update public.crm_onboardings set case_id = other_case where id = second.id;
   select * into second_receipt from public.crm_onboarding_receipts where onboarding_id = second.id;
   select * into payment from public.crm_register_invoice_payment(other_invoice.id, 100, current_date, 'transfer', 'EXISTING');
+  rejected := false;
+  select * into receipt from public.crm_onboarding_receipts where id = receipt.id;
+  begin perform public.crm_apply_onboarding_receipt(second_receipt.id, other_invoice.id, receipt.invoice_payment_id);
+  exception when others then
+    if sqlerrm <> 'Existing payment must match the receipt amount, date and method' then raise; end if;
+    rejected := true;
+  end;
+  if not rejected then raise exception 'Payment from another invoice must be rejected'; end if;
   perform public.crm_apply_onboarding_receipt(second_receipt.id, other_invoice.id, payment.id);
   if (select count(*) from public.crm_invoice_payments where invoice_id = other_invoice.id) <> 1
     or (select invoice_payment_id from public.crm_onboarding_receipts where id = second_receipt.id) <> payment.id then

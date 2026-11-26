@@ -2,13 +2,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, expect, it, vi } from 'vitest'
 
 import type { FacturaPersistida } from '@/features/facturacion/application'
+import type * as FacturacionApplication from '@/features/facturacion/application'
 import type { OnboardingPersistido } from '@/features/onboarding/application/onboarding-types'
 
 import { OnboardingReceipts } from './onboarding-receipts'
 
 const mocks = vi.hoisted(() => ({ apply: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@/features/facturacion/application', async (original) => ({
-  ...(await original<typeof import('@/features/facturacion/application')>()),
+  ...(await original<typeof FacturacionApplication>()),
   useApplyOnboardingReceipt: () => ({ mutateAsync: mocks.apply, isPending: false }),
   useOnboardingReceipts: () => ({
     data: [
@@ -54,6 +55,7 @@ it('ofrece vincular un cobro existente sin crear uno nuevo', async () => {
   } as FacturaPersistida
   render(<OnboardingReceipts firmId="firm" onboardings={[onboarding]} invoices={[invoice]} />)
   fireEvent.change(screen.getByLabelText('Factura para ONB-1'), { target: { value: 'invoice' } })
+  expect(screen.getByText(/Hay cobros que coinciden/)).toBeTruthy()
   fireEvent.change(screen.getByLabelText('Aplicación de ONB-1'), { target: { value: 'payment' } })
   fireEvent.click(screen.getByRole('button', { name: 'Aplicar provisión' }))
   await waitFor(() =>
@@ -63,6 +65,50 @@ it('ofrece vincular un cobro existente sin crear uno nuevo', async () => {
       paymentId: 'payment',
     }),
   )
+})
+
+it('crea un cobro solo tras seleccionar expresamente esa opción', async () => {
+  const onboarding = {
+    id: 'onb',
+    referencia: 'ONB-1',
+    expedienteId: 'case',
+    contactoId: 'contact',
+  } as OnboardingPersistido
+  const invoice = {
+    id: 'invoice',
+    referencia: 'A-1',
+    asuntoId: 'case',
+    contactoId: 'contact',
+    moneda: 'EUR',
+    tipo: 'standard',
+    estado: 'issued',
+    importePendiente: 50,
+    cobros: [],
+  } as unknown as FacturaPersistida
+  render(<OnboardingReceipts firmId="firm" onboardings={[onboarding]} invoices={[invoice]} />)
+  fireEvent.change(screen.getByLabelText('Factura para ONB-1'), { target: { value: 'invoice' } })
+  expect(
+    (screen.getByRole('button', { name: 'Aplicar provisión' }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+  fireEvent.change(screen.getByLabelText('Aplicación de ONB-1'), { target: { value: 'new' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Aplicar provisión' }))
+  await waitFor(() =>
+    expect(mocks.apply).toHaveBeenCalledWith({
+      receiptId: 'receipt',
+      invoiceId: 'invoice',
+      paymentId: null,
+    }),
+  )
+})
+
+it('advierte sobre confirmaciones antiguas sin recibo', () => {
+  const old = {
+    id: 'old',
+    referencia: 'ONB-OLD',
+    pagoConfirmado: '2026-11-24',
+  } as OnboardingPersistido
+  render(<OnboardingReceipts firmId="firm" onboardings={[old]} invoices={[]} />)
+  expect(screen.getByText(/ONB-OLD: confirmación anterior sin importe/)).toBeTruthy()
 })
 
 it('impide seleccionar facturas de otro expediente', () => {
