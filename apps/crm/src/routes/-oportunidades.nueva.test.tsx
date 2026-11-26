@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: { contactId: 'contact-1' },
   contactOrigin: 'Recomendación',
+  membersError: false,
   createOpportunity: vi.fn(),
   createTask: vi.fn(),
   markNextAction: vi.fn(),
@@ -59,7 +60,10 @@ vi.mock('@/features/crm', () => ({
   useAvanzarLeadPorHito: () => ({ isPending: false, mutateAsync: mocks.advanceLead }),
   useCrearOportunidad: () => ({ isPending: false, mutateAsync: mocks.createOpportunity }),
   useLeadRoles: () => ({ data: [] }),
-  useMiembrosDespacho: () => ({ data: [{ id: 'lawyer-jon', nombre: 'Jon' }] }),
+  useMiembrosDespacho: () => ({
+    data: [{ id: 'lawyer-jon', nombre: 'Jon' }],
+    isError: mocks.membersError,
+  }),
   useTransicionarOportunidad: () => ({ isPending: false, mutateAsync: mocks.transition }),
 }))
 vi.mock('@/features/notas', () => ({ useCrearNotaOportunidad: () => ({ isPending: false }) }))
@@ -81,6 +85,7 @@ afterEach(() => {
   mocks.transition.mockReset()
   mocks.search = { contactId: 'contact-1' }
   mocks.contactOrigin = 'Recomendación'
+  mocks.membersError = false
 })
 
 describe('NuevaOportunidadPage', () => {
@@ -183,6 +188,64 @@ describe('NuevaOportunidadPage', () => {
     await waitFor(() =>
       expect(mocks.createOpportunity).toHaveBeenCalledWith(
         expect.objectContaining({ source: 'Web' }),
+      ),
+    )
+  })
+
+  it('guarda el responsable elegido y por defecto deja el lead sin asignar', async () => {
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    mocks.advanceLead.mockResolvedValue({})
+    const { container, unmount } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.change(screen.getByLabelText('Responsable del Lead'), {
+      target: { value: 'lawyer-jon' },
+    })
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedTo: 'lawyer-jon' }),
+      ),
+    )
+
+    unmount()
+    mocks.createOpportunity.mockClear()
+    const second = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    const secondForm = second.container.querySelector('form')
+    if (!secondForm) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(secondForm)
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedTo: null }),
+      ),
+    )
+  })
+
+  it('no pierde un responsable elegido si falla la consulta de miembros', async () => {
+    mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
+    mocks.advanceLead.mockResolvedValue({})
+    const { container, rerender } = render(<NuevaOportunidadPage />)
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.change(screen.getByLabelText('Responsable del Lead'), {
+      target: { value: 'lawyer-jon' },
+    })
+    fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    mocks.membersError = true
+    rerender(<NuevaOportunidadPage />)
+    const form = container.querySelector('form')
+    if (!form) throw new Error('No se encontró el formulario de alta.')
+    fireEvent.submit(form)
+    expect(mocks.createOpportunity).not.toHaveBeenCalled()
+    expect(screen.getByText(/No se pudieron cargar los responsables/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar responsable seleccionado' }))
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(mocks.createOpportunity).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedTo: null }),
       ),
     )
   })

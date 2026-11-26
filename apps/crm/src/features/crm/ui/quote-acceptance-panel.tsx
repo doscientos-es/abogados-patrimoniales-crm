@@ -30,6 +30,7 @@ import {
   MEDIOS_ACEPTACION,
   pasosAvanceHastaEnvio,
   registrarRespuesta,
+  tareaSeguimientoVigente,
   versionEnviada,
   type AceptacionManualInput,
   type TipoEvidenciaAceptacion,
@@ -46,6 +47,7 @@ import {
 } from '@/features/crm/application/quote-editor'
 import { ProformaCard } from '@/features/crm/ui/proforma-card'
 import { documentoHtml, imprimir, type Cliente } from '@/features/crm/ui/quote-document'
+import { QuoteFollowupCard } from '@/features/crm/ui/quote-followup-card'
 import {
   useCrearOnboarding,
   useOnboardings,
@@ -108,8 +110,7 @@ export function QuoteAcceptancePanel({
   const acceptanceDescription = describirAceptacion(acceptance)
   const onboarding = onboardings.data?.find((item) => item.oportunidadId === opportunity.id)
   const tracking = rec(details['seguimientoCliente'])
-  const trackingTask = rec(tracking['tarea'])
-  const taskId = typeof trackingTask['tareaId'] === 'string' ? trackingTask['tareaId'] : undefined
+  const taskId = tareaSeguimientoVigente(opportunity.detalles)?.tareaId
   const followupTask = useTareaPorId(firmId, taskId)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [documentOpen, setDocumentOpen] = useState(false)
@@ -471,6 +472,16 @@ export function QuoteAcceptancePanel({
         </CardContent>
       </Card>
 
+      {pending ? (
+        <QuoteFollowupCard
+          firmId={firmId}
+          opportunity={opportunity}
+          cliente={snapshot?.instantanea?.cliente.nombre ?? cliente.nombre}
+          referencia={text(quote['referencia']) || sent?.referencia || opportunity.referencia}
+          canEdit={canEdit}
+        />
+      ) : null}
+
       {acceptanceDescription ? (
         <ProformaCard
           proforma={proforma}
@@ -519,13 +530,14 @@ export function QuoteAcceptancePanel({
       {pending && opportunity.fase !== 'won' && opportunity.fase !== 'lost' ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Aceptación online segura</CardTitle>
+            <CardTitle className="text-base">Aceptación online</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p role="note" className="rounded-md border px-3 py-2 text-xs">
-              LEX no envía emails. Genera el enlace tokenizado, cópialo junto con el PDF y envíalo
-              por tu canal habitual. Solo el cliente puede aceptar desde ese enlace; abrirlo no
-              registra aceptación.
+              Envía el enlace y el PDF por tu canal habitual. Para aceptar se solicitará un código
+              al correo registrado en el envío; acredita acceso al buzón, no la identidad. Los
+              enlaces anteriores a la verificación requieren uno nuevo. Abrirlo no registra
+              aceptación.
             </p>
             {newLink ? (
               <div className="space-y-2 rounded-md border p-3">

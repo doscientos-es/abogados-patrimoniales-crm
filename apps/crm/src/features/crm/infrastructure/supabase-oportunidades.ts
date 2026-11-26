@@ -33,6 +33,7 @@ const createInputSchema = z.object({
   area: z.string().trim().max(160).optional(),
   source: z.string().trim().max(160).optional(),
   description: z.string().trim().max(20_000).optional(),
+  assignedTo: z.string().uuid().nullable().optional(),
   details: z.unknown(),
 })
 
@@ -166,6 +167,7 @@ function toInsert(firmId: string, input: CrearOportunidadInput): OpportunityInse
     operational_status: 'Debemos trabajo',
     source: input.source ?? '',
     description: input.description ?? '',
+    assigned_to: input.assignedTo ?? null,
     details: asJson(input.details),
   }
 }

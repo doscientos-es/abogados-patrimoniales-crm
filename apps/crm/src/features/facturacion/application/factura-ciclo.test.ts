@@ -19,6 +19,7 @@ const factura = (overrides: Partial<FacturaPersistida> = {}): FacturaPersistida 
   asuntoReferencia: 'EXP-2026-0001',
   referencia: 'A-2026-000001',
   cliente: 'Cliente SL',
+  datosEmisor: null,
   concepto: 'Honorarios',
   moneda: 'EUR',
   serie: 'A',

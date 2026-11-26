@@ -429,6 +429,7 @@ function FichaOportunidadPage() {
           <QuoteSendPanel
             firmId={membership.data.firmId}
             opportunity={data}
+            nombrePila={contacto.data?.tipoPersona === 'Persona física' ? contacto.data.nombre : ''}
             cliente={{
               nombre: contactName(contacto.data),
               email: contacto.data?.email ?? '',

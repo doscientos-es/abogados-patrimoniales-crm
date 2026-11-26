@@ -2,7 +2,9 @@
 do $$
 declare
   acceptance_function oid := 'public.crm_public_quote_acceptance(text)'::regprocedure;
-  accept_function oid := 'public.crm_public_accept_quote(text, text, boolean, text)'::regprocedure;
+  old_accept_function oid := 'public.crm_public_accept_quote(text, text, boolean, text)'::regprocedure;
+  accept_function oid := 'public.crm_public_accept_quote_verified(text, text, boolean, text, text)'::regprocedure;
+  prepare_function oid := 'public.crm_prepare_quote_verification(text)'::regprocedure;
 begin
   if not (select relrowsecurity from pg_class where oid = 'public.crm_quote_acceptance_links'::regclass) then
     raise exception 'Acceptance links must have row-level security enabled';
@@ -19,6 +21,17 @@ begin
   if not has_function_privilege('anon', acceptance_function, 'EXECUTE')
     or not has_function_privilege('anon', accept_function, 'EXECUTE') then
     raise exception 'The public token-scoped RPCs must be executable by anonymous callers';
+  end if;
+  if has_function_privilege('anon', old_accept_function, 'EXECUTE')
+    or has_function_privilege('authenticated', old_accept_function, 'EXECUTE')
+    or has_function_privilege('anon', prepare_function, 'EXECUTE')
+    or has_function_privilege('authenticated', prepare_function, 'EXECUTE')
+    or not has_function_privilege('service_role', prepare_function, 'EXECUTE') then
+    raise exception 'Verification must not be bypassable or expose codes to public callers';
+  end if;
+  if has_table_privilege('anon', 'public.crm_quote_acceptance_verification', 'SELECT')
+    or has_table_privilege('authenticated', 'public.crm_quote_acceptance_verification', 'SELECT') then
+    raise exception 'Verification secrets must not be accessible directly';
   end if;
   if not (select prosecdef from pg_proc where oid = acceptance_function)
     or not (select prosecdef from pg_proc where oid = accept_function) then

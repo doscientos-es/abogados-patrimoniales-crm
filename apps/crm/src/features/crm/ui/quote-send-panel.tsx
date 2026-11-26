@@ -43,6 +43,10 @@ import {
   type CopiaVersion,
   type Envio,
 } from '@/features/crm/application/quote-editor'
+import {
+  nombrePilaParaPlantilla,
+  resolverVariablesPlantilla,
+} from '@/features/crm/application/quote-email-template'
 import { guardarSeguimientoTrasEnvio } from '@/features/crm/application/quote-followup-save'
 import { documentoHtml, imprimir, type Cliente } from '@/features/crm/ui/quote-document'
 import { CrearTareaEnvioBox } from '@/features/crm/ui/quote-send-task'
@@ -53,7 +57,6 @@ import { errorMessage } from '@/shared/lib/error-message'
 type Rec = Record<string, unknown>
 const rec = (value: unknown): Rec =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Rec) : {}
-const text = (value: unknown) => (typeof value === 'string' ? value : '')
 const addDays = (days: number) => {
   const date = new Date()
   date.setDate(date.getDate() + days)
@@ -63,11 +66,13 @@ export function QuoteSendPanel({
   firmId,
   opportunity,
   cliente,
+  nombrePila,
   canEdit,
 }: {
   firmId: string
   opportunity: OportunidadPersistida
   cliente: Cliente
+  nombrePila: string
   canEdit: boolean
 }) {
   const save = useActualizarDetallesOportunidad(firmId)
@@ -170,6 +175,9 @@ export function QuoteSendPanel({
               followup.assignedId,
             venceEn: venceA18(followup.date),
             ahora: new Date().toISOString(),
+            nombreAsignado: (id) =>
+              members.data?.find((member) => member.id === id)?.nombre ??
+              'Responsable no disponible',
             buscar: (marker) => buscarTareaRevisionAbierta(firmId, opportunity.id, marker),
             crear: (input) => createTask.mutateAsync(input),
           }),
@@ -396,6 +404,11 @@ export function QuoteSendPanel({
           version={prepared}
           firmName={prepared.instantanea?.despacho ?? firmName}
           cliente={prepared.instantanea?.cliente ?? cliente}
+          nombrePila={nombrePilaParaPlantilla(
+            nombrePila,
+            cliente.nombre,
+            prepared.instantanea?.cliente.nombre ?? cliente.nombre,
+          )}
           templates={templates.data ?? []}
           userId={userId}
           memberNames={new Map((members.data ?? []).map((member) => [member.id, member.nombre]))}
@@ -417,10 +430,11 @@ export function QuoteSendPanel({
   )
 }
 
-function SendDialog({
+export function SendDialog({
   version,
   firmName,
   cliente,
+  nombrePila,
   templates,
   userId,
   memberNames,
@@ -440,6 +454,7 @@ function SendDialog({
   }
   firmName: string
   cliente: Cliente
+  nombrePila: string
   templates: Array<{
     id: string
     name: string
@@ -464,6 +479,7 @@ function SendDialog({
     : defaultTemplate
   const vars: Record<string, string> = {
     nombre_cliente: cliente.nombre,
+    nombre_pila: nombrePila,
     nombre_despacho: firmName,
     asunto: version.asunto,
     referencia_presupuesto: `${version.referencia} (v${version.version})`,
@@ -471,11 +487,7 @@ function SendDialog({
     fecha: new Date().toLocaleDateString('es-ES'),
     responsable: userId ? (memberNames.get(userId) ?? '') : '',
   }
-  /** Unknown or missing variables resolve to empty text: nothing is invented. */
-  const resolve = (value: string) =>
-    value
-      .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, key: string) => vars[key]?.trim() ?? '')
-      .replace(/[ \t]+([,.:;])/g, '$1')
+  const resolve = (value: string) => resolverVariablesPlantilla(value, vars)
   const [templateId, setTemplateId] = useState(borrador?.plantilla?.id ?? initial?.id ?? '')
   const [recipient, setRecipient] = useState(borrador?.destinatario ?? cliente.email)
   const [subject, setSubject] = useState(
@@ -533,6 +545,14 @@ function SendDialog({
           {templates.length === 0 ? (
             <p className="text-muted-foreground text-xs">
               No hay plantillas configuradas; puedes redactar el email aquí.
+            </p>
+          ) : null}
+          {!nombrePila &&
+          usedTemplate &&
+          /\{\{\s*nombre_pila\s*\}\}/.test(`${usedTemplate.subject} ${usedTemplate.body}`) ? (
+            <p role="note" className="text-muted-foreground text-xs">
+              No hay un nombre de pila disponible para este presupuesto. Revisa el saludo antes de
+              enviar.
             </p>
           ) : null}
         </div>

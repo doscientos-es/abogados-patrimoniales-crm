@@ -47,6 +47,9 @@ const lineaVacia = (): LineaEditable => ({
 })
 
 export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }) {
+  const aviso = factura.datosEmisor
+    ? 'Vista preliminar: faltan requisitos fiscales por validar. No la utilices como factura.'
+    : 'Vista preliminar: este documento no incluye los datos fiscales del emisor. No lo utilices como factura.'
   const printInvoice = () => {
     const printWindow = window.open('', '_blank', 'width=900,height=1000')
     if (!printWindow) {
@@ -64,9 +67,18 @@ export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }
     printWindow.document.write(
       `<!doctype html><html lang="es"><head><title>${escapeHtml(factura.referencia)}</title><style>body{font-family:Arial,sans-serif;color:#202833;max-width:820px;margin:48px auto;padding:0 24px}header{display:flex;justify-content:space-between;border-bottom:2px solid #202833;padding-bottom:24px;margin-bottom:32px}h1{font-size:28px;margin:0 0 8px}p{color:#667085;margin:4px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;margin-bottom:32px}.meta strong{display:block;color:#202833;margin-top:3px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:12px 8px}th{font-size:12px;text-transform:uppercase;color:#667085}.totals{margin:28px 0 0 auto;width:260px}.total{font-size:20px;font-weight:bold;border-top:2px solid #202833;padding-top:12px;margin-top:12px;display:flex;justify-content:space-between}@media print{body{margin:0}}</style></head><body><header><div><img src="${window.location.origin}/logo-lex.svg" alt="LEX" style="width:72px;height:72px;object-fit:contain"><p>Gestión jurídica patrimonial</p></div><div style="text-align:right"><h1>${escapeHtml(factura.referencia)}</h1><p>${escapeHtml(ESTADO_FACTURA_LABEL[factura.estado])}</p></div></header><div class="meta"><div>Cliente<strong>${escapeHtml(factura.cliente)}</strong></div><div>Expediente<strong>${escapeHtml(factura.asuntoReferencia)}</strong></div><div>Fecha<strong>${escapeHtml(formatDate(factura.emision))}</strong></div><div>Vencimiento<strong>${escapeHtml(factura.vencimiento ? formatDate(factura.vencimiento) : '—')}</strong></div></div><h2>${escapeHtml(factura.concepto)}</h2><table><thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div>Base imponible: ${formatCurrency(factura.baseImponible, factura.moneda)}</div><div>IVA: ${formatCurrency(factura.cuotaIva, factura.moneda)}</div><div class="total"><span>Total</span><span>${formatCurrency(factura.importeTotal, factura.moneda)}</span></div></div></body></html>`,
     )
+    if (factura.datosEmisor) {
+      const issuer = printWindow.document.createElement('p')
+      issuer.textContent = [
+        factura.datosEmisor.legal_name,
+        `NIF: ${factura.datosEmisor.tax_id}`,
+        factura.datosEmisor.address,
+        factura.datosEmisor.professional_registration,
+      ].join(' · ')
+      printWindow.document.body.prepend(issuer)
+    }
     const warning = printWindow.document.createElement('p')
-    warning.textContent =
-      'Vista preliminar: este documento no incluye los datos fiscales del emisor. No lo utilices como factura.'
+    warning.textContent = aviso
     printWindow.document.body.prepend(warning)
     printWindow.document.close()
     printWindow.focus()
@@ -85,12 +97,20 @@ export function FacturaPreviewDialog({ factura }: { factura: FacturaPersistida }
       render={() => (
         <div className="space-y-5">
           <p role="alert" className="text-destructive text-sm">
-            Esta vista no incluye los datos fiscales del emisor. No la utilices como factura.
+            {aviso}
           </p>
           <div className="flex items-start justify-between border-b pb-4">
             <div>
               <img src="/logo-lex.svg" alt="LEX" className="h-14 w-14 object-contain" />
               <p className="text-muted-foreground mt-2 text-xs">Gestión jurídica patrimonial</p>
+              {factura.datosEmisor ? (
+                <div className="mt-2 text-sm">
+                  <p>{factura.datosEmisor.legal_name}</p>
+                  <p>NIF: {factura.datosEmisor.tax_id}</p>
+                  <p>{factura.datosEmisor.address}</p>
+                  <p>{factura.datosEmisor.professional_registration}</p>
+                </div>
+              ) : null}
             </div>
             <div className="text-right">
               <p className="font-serif text-2xl font-semibold">{factura.referencia}</p>

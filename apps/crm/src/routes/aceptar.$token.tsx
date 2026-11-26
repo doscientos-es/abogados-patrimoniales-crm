@@ -9,6 +9,7 @@ import { euros, type CopiaVersion } from '@/features/crm/application/quote-edito
 import { documentoHtml, imprimir } from '@/features/crm/ui/quote-document'
 import {
   confirmarAceptacionOnline,
+  solicitarCodigoAceptacion,
   verEnlaceAceptacion,
   type EstadoEnlaceAceptacion,
 } from '@/lib/quote-acceptance.functions'
@@ -33,15 +34,24 @@ const MENSAJES: Record<string, string> = {
     'Este presupuesto ha sido sustituido o ya no está pendiente de aceptación. Contacta con el despacho.',
   unavailable:
     'No podemos mostrar el presupuesto ahora. Inténtalo más tarde o contacta con el despacho.',
+  email_unavailable:
+    'Este enlace no permite verificar el correo. Pide al despacho un enlace nuevo.',
+  rate_limited:
+    'Has solicitado demasiados códigos o acabas de pedir uno. Espera antes de intentarlo de nuevo.',
+  code_invalid: 'El código no es correcto. Compruébalo e inténtalo de nuevo.',
+  code_expired: 'El código ha caducado o has agotado los intentos. Solicita uno nuevo.',
 }
 
-function AceptarPresupuestoPage() {
+export function AceptarPresupuestoPage() {
   const { token } = Route.useParams()
   const readLink = useServerFn(verEnlaceAceptacion)
   const accept = useServerFn(confirmarAceptacionOnline)
+  const requestCode = useServerFn(solicitarCodigoAceptacion)
   const [state, setState] = useState<EstadoEnlaceAceptacion | null>(null)
   const [name, setName] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [code, setCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
@@ -58,11 +68,34 @@ function AceptarPresupuestoPage() {
     setError('')
     setPending(true)
     try {
-      const result = await accept({ data: { token, nombre: name.trim(), acepto: true } })
+      const result = await accept({
+        data: { token, nombre: name.trim(), acepto: true, codigo: code },
+      })
       if (result.status === 'accepted') setState(await readLink({ data: { token } }))
       else setError(MENSAJES[result.status] ?? 'No se pudo registrar la aceptación.')
     } catch {
-      setError('Comprueba el nombre y la casilla de aceptación e inténtalo de nuevo.')
+      setError('Comprueba el nombre, el código y la casilla de aceptación e inténtalo de nuevo.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const sendCode = async () => {
+    if (pending) return
+    setError('')
+    setCodeSent(false)
+    setPending(true)
+    try {
+      const result = await requestCode({ data: { token } })
+      if (result.status === 'sent') {
+        setCode('')
+        setCodeSent(true)
+      } else if (result.status === 'accepted') setState(await readLink({ data: { token } }))
+      else if (result.status === 'unavailable')
+        setError('No se pudo enviar el código. Inténtalo más tarde o contacta con el despacho.')
+      else setError(MENSAJES[result.status] ?? 'No se pudo enviar el código.')
+    } catch {
+      setError('No se pudo enviar el código. Inténtalo más tarde o contacta con el despacho.')
     } finally {
       setPending(false)
     }
@@ -121,6 +154,35 @@ function AceptarPresupuestoPage() {
                     onChange={(event) => setName(event.target.value)}
                   />
                 </div>
+                <p className="text-sm">
+                  Solicita un código al correo registrado para el envío del presupuesto.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => void sendCode()}
+                >
+                  {codeSent ? 'Solicitar otro código' : 'Enviar código'}
+                </Button>
+                {codeSent ? (
+                  <p role="status" className="text-sm">
+                    Código solicitado. Revisa tu correo; caduca en 10 minutos.
+                  </p>
+                ) : null}
+                <div className="space-y-1">
+                  <Label htmlFor="acceptance-code">Código de verificación</Label>
+                  <Input
+                    id="acceptance-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.replace(/[^0-9]/g, '').slice(0, 6))
+                    }
+                  />
+                </div>
                 <label className="flex items-start gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -138,14 +200,15 @@ function AceptarPresupuestoPage() {
                 <Button
                   className="w-full"
                   size="lg"
-                  disabled={!confirmed || name.trim().length < 2 || pending}
+                  disabled={!confirmed || name.trim().length < 2 || code.length !== 6 || pending}
                   onClick={() => void submit()}
                 >
                   {pending ? 'Confirmando…' : 'Confirmar aceptación'}
                 </Button>
                 <p className="text-muted-foreground text-xs">
-                  Se registrarán fecha, hora, nombre y esta versión exacta como constancia de
-                  conformidad. No es una firma electrónica cualificada.
+                  Se registrarán fecha, hora, nombre, esta versión y la verificación del correo. El
+                  código acredita acceso al buzón, no la identidad. No es una firma electrónica
+                  cualificada.
                 </p>
               </div>
             )}

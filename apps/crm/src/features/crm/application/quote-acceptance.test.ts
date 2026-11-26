@@ -102,6 +102,7 @@ describe('aceptación y seguimiento del presupuesto', () => {
       asignadoNombre: 'Luis',
       venceEn: null,
       ahora: '2026-10-05',
+      nombreAsignado: () => 'Luis',
       buscar: async () => null,
       crear: createTask,
     })
@@ -109,7 +110,7 @@ describe('aceptación y seguimiento del presupuesto', () => {
     if (result) expect(tareaSeguimientoVigente(result.detalles)?.version).toBe(2)
     expect(createTask).toHaveBeenCalledOnce()
     const reused = await asegurarTareaSeguimiento({
-      detalles: sent,
+      detalles: { ...sent, seguimientoCliente: { estado: 'aplazado', historial: [] } },
       leadId: 'lead-1',
       referencia: 'PR-1',
       cliente: 'Ana',
@@ -117,10 +118,25 @@ describe('aceptación y seguimiento del presupuesto', () => {
       asignadoNombre: 'Luis',
       venceEn: null,
       ahora: 'x',
-      buscar: async () => ({ id: 'existing' }),
+      nombreAsignado: (id) => (id === 'u2' ? 'Ana' : 'Desconocido'),
+      buscar: async () => ({
+        id: 'existing',
+        asignadoId: 'u2',
+        venceEn: '2026-11-30',
+        creadaEn: '2026-10-02',
+      }),
       crear: createTask,
     })
     expect(reused?.tareaId).toBe('existing')
+    expect(reused && leerSeguimiento(reused.detalles)).toMatchObject({
+      estado: 'aplazado',
+      tarea: {
+        asignadoId: 'u2',
+        asignadoNombre: 'Ana',
+        venceEn: '2026-11-30',
+        creadaEn: '2026-10-02',
+      },
+    })
     expect(createTask).toHaveBeenCalledOnce()
   })
 

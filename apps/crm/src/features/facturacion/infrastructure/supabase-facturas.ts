@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { leerDatosEmisor } from '@/features/facturacion/application/factura-emisor'
 import type {
   CobroFactura,
   DescartarBorradorInput,
@@ -18,6 +19,14 @@ import {
 } from '@/shared/infrastructure/supabase'
 
 const CONFLICTO = 'Otra persona modificó la factura. Recarga antes de continuar.'
+const EMISOR_INCOMPLETO =
+  'Completa la razón social, el NIF, el domicilio y la colegiación del despacho en Configuración antes de emitir.'
+
+function errorEmision(error: { code?: string; message: string }) {
+  if (error.code === '40001') return new Error(CONFLICTO)
+  if (error.message === EMISOR_INCOMPLETO) return new Error(EMISOR_INCOMPLETO)
+  return error
+}
 
 function lineaFromRow(row: InvoiceLineRow): LineaFactura {
   return {
@@ -56,6 +65,7 @@ function facturaFromRow(
     asuntoReferencia: caseReferences.get(row.case_id) ?? 'Expediente no disponible',
     referencia: row.reference,
     cliente: row.recipient_name || 'Cliente pendiente',
+    datosEmisor: leerDatosEmisor(row.details),
     concepto: row.concept,
     moneda: row.currency,
     serie: row.series,
@@ -192,8 +202,7 @@ export function useEmitirFactura(firmId: string | undefined) {
       new_issued_on: input.emision,
       new_due_on: input.vencimiento,
     })
-    if (error?.code === '40001') throw new Error(CONFLICTO)
-    if (error) throw error
+    if (error) throw errorEmision(error)
   })
 }
 
@@ -229,8 +238,7 @@ export function useRectificarFactura(firmId: string | undefined) {
       target_expected_version: input.versionEsperada,
       rectification_reason: input.motivo,
     })
-    if (error?.code === '40001') throw new Error(CONFLICTO)
-    if (error) throw error
+    if (error) throw errorEmision(error)
   })
 }
 

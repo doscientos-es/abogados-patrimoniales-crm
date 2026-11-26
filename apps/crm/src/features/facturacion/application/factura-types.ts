@@ -28,6 +28,13 @@ export type CobroFactura = {
   referencia: string
 }
 
+export type DatosEmisorFactura = {
+  legal_name: string
+  tax_id: string
+  address: string
+  professional_registration: string
+}
+
 export type FacturaPersistida = {
   id: string
   contactoId: string
@@ -35,6 +42,7 @@ export type FacturaPersistida = {
   asuntoReferencia: string
   referencia: string
   cliente: string
+  datosEmisor: DatosEmisorFactura | null
   concepto: string
   moneda: string
   serie: string

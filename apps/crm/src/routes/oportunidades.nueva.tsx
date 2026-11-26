@@ -25,6 +25,7 @@ import {
   useAvanzarLeadPorHito,
   useCrearOportunidad,
   useLeadRoles,
+  useMiembrosDespacho,
   useTransicionarOportunidad,
 } from '@/features/crm'
 import {
@@ -64,12 +65,14 @@ export function NuevaOportunidadPage() {
   const membership = useActiveMembership(session.user?.id)
   const firmId = membership.data?.firmId
   const contacts = useContactos(firmId)
+  const members = useMiembrosDespacho(firmId)
   const createOpportunity = useCrearOportunidad(firmId)
   const transition = useTransicionarOportunidad(firmId)
   const avanzarHito = useAvanzarLeadPorHito(firmId)
   const [viability, setViability] = useState<ViabilidadInicial | ''>('')
   const [viabilityReason, setViabilityReason] = useState('')
   const [saving, setSaving] = useState(false)
+  const [assignedTo, setAssignedTo] = useState('')
   const [documents, setDocuments] = useState<string[]>([])
   const [contactId, setContactId] = useState('')
   const [contactSearch, setContactSearch] = useState('')
@@ -140,6 +143,13 @@ export function NuevaOportunidadPage() {
       toast.error('Selecciona un contacto e indica un título.')
       return
     }
+    if (
+      assignedTo &&
+      (members.isError || !members.data?.some((member) => member.id === assignedTo))
+    ) {
+      toast.error('No se pudo comprobar el responsable. Vuelve a seleccionarlo antes de guardar.')
+      return
+    }
     if (!viability) {
       toast.error('Indica la viabilidad inicial del Lead.')
       return
@@ -161,6 +171,7 @@ export function NuevaOportunidadPage() {
           ''
         ).slice(0, 160),
         description: formText(form, 'description'),
+        assignedTo: assignedTo || null,
         details: {
           rolContacto: { rol: formText(form, 'role') },
           urgencia: {
@@ -346,6 +357,33 @@ export function NuevaOportunidadPage() {
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field name="title" label="Título del Lead" maxLength={300} required />
+              <div className="space-y-1.5">
+                <Label htmlFor="lead-assignee">Responsable del Lead</Label>
+                <select
+                  id="lead-assignee"
+                  className={selectClassName}
+                  value={assignedTo}
+                  onChange={(event) => setAssignedTo(event.target.value)}
+                  disabled={members.isPending || members.isError}
+                >
+                  <option value="">Sin asignar</option>
+                  {(members.data ?? []).map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.nombre}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-muted-foreground text-xs">
+                  {members.isError
+                    ? 'No se pudieron cargar los responsables. Puedes asignarlo después desde la ficha.'
+                    : 'Opcional. No se asigna automáticamente a quien dirige la cita.'}
+                </p>
+                {members.isError && assignedTo ? (
+                  <Button type="button" variant="outline" onClick={() => setAssignedTo('')}>
+                    Quitar responsable seleccionado
+                  </Button>
+                ) : null}
+              </div>
               <div className="space-y-1.5">
                 <Field name="source" label="Origen del Lead" maxLength={160} />
                 <p className="text-muted-foreground text-xs">

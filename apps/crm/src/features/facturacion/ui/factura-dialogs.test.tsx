@@ -65,6 +65,7 @@ describe('FacturaPreviewDialog', () => {
       referencia: 'A-1',
       estado: 'issued',
       cliente: 'Ana',
+      datosEmisor: null,
       asuntoReferencia: 'EXP-1',
       emision: '2026-01-10',
       vencimiento: null,
@@ -85,6 +86,66 @@ describe('FacturaPreviewDialog', () => {
     expect(warning.textContent).toContain('no incluye los datos fiscales del emisor')
     expect(body.prepend).toHaveBeenCalledWith(warning)
     expect(printWindow.print).toHaveBeenCalledOnce()
+  })
+
+  it('muestra e imprime la copia del emisor como texto, sin retirar el aviso fiscal', () => {
+    const elements: Array<{ textContent: string }> = []
+    const printWindow = {
+      opener: window,
+      document: {
+        write: vi.fn(),
+        close: vi.fn(),
+        createElement: vi.fn(() => {
+          const element = { textContent: '' }
+          elements.push(element)
+          return element
+        }),
+        body: { prepend: vi.fn() },
+      },
+      focus: vi.fn(),
+      print: vi.fn(),
+    }
+    vi.spyOn(window, 'open').mockReturnValue(printWindow as unknown as Window)
+    const factura = {
+      id: 'invoice-1',
+      contactoId: 'contact-1',
+      asuntoId: 'case-1',
+      serie: 'A',
+      ejercicio: 2026,
+      numero: 1,
+      importeCobrado: 0,
+      importePendiente: 121,
+      tipo: 'standard',
+      rectificaFacturaId: null,
+      motivoAnulacion: '',
+      version: 1,
+      cobros: [],
+      referencia: 'A-1',
+      estado: 'issued',
+      cliente: 'Ana',
+      asuntoReferencia: 'EXP-1',
+      emision: '2026-01-10',
+      vencimiento: null,
+      concepto: 'Servicio',
+      moneda: 'EUR',
+      baseImponible: 100,
+      cuotaIva: 21,
+      importeTotal: 121,
+      lineas: [],
+      datosEmisor: {
+        legal_name: '<Despacho>',
+        tax_id: 'B12345678',
+        address: 'Bilbao',
+        professional_registration: 'Colegiado 1',
+      },
+    } satisfies FacturaPersistida
+    render(<FacturaPreviewDialog factura={factura} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Ver' }))
+    expect(screen.getByText('<Despacho>')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain('requisitos fiscales por validar')
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir / Guardar PDF' }))
+    expect(elements[0]?.textContent).toContain('<Despacho> · NIF: B12345678')
+    expect(elements[1]?.textContent).toContain('No la utilices como factura')
   })
 })
 

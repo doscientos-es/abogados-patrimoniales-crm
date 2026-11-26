@@ -108,25 +108,53 @@ export const verEnlaceAceptacion = createServerFn({ method: 'GET' })
     return { ...state, snapshot: snapshot.data } as EstadoEnlaceAceptacion
   })
 
+export const solicitarCodigoAceptacion = createServerFn({ method: 'POST' })
+  .inputValidator((value: { token: string }) => z.object({ token: tokenSchema }).parse(value))
+  .handler(async ({ data }) => {
+    const { data: result, error } = await publicSupabaseClient().functions.invoke(
+      'send-quote-verification-code',
+      { body: { token: data.token } },
+    )
+    if (error) return { status: 'unavailable' as const }
+    const parsed = z
+      .object({
+        status: z.enum([
+          'sent',
+          'invalid',
+          'expired',
+          'revoked',
+          'superseded',
+          'accepted',
+          'email_unavailable',
+          'rate_limited',
+          'unavailable',
+        ]),
+      })
+      .safeParse(result)
+    return parsed.success ? parsed.data : { status: 'unavailable' as const }
+  })
+
 export const confirmarAceptacionOnline = createServerFn({ method: 'POST' })
-  .inputValidator((value: { token: string; nombre: string; acepto: boolean }) =>
+  .inputValidator((value: { token: string; nombre: string; acepto: boolean; codigo: string }) =>
     z
       .object({
         token: tokenSchema,
         nombre: z.string().trim().min(2).max(160),
         acepto: z.literal(true),
+        codigo: z.string().regex(/^[0-9]{6}$/),
       })
       .parse(value),
   )
   .handler(async ({ data }) => {
     const userAgent = getRequestHeader('user-agent') ?? ''
     const { data: result, error } = await publicSupabaseClient().rpc(
-      'crm_public_accept_quote' as never,
+      'crm_public_accept_quote_verified' as never,
       {
         access_token: data.token,
         acceptor: data.nombre,
         confirmed: data.acepto,
         user_agent: userAgent.slice(0, 400),
+        verification_code: data.codigo,
       } as never,
     )
     if (error) return { status: 'unavailable' as const }
@@ -140,6 +168,9 @@ export const confirmarAceptacionOnline = createServerFn({ method: 'POST' })
           'superseded',
           'not_confirmed',
           'name_required',
+          'email_unavailable',
+          'code_invalid',
+          'code_expired',
         ]),
         already: z.boolean().optional(),
         acceptedAt: z.string().datetime({ offset: true }).optional(),

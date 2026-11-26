@@ -5,3 +5,7 @@ verify_jwt = false
 # Supabase Cron authenticates with a short-lived, single-use credential.
 [functions.google-calendar-sync]
 verify_jwt = false
+
+# Token-scoped public verification request; the function never returns the code.
+[functions.send-quote-verification-code]
+verify_jwt = false

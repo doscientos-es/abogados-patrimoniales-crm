@@ -32,6 +32,7 @@ import {
   type QuoteEmailTemplate,
   type QuoteService,
 } from '@/features/crm/application'
+import { VARIABLES_PRESUPUESTO } from '@/features/crm/application/quote-email-template'
 
 export type QuoteCatalogKind = 'services' | 'blocks' | 'templates'
 
@@ -370,7 +371,9 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
             <Dialog open onOpenChange={(open) => !open && setServiceDraft(null)}>
               <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{serviceDraft.id ? 'Editar servicio' : 'Nuevo servicio'}</DialogTitle>
+                  <DialogTitle>
+                    {serviceDraft.id ? 'Editar servicio' : 'Nuevo servicio'}
+                  </DialogTitle>
                   <DialogDescription>
                     Los cambios no modifican presupuestos ya guardados.
                   </DialogDescription>
@@ -710,6 +713,19 @@ export function QuoteCatalogAdmin({ kind }: { kind: QuoteCatalogKind }) {
                       }
                     />
                   </Field>
+                  <details className="text-muted-foreground text-xs">
+                    <summary>Variables disponibles</summary>
+                    <ul className="mt-2 space-y-1">
+                      {VARIABLES_PRESUPUESTO.map(([key, description]) => (
+                        <li key={key}>
+                          <code>{`{{${key}}}`}</code> — {description}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2">
+                      Si no consta el nombre de pila, queda vacío; revisa el saludo antes de enviar.
+                    </p>
+                  </details>
                   <div className="flex gap-4 text-sm">
                     <Check
                       label="Activa"

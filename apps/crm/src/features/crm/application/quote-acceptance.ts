@@ -147,7 +147,7 @@ export function conTareaSeguimiento(detalles: unknown, task: TareaSeguimiento): 
     seguimientoCliente: {
       historial: [],
       ...tracking,
-      estado: 'pendiente',
+      estado: isEstado(tracking['estado']) ? tracking['estado'] : 'pendiente',
       version: task.version,
       tarea: task,
     },
@@ -357,7 +357,13 @@ export async function asegurarTareaSeguimiento(input: {
   asignadoNombre: string
   venceEn: string | null
   ahora: string
-  buscar: (marker: string) => Promise<{ id: string } | null>
+  nombreAsignado: (id: string) => string
+  buscar: (marker: string) => Promise<{
+    id: string
+    asignadoId: string | null
+    venceEn: string | null
+    creadaEn: string
+  } | null>
   crear: (task: CrearTareaSeguimientoInput) => Promise<{ id: string } | null | undefined>
 }): Promise<{ detalles: Json; tareaId: string; creada: boolean } | null> {
   const version = versionEnviada(input.detalles)
@@ -389,10 +395,14 @@ export async function asegurarTareaSeguimiento(input: {
     detalles: conTareaSeguimiento(input.detalles, {
       tareaId: taskId,
       version,
-      asignadoId: input.asignadoId,
-      asignadoNombre: input.asignadoNombre,
-      venceEn: input.venceEn,
-      creadaEn: input.ahora,
+      asignadoId: existing ? (existing.asignadoId ?? '') : input.asignadoId,
+      asignadoNombre: existing
+        ? existing.asignadoId
+          ? input.nombreAsignado(existing.asignadoId)
+          : 'Sin asignar'
+        : input.asignadoNombre,
+      venceEn: existing ? existing.venceEn : input.venceEn,
+      creadaEn: existing ? existing.creadaEn : input.ahora,
     }),
   }
 }
