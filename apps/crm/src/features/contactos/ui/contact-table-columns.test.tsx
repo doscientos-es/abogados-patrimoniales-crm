@@ -13,11 +13,15 @@ it('aísla las preferencias cuando cambia el usuario sin desmontar la vista', ()
   const { result, rerender } = renderHook(({ id }) => useContactTableColumns(id), {
     initialProps: { id: 'user-1' },
   })
-  act(() => { result.current.toggle('source') })
+  act(() => {
+    result.current.toggle('source')
+  })
   expect(result.current.isVisible('source')).toBe(false)
   rerender({ id: 'user-2' })
   expect(result.current.isVisible('source')).toBe(true)
-  act(() => { result.current.toggle('status') })
+  act(() => {
+    result.current.toggle('status')
+  })
   rerender({ id: 'user-1' })
   expect(result.current.isVisible('source')).toBe(false)
   expect(result.current.isVisible('status')).toBe(true)
@@ -27,9 +31,13 @@ it('ignora valores corruptos y conserva la vista de sesión si falla el almacena
   window.localStorage.setItem('lex:contact-columns:user-1', '{invalid')
   const { result } = renderHook(() => useContactTableColumns('user-1'))
   expect(result.current.isVisible('source')).toBe(true)
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('blocked')
+  })
   let saved = true
-  act(() => { saved = result.current.toggle('source') })
+  act(() => {
+    saved = result.current.toggle('source')
+  })
   expect(saved).toBe(false)
   expect(result.current.isVisible('source')).toBe(false)
 })

@@ -94,7 +94,7 @@ const inputSchema = z.object({
     'Contraparte',
     'Proveedor',
   ]),
-  valores: z.record(z.string()),
+  valores: z.record(z.string(), z.string()),
 })
 
 export type NuevoContactoInput = z.infer<typeof inputSchema>

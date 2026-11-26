@@ -17,7 +17,9 @@ describe('guardar seguimiento tras el envío', () => {
     const error = { message: 'Permiso denegado' }
     const guardar = vi.fn()
     const result = await guardarSeguimientoTrasEnvio({
-      asegurar: async () => { throw error },
+      asegurar: async () => {
+        throw error
+      },
       guardar,
     })
     expect(result).toEqual({ estado: 'sin-tarea', error })
@@ -28,15 +30,18 @@ describe('guardar seguimiento tras el envío', () => {
     const error = { message: 'Conflicto de versión' }
     const result = await guardarSeguimientoTrasEnvio({
       asegurar: async () => ({ tareaId: 'task-1', detalles: {} }),
-      guardar: async () => { throw error },
+      guardar: async () => {
+        throw error
+      },
     })
     expect(result).toEqual({ estado: 'sin-vincular', tareaId: 'task-1', error })
   })
 
   it('no modifica los detalles si el seguimiento ya está vinculado', async () => {
     const guardar = vi.fn()
-    expect(await guardarSeguimientoTrasEnvio({ asegurar: async () => null, guardar }))
-      .toEqual({ estado: 'guardado' })
+    expect(await guardarSeguimientoTrasEnvio({ asegurar: async () => null, guardar })).toEqual({
+      estado: 'guardado',
+    })
     expect(guardar).not.toHaveBeenCalled()
   })
 })

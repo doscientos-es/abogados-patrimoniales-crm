@@ -10,7 +10,9 @@ it('conserva atributos y permite personalizar los estilos de la tabla', () => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col" className="text-right">Importe</TableHead>
+          <TableHead scope="col" className="text-right">
+            Importe
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

@@ -54,7 +54,12 @@ export function DialogFooter({
   className,
   ...props
 }: ComponentProps<typeof DoscientosDialogFooter>) {
-  return <DoscientosDialogFooter {...props} className={cn('bg-background sticky bottom-0 z-10', className)} />
+  return (
+    <DoscientosDialogFooter
+      {...props}
+      className={cn('bg-background sticky bottom-0 z-10', className)}
+    />
+  )
 }
 
 export function DialogTitle({ className, ...props }: ComponentProps<typeof DoscientosDialogTitle>) {

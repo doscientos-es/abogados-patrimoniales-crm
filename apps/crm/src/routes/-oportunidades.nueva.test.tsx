@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   search: { contactId: 'contact-1' },
   contactOrigin: 'Recomendación',
   membersError: false,
+  practiceAreas: ['SUCESIONES Y HERENCIAS'],
+  areasError: false,
+  areasPending: false,
+  areaRefetch: vi.fn(),
   createOpportunity: vi.fn(),
   createTask: vi.fn(),
   markNextAction: vi.fn(),
@@ -31,7 +35,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
 }))
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: ['SUCESIONES Y HERENCIAS'] }),
+  useQuery: () => ({
+    data: mocks.practiceAreas,
+    isError: mocks.areasError,
+    isPending: mocks.areasPending,
+    refetch: mocks.areaRefetch,
+  }),
 }))
 vi.mock('@/features/auth', () => ({
   useActiveMembership: () => ({ data: { firmId: 'firm-1' }, isPending: false }),
@@ -86,6 +95,10 @@ afterEach(() => {
   mocks.search = { contactId: 'contact-1' }
   mocks.contactOrigin = 'Recomendación'
   mocks.membersError = false
+  mocks.practiceAreas = ['SUCESIONES Y HERENCIAS']
+  mocks.areasError = false
+  mocks.areasPending = false
+  mocks.areaRefetch.mockReset()
 })
 
 describe('NuevaOportunidadPage', () => {
@@ -126,7 +139,7 @@ describe('NuevaOportunidadPage', () => {
     expect((screen.getByRole('button', { name: 'Crear Lead' }) as HTMLButtonElement).disabled).toBe(
       false,
     )
-    expect(screen.getByLabelText('Origen del Lead')).toBeTruthy()
+    expect(screen.queryByLabelText('Origen del Lead')).toBeNull()
     expect(screen.queryByLabelText('Otras personas o entidades relacionadas')).toBeNull()
   })
 
@@ -175,21 +188,43 @@ describe('NuevaOportunidadPage', () => {
     expect(mocks.createOpportunity.mock.calls[0]?.[0].source).toBe('A'.repeat(160))
   })
 
-  it('permite indicar un origen diferente del contacto', async () => {
+  it('hereda el origen del contacto sin pedirlo de nuevo', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
     mocks.advanceLead.mockResolvedValue({})
     const { container } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
-    fireEvent.change(screen.getByLabelText('Origen del Lead'), { target: { value: 'Web' } })
+    expect(screen.queryByLabelText('Origen del Lead')).toBeNull()
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
     await waitFor(() =>
       expect(mocks.createOpportunity).toHaveBeenCalledWith(
-        expect.objectContaining({ source: 'Web' }),
+        expect.objectContaining({ source: 'Recomendación' }),
       ),
     )
+  })
+
+  it('explica un catálogo vacío sin inventar materias', () => {
+    mocks.practiceAreas = []
+    render(<NuevaOportunidadPage />)
+    expect((screen.getByLabelText('Materia') as HTMLSelectElement).disabled).toBe(true)
+    expect(screen.getByRole('option', { name: 'No hay materias activas' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Catálogos → Materias/ }).getAttribute('target')).toBe(
+      '_blank',
+    )
+  })
+
+  it('distingue una consulta pendiente de un error y permite reintentar', () => {
+    mocks.areasPending = true
+    const { rerender } = render(<NuevaOportunidadPage />)
+    expect(screen.getByRole('option', { name: 'Cargando materias…' })).toBeTruthy()
+    mocks.areasPending = false
+    mocks.areasError = true
+    rerender(<NuevaOportunidadPage />)
+    expect(screen.getByRole('option', { name: 'Materias no disponibles' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(mocks.areaRefetch).toHaveBeenCalledOnce()
   })
 
   it('guarda el responsable elegido y por defecto deja el lead sin asignar', async () => {

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import type { McpReadGateway } from '../../domain/contracts.ts'
 
 const resultSchema = z.discriminatedUnion('ok', [
-  z.object({ ok: z.literal(true), data: z.record(z.unknown()) }),
+  z.object({ ok: z.literal(true), data: z.record(z.string(), z.unknown()) }),
   z.object({
     ok: z.literal(false),
     error: z.enum(['unauthorized', 'forbidden', 'rate_limited', 'invalid_arguments']),

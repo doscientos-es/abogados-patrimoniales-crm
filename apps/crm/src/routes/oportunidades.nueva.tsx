@@ -166,9 +166,7 @@ export function NuevaOportunidadPage() {
         title,
         area: formText(form, 'area'),
         source: (
-          formText(form, 'source') ||
-          allContacts.find((item) => item.id === selectedContactId)?.origen?.trim() ||
-          ''
+          allContacts.find((item) => item.id === selectedContactId)?.origen?.trim() ?? ''
         ).slice(0, 160),
         description: formText(form, 'description'),
         assignedTo: assignedTo || null,
@@ -385,23 +383,55 @@ export function NuevaOportunidadPage() {
                 ) : null}
               </div>
               <div className="space-y-1.5">
-                <Field name="source" label="Origen del Lead" maxLength={160} />
-                <p className="text-muted-foreground text-xs">
-                  Si lo dejas vacío, se usará el origen del contacto cuando esté disponible.
-                </p>
-              </div>
-              <div className="space-y-1.5">
                 <Label htmlFor="lead-area">Materia</Label>
-                <select id="lead-area" name="area" className={selectClassName} defaultValue="">
-                  <option value="">Selecciona una materia…</option>
+                <select
+                  id="lead-area"
+                  name="area"
+                  className={selectClassName}
+                  defaultValue=""
+                  disabled={areas.isPending || areas.isError || !areas.data?.length}
+                  aria-describedby="lead-area-help"
+                >
+                  <option value="">
+                    {areas.isPending
+                      ? 'Cargando materias…'
+                      : areas.isError
+                        ? 'Materias no disponibles'
+                        : areas.data?.length
+                          ? 'Selecciona una materia…'
+                          : 'No hay materias activas'}
+                  </option>
                   {(areas.data ?? []).map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
                 </select>
-                <p className="text-muted-foreground text-xs">
-                  Puedes editar la lista en Configuración → Catálogos → Materias.
+                <p id="lead-area-help" className="text-muted-foreground text-xs">
+                  {areas.isError ? 'No se pudieron cargar las materias. ' : null}
+                  {areas.isError ? (
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => void areas.refetch()}
+                    >
+                      Reintentar
+                    </button>
+                  ) : (
+                    <>
+                      Gestiona la lista en{' '}
+                      <Link
+                        to="/configuracion"
+                        search={{ tab: 'catalogs' }}
+                        target="_blank"
+                        rel="noopener"
+                        className="underline"
+                      >
+                        Configuración → Catálogos → Materias
+                      </Link>
+                      .
+                    </>
+                  )}
                 </p>
               </div>
               <div className="space-y-1.5">

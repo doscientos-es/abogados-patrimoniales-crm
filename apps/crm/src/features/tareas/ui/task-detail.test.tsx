@@ -474,7 +474,8 @@ describe('TaskDetail', () => {
     expect(within(dialog).getByText('Pedir escritura')).toBeTruthy()
     expect(within(dialog).queryByText('Revisar correo')).toBeNull()
     fireEvent.change(within(dialog).getByLabelText('Resultado'), { target: { value: 'Terminado' } })
-    const form = dialog.querySelector('form')!
+    const form = dialog.querySelector('form')
+    if (!form) throw new Error('Falta el formulario de cierre')
     fireEvent.submit(form)
     expect(mocks.completeTask).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /He revisado las subtareas/ }))
@@ -513,7 +514,9 @@ describe('TaskDetail', () => {
       target: { value: 'create_next_task_with_subtasks' },
     })
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /He revisado las subtareas/ }))
-    fireEvent.submit(dialog.querySelector('form')!)
+    const form = dialog.querySelector('form')
+    if (!form) throw new Error('Falta el formulario de cierre')
+    fireEvent.submit(form)
     await expect.poll(() => mocks.completeTask.mock.calls.length).toBe(1)
     expect(mocks.completeTask).toHaveBeenCalledWith(
       expect.objectContaining({ continuidad: 'create_next_task_with_subtasks' }),

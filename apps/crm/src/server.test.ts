@@ -8,7 +8,11 @@ import server from './server'
 
 describe('cabeceras de seguridad', () => {
   it('permite consultar únicamente el servicio postal configurado sin abrir connect-src', async () => {
-    const response = await server.fetch(new Request('https://example.test/contactos/nuevo'), null, null)
+    const response = await server.fetch(
+      new Request('https://example.test/contactos/nuevo'),
+      null,
+      null,
+    )
     const policy = response.headers.get('content-security-policy') ?? ''
     const connectSrc = policy.split('; ').find((directive) => directive.startsWith('connect-src '))
     expect(connectSrc).toBe(

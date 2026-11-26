@@ -73,10 +73,7 @@ export function addLeadTreeParticipant(
   return withItems(details, [...items(details), item])
 }
 
-export function updateLeadTreeParticipant(
-  details: Json,
-  input: ActualizarParticipanteInput,
-): Json {
+export function updateLeadTreeParticipant(details: Json, input: ActualizarParticipanteInput): Json {
   return withItems(
     details,
     items(details).map((item) =>

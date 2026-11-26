@@ -53,7 +53,7 @@ const updateInputSchema = z.object({
 const updateDetailsInputSchema = z.object({
   id: z.string().uuid(),
   versionEsperada: z.number().int().positive(),
-  detalles: z.record(z.unknown()),
+  detalles: z.record(z.string(), z.unknown()),
   transicionContratacion: z
     .object({
       fase: z.enum([

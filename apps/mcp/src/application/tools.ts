@@ -24,7 +24,7 @@ function tool(
   name: string,
   description: string,
   scope: McpScope | null,
-  schema: z.ZodTypeAny,
+  schema: z.ZodType<Record<string, unknown>>,
   properties: Record<string, unknown>,
   required: string[] = [],
   readOnly = true,

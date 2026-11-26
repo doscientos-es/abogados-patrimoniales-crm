@@ -61,7 +61,9 @@ export function useContactTableColumns(userId: string | undefined) {
     hidden,
     isVisible: (column: ContactColumn) => !hidden.includes(column),
     toggle: (column: ContactColumn) =>
-      save(hidden.includes(column) ? hidden.filter((item) => item !== column) : [...hidden, column]),
+      save(
+        hidden.includes(column) ? hidden.filter((item) => item !== column) : [...hidden, column],
+      ),
     reset: () => save([]),
   }
 }

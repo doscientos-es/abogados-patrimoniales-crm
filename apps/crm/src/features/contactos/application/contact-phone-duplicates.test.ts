@@ -8,7 +8,9 @@ describe('findContactPhoneDuplicates', () => {
     { id: '2', name: 'Luis', phone: null, alternatePhone: null },
   ]
   it('matches both numbers despite Spanish prefixes and formatting', () => {
-    expect(findContactPhoneDuplicates(contacts, ['0034 600123456', '911123456']).map((c) => c.id)).toEqual(['1'])
+    expect(
+      findContactPhoneDuplicates(contacts, ['0034 600123456', '911123456']).map((c) => c.id),
+    ).toEqual(['1'])
     expect(findContactPhoneDuplicates(contacts, ['', ''])).toEqual([])
     expect(findContactPhoneDuplicates(contacts, ['600123457'])).toEqual([])
   })

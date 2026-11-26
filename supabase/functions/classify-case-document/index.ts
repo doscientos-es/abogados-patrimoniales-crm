@@ -9,10 +9,31 @@ const corsHeaders = {
 const MAX_BYTES = 15 * 1024 * 1024
 const MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4.1'
 const BUILTIN_TYPES = [
-  'DEMANDA', 'CONTESTACIÓN', 'ESCRITO', 'RECURSO', 'SENTENCIA', 'AUTO', 'DECRETO', 'PROVIDENCIA',
-  'DILIGENCIA', 'REQUERIMIENTO', 'BUROFAX', 'CONTRATO', 'ESCRITURA', 'TESTAMENTO', 'PODER',
-  'CERTIFICADO', 'NOTA SIMPLE', 'INFORME PERICIAL', 'FACTURA', 'JUSTIFICANTE', 'CORRESPONDENCIA',
-  'IDENTIFICACIÓN', 'HOJA DE ENCARGO', 'PRESUPUESTO', 'ACTA',
+  'DEMANDA',
+  'CONTESTACIÓN',
+  'ESCRITO',
+  'RECURSO',
+  'SENTENCIA',
+  'AUTO',
+  'DECRETO',
+  'PROVIDENCIA',
+  'DILIGENCIA',
+  'REQUERIMIENTO',
+  'BUROFAX',
+  'CONTRATO',
+  'ESCRITURA',
+  'TESTAMENTO',
+  'PODER',
+  'CERTIFICADO',
+  'NOTA SIMPLE',
+  'INFORME PERICIAL',
+  'FACTURA',
+  'JUSTIFICANTE',
+  'CORRESPONDENCIA',
+  'IDENTIFICACIÓN',
+  'HOJA DE ENCARGO',
+  'PRESUPUESTO',
+  'ACTA',
 ]
 
 function response(body: Record<string, unknown>, status = 200) {
@@ -42,12 +63,16 @@ function parseSuggestion(text: string) {
   return {
     typeName: typeof result['typeName'] === 'string' ? result['typeName'].slice(0, 60) : null,
     confidence: typeof result['confidence'] === 'number' ? result['confidence'] : 0,
-    description: typeof result['description'] === 'string' ? result['description'].slice(0, 120) : '',
-    documentDate: typeof result['documentDate'] === 'string' ? result['documentDate'].slice(0, 10) : null,
+    description:
+      typeof result['description'] === 'string' ? result['description'].slice(0, 120) : '',
+    documentDate:
+      typeof result['documentDate'] === 'string' ? result['documentDate'].slice(0, 10) : null,
     parties,
     court: typeof result['court'] === 'string' ? result['court'].slice(0, 200) : null,
     procedureNumber:
-      typeof result['procedureNumber'] === 'string' ? result['procedureNumber'].slice(0, 120) : null,
+      typeof result['procedureNumber'] === 'string'
+        ? result['procedureNumber'].slice(0, 120)
+        : null,
   }
 }
 
@@ -78,14 +103,20 @@ Deno.serve(async (req) => {
 
     const { data: document, error: documentError } = await caller
       .from('crm_case_documents')
-      .select('id,firm_id,case_id,logical_document_id,original_name,mime_type,size_bytes,storage_path,confidentiality,is_current,content_status,archived_at')
+      .select(
+        'id,firm_id,case_id,logical_document_id,original_name,mime_type,size_bytes,storage_path,confidentiality,is_current,content_status,archived_at',
+      )
       .eq('id', documentId)
       .maybeSingle()
-    if (documentError || !document) return response({ error: 'No tienes acceso a este documento.' }, 403)
+    if (documentError || !document)
+      return response({ error: 'No tienes acceso a este documento.' }, 403)
     if (!document.is_current || document.archived_at || document.content_status !== 'validated')
       return response({ error: 'Solo se pueden analizar documentos vigentes y validados.' }, 400)
     if (document.confidentiality === 'confidential' && body.allowConfidential !== true)
-      return response({ error: 'Confirma que quieres que LEXIA lea este documento confidencial.', needsConsent: true })
+      return response({
+        error: 'Confirma que quieres que LEXIA lea este documento confidencial.',
+        needsConsent: true,
+      })
     if (document.size_bytes > MAX_BYTES)
       return response({ error: 'El documento supera el máximo de 15 MB.' }, 413)
 
@@ -97,12 +128,19 @@ Deno.serve(async (req) => {
       'image/webp',
     ])
     if (!supportedMime.has(document.mime_type))
-      return response({ error: 'LEXIA admite PDF, DOCX y imágenes JPG, PNG o WEBP. Las hojas XLSX no están admitidas.' }, 415)
+      return response(
+        {
+          error:
+            'LEXIA admite PDF, DOCX y imágenes JPG, PNG o WEBP. Las hojas XLSX no están admitidas.',
+        },
+        415,
+      )
 
     const { data: file, error: downloadError } = await caller.storage
       .from('case-documents')
       .download(document.storage_path)
-    if (downloadError || !file) return response({ error: 'No se pudo leer el archivo con tu sesión.' }, 403)
+    if (downloadError || !file)
+      return response({ error: 'No se pudo leer el archivo con tu sesión.' }, 403)
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (!bytes.length || bytes.length > MAX_BYTES)
       return response({ error: 'El documento supera el máximo de 15 MB.' }, 413)
@@ -114,7 +152,10 @@ Deno.serve(async (req) => {
       .eq('active', true)
       .order('sort_order')
     const types = typeRows?.length
-      ? typeRows.map((type) => `${type.name}${type.suggestions?.length ? ` (descripciones habituales: ${type.suggestions.join('; ')})` : ''}`)
+      ? typeRows.map(
+          (type) =>
+            `${type.name}${type.suggestions?.length ? ` (descripciones habituales: ${type.suggestions.join('; ')})` : ''}`,
+        )
       : BUILTIN_TYPES
     const { data: ruleRows } = await caller
       .from('crm_document_naming_rules')
@@ -124,7 +165,11 @@ Deno.serve(async (req) => {
     const rules = ruleRows?.map((rule) => `- ${rule.rule}`).join('\n') ?? ''
     const base64 = toBase64(bytes)
     const inputDocument = document.mime_type.startsWith('image/')
-      ? { type: 'input_image', image_url: `data:${document.mime_type};base64,${base64}`, detail: 'high' }
+      ? {
+          type: 'input_image',
+          image_url: `data:${document.mime_type};base64,${base64}`,
+          detail: 'high',
+        }
       : {
           type: 'input_file',
           filename: document.original_name.slice(0, 160),
@@ -150,7 +195,10 @@ Deno.serve(async (req) => {
           {
             role: 'user',
             content: [
-              { type: 'input_text', text: `Analiza el documento «${document.original_name.slice(0, 160)}».` },
+              {
+                type: 'input_text',
+                text: `Analiza el documento «${document.original_name.slice(0, 160)}».`,
+              },
               inputDocument,
             ],
           },
@@ -160,10 +208,22 @@ Deno.serve(async (req) => {
     })
     if (!aiResponse.ok) {
       if (aiResponse.status === 429)
-        return response({ error: 'LEXIA está temporalmente saturada o ha alcanzado su límite. Inténtalo más tarde.' }, 429)
+        return response(
+          {
+            error:
+              'LEXIA está temporalmente saturada o ha alcanzado su límite. Inténtalo más tarde.',
+          },
+          429,
+        )
       if (aiResponse.status === 401 || aiResponse.status === 403)
-        return response({ error: 'LEXIA no está disponible por un problema de configuración.' }, 503)
-      return response({ error: 'LEXIA no ha podido analizar el documento. Inténtalo de nuevo.' }, 502)
+        return response(
+          { error: 'LEXIA no está disponible por un problema de configuración.' },
+          503,
+        )
+      return response(
+        { error: 'LEXIA no ha podido analizar el documento. Inténtalo de nuevo.' },
+        502,
+      )
     }
     const payload = (await aiResponse.json()) as {
       output?: { content?: { type?: string; text?: unknown }[] }[]
