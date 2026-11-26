@@ -24,6 +24,7 @@ import { Route as EjecucionesRouteImport } from './routes/ejecuciones'
 import { Route as FacturacionRouteImport } from './routes/facturacion'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as NotasRouteImport } from './routes/notas'
+import { Route as NotificacionesRouteImport } from './routes/notificaciones'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PlantillasPresupuestoRouteImport } from './routes/plantillas-presupuesto'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
@@ -116,6 +117,11 @@ const InformesRoute = InformesRouteImport.update({
 const NotasRoute = NotasRouteImport.update({
   id: '/notas',
   path: '/notas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacionesRoute = NotificacionesRouteImport.update({
+  id: '/notificaciones',
+  path: '/notificaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/onboarding': typeof OnboardingRoute
   '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/onboarding': typeof OnboardingRoute
   '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/facturacion': typeof FacturacionRoute
   '/informes': typeof InformesRoute
   '/notas': typeof NotasRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/onboarding': typeof OnboardingRoute
   '/plantillas-presupuesto': typeof PlantillasPresupuestoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/facturacion'
     | '/informes'
     | '/notas'
+    | '/notificaciones'
     | '/onboarding'
     | '/plantillas-presupuesto'
     | '/privacidad'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/facturacion'
     | '/informes'
     | '/notas'
+    | '/notificaciones'
     | '/onboarding'
     | '/plantillas-presupuesto'
     | '/privacidad'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/facturacion'
     | '/informes'
     | '/notas'
+    | '/notificaciones'
     | '/onboarding'
     | '/plantillas-presupuesto'
     | '/privacidad'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   FacturacionRoute: typeof FacturacionRoute
   InformesRoute: typeof InformesRoute
   NotasRoute: typeof NotasRoute
+  NotificacionesRoute: typeof NotificacionesRoute
   OnboardingRoute: typeof OnboardingRoute
   PlantillasPresupuestoRoute: typeof PlantillasPresupuestoRoute
   PrivacidadRoute: typeof PrivacidadRoute
@@ -563,6 +576,13 @@ declare module '@tanstack/react-router' {
       path: '/notas'
       fullPath: '/notas'
       preLoaderRoute: typeof NotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notificaciones': {
+      id: '/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/notificaciones'
+      preLoaderRoute: typeof NotificacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -721,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   FacturacionRoute: FacturacionRoute,
   InformesRoute: InformesRoute,
   NotasRoute: NotasRoute,
+  NotificacionesRoute: NotificacionesRoute,
   OnboardingRoute: OnboardingRoute,
   PlantillasPresupuestoRoute: PlantillasPresupuestoRoute,
   PrivacidadRoute: PrivacidadRoute,

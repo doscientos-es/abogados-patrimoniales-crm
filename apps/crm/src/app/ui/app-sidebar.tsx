@@ -209,7 +209,7 @@ export function AppSidebar({
             >
               <CalendarDays className="size-4" aria-hidden="true" />
             </Link>
-            <TaskNotificationsBell />
+            <TaskNotificationsBell onNavigate={onNavigate} />
           </div>
         </SidebarFooter>
       </div>

@@ -534,10 +534,10 @@ export function QuoteAcceptancePanel({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p role="note" className="rounded-md border px-3 py-2 text-xs">
-              Envía el enlace y el PDF por tu canal habitual. Para aceptar se solicitará un código
-              al correo registrado en el envío; acredita acceso al buzón, no la identidad. Los
-              enlaces anteriores a la verificación requieren uno nuevo. Abrirlo no registra
-              aceptación.
+              Envía el enlace y el PDF por tu canal habitual. Cuando la verificación esté activada,
+              se solicitará un código al correo registrado en el envío; acredita acceso al buzón, no
+              la identidad. Sin la migración, cualquiera con el enlace puede aceptar. Los enlaces
+              anteriores a la verificación requieren uno nuevo. Abrirlo no registra aceptación.
             </p>
             {newLink ? (
               <div className="space-y-2 rounded-md border p-3">

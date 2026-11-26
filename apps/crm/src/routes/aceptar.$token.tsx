@@ -42,7 +42,7 @@ const MENSAJES: Record<string, string> = {
   code_expired: 'El código ha caducado o has agotado los intentos. Solicita uno nuevo.',
 }
 
-function AceptarPresupuestoPage() {
+export function AceptarPresupuestoPage() {
   const { token } = Route.useParams()
   const readLink = useServerFn(verEnlaceAceptacion)
   const accept = useServerFn(confirmarAceptacionOnline)

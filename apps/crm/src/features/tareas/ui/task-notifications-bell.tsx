@@ -8,30 +8,18 @@ import { Button } from '@/components/ui/button'
 import { useAuthSession } from '@/features/auth'
 import {
   useMarcarNotificacionesLeidas,
+  useNotificacionesSinLeer,
   useNotificacionesTareas,
   type NotificationRow,
 } from '@/features/tareas'
+import {
+  NOTIFICATION_KIND_LABEL,
+  notificationDate,
+  notificationPreview,
+} from '@/features/tareas/ui/notification-format'
 import { TaskDetailDialog } from '@/features/tareas/ui/task-detail-dialog'
 
-const KIND_LABEL: Record<NotificationRow['kind'], string> = {
-  task_message: 'Mensaje',
-  task_assignment: 'Encargo',
-  task_reminder: 'Recordatorio',
-  task_unblocked: 'Cadena',
-}
-const REMINDER_PREFIX = 'Recordatorio al responsable: '
-
-const when = (value: string) =>
-  new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(
-    new Date(value),
-  )
-
-const preview = (notification: NotificationRow) =>
-  notification.body.startsWith(REMINDER_PREFIX)
-    ? notification.body.slice(REMINDER_PREFIX.length)
-    : notification.body
-
-export function TaskNotificationsBell() {
+export function TaskNotificationsBell({ onNavigate }: { onNavigate?: () => void }) {
   const session = useAuthSession()
   const [taskId, setTaskId] = useState<string | null>(null)
   const markRead = useMarcarNotificacionesLeidas()
@@ -40,26 +28,32 @@ export function TaskNotificationsBell() {
   const openTask = useCallback(
     (id: string) => {
       setTaskId(id)
-      markTaskRead(id)
+      markTaskRead(id, {
+        onError: () => toast.error('No se pudieron marcar los avisos como leídos.'),
+      })
     },
     [markTaskRead],
   )
 
   const onNueva = useCallback(
     (notification: NotificationRow) => {
-      toast(`${KIND_LABEL[notification.kind]} · ${notification.task_title || 'Tarea'}`, {
-        description: `${notification.actor_name ? `${notification.actor_name}: ` : ''}${preview(notification)}`,
-        action: notification.task_id
-          ? { label: 'Abrir', onClick: () => openTask(notification.task_id as string) }
-          : undefined,
-      })
+      toast(
+        `${NOTIFICATION_KIND_LABEL[notification.kind]} · ${notification.task_title || 'Tarea'}`,
+        {
+          description: `${notification.actor_name ? `${notification.actor_name}: ` : ''}${notificationPreview(notification)}`,
+          action: notification.task_id
+            ? { label: 'Abrir', onClick: () => openTask(notification.task_id as string) }
+            : undefined,
+        },
+      )
     },
     [openTask],
   )
 
   const notifications = useNotificacionesTareas(session.user?.id, onNueva)
+  const unreadCount = useNotificacionesSinLeer(session.user?.id)
   const items = notifications.data ?? []
-  const unread = items.filter((notification) => !notification.read_at).length
+  const unread = unreadCount.data ?? 0
 
   if (!session.user) return null
 
@@ -87,18 +81,31 @@ export function TaskNotificationsBell() {
       >
         <DropdownMenuItem
           textValue="Marcar todo como leído"
-          isDisabled={!unread || markRead.isPending}
-          onAction={() => markRead.mutate(null)}
+          isDisabled={unreadCount.data === 0 || markRead.isPending}
+          onAction={() =>
+            markRead.mutate(null, {
+              onError: () => toast.error('No se pudieron marcar los avisos como leídos.'),
+            })
+          }
         >
           <span className="text-xs font-medium">Marcar todo como leído</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {items.length ? (
+        {notifications.isPending ? (
+          <DropdownMenuItem textValue="Cargando avisos" isDisabled>
+            Cargando avisos…
+          </DropdownMenuItem>
+        ) : notifications.isError ? (
+          <DropdownMenuItem textValue="Error al cargar avisos" isDisabled>
+            No se pudieron cargar los avisos.
+          </DropdownMenuItem>
+        ) : items.length ? (
           items.map((notification) => (
             <DropdownMenuItem
               key={notification.id}
               textValue={`${notification.task_title} ${notification.body}`}
               className={notification.read_at ? '' : 'bg-primary/5'}
+              isDisabled={!notification.task_id}
               onAction={() => {
                 if (notification.task_id) openTask(notification.task_id)
               }}
@@ -106,10 +113,10 @@ export function TaskNotificationsBell() {
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="flex items-center gap-1.5">
                   <Badge variant={notification.kind === 'task_reminder' ? 'secondary' : 'outline'}>
-                    {KIND_LABEL[notification.kind]}
+                    {NOTIFICATION_KIND_LABEL[notification.kind]}
                   </Badge>
                   <span className="text-muted-foreground text-[11px]">
-                    {when(notification.created_at)}
+                    {notificationDate(notification.created_at)}
                   </span>
                 </span>
                 <span className="truncate text-xs font-medium">
@@ -117,7 +124,7 @@ export function TaskNotificationsBell() {
                 </span>
                 <span className="text-muted-foreground line-clamp-2 text-xs">
                   {notification.actor_name ? `${notification.actor_name}: ` : ''}
-                  {preview(notification)}
+                  {notificationPreview(notification)}
                 </span>
               </span>
             </DropdownMenuItem>
@@ -127,6 +134,14 @@ export function TaskNotificationsBell() {
             <span className="text-muted-foreground text-xs">No tienes avisos.</span>
           </DropdownMenuItem>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          href="/notificaciones"
+          textValue="Ver todas las notificaciones"
+          onAction={onNavigate}
+        >
+          <span className="text-primary text-xs font-medium">Ver todas las notificaciones</span>
+        </DropdownMenuItem>
       </DropdownMenu>
       <TaskDetailDialog
         taskId={taskId}

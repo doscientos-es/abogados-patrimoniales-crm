@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({ read: vi.fn(), send: vi.fn(), accept: vi.fn() 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (options: object) => ({
     ...options,
-    options,
     useParams: () => ({ token: 'a'.repeat(64) }),
   }),
 }))
@@ -20,9 +19,7 @@ vi.mock('@/features/crm/ui/quote-document', () => ({
   imprimir: vi.fn(),
 }))
 
-import { Route } from './aceptar.$token'
-
-const AceptarPresupuestoPage = Route.options.component!
+import { AceptarPresupuestoPage } from './aceptar.$token'
 
 afterEach(() => {
   cleanup()

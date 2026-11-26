@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { combinarTareasLead, leerTodasLasPaginas } from '@/features/tareas/application/task-scopes'
@@ -1229,7 +1229,7 @@ export function useNotificacionesTareas(
   onNueva?: (notificacion: NotificationRow) => void,
 ) {
   const queryClient = useQueryClient()
-  const queryKey = ['notificaciones', userId]
+  const queryKey = ['notificaciones', userId, 'recientes']
 
   useEffect(() => {
     const client = getSupabaseBrowserClient()
@@ -1263,16 +1263,63 @@ export function useNotificacionesTareas(
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const client = getSupabaseBrowserClient()
-      if (!client || !userId) return []
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
       const { data, error } = await client
         .from('crm_notifications')
         .select('*')
         .eq('recipient_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .order('id', { ascending: false })
+        .limit(5)
       if (error) throw error
       return (data ?? []) as NotificationRow[]
     },
+  })
+}
+
+export function useNotificacionesSinLeer(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['notificaciones', userId, 'sin-leer'],
+    enabled: Boolean(userId),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
+      const { count, error } = await client
+        .from('crm_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .is('read_at', null)
+      if (error) throw error
+      return count ?? 0
+    },
+  })
+}
+
+const NOTIFICATIONS_PAGE_SIZE = 30
+
+export function useHistorialNotificaciones(userId: string | undefined, unreadOnly: boolean) {
+  return useInfiniteQuery({
+    queryKey: ['notificaciones', userId, 'historial', unreadOnly],
+    enabled: Boolean(userId),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
+      let query = client.from('crm_notifications').select('*').eq('recipient_id', userId)
+      if (unreadOnly) query = query.is('read_at', null)
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(pageParam, pageParam + NOTIFICATIONS_PAGE_SIZE - 1)
+      if (error) throw error
+      return (data ?? []) as NotificationRow[]
+    },
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === NOTIFICATIONS_PAGE_SIZE
+        ? pages.length * NOTIFICATIONS_PAGE_SIZE
+        : undefined,
   })
 }
 
