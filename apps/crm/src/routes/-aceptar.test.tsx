@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ read: vi.fn(), send: vi.fn(), accept: vi.fn() 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (options: object) => ({
     ...options,
+    options,
     useParams: () => ({ token: 'a'.repeat(64) }),
   }),
 }))
@@ -19,7 +20,9 @@ vi.mock('@/features/crm/ui/quote-document', () => ({
   imprimir: vi.fn(),
 }))
 
-import { AceptarPresupuestoPage } from './aceptar.$token'
+import { Route } from './aceptar.$token'
+
+const AceptarPresupuestoPage = Route.options.component!
 
 afterEach(() => {
   cleanup()
@@ -69,5 +72,30 @@ describe('aceptación con código de correo', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('Espera')
     expect(screen.queryByRole('status')).toBeNull()
     expect(mocks.accept).not.toHaveBeenCalled()
+  })
+
+  it('muestra la confirmación únicamente después de que el servidor acepte', async () => {
+    mocks.read
+      .mockResolvedValueOnce({ status: 'valid', version: 1, reference: 'P-1', snapshot: {} })
+      .mockResolvedValueOnce({
+        status: 'accepted',
+        version: 1,
+        reference: 'P-1',
+        snapshot: {},
+        acceptorName: 'Ana',
+      })
+    mocks.accept.mockResolvedValue({ status: 'accepted' })
+    render(<AceptarPresupuestoPage />)
+    await screen.findByRole('button', { name: 'Enviar código' })
+    fireEvent.change(screen.getByLabelText('Nombre y apellidos de quien acepta'), {
+      target: { value: 'Ana' },
+    })
+    fireEvent.change(screen.getByLabelText('Código de verificación'), {
+      target: { value: '012345' },
+    })
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar aceptación' }))
+    expect((await screen.findByText(/Presupuesto aceptado por Ana/)).textContent).toContain('Ana')
+    expect(screen.queryByRole('button', { name: 'Confirmar aceptación' })).toBeNull()
   })
 })

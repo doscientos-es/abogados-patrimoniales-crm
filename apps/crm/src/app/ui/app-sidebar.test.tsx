@@ -57,6 +57,12 @@ it('sitúa búsqueda arriba y cuenta, calendario y avisos en el pie', () => {
   expect(sidebar.className).toContain('app-sidebar')
   const header = sidebar.querySelector('[data-sidebar="header"]') as HTMLElement
   const footer = sidebar.querySelector('[data-sidebar="footer"]') as HTMLElement
+  const brand = within(header).getByRole('link', { name: 'LEX.EUS · Inicio' })
+  expect(brand.querySelector('img')?.className).toContain('invert')
+  expect(within(header).queryByText('Gestión del despacho')).toBeNull()
+  const toggle = within(header).getByRole('button', { name: 'Contraer navegación' })
+  expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  expect(toggle.className).toContain('aria-expanded:bg-transparent')
   expect(within(header).getByRole('button', { name: 'Buscar' })).toBeTruthy()
   const navigation = within(sidebar).getByRole('navigation', { name: 'Secciones' })
   const contacts = within(navigation).getByRole('link', { name: 'Contactos' })

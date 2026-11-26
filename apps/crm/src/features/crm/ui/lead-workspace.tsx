@@ -2170,6 +2170,8 @@ function eventLabel(type: string, payload: Json) {
     return `Presupuesto validado por ${text(details['reviewer'])}`
   if (type === 'quote_sent_recorded')
     return `Presupuesto marcado como enviado · ${text(details['recipient'])}`
+  if (type === 'acceptance_email_verified')
+    return `Correo de aceptación verificado · ${text(details['email'])}`
   if (type === 'engagement_updated') return 'Seguimiento de contratación actualizado'
   if (type === 'qualification_updated') return 'Cualificación actualizada'
   if (type === 'created') return 'Lead creado'

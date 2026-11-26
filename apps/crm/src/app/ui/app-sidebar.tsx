@@ -123,17 +123,14 @@ export function AppSidebar({
               )}
               onClick={onNavigate}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
-                <img src="/logo-lex.svg" alt="" className="h-full w-full object-contain" />
-              </span>
+              <img
+                src="/logo-lex.svg"
+                alt=""
+                className="size-10 shrink-0 object-contain brightness-0 invert"
+              />
               {!collapsed ? (
-                <span className="min-w-0">
-                  <span className="text-sidebar-foreground block truncate font-serif text-lg leading-tight font-semibold tracking-wide">
-                    LEX.EUS
-                  </span>
-                  <span className="text-sidebar-foreground/65 mt-0.5 block truncate text-[11px] tracking-wide">
-                    Gestión del despacho
-                  </span>
+                <span className="text-sidebar-foreground min-w-0 truncate font-serif text-lg leading-tight font-semibold tracking-wide">
+                  LEX.EUS
                 </span>
               ) : null}
             </Link>
@@ -145,7 +142,7 @@ export function AppSidebar({
               title={toggleLabel}
               variant="ghost"
               size="icon"
-              className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground size-9 shrink-0 rounded-lg"
+              className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:text-sidebar-foreground/70 aria-expanded:hover:bg-sidebar-accent aria-expanded:hover:text-sidebar-accent-foreground size-9 shrink-0 rounded-lg aria-expanded:bg-transparent"
               onClick={onClose}
             >
               <PanelLeft className="size-4" aria-hidden="true" />

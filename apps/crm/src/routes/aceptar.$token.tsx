@@ -42,7 +42,7 @@ const MENSAJES: Record<string, string> = {
   code_expired: 'El código ha caducado o has agotado los intentos. Solicita uno nuevo.',
 }
 
-export function AceptarPresupuestoPage() {
+function AceptarPresupuestoPage() {
   const { token } = Route.useParams()
   const readLink = useServerFn(verEnlaceAceptacion)
   const accept = useServerFn(confirmarAceptacionOnline)
@@ -166,9 +166,9 @@ export function AceptarPresupuestoPage() {
                   {codeSent ? 'Solicitar otro código' : 'Enviar código'}
                 </Button>
                 {codeSent ? (
-                  <p role="status" className="text-sm">
+                  <output className="block text-sm">
                     Código solicitado. Revisa tu correo; caduca en 10 minutos.
-                  </p>
+                  </output>
                 ) : null}
                 <div className="space-y-1">
                   <Label htmlFor="acceptance-code">Código de verificación</Label>
