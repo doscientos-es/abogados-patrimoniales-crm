@@ -7,7 +7,10 @@ import type { OnboardingPersistido } from '@/features/onboarding/application/onb
 
 import { OnboardingReceipts } from './onboarding-receipts'
 
-const mocks = vi.hoisted(() => ({ apply: vi.fn().mockResolvedValue(undefined) }))
+const mocks = vi.hoisted(() => ({
+  apply: vi.fn().mockResolvedValue(undefined),
+  appliedPaymentId: null as string | null,
+}))
 vi.mock('@/features/facturacion/application', async (original) => ({
   ...(await original<typeof FacturacionApplication>()),
   useApplyOnboardingReceipt: () => ({ mutateAsync: mocks.apply, isPending: false }),
@@ -22,6 +25,19 @@ vi.mock('@/features/facturacion/application', async (original) => ({
         external_reference: '',
         invoice_payment_id: null,
       },
+      ...(mocks.appliedPaymentId
+        ? [
+            {
+              id: 'other',
+              onboarding_id: 'other',
+              amount: 50,
+              received_on: '2026-11-24',
+              payment_method: 'transfer',
+              external_reference: '',
+              invoice_payment_id: mocks.appliedPaymentId,
+            },
+          ]
+        : []),
     ],
     isLoading: false,
     isError: false,
@@ -31,6 +47,7 @@ vi.mock('@/features/facturacion/application', async (original) => ({
 afterEach(() => {
   cleanup()
   mocks.apply.mockClear()
+  mocks.appliedPaymentId = null
 })
 
 it('ofrece vincular un cobro existente sin crear uno nuevo', async () => {
@@ -109,6 +126,32 @@ it('advierte sobre confirmaciones antiguas sin recibo', () => {
   } as OnboardingPersistido
   render(<OnboardingReceipts firmId="firm" onboardings={[old]} invoices={[]} />)
   expect(screen.getByText(/ONB-OLD: confirmación anterior sin importe/)).toBeTruthy()
+})
+
+it('no ofrece un cobro ya vinculado a otra provisión', () => {
+  mocks.appliedPaymentId = 'payment'
+  const onboarding = {
+    id: 'onb',
+    referencia: 'ONB-1',
+    expedienteId: 'case',
+    contactoId: 'contact',
+  } as OnboardingPersistido
+  const invoice = {
+    id: 'invoice',
+    referencia: 'A-1',
+    asuntoId: 'case',
+    contactoId: 'contact',
+    moneda: 'EUR',
+    tipo: 'standard',
+    estado: 'paid',
+    importePendiente: 0,
+    cobros: [
+      { id: 'payment', importe: 50, fecha: '2026-11-24', metodo: 'transfer', referencia: 'TX' },
+    ],
+  } as unknown as FacturaPersistida
+  render(<OnboardingReceipts firmId="firm" onboardings={[onboarding]} invoices={[invoice]} />)
+  fireEvent.change(screen.getByLabelText('Factura para ONB-1'), { target: { value: 'invoice' } })
+  expect(screen.queryByRole('option', { name: /Vincular cobro existente/ })).toBeNull()
 })
 
 it('impide seleccionar facturas de otro expediente', () => {
