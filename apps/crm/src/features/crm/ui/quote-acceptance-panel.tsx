@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthSession } from '@/features/auth'
-import { useActualizarDetallesOportunidad } from '@/features/crm'
+import { useActualizarDetallesOportunidad, useRegistrarProformaEnviada } from '@/features/crm'
 import type { OportunidadPersistida } from '@/features/crm/application/opportunity-types'
 import { leerProforma, nuevaProforma, type Proforma } from '@/features/crm/application/proforma'
 import {
@@ -48,11 +48,7 @@ import {
 import { ProformaCard } from '@/features/crm/ui/proforma-card'
 import { documentoHtml, imprimir, type Cliente } from '@/features/crm/ui/quote-document'
 import { QuoteFollowupCard } from '@/features/crm/ui/quote-followup-card'
-import {
-  useCrearOnboarding,
-  useOnboardings,
-  useRegistrarEnvioProforma,
-} from '@/features/onboarding'
+import { useCrearOnboarding, useOnboardings } from '@/features/onboarding'
 import { useCompletarTarea, useTareaPorId } from '@/features/tareas'
 import { getSupabaseBrowserClient, type Json } from '@/shared/infrastructure/supabase'
 
@@ -92,7 +88,7 @@ export function QuoteAcceptancePanel({
   const save = useActualizarDetallesOportunidad(firmId)
   const onboardings = useOnboardings(firmId)
   const createOnboarding = useCrearOnboarding(firmId)
-  const registerProformaSent = useRegistrarEnvioProforma(firmId)
+  const registerProformaSent = useRegistrarProformaEnviada(firmId)
   const completeTask = useCompletarTarea(firmId)
   const details = rec(opportunity.detalles)
   const quote = rec(details['presupuesto'])
@@ -175,18 +171,20 @@ export function QuoteAcceptancePanel({
 
   const saveProforma = async (value: Proforma) => {
     try {
-      if (value.estado === 'enviada' && value.fechaEnvio && onboarding) {
-        await registerProformaSent.mutateAsync({
-          onboardingId: onboarding.id,
-          version: onboarding.version,
-          fecha: value.fechaEnvio,
-        })
-      }
-      const saved = await save.mutateAsync({
-        id: opportunity.id,
-        versionEsperada: opportunity.version,
-        detalles: { ...details, proforma: value } as unknown as Json,
-      })
+      const saved =
+        value.estado === 'enviada' && value.fechaEnvio && onboarding
+          ? await registerProformaSent.mutateAsync({
+              opportunityId: opportunity.id,
+              opportunityVersion: opportunity.version,
+              onboardingId: onboarding.id,
+              onboardingVersion: onboarding.version,
+              proforma: value as unknown as Json,
+            })
+          : await save.mutateAsync({
+              id: opportunity.id,
+              versionEsperada: opportunity.version,
+              detalles: { ...details, proforma: value } as unknown as Json,
+            })
       if (value.estado === 'enviada' && value.fechaEnvio && !onboarding)
         await startOnboarding(saved)
       toast.success(

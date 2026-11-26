@@ -386,6 +386,46 @@ export function useActualizarDetallesOportunidad(firmId: string | undefined) {
   })
 }
 
+export function useRegistrarProformaEnviada(firmId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      opportunityId: string
+      opportunityVersion: number
+      onboardingId: string
+      onboardingVersion: number
+      proforma: Json
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc(
+        'crm_save_sent_proforma' as never,
+        {
+          target_opportunity_id: input.opportunityId,
+          target_opportunity_version: input.opportunityVersion,
+          target_onboarding_id: input.onboardingId,
+          target_onboarding_version: input.onboardingVersion,
+          new_proforma: input.proforma,
+        } as never,
+      )
+      if (error?.code === '40001')
+        throw new Error('El Lead o el onboarding ha cambiado. Recarga antes de guardar.')
+      if (error) throw error
+      return oportunidadFromRow(data as unknown as OpportunityRow)
+    },
+    onSuccess: (saved) => {
+      queryClient.setQueryData(['crm', 'oportunidades', firmId, saved.id], saved)
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] })
+      void queryClient.invalidateQueries({
+        queryKey: ['crm', 'opportunity-events', firmId, saved.id],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['onboardings', firmId] })
+      void queryClient.invalidateQueries({ queryKey: ['onboarding-events', firmId] })
+    },
+  })
+}
+
 export function useRegistrarComunicacionOportunidad(firmId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({

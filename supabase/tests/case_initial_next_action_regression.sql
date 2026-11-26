@@ -1,4 +1,4 @@
--- LOCAL DISPOSABLE DATABASE ONLY, after applying migrations. All fixtures roll back.
+-- Run on an explicitly authorized test database after migrations; fixtures roll back.
 begin;
 
 do $$
@@ -14,7 +14,8 @@ begin
   insert into public.crm_firm_members(firm_id, user_id, role, status) values (firm, actor, 'owner', 'active');
   perform set_config('request.jwt.claims', jsonb_build_object('sub', actor, 'role', 'authenticated')::text, true);
   perform set_config('request.jwt.claim.sub', actor::text, true);
-  insert into public.crm_contacts(id, firm_id, nature, relationship, display_name) values (contact, firm, 'person', 'client', 'Test');
+  insert into public.crm_contacts(id, firm_id, reference, nature, relationship, display_name)
+    values (contact, firm, 'TEST-' || contact::text, 'person', 'client', 'Test');
 
   select * into with_action from public.crm_create_case(firm, contact, null, 'Test', '', '', 'extrajudicial', 'medium', actor, current_date, 'Solicitar certificado', '');
   if (select count(*) from public.crm_tasks where case_id = with_action.id and title = 'Solicitar certificado' and is_next_action and status = 'pending') <> 1 then

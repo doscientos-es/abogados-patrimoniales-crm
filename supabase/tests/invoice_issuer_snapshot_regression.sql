@@ -1,4 +1,4 @@
--- LOCAL DISPOSABLE DATABASE ONLY. Do not run against production. All fixtures roll back.
+-- Run on an explicitly authorized test database after migrations; fixtures roll back.
 begin;
 
 do $$
@@ -6,6 +6,7 @@ declare
   actor uuid := gen_random_uuid(); firm uuid := gen_random_uuid();
   contact uuid := gen_random_uuid(); case_id uuid := gen_random_uuid();
   draft public.crm_invoices; issued public.crm_invoices; credit public.crm_invoices;
+  payment_draft public.crm_invoices; payment_invoice public.crm_invoices;
   rejected boolean := false;
 begin
   insert into auth.users(id, email) values (actor, actor::text || '@test.invalid');
@@ -13,7 +14,8 @@ begin
   insert into public.crm_firm_members(firm_id, user_id, role, status) values (firm, actor, 'owner', 'active');
   perform set_config('request.jwt.claims', jsonb_build_object('sub', actor, 'role', 'authenticated')::text, true);
   perform set_config('request.jwt.claim.sub', actor::text, true);
-  insert into public.crm_contacts(id, firm_id, nature, relationship, display_name) values (contact, firm, 'person', 'client', 'Test');
+  insert into public.crm_contacts(id, firm_id, reference, nature, relationship, display_name)
+    values (contact, firm, 'TEST-' || contact::text, 'person', 'client', 'Test');
   insert into public.crm_cases(id, firm_id, primary_contact_id, case_number, title, nature)
     values (case_id, firm, contact, 1, 'Test', 'extrajudicial');
 
@@ -58,6 +60,15 @@ begin
   end;
   if not rejected then raise exception 'Issued snapshots must be immutable'; end if;
 
+  rejected := false;
+  begin
+    update public.crm_invoices set net_amount = net_amount + 1 where id = issued.id;
+  exception when others then
+    if sqlerrm not like 'An issued invoice cannot be modified%' then raise; end if;
+    rejected := true;
+  end;
+  if not rejected then raise exception 'Generated total must not make its source amount mutable'; end if;
+
   update public.crm_firm_settings set tax_id = '' where firm_id = firm;
   rejected := false;
   begin
@@ -77,6 +88,19 @@ begin
     'address', 'Original address', 'professional_registration', 'Registration'
   ) then
     raise exception 'Credit note must capture issuer at its own issuance';
+  end if;
+  if (select status from public.crm_invoices where id = issued.id) is distinct from 'cancelled' then
+    raise exception 'Rectification without payments must cancel the source invoice';
+  end if;
+
+  select * into payment_draft from public.crm_save_invoice_draft(
+    firm, null, 0, case_id, contact, 'Test', 'Payment', 'EUR', current_date, null,
+    '[{"description":"Service","quantity":1,"unit_price":100,"tax_rate":21}]'::jsonb
+  );
+  select * into payment_invoice from public.crm_issue_invoice(payment_draft.id, payment_draft.version, current_date, null);
+  perform public.crm_register_invoice_payment(payment_invoice.id, 121, current_date, 'transfer', 'TEST');
+  if (select status from public.crm_invoices where id = payment_invoice.id) is distinct from 'paid' then
+    raise exception 'A full payment must update an issued invoice';
   end if;
 end;
 $$;
