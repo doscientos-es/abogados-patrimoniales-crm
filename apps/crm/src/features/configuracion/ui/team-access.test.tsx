@@ -11,13 +11,22 @@ vi.mock('@/shared/infrastructure/supabase', () => ({
 
 import { TeamAccess } from './team-access'
 
-function renderTeamAccess(members: ComponentProps<typeof TeamAccess>['members'] = []) {
+function renderTeamAccess(
+  members: ComponentProps<typeof TeamAccess>['members'] = [],
+  actorRole: ComponentProps<typeof TeamAccess>['actorRole'] = 'owner',
+) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
   return render(
-    <TeamAccess actorRole="owner" firmId="firm-1" members={members} onChanged={vi.fn()} />,
+    <TeamAccess
+      actorRole={actorRole}
+      actorUserId="actor-1"
+      firmId="firm-1"
+      members={members}
+      onChanged={vi.fn()}
+    />,
     {
       wrapper,
     },
@@ -88,6 +97,7 @@ describe('TeamAccess', () => {
     render(
       <TeamAccess
         actorRole="owner"
+        actorUserId="actor-1"
         firmId="firm-1"
         members={[
           { userId: 'user-2', role: 'lawyer', status: 'disabled', displayName: 'María García' },
@@ -116,5 +126,28 @@ describe('TeamAccess', () => {
       }),
     )
     expect(onChanged).toHaveBeenCalledOnce()
+  })
+
+  it('lets an administrator remove another administrator but not an owner or themselves', async () => {
+    mocks.rpc.mockResolvedValue({ data: 0, error: null })
+    mocks.invoke.mockResolvedValue({ data: { releasedAssignments: 0 }, error: null })
+    renderTeamAccess(
+      [
+        { userId: 'actor-1', role: 'admin', status: 'active', displayName: 'Yo' },
+        { userId: 'owner-1', role: 'owner', status: 'disabled', displayName: 'Propietario' },
+        { userId: 'admin-2', role: 'admin', status: 'disabled', displayName: 'Otro admin' },
+      ],
+      'admin',
+    )
+    expect(screen.getAllByRole('button', { name: 'Eliminar' })).toHaveLength(1)
+    expect(screen.queryByRole('combobox', { name: 'Rol de Yo' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
+    await screen.findByRole('alertdialog', { name: 'Eliminar usuario definitivamente' })
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar usuario' }))
+    await waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith('delete-disabled-firm-member', {
+        body: { firmId: 'firm-1', userId: 'admin-2' },
+      }),
+    )
   })
 })
