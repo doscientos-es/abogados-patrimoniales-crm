@@ -405,6 +405,7 @@ export function FirmSettings({
       {tab === 'team' ? (
         <TeamAccess
           actorRole={membership.data?.role ?? 'paralegal'}
+          actorUserId={session.user?.id ?? ''}
           firmId={firmId ?? ''}
           members={configuration.data.members}
           onChanged={() => void invalidate()}

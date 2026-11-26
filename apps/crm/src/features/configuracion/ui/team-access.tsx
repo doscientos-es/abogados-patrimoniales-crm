@@ -40,11 +40,13 @@ const ASSIGNABLE_ROLES: MemberRole[] = ['lawyer', 'paralegal']
 export function TeamAccess({
   firmId,
   actorRole,
+  actorUserId,
   members,
   onChanged,
 }: {
   firmId: string
   actorRole: MemberRole
+  actorUserId: string
   members: Member[]
   onChanged: () => void
 }) {
@@ -128,7 +130,10 @@ export function TeamAccess({
           : 'Usuario eliminado definitivamente.',
       )
     },
-    onError: () => toast.error('No se ha podido eliminar el acceso. Revisa tus permisos.'),
+    onError: () =>
+      toast.error(
+        'No se ha podido completar la eliminación. Inténtalo de nuevo; si persiste, contacta con soporte.',
+      ),
   })
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -172,16 +177,17 @@ export function TeamAccess({
                 </Badge>
               </div>
             </div>
-            {canManage &&
-            member.role !== 'owner' &&
-            !(actorRole === 'admin' && member.role === 'admin') ? (
+            {canManage && member.role !== 'owner' && member.userId !== actorUserId ? (
               <div className="flex items-center gap-2">
                 <select
                   aria-label={`Rol de ${member.displayName}`}
                   className="border-input bg-background h-9 rounded-md border px-2 text-sm"
                   value={member.role}
                   disabled={
-                    changeMember.isPending || previewRemoval.isPending || removeMember.isPending
+                    changeMember.isPending ||
+                    previewRemoval.isPending ||
+                    removeMember.isPending ||
+                    (actorRole === 'admin' && member.role === 'admin')
                   }
                   onChange={(event) =>
                     changeMember.mutate({
@@ -204,7 +210,10 @@ export function TeamAccess({
                   size="sm"
                   variant="outline"
                   disabled={
-                    changeMember.isPending || previewRemoval.isPending || removeMember.isPending
+                    changeMember.isPending ||
+                    previewRemoval.isPending ||
+                    removeMember.isPending ||
+                    (actorRole === 'admin' && member.role === 'admin' && member.status !== 'active')
                   }
                   onClick={() =>
                     changeMember.mutate({
@@ -308,8 +317,8 @@ export function TeamAccess({
             <AlertDialogDescription>
               {memberToDelete
                 ? assignmentCount
-                  ? `“${memberToDelete.displayName}” tiene ${assignmentCount} registros asignados. Se quedarán sin responsable y se eliminarán definitivamente su cuenta y acceso.`
-                  : `Se eliminarán definitivamente la cuenta y el acceso de “${memberToDelete.displayName}”.`
+                  ? `“${memberToDelete.displayName}” tiene ${assignmentCount} registros asignados. Se quedarán sin responsable y se eliminarán su cuenta y acceso. Se conservará su historial de actividad.`
+                  : `Se eliminarán la cuenta y el acceso de “${memberToDelete.displayName}”. Se conservará su historial de actividad.`
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
