@@ -23,6 +23,7 @@ import { useActualizarEstadoNota, useGuardarNota, useNotasRemotas } from '@/feat
 import {
   useActualizarReunionEspecial,
   useCrearTarea,
+  useEtiquetasTarea,
   useTareasPersistentes,
   type TareaPersistida,
 } from '@/features/tareas'
@@ -47,6 +48,7 @@ export function FirstMeetingClosingDialog({
   const members = useMiembrosDespacho(firmId)
   const updateMeeting = useActualizarReunionEspecial(firmId)
   const createTask = useCrearTarea(firmId)
+  const taskLabels = useEtiquetasTarea(firmId)
   const saveNote = useGuardarNota(firmId)
   const updateNoteStatus = useActualizarEstadoNota(firmId)
   const [noteItems, setNoteItems] = useState<string[] | null>(null)
@@ -201,6 +203,7 @@ export function FirstMeetingClosingDialog({
             lineaId={caseId ? task.lineaId : null}
             contextLabel={reference}
             members={members.data ?? []}
+            labels={taskLabels.data ?? []}
             pending={createTask.isPending}
             trigger={
               <Button

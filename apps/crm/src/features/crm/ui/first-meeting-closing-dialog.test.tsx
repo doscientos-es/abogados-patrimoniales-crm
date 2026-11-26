@@ -43,6 +43,7 @@ vi.mock('@/features/notas', () => ({
 vi.mock('@/features/tareas', () => ({
   useTareasPersistentes: () => ({ data: [] }),
   useCrearTarea: () => ({ isPending: false, mutateAsync: mocks.create }),
+  useEtiquetasTarea: () => ({ data: [] }),
   useMarcarSiguienteAccion: () => ({ isPending: false }),
   useActualizarReunionEspecial: () => ({ mutateAsync: mocks.update }),
 }))
