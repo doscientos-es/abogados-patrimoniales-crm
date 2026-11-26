@@ -440,6 +440,9 @@ export function useCrearTarea(firmId: string | undefined) {
         void queryClient.invalidateQueries({
           queryKey: ['tareas', firmId, task.asignadoId, 'inbox'],
         })
+        if (task.reunion['specialType'] === 'meeting' && task.reunion['status'] === 'preparation') {
+          void queryClient.invalidateQueries({ queryKey: ['notificaciones', task.asignadoId] })
+        }
       }
     },
   })
