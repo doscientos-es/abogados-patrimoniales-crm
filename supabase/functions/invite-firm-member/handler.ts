@@ -11,7 +11,8 @@ const headers = {
   'Access-Control-Allow-Origin': '*',
   'Content-Type': 'application/json',
 }
-const reply = (error: string, status: number) => new Response(JSON.stringify({ error }), { status, headers })
+const reply = (error: string, status: number) =>
+  new Response(JSON.stringify({ error }), { status, headers })
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function handleInvitation(req: Request, deps: Dependencies): Promise<Response> {
@@ -21,21 +22,34 @@ export async function handleInvitation(req: Request, deps: Dependencies): Promis
   const token = /^Bearer\s+(\S+)$/i.exec(authorization)?.[1]
   if (!token) return reply('unauthorized', 401)
   try {
-    const body = (await req.json()) as Record<string, unknown> | null
+    const body = (await req.json()) as {
+      name?: unknown
+      email?: unknown
+      firmId?: unknown
+      role?: unknown
+    } | null
     const invitation = {
       name: typeof body?.name === 'string' ? body.name.trim() : '',
       email: typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '',
       firmId: typeof body?.firmId === 'string' ? body.firmId : '',
       role: typeof body?.role === 'string' ? body.role : '',
     }
-    if (invitation.name.length < 2 || invitation.name.length > 160 ||
-      !/^\S+@\S+\.\S+$/.test(invitation.email) || invitation.email.length > 254 ||
-      !uuidPattern.test(invitation.firmId) || !['admin', 'lawyer', 'paralegal'].includes(invitation.role))
+    if (
+      invitation.name.length < 2 ||
+      invitation.name.length > 160 ||
+      !/^\S+@\S+\.\S+$/.test(invitation.email) ||
+      invitation.email.length > 254 ||
+      !uuidPattern.test(invitation.firmId) ||
+      !['admin', 'lawyer', 'paralegal'].includes(invitation.role)
+    )
       return reply('invalid', 400)
     const actor = await deps.identify(authorization, token)
     if (!actor) return reply('unauthorized', 401)
     const role = await deps.role(invitation.firmId, actor)
-    if (!['owner', 'admin'].includes(role ?? '') || (invitation.role === 'admin' && role !== 'owner'))
+    if (
+      !['owner', 'admin'].includes(role ?? '') ||
+      (invitation.role === 'admin' && role !== 'owner')
+    )
       return reply('forbidden', 403)
     const userId = await deps.invite(invitation)
     if (!userId) return reply('email_failed', 502)

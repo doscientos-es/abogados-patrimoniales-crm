@@ -37,6 +37,19 @@ type Change = { userId: string; role: MemberRole; status: 'active' | 'disabled' 
 
 const ASSIGNABLE_ROLES: MemberRole[] = ['lawyer', 'paralegal']
 
+async function edgeErrorCode(error: unknown): Promise<string | null> {
+  if (!(error instanceof Error) || !('context' in error) || !(error.context instanceof Response))
+    return null
+  try {
+    const body: unknown = await error.context.json()
+    return body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+      ? body.error
+      : null
+  } catch {
+    return null
+  }
+}
+
 export function TeamAccess({
   firmId,
   actorRole,
@@ -64,7 +77,16 @@ export function TeamAccess({
       const { error } = await client.functions.invoke('invite-firm-member', {
         body: { name, email, firmId, role },
       })
-      if (error) throw error
+      if (error) {
+        const code = await edgeErrorCode(error)
+        throw new Error(
+          code === 'email_failed'
+            ? 'No se ha podido enviar el correo de invitación. Comprueba el correo o inténtalo más tarde.'
+            : code === 'membership_failed'
+              ? 'El correo se ha solicitado, pero no se ha podido crear el acceso. Contacta con soporte antes de usar el enlace.'
+              : 'No se ha podido enviar la invitación. Comprueba los datos y tus permisos.',
+        )
+      }
     },
     onSuccess: () => {
       setName('')
@@ -73,7 +95,7 @@ export function TeamAccess({
       onChanged()
       toast.success('Invitación enviada por correo.')
     },
-    onError: () => toast.error('No se ha podido crear el acceso. Revisa los datos y tus permisos.'),
+    onError: (error) => toast.error(error.message),
   })
   const changeMember = useMutation({
     mutationFn: async (change: Change) => {
@@ -117,7 +139,14 @@ export function TeamAccess({
       const { data, error } = await client.functions.invoke('delete-disabled-firm-member', {
         body: { firmId, userId: member.userId },
       })
-      if (error) throw error
+      if (error) {
+        const code = await edgeErrorCode(error)
+        throw new Error(
+          code === 'member_unavailable'
+            ? 'No se puede eliminar: comprueba que el usuario esté desactivado y no pertenezca a otro despacho.'
+            : 'No se ha podido completar la eliminación. Inténtalo de nuevo; si persiste, contacta con soporte.',
+        )
+      }
       return typeof data?.releasedAssignments === 'number' ? data.releasedAssignments : 0
     },
     onSuccess: (releasedAssignments) => {
@@ -130,10 +159,7 @@ export function TeamAccess({
           : 'Usuario eliminado definitivamente.',
       )
     },
-    onError: () =>
-      toast.error(
-        'No se ha podido completar la eliminación. Inténtalo de nuevo; si persiste, contacta con soporte.',
-      ),
+    onError: (error) => toast.error(error.message),
   })
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
