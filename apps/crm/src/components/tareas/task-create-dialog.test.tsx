@@ -120,6 +120,7 @@ describe('TaskCreateDialog', () => {
     renderDialog(
       <TaskCreateDialog
         oportunidadId="lead-1"
+        contextLabel="OP-1"
         members={[
           { id: 'a', nombre: 'Ana' },
           { id: 'b', nombre: 'Ana' },
@@ -130,10 +131,15 @@ describe('TaskCreateDialog', () => {
           meetingType: 'Primera cita',
           subject: 'Consulta',
           contactIds: ['contact-1'],
+          contactLabel: 'María',
         }}
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea' }))
+    const dialog = screen.getByRole('dialog', { name: 'Programar primera cita' })
+    expect(dialog.className).toContain('first-meeting-dialog')
+    expect(screen.getByText('OP-1 · María')).toBeTruthy()
+    expect(screen.queryByText(/Sólo el título es obligatorio/)).toBeNull()
     const [, lawyer] = screen.getAllByRole('radio', { name: 'Ana' })
     if (!lawyer) throw new Error('No aparece el segundo abogado con el mismo nombre.')
     fireEvent.click(lawyer)
@@ -141,7 +147,9 @@ describe('TaskCreateDialog', () => {
       target: { value: '2026-12-02' },
     })
     fireEvent.change(screen.getByLabelText('Hora *'), { target: { value: '10:30' } })
-    fireEvent.click(screen.getByRole('button', { name: 'CREAR PRIMERA CITA' }))
+    fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
+    fireEvent.change(screen.getByLabelText('Modalidad / lugar'), { target: { value: 'phone' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear primera cita' }))
     await waitFor(() =>
       expect(onCreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -149,9 +157,29 @@ describe('TaskCreateDialog', () => {
           detallesReunion: expect.objectContaining({
             abogadoPrimeraCita: 'Ana',
             abogadoPrimeraCitaId: 'b',
+            durationMinutes: 45,
+            mode: 'phone',
           }),
         }),
       ),
+    )
+  })
+
+  it('explica y bloquea la creación de la primera cita si no hay miembros disponibles', () => {
+    renderDialog(
+      <TaskCreateDialog
+        oportunidadId="lead-1"
+        members={[]}
+        pending={false}
+        onCreate={vi.fn()}
+        meetingPreset={{ meetingType: 'Primera cita', subject: 'Consulta', contactIds: [] }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea' }))
+    expect(screen.getByText('No hay miembros disponibles para atender la cita.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Crear primera cita' })).toHaveProperty(
+      'disabled',
+      true,
     )
   })
 })

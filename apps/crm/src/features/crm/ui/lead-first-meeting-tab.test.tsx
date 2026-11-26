@@ -417,7 +417,7 @@ describe('LeadFirstMeetingTab', () => {
     })
     fireEvent.change(screen.getByLabelText('Hora *'), { target: { value: '10:37' } })
     fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
-    fireEvent.click(screen.getByRole('button', { name: 'CREAR PRIMERA CITA' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Crear primera cita' }))
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce())
     expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({

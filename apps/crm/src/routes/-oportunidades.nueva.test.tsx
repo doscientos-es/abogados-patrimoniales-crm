@@ -300,7 +300,7 @@ describe('NuevaOportunidadPage', () => {
     expect((screen.getByLabelText('Hora *') as HTMLInputElement).step).toBe('60')
     fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
     fireEvent.change(screen.getByLabelText('Modalidad / lugar'), { target: { value: 'phone' } })
-    fireEvent.click(screen.getByRole('button', { name: 'CREAR PRIMERA CITA' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Crear primera cita' }))
 
     await waitFor(() => expect(mocks.createTask).toHaveBeenCalledOnce())
     expect(mocks.createTask).toHaveBeenCalledWith(

@@ -600,6 +600,11 @@
   }
 }
 
+/* Limita el formulario de primera cita también en pantallas muy anchas. */
+.first-meeting-dialog {
+  max-width: 34rem;
+}
+
 /* La búsqueda ocupa la pantalla en móvil y se adapta a su contenido en escritorio. */
 .global-search-dialog {
   position: fixed;

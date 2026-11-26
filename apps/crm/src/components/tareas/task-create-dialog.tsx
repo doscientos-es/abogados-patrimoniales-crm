@@ -246,14 +246,21 @@ export function TaskCreateDialog({
           )}
         </DialogTrigger>
       ) : null}
-      <DialogContent size={firstMeeting ? 'xl' : special === 'meeting' ? '2xl' : 'xl'}>
+      <DialogContent
+        size={firstMeeting ? 'lg' : special === 'meeting' ? '2xl' : 'xl'}
+        className={firstMeeting ? 'first-meeting-dialog' : undefined}
+      >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className={firstMeeting ? 'text-lg tracking-normal normal-case' : undefined}>
+            {firstMeeting && title === 'Nueva tarea' ? 'Programar primera cita' : title}
+          </DialogTitle>
           <DialogDescription>
             {description ??
-              (contextLabel
-                ? `Quedará vinculada ${contextLabel.startsWith('el ') ? `al ${contextLabel.slice(3)}` : `a ${contextLabel}`}.`
-                : 'Sólo el título es obligatorio; el resto puede completarse después.')}
+              (firstMeeting
+                ? 'Elige quién atenderá la cita y cuándo tendrá lugar.'
+                : contextLabel
+                  ? `Quedará vinculada ${contextLabel.startsWith('el ') ? `al ${contextLabel.slice(3)}` : `a ${contextLabel}`}.`
+                  : 'Sólo el título es obligatorio; el resto puede completarse después.')}
           </DialogDescription>
         </DialogHeader>
         {selectCase && !cases?.length ? (
@@ -433,11 +440,11 @@ export function TaskCreateDialog({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" disabled={pending || (firstMeeting && !members.length)}>
                 {pending
                   ? 'Creando…'
                   : firstMeeting
-                    ? 'CREAR PRIMERA CITA'
+                    ? 'Crear primera cita'
                     : special === 'meeting'
                       ? 'Crear reunión'
                       : 'Crear tarea'}
@@ -986,35 +993,40 @@ function FirstMeetingFields({
       {preset.contactIds.map((id) => (
         <input key={id} type="hidden" name="meetingContacts" value={id} />
       ))}
-      <div className="bg-muted/40 rounded-md border px-4 py-3">
-        <p className="text-sm font-bold tracking-wide uppercase">Primera cita</p>
-        <p className="text-muted-foreground text-sm">
-          {[contextLabel, preset.contactLabel].filter(Boolean).join(' · ')}
-        </p>
-      </div>
+      {contextLabel || preset.contactLabel ? (
+        <div className="bg-muted/50 text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm">
+          <CalendarClock className="size-4 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 break-words">
+            {[contextLabel, preset.contactLabel].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+      ) : null}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Abogado de la Primera Cita *</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-2 text-sm font-medium">Abogado de la primera cita *</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
           {members.map((member, index) => (
             <label
               key={member.id}
-              className="has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm"
+              className="has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-ring flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm has-[:focus-visible]:ring-2"
             >
               <input
                 type="radio"
                 name="firstMeetingLawyer"
                 value={member.id}
                 required={index === 0}
+                className="accent-primary shrink-0"
               />
-              {member.nombre}
+              <span className="break-words">{member.nombre}</span>
             </label>
           ))}
           {!members.length ? (
-            <p className="text-muted-foreground text-sm">No hay miembros disponibles.</p>
+            <p className="text-muted-foreground text-sm sm:col-span-2">
+              No hay miembros disponibles para atender la cita.
+            </p>
           ) : null}
         </div>
       </fieldset>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field name="firstMeetingDate" label="Fecha de la cita *" type="date" required />
         <div className="space-y-1.5">
           <Label htmlFor="task-create-firstMeetingTime">Hora *</Label>
@@ -1036,7 +1048,6 @@ function FirstMeetingFields({
           name="meetingMode"
           label="Modalidad / lugar"
           defaultValue="office_bilbao"
-          className="sm:col-span-3"
           options={[
             ['office_bilbao', 'Despacho Bilbao'],
             ['office_recalde', 'Despacho Rekalde'],
