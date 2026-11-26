@@ -399,13 +399,23 @@ export function TaskDetail({
     }
   }, [canWork, open, task])
 
-  if (tasks.isPending || members.isPending || cases.isPending || participants.isPending)
-    return (
-      <PendingPanel title="Cargando tarea" description="Recuperando el encargo y su historial…" />
-    )
-  if (tasks.isError || members.isError || cases.isError || participants.isError)
+  if (
+    tasks.isError ||
+    members.isError ||
+    cases.isError ||
+    (task?.expedienteId && participants.isError)
+  )
     return (
       <PendingPanel title="No se pudo cargar la tarea" description="Reintenta en unos instantes." />
+    )
+  if (
+    tasks.isPending ||
+    members.isPending ||
+    cases.isPending ||
+    (task?.expedienteId && participants.isPending)
+  )
+    return (
+      <PendingPanel title="Cargando tarea" description="Recuperando el encargo y su historial…" />
     )
   if (!task)
     return (

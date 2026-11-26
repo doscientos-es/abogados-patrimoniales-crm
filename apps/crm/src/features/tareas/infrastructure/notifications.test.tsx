@@ -83,6 +83,7 @@ it('pagina y filtra el historial en el servidor', async () => {
   expect(mocks.order).toHaveBeenCalledWith('created_at', { ascending: false })
   expect(mocks.order).toHaveBeenCalledWith('id', { ascending: false })
   expect(mocks.range).toHaveBeenCalledWith(0, 29)
+  expect(result.current.data?.pages.flat()).toHaveLength(30)
   await act(async () => {
     await result.current.fetchNextPage()
   })

@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   updateMeeting: vi.fn().mockResolvedValue(undefined),
   updateSpecialMeeting: vi.fn().mockResolvedValue(undefined),
   meetingDetails: {} as Record<string, unknown>,
+  caseId: 'case-1' as string | null,
+  participantsState: 'success' as 'success' | 'pending' | 'error',
   role: 'paralegal',
   createTask: vi.fn().mockResolvedValue({ id: 'task-new' }),
   convertSubtask: vi.fn().mockResolvedValue(undefined),
@@ -108,10 +110,13 @@ vi.mock('@/features/expedientes', () => ({
     isPending: false,
     isError: false,
   }),
-  useParticipantesPersistentes: () => ({
-    data: [{ id: 'participant-1', contactoId: 'contact-1', nombre: 'María Cliente' }],
-    isPending: false,
-    isError: false,
+  useParticipantesPersistentes: (_firmId: string, caseId: string) => ({
+    data:
+      caseId && mocks.participantsState === 'success'
+        ? [{ id: 'participant-1', contactoId: 'contact-1', nombre: 'María Cliente' }]
+        : undefined,
+    isPending: !caseId || mocks.participantsState === 'pending',
+    isError: Boolean(caseId) && mocks.participantsState === 'error',
   }),
 }))
 vi.mock('@/features/contactos', () => ({
@@ -140,8 +145,8 @@ vi.mock('@/features/tareas', () => ({
     data: [
       {
         id: 'task-1',
-        expedienteId: 'case-1',
-        oportunidadId: null,
+        expedienteId: mocks.caseId,
+        oportunidadId: mocks.caseId ? null : 'lead-1',
         tipo: 'Evento',
         titulo: 'Preparar borrador',
         descripcion: 'Revisar la documentación.',
@@ -229,9 +234,42 @@ afterEach(() => {
   mocks.waitingMode = false
   mocks.taskEvents = []
   mocks.role = 'paralegal'
+  mocks.caseId = 'case-1'
+  mocks.participantsState = 'success'
 })
 
 describe('TaskDetail', () => {
+  it('abre una reunión vinculada a un lead sin esperar participantes de expediente', () => {
+    mocks.caseId = null
+    mocks.meetingDetails = { specialType: 'meeting', status: 'preparation' }
+    render(<TaskDetail taskId="task-1" />)
+
+    expect(screen.queryByText('Cargando tarea')).toBeNull()
+    expect(screen.getByText('Tarea especial · Reunión')).toBeTruthy()
+  })
+
+  it('espera a los participantes cuando la reunión pertenece a un expediente', () => {
+    mocks.participantsState = 'pending'
+    const { rerender } = render(<TaskDetail taskId="task-1" />)
+    expect(screen.getByText('Cargando tarea')).toBeTruthy()
+
+    mocks.participantsState = 'success'
+    rerender(<TaskDetail taskId="task-1" />)
+    expect(screen.queryByText('Cargando tarea')).toBeNull()
+    expect(screen.getByText('Datos de la reunión')).toBeTruthy()
+  })
+
+  it('muestra un error si no se pueden cargar los participantes del expediente', () => {
+    mocks.participantsState = 'error'
+    render(<TaskDetail taskId="task-1" />)
+    expect(screen.getByText('No se pudo cargar la tarea')).toBeTruthy()
+  })
+
+  it('muestra que la tarea no existe sin esperar una consulta desactivada', () => {
+    render(<TaskDetail taskId="missing-task" />)
+    expect(screen.getByText('Tarea no encontrada')).toBeTruthy()
+  })
+
   it('shows who the task is waiting for and the waiting history', () => {
     mocks.waitingMode = true
     mocks.taskEvents = [
