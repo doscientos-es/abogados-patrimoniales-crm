@@ -12,7 +12,7 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -180,24 +180,27 @@ function saveStoredItem(firmId: string | undefined, item: PaletteItem) {
 function CommandRow({
   item,
   active,
+  activeRef,
   onSelect,
 }: {
   item: PaletteItem
   active: boolean
+  activeRef: RefObject<HTMLButtonElement | null>
   onSelect: () => void
 }) {
   const Icon = ICONS[item.entity_type] ?? Search
   return (
     <button
       type="button"
+      ref={active ? activeRef : undefined}
       className={cn(
-        'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
+        'focus-visible:ring-ring flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors outline-none focus-visible:ring-2 motion-reduce:transition-none',
         active ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/70',
       )}
       onClick={onSelect}
       onMouseMove={() => undefined}
     >
-      <span className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
+      <span className="bg-primary/5 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
@@ -260,6 +263,7 @@ export function GlobalSearch({
   const [term, setTerm] = useState('')
   const [debouncedTerm, setDebouncedTerm] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const activeRowRef = useRef<HTMLButtonElement>(null)
   const results = useGlobalSearch(firmId, debouncedTerm)
   const stored = loadStoredItems(firmId)
 
@@ -267,6 +271,10 @@ export function GlobalSearch({
     const timer = window.setTimeout(() => setDebouncedTerm(term), 180)
     return () => window.clearTimeout(timer)
   }, [term])
+
+  useEffect(() => {
+    if (open) activeRowRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [activeIndex, open])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -335,11 +343,14 @@ export function GlobalSearch({
   let rowIndex = -1
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed inset-0 flex h-dvh max-h-none w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 pt-[env(safe-area-inset-top)] md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-2xl md:rounded-xl md:pt-0 [&_[data-slot=dialog-close]]:top-[calc(env(safe-area-inset-top)+0.75rem)] md:[&_[data-slot=dialog-close]]:top-3">
+      <DialogContent
+        overlaySlot="global-search-overlay"
+        className="global-search-dialog flex flex-col gap-0 overflow-hidden p-0 shadow-2xl"
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>Buscar en LEX</DialogTitle>
         </DialogHeader>
-        <div className="flex shrink-0 items-center gap-3 border-b py-1 pr-14 pl-4">
+        <div className="flex shrink-0 items-center gap-3 border-b px-5 py-1 pr-16">
           <Search className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
           <Input
             autoFocus
@@ -358,7 +369,7 @@ export function GlobalSearch({
             ESC
           </kbd>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 md:max-h-[min(60vh,480px)]">
+        <div className="global-search-results min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {groups.map((group) => (
             <section key={group.label} className="py-1" aria-label={group.label}>
               <p className="text-muted-foreground px-2 py-1.5 text-[10px] font-semibold tracking-wider uppercase">
@@ -371,6 +382,7 @@ export function GlobalSearch({
                     key={`${item.entity_type}-${item.id}-${item.href}`}
                     item={item}
                     active={rowIndex === activeIndex}
+                    activeRef={activeRowRef}
                     onSelect={() => select(item)}
                   />
                 )
@@ -398,7 +410,7 @@ export function GlobalSearch({
             </p>
           ) : null}
         </div>
-        <footer className="text-muted-foreground hidden items-center justify-between border-t px-4 py-2 text-[11px] md:flex">
+        <footer className="global-search-footer text-muted-foreground shrink-0 items-center justify-between gap-4 border-t px-5 py-3 text-[11px]">
           <span>↑↓ para navegar · ↵ para abrir</span>
           <span>Los accesos se guardan solo en este navegador.</span>
         </footer>

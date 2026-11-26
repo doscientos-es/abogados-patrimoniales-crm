@@ -1,7 +1,7 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 
-import { combinarTareasLead, leerTodasLasPaginas } from "@/features/tareas/application/task-scopes";
+import { combinarTareasLead, leerTodasLasPaginas } from '@/features/tareas/application/task-scopes'
 import type {
   CompletarTareaInput,
   CrearTareaInput,
@@ -10,7 +10,7 @@ import type {
   TareaPersistida,
   TransicionEsperaInput,
   ValidarPlazoInput,
-} from "@/features/tareas/application/task-types";
+} from '@/features/tareas/application/task-types'
 import {
   type CaseCommunicationInsert,
   type CaseCommunicationRow,
@@ -27,66 +27,66 @@ import {
   type TaskDependencyRow,
   type TaskLabelRow,
   type TaskStatus,
-} from "@/shared/infrastructure/supabase";
+} from '@/shared/infrastructure/supabase'
 
-export type { NotificationRow, TaskInboxItemRow } from "@/shared/infrastructure/supabase";
+export type { NotificationRow, TaskInboxItemRow } from '@/shared/infrastructure/supabase'
 
 const typeFromDb = {
-  task: "Tarea",
-  reminder: "Recordatorio",
-  event: "Evento",
-  deadline: "Plazo",
-} as const;
+  task: 'Tarea',
+  reminder: 'Recordatorio',
+  event: 'Evento',
+  deadline: 'Plazo',
+} as const
 const typeToDb = {
-  Tarea: "task",
-  Recordatorio: "reminder",
-  Evento: "event",
-  Plazo: "deadline",
-} as const;
-const statusFromDb: Record<TaskStatus, TareaPersistida["estado"]> = {
-  pending: "Pendiente",
-  in_progress: "En curso",
-  waiting: "En espera",
-  completed: "Completada",
-  cancelled: "Cancelada",
-};
+  Tarea: 'task',
+  Recordatorio: 'reminder',
+  Evento: 'event',
+  Plazo: 'deadline',
+} as const
+const statusFromDb: Record<TaskStatus, TareaPersistida['estado']> = {
+  pending: 'Pendiente',
+  in_progress: 'En curso',
+  waiting: 'En espera',
+  completed: 'Completada',
+  cancelled: 'Cancelada',
+}
 const statusToDb = {
-  Pendiente: "pending",
-  "En curso": "in_progress",
-  "En espera": "waiting",
-  Completada: "completed",
-  Cancelada: "cancelled",
-} as const;
-const priorityFromDb = { low: "Baja", medium: "Media", high: "Alta" } as const;
-const priorityToDb = { Baja: "low", Media: "medium", Alta: "high" } as const;
+  Pendiente: 'pending',
+  'En curso': 'in_progress',
+  'En espera': 'waiting',
+  Completada: 'completed',
+  Cancelada: 'cancelled',
+} as const
+const priorityFromDb = { low: 'Baja', medium: 'Media', high: 'Alta' } as const
+const priorityToDb = { Baja: 'low', Media: 'medium', Alta: 'high' } as const
 const validationFromDb = {
-  not_required: "No aplica",
-  proposed: "Propuesto",
-  validated: "Validado",
-  rejected: "Rechazado",
-} as const;
+  not_required: 'No aplica',
+  proposed: 'Propuesto',
+  validated: 'Validado',
+  rejected: 'Rechazado',
+} as const
 
-function subtareasFromDetails(details: Json): TareaPersistida["subtareas"] {
-  if (!details || typeof details !== "object" || Array.isArray(details)) return [];
-  const subtasks = (details as Record<string, Json>)["subtasks"];
-  if (!Array.isArray(subtasks)) return [];
+function subtareasFromDetails(details: Json): TareaPersistida['subtareas'] {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return []
+  const subtasks = (details as Record<string, Json>)['subtasks']
+  if (!Array.isArray(subtasks)) return []
   return subtasks.flatMap((item) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const value = item as Record<string, Json>;
-    const id = value["id"];
-    const text = value["text"];
-    const done = value["done"];
-    const createdBy = value["created_by"];
-    const createdAt = value["created_at"];
-    const convertedTo = value["converted_to"];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const value = item as Record<string, Json>
+    const id = value['id']
+    const text = value['text']
+    const done = value['done']
+    const createdBy = value['created_by']
+    const createdAt = value['created_at']
+    const convertedTo = value['converted_to']
     if (
-      typeof id !== "string" ||
-      typeof text !== "string" ||
-      typeof done !== "boolean" ||
-      (createdBy !== null && typeof createdBy !== "string") ||
-      typeof createdAt !== "string"
+      typeof id !== 'string' ||
+      typeof text !== 'string' ||
+      typeof done !== 'boolean' ||
+      (createdBy !== null && typeof createdBy !== 'string') ||
+      typeof createdAt !== 'string'
     )
-      return [];
+      return []
     return [
       {
         id,
@@ -94,18 +94,18 @@ function subtareasFromDetails(details: Json): TareaPersistida["subtareas"] {
         hecha: done,
         creadaPorId: createdBy,
         creadaEn: createdAt,
-        convertidaEnId: typeof convertedTo === "string" ? convertedTo : null,
+        convertidaEnId: typeof convertedTo === 'string' ? convertedTo : null,
       },
-    ];
-  });
+    ]
+  })
 }
 
 function origenSubtareaFromDetails(details: Json): string | null {
-  if (!details || typeof details !== "object" || Array.isArray(details)) return null;
-  const origin = (details as Record<string, Json>)["origin_subtask"];
-  if (!origin || typeof origin !== "object" || Array.isArray(origin)) return null;
-  const taskId = origin["task_id"];
-  return typeof taskId === "string" ? taskId : null;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return null
+  const origin = (details as Record<string, Json>)['origin_subtask']
+  if (!origin || typeof origin !== 'object' || Array.isArray(origin)) return null
+  const taskId = origin['task_id']
+  return typeof taskId === 'string' ? taskId : null
 }
 
 const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
@@ -121,10 +121,10 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   venceEn: row.due_at,
   recordarEn: row.reminder_at,
   clasePlazo:
-    row.deadline_class === "judicial"
-      ? "Judicial"
-      : row.deadline_class === "extrajudicial"
-        ? "Extrajudicial"
+    row.deadline_class === 'judicial'
+      ? 'Judicial'
+      : row.deadline_class === 'extrajudicial'
+        ? 'Extrajudicial'
         : null,
   validacion: validationFromDb[row.validation_status],
   fuentePlazo: row.deadline_source,
@@ -139,7 +139,7 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   revisarEn: row.waiting_until,
   detalleEspera: row.waiting_detail,
   resultadoCierre: row.completion_result,
-  relevancia: row.relevance ?? "normal",
+  relevancia: row.relevance ?? 'normal',
   motivoCancelacion: row.cancellation_reason,
   abiertaEn: row.opened_at,
   abiertaPorId: row.opened_by,
@@ -149,7 +149,7 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   origenSubtareaDeId: origenSubtareaFromDetails(row.details),
   reunion:
     row.meeting_details &&
-    typeof row.meeting_details === "object" &&
+    typeof row.meeting_details === 'object' &&
     !Array.isArray(row.meeting_details)
       ? (row.meeting_details as Record<string, unknown>)
       : {},
@@ -158,16 +158,16 @@ const fromRow = (row: TaskRow, bloqueada = false): TareaPersistida => ({
   version: row.version,
   etiquetas: [],
   boardPosition: row.board_position,
-});
+})
 
-type LabelAssignment = { task_id: string; label_id: string };
-const TASK_ID_CHUNK_SIZE = 80;
+type LabelAssignment = { task_id: string; label_id: string }
+const TASK_ID_CHUNK_SIZE = 80
 
 function chunks<T>(items: T[], size: number): T[][] {
-  const result: T[][] = [];
+  const result: T[][] = []
   for (let index = 0; index < items.length; index += size)
-    result.push(items.slice(index, index + size));
-  return result;
+    result.push(items.slice(index, index + size))
+  return result
 }
 
 function labelsByTask(
@@ -176,212 +176,212 @@ function labelsByTask(
 ): Map<string, EtiquetaTarea[]> {
   const labelMap = new Map(
     labels.map((label) => [label.id, { id: label.id, nombre: label.name, color: label.color }]),
-  );
-  const result = new Map<string, EtiquetaTarea[]>();
+  )
+  const result = new Map<string, EtiquetaTarea[]>()
   for (const assignment of assignments) {
-    const label = labelMap.get(assignment.label_id);
-    if (label) result.set(assignment.task_id, [...(result.get(assignment.task_id) ?? []), label]);
+    const label = labelMap.get(assignment.label_id)
+    if (label) result.set(assignment.task_id, [...(result.get(assignment.task_id) ?? []), label])
   }
-  return result;
+  return result
 }
 
 async function cargarTareas(firmId: string, opportunityId?: string): Promise<TareaPersistida[]> {
-  const client = getSupabaseBrowserClient();
-  if (!client) return [];
+  const client = getSupabaseBrowserClient()
+  if (!client) return []
   const rows = await leerTodasLasPaginas<TaskRow>(async (from, to) => {
-    let query = client.from("crm_tasks").select("*").eq("firm_id", firmId);
-    if (opportunityId) query = query.eq("opportunity_id", opportunityId);
+    let query = client.from('crm_tasks').select('*').eq('firm_id', firmId)
+    if (opportunityId) query = query.eq('opportunity_id', opportunityId)
     const result = await query
-      .order("board_position", { ascending: true, nullsFirst: false })
-      .order("updated_at", { ascending: false })
-      .order("id", { ascending: true })
-      .range(from, to);
-    return { data: result.data as TaskRow[] | null, error: result.error };
-  });
-  const taskIds = rows.map((task) => task.id);
+      .order('board_position', { ascending: true, nullsFirst: false })
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, to)
+    return { data: result.data as TaskRow[] | null, error: result.error }
+  })
+  const taskIds = rows.map((task) => task.id)
   const assignmentPages = await Promise.all(
     chunks(taskIds, TASK_ID_CHUNK_SIZE).map(async (taskIdChunk) => {
       const result = await client
-        .from("crm_task_label_assignments")
-        .select("task_id,label_id")
-        .in("task_id", taskIdChunk);
-      if (result.error) throw result.error;
-      return (result.data ?? []) as LabelAssignment[];
+        .from('crm_task_label_assignments')
+        .select('task_id,label_id')
+        .in('task_id', taskIdChunk)
+      if (result.error) throw result.error
+      return (result.data ?? []) as LabelAssignment[]
     }),
-  );
+  )
   const [labels, dependencies] = await Promise.all([
     leerTodasLasPaginas<TaskLabelRow>(async (from, to) => {
       const result = await client
-        .from("crm_task_labels")
-        .select("id,name,color,firm_id,archived,created_at,updated_at")
-        .eq("firm_id", firmId)
-        .eq("archived", false)
-        .order("name")
-        .range(from, to);
-      return { data: result.data as TaskLabelRow[] | null, error: result.error };
+        .from('crm_task_labels')
+        .select('id,name,color,firm_id,archived,created_at,updated_at')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('name')
+        .range(from, to)
+      return { data: result.data as TaskLabelRow[] | null, error: result.error }
     }),
     leerTodasLasPaginas<{
-      predecessor_task_id: string;
-      successor_task_id: string;
+      predecessor_task_id: string
+      successor_task_id: string
     }>(async (from, to) => {
       const result = await client
-        .from("crm_task_dependencies")
-        .select("predecessor_task_id,successor_task_id")
-        .eq("firm_id", firmId)
-        .order("predecessor_task_id")
-        .order("successor_task_id")
-        .range(from, to);
-      return { data: result.data, error: result.error };
+        .from('crm_task_dependencies')
+        .select('predecessor_task_id,successor_task_id')
+        .eq('firm_id', firmId)
+        .order('predecessor_task_id')
+        .order('successor_task_id')
+        .range(from, to)
+      return { data: result.data, error: result.error }
     }),
-  ]);
-  const assignments = assignmentPages.flat();
-  const taskLabels = labelsByTask(labels, assignments);
-  const statusById = new Map(rows.map((task) => [task.id, task.status]));
+  ])
+  const assignments = assignmentPages.flat()
+  const taskLabels = labelsByTask(labels, assignments)
+  const statusById = new Map(rows.map((task) => [task.id, task.status]))
   const blockedTaskIds = new Set(
     dependencies
       .filter(
         (dependency) =>
           statusById.has(dependency.successor_task_id) &&
-          statusById.get(dependency.predecessor_task_id) !== "completed",
+          statusById.get(dependency.predecessor_task_id) !== 'completed',
       )
       .map((dependency) => dependency.successor_task_id),
-  );
+  )
   return rows.map((row) => ({
     ...fromRow(row, blockedTaskIds.has(row.id)),
     etiquetas: taskLabels.get(row.id) ?? [],
-  }));
+  }))
 }
 
 export function useTareasPersistentes(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId],
+    queryKey: ['tareas', firmId],
     enabled: Boolean(firmId),
     queryFn: async () => (firmId ? cargarTareas(firmId) : []),
-  });
+  })
 }
 
 export function useTareasLead(firmId: string | undefined, leadId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   const direct = useQuery({
-    queryKey: ["tareas", firmId, "lead", leadId],
+    queryKey: ['tareas', firmId, 'lead', leadId],
     enabled: Boolean(firmId && leadId),
     queryFn: async () => (firmId && leadId ? cargarTareas(firmId, leadId) : []),
-  });
+  })
   const global = useQuery({
-    queryKey: ["tareas", firmId],
+    queryKey: ['tareas', firmId],
     enabled: false,
-    queryFn: async () => queryClient.getQueryData<TareaPersistida[]>(["tareas", firmId]) ?? [],
-  });
+    queryFn: async () => queryClient.getQueryData<TareaPersistida[]>(['tareas', firmId]) ?? [],
+  })
   return {
     ...direct,
-    data: direct.data ? combinarTareasLead(direct.data, global.data, leadId ?? "") : undefined,
-  };
+    data: direct.data ? combinarTareasLead(direct.data, global.data, leadId ?? '') : undefined,
+  }
 }
 
 export function useTareaPorId(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, "byId", taskId],
+    queryKey: ['tareas', firmId, 'byId', taskId],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return null;
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return null
       const { data, error } = await client
-        .from("crm_tasks")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("id", taskId)
-        .maybeSingle();
-      if (error) throw error;
-      return data ? { ...fromRow(data as TaskRow), etiquetas: [] } : null;
+        .from('crm_tasks')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('id', taskId)
+        .maybeSingle()
+      if (error) throw error
+      return data ? { ...fromRow(data as TaskRow), etiquetas: [] } : null
     },
-  });
+  })
 }
 
 export function useEtiquetasTarea(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", "etiquetas", firmId],
+    queryKey: ['tareas', 'etiquetas', firmId],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_task_labels")
-        .select("id,name,color")
-        .eq("firm_id", firmId)
-        .eq("archived", false)
-        .order("name");
-      if (error) throw error;
+        .from('crm_task_labels')
+        .select('id,name,color')
+        .eq('firm_id', firmId)
+        .eq('archived', false)
+        .order('name')
+      if (error) throw error
       return (data ?? []).map((label) => ({
         id: label.id,
         nombre: label.name,
         color: label.color,
-      }));
+      }))
     },
-  });
+  })
 }
 
 export function useEtiquetarTareasEnBloque(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ taskIds, labelId }: { taskIds: string[]; labelId: string }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!taskIds.length || !labelId) throw new Error("Selecciona tareas y una etiqueta.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!taskIds.length || !labelId) throw new Error('Selecciona tareas y una etiqueta.')
       const { data: existing, error: readError } = await client
-        .from("crm_task_label_assignments")
-        .select("task_id,label_id")
-        .eq("label_id", labelId)
-        .in("task_id", taskIds);
-      if (readError) throw readError;
-      const alreadyAssigned = new Set((existing ?? []).map((item) => item.task_id));
+        .from('crm_task_label_assignments')
+        .select('task_id,label_id')
+        .eq('label_id', labelId)
+        .in('task_id', taskIds)
+      if (readError) throw readError
+      const alreadyAssigned = new Set((existing ?? []).map((item) => item.task_id))
       const toInsert = taskIds
         .filter((taskId) => !alreadyAssigned.has(taskId))
-        .map((taskId) => ({ task_id: taskId, label_id: labelId }));
+        .map((taskId) => ({ task_id: taskId, label_id: labelId }))
       if (toInsert.length) {
-        const { error } = await client.from("crm_task_label_assignments").insert(toInsert);
-        if (error) throw error;
+        const { error } = await client.from('crm_task_label_assignments').insert(toInsert)
+        if (error) throw error
       }
-      return toInsert.length;
+      return toInsert.length
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useReordenarTableroTareas(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       status,
       taskIds,
     }: {
-      status: "pending" | "in_progress";
-      taskIds: string[];
+      status: 'pending' | 'in_progress'
+      taskIds: string[]
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { error } = await client.rpc("crm_set_task_board_order", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_set_task_board_order', {
         target_firm_id: firmId,
         target_status: status,
         ordered_task_ids: taskIds,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useCrearTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: CrearTareaInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!input.titulo.trim()) throw new Error("El título es obligatorio.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.titulo.trim()) throw new Error('El título es obligatorio.')
       if (!input.expedienteId && !input.oportunidadId)
-        throw new Error("Vincula la tarea a un expediente u oportunidad.");
-      if (input.tipo === "Plazo" && (!input.venceEn || !input.clasePlazo))
-        throw new Error("El plazo requiere vencimiento y clase.");
-      const { data, error } = await client.rpc("crm_create_task", {
+        throw new Error('Vincula la tarea a un expediente u oportunidad.')
+      if (input.tipo === 'Plazo' && (!input.venceEn || !input.clasePlazo))
+        throw new Error('El plazo requiere vencimiento y clase.')
+      const { data, error } = await client.rpc('crm_create_task', {
         target_firm_id: firmId,
         target_case_id: input.expedienteId,
         target_opportunity_id: input.oportunidadId,
@@ -393,24 +393,24 @@ export function useCrearTarea(firmId: string | undefined) {
         new_reminder_at: input.recordarEn,
         new_assigned_to: input.asignadoId,
         new_deadline_class: input.clasePlazo
-          ? (input.clasePlazo.toLowerCase() as "judicial" | "extrajudicial")
+          ? (input.clasePlazo.toLowerCase() as 'judicial' | 'extrajudicial')
           : null,
         initial_message: input.mensajeInicial?.trim() || null,
         ...(input.detallesReunion ? { new_meeting_details: input.detallesReunion as Json } : {}),
         new_workstream_id: input.lineaId ?? null,
         new_critical: input.critico,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
       if (input.etiquetaIds?.length) {
         const { error: labelsError } = await client
-          .from("crm_task_label_assignments")
-          .insert(input.etiquetaIds.map((labelId) => ({ label_id: labelId, task_id: data.id })));
-        if (labelsError) throw labelsError;
+          .from('crm_task_label_assignments')
+          .insert(input.etiquetaIds.map((labelId) => ({ label_id: labelId, task_id: data.id })))
+        if (labelsError) throw labelsError
       }
       const { data: labels } = await client
-        .from("crm_task_labels")
-        .select("id,name,color")
-        .in("id", input.etiquetaIds ?? []);
+        .from('crm_task_labels')
+        .select('id,name,color')
+        .in('id', input.etiquetaIds ?? [])
       return {
         ...fromRow(data),
         etiquetas: ((labels ?? []) as TaskLabelRow[]).map((label) => ({
@@ -418,406 +418,406 @@ export function useCrearTarea(firmId: string | undefined) {
           nombre: label.name,
           color: label.color,
         })),
-      };
+      }
     },
     onSuccess: (task) => {
-      queryClient.setQueryData<TareaPersistida[]>(["tareas", firmId], (items) => [
+      queryClient.setQueryData<TareaPersistida[]>(['tareas', firmId], (items) => [
         task,
         ...(items ?? []),
-      ]);
-      queryClient.setQueryData(["tareas", firmId, "byId", task.id], task);
+      ])
+      queryClient.setQueryData(['tareas', firmId, 'byId', task.id], task)
       if (task.oportunidadId) {
         queryClient.setQueryData<TareaPersistida[]>(
-          ["tareas", firmId, "lead", task.oportunidadId],
+          ['tareas', firmId, 'lead', task.oportunidadId],
           (items) => (items ? [task, ...items.filter((item) => item.id !== task.id)] : items),
-        );
+        )
         void queryClient.invalidateQueries({
-          queryKey: ["tareas", firmId, "lead", task.oportunidadId],
-        });
+          queryKey: ['tareas', firmId, 'lead', task.oportunidadId],
+        })
       }
       if (task.asignadoId && task.asignadoId === task.creadaPorId) {
         void queryClient.invalidateQueries({
-          queryKey: ["tareas", firmId, task.asignadoId, "inbox"],
-        });
+          queryKey: ['tareas', firmId, task.asignadoId, 'inbox'],
+        })
       }
     },
-  });
+  })
 }
 
 export function useCambiarEstadoTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       task,
       estado,
     }: {
-      task: TareaPersistida;
-      estado: TareaPersistida["estado"];
+      task: TareaPersistida
+      estado: TareaPersistida['estado']
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (estado === "En espera" || estado === "Completada")
-        throw new Error("Usa la acción específica para poner en espera o completar.");
-      const { data, error } = await client.rpc("crm_set_task_status", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (estado === 'En espera' || estado === 'Completada')
+        throw new Error('Usa la acción específica para poner en espera o completar.')
+      const { data, error } = await client.rpc('crm_set_task_status', {
         target_task_id: task.id,
         target_expected_version: task.version,
         new_status: statusToDb[estado],
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useCancelarTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, motivo }: { task: TareaPersistida; motivo: string }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!motivo.trim()) throw new Error("Indica el motivo de la cancelación.");
-      const { data, error } = await client.rpc("crm_set_task_status", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!motivo.trim()) throw new Error('Indica el motivo de la cancelación.')
+      const { data, error } = await client.rpc('crm_set_task_status', {
         target_task_id: task.id,
         target_expected_version: task.version,
-        new_status: "cancelled",
+        new_status: 'cancelled',
         cancellation_text: motivo.trim(),
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useRechazarTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, motivo }: { task: TareaPersistida; motivo: string }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!motivo.trim()) throw new Error("Indica el motivo del rechazo.");
-      const { data, error } = await client.rpc("crm_reject_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!motivo.trim()) throw new Error('Indica el motivo del rechazo.')
+      const { data, error } = await client.rpc('crm_reject_task', {
         target_task_id: task.id,
         target_expected_version: task.version,
         reason: motivo.trim(),
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useAbrirTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (taskId: string) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_open_task", { target_task_id: taskId });
-      if (error) throw error;
-      return fromRow(data);
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_open_task', { target_task_id: taskId })
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function usePonerTareaEnEspera(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, motivo, revisarEn, detalle }: TransicionEsperaInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!motivo.trim() || !revisarEn) throw new Error("Indica el motivo y la fecha de revisión.");
-      const { data, error } = await client.rpc("crm_put_task_on_hold", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!motivo.trim() || !revisarEn) throw new Error('Indica el motivo y la fecha de revisión.')
+      const { data, error } = await client.rpc('crm_put_task_on_hold', {
         target_task_id: task.id,
         target_expected_version: task.version,
         reason: motivo.trim(),
         review_at: revisarEn,
         detail: detalle?.trim() || null,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useCompletarTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, resultado, continuidad, relevancia }: CompletarTareaInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!resultado.trim()) throw new Error("El resultado es obligatorio.");
-      const { data, error } = await client.rpc("crm_complete_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!resultado.trim()) throw new Error('El resultado es obligatorio.')
+      const { data, error } = await client.rpc('crm_complete_task', {
         target_task_id: task.id,
         target_expected_version: task.version,
         result_text: resultado.trim(),
         continuity_decision: continuidad ?? null,
-        task_relevance: relevancia ?? "normal",
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+        task_relevance: relevancia ?? 'normal',
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
     onSuccess: (_, { task, relevancia }) =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-        ...(relevancia && relevancia !== "normal"
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+        ...(relevancia && relevancia !== 'normal'
           ? [
               queryClient.invalidateQueries({
-                queryKey: ["expedientes", firmId, task.expedienteId],
+                queryKey: ['expedientes', firmId, task.expedienteId],
               }),
-              queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, "actuaciones"] }),
+              queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'actuaciones'] }),
               queryClient.invalidateQueries({
-                queryKey: ["expedientes", firmId, "actuaciones-recientes"],
+                queryKey: ['expedientes', firmId, 'actuaciones-recientes'],
               }),
             ]
           : []),
       ]).then(() => undefined),
-  });
+  })
 }
 
 export function useAnadirSubtareaTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, texto }: { task: TareaPersistida; texto: string }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!texto.trim()) throw new Error("Escribe el texto de la subtarea.");
-      const { data, error } = await client.rpc("crm_add_task_subtask", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!texto.trim()) throw new Error('Escribe el texto de la subtarea.')
+      const { data, error } = await client.rpc('crm_add_task_subtask', {
         target_task_id: task.id,
         target_expected_version: task.version,
         subtask_text: texto.trim(),
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useMarcarSubtareaTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       task,
       subtaskId,
       completed,
     }: {
-      task: TareaPersistida;
-      subtaskId: string;
-      completed: boolean;
+      task: TareaPersistida
+      subtaskId: string
+      completed: boolean
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_set_task_subtask_done", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_set_task_subtask_done', {
         target_task_id: task.id,
         target_expected_version: task.version,
         target_subtask_id: subtaskId,
         target_done: completed,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useConvertirSubtareaTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       task,
       subtaskId,
       convertedTaskId,
     }: {
-      task: TareaPersistida;
-      subtaskId: string;
-      convertedTaskId: string;
+      task: TareaPersistida
+      subtaskId: string
+      convertedTaskId: string
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_mark_task_subtask_converted", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_mark_task_subtask_converted', {
         target_task_id: task.id,
         target_subtask_id: subtaskId,
         converted_task_id: convertedTaskId,
-      });
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useMarcarSiguienteAccion(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, enabled }: { task: TareaPersistida; enabled: boolean }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_set_next_action", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_set_next_action', {
         target_task_id: task.id,
         target_expected_version: task.version,
         enabled,
-      });
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useMensajesTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "mensajes"],
+    queryKey: ['tareas', firmId, taskId, 'mensajes'],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data, error } = await client
-        .from("crm_task_messages")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("task_id", taskId)
-        .order("created_at");
-      if (error) throw error;
-      return (data ?? []) as TaskMessageRow[];
+        .from('crm_task_messages')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('task_id', taskId)
+        .order('created_at')
+      if (error) throw error
+      return (data ?? []) as TaskMessageRow[]
     },
-  });
+  })
 }
 
 export function useEvidenciasTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "evidencias"],
+    queryKey: ['tareas', firmId, taskId, 'evidencias'],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data, error } = await client
-        .from("crm_task_evidences")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("task_id", taskId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as TaskEvidenceRow[];
+        .from('crm_task_evidences')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as TaskEvidenceRow[]
     },
-  });
+  })
 }
 
 export function useAnadirEvidenciaTarea(firmId: string | undefined, taskId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ body, documentId }: { body: string; documentId?: string | null }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!body.trim() && !documentId) throw new Error("Añade una nota o selecciona un documento.");
-      const { data, error } = await client.rpc("crm_add_task_evidence", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!body.trim() && !documentId) throw new Error('Añade una nota o selecciona un documento.')
+      const { data, error } = await client.rpc('crm_add_task_evidence', {
         target_task_id: taskId,
         evidence_body: body.trim() || null,
         target_document_id: documentId ?? null,
-      });
-      if (error) throw error;
-      return data;
+      })
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, taskId, "evidencias"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, taskId, 'evidencias'] }),
+  })
 }
 
 export function useDependenciasTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "dependencias"],
+    queryKey: ['tareas', firmId, taskId, 'dependencias'],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data, error } = await client
-        .from("crm_task_dependencies")
-        .select("*")
-        .eq("firm_id", firmId)
-        .or(`predecessor_task_id.eq.${taskId},successor_task_id.eq.${taskId}`);
-      if (error) throw error;
-      return (data ?? []) as TaskDependencyRow[];
+        .from('crm_task_dependencies')
+        .select('*')
+        .eq('firm_id', firmId)
+        .or(`predecessor_task_id.eq.${taskId},successor_task_id.eq.${taskId}`)
+      if (error) throw error
+      return (data ?? []) as TaskDependencyRow[]
     },
-  });
+  })
 }
 
 export function useCrearDependenciaTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       predecessorId,
       successorId,
     }: {
-      predecessorId: string;
-      successorId: string;
+      predecessorId: string
+      successorId: string
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_create_task_dependency", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_create_task_dependency', {
         target_predecessor_id: predecessorId,
         target_successor_id: successorId,
-      });
-      if (error) throw error;
-      return data;
+      })
+      if (error) throw error
+      return data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useDependenciasDespacho(firmId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, "dependencias"],
+    queryKey: ['tareas', firmId, 'dependencias'],
     enabled: Boolean(firmId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) return []
       const { data, error } = await client
-        .from("crm_task_dependencies")
-        .select("*")
-        .eq("firm_id", firmId);
-      if (error) throw error;
-      return (data ?? []) as TaskDependencyRow[];
+        .from('crm_task_dependencies')
+        .select('*')
+        .eq('firm_id', firmId)
+      if (error) throw error
+      return (data ?? []) as TaskDependencyRow[]
     },
-  });
+  })
 }
 
 export type SiguienteTareaInput = {
-  task: TareaPersistida;
-  titulo: string;
-  descripcion: string;
-  prioridad: TareaPersistida["prioridad"];
-  asignadoId: string | null;
-  venceEn: string | null;
-  diasTrasAnterior: number | null;
-  horaLimite: string | null;
-};
+  task: TareaPersistida
+  titulo: string
+  descripcion: string
+  prioridad: TareaPersistida['prioridad']
+  asignadoId: string | null
+  venceEn: string | null
+  diasTrasAnterior: number | null
+  horaLimite: string | null
+}
 
 export function useAnadirSiguienteTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: SiguienteTareaInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!input.titulo.trim()) throw new Error("Indica el título de la siguiente tarea.");
-      const { data, error } = await client.rpc("crm_add_next_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!input.titulo.trim()) throw new Error('Indica el título de la siguiente tarea.')
+      const { data, error } = await client.rpc('crm_add_next_task', {
         target_task_id: input.task.id,
         new_title: input.titulo.trim(),
         new_description: input.descripcion,
@@ -826,168 +826,168 @@ export function useAnadirSiguienteTarea(firmId: string | undefined) {
         new_due_at: input.venceEn,
         new_due_days: input.diasTrasAnterior,
         new_due_time: input.horaLimite,
-      });
-      if (error) throw error;
-      return fromRow(data, true);
+      })
+      if (error) throw error
+      return fromRow(data, true)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useEliminarDependenciaTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (dependencyId: string) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { error } = await client.rpc("crm_remove_task_dependency", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_remove_task_dependency', {
         target_dependency_id: dependencyId,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useActualizarReunionTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, details }: { task: TareaPersistida; details: DetallesReunion }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_update_task_meeting", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_task_meeting', {
         target_task_id: task.id,
         target_expected_version: task.version,
         new_meeting_details: details as Json,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la reunión. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la reunión. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useActualizarReunionEspecial(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ task, details }: { task: TareaPersistida; details: DetallesReunion }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_update_special_meeting", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_update_special_meeting', {
         target_task_id: task.id,
         target_expected_version: task.version,
         new_meeting_details: details as Json,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la reunión. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la reunión. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useInboxTareas(firmId: string | undefined, userId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, userId, "inbox"],
+    queryKey: ['tareas', firmId, userId, 'inbox'],
     enabled: Boolean(firmId && userId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !userId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) return []
       const { data, error } = await client
-        .from("crm_task_inbox_items")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("user_id", userId)
-        .order("stage")
-        .order("position")
-        .order("created_at");
-      if (error) throw error;
-      return (data ?? []) as TaskInboxItemRow[];
+        .from('crm_task_inbox_items')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('user_id', userId)
+        .order('stage')
+        .order('position')
+        .order('created_at')
+      if (error) throw error
+      return (data ?? []) as TaskInboxItemRow[]
     },
-  });
+  })
 }
 
 export function useCapturarInboxTarea(firmId: string | undefined, userId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       captureText,
       taskId,
     }: {
-      captureText: string;
-      taskId?: string | null;
+      captureText: string
+      taskId?: string | null
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !userId) throw new Error("No hay un despacho activo.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) throw new Error('No hay un despacho activo.')
       if (!captureText.trim() && !taskId)
-        throw new Error("Escribe una captura o selecciona una tarea.");
+        throw new Error('Escribe una captura o selecciona una tarea.')
       const { data, error } = await client
-        .from("crm_task_inbox_items")
+        .from('crm_task_inbox_items')
         .insert({
           firm_id: firmId,
           user_id: userId,
           task_id: taskId ?? null,
           capture_text: captureText.trim(),
-          stage: "inbox",
+          stage: 'inbox',
           position: 0,
         })
         .select()
-        .single();
-      if (error) throw error;
-      return data as TaskInboxItemRow;
+        .single()
+      if (error) throw error
+      return data as TaskInboxItemRow
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, userId, "inbox"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, userId, 'inbox'] }),
+  })
 }
 
 export function useMoverInboxTarea(firmId: string | undefined, userId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ itemId, stage }: { itemId: string; stage: TaskInboxItemRow["stage"] }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !userId) throw new Error("No hay un despacho activo.");
+    mutationFn: async ({ itemId, stage }: { itemId: string; stage: TaskInboxItemRow['stage'] }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !userId) throw new Error('No hay un despacho activo.')
       const { error } = await client
-        .from("crm_task_inbox_items")
+        .from('crm_task_inbox_items')
         .update({ stage })
-        .eq("id", itemId)
-        .eq("firm_id", firmId)
-        .eq("user_id", userId);
-      if (error) throw error;
+        .eq('id', itemId)
+        .eq('firm_id', firmId)
+        .eq('user_id', userId)
+      if (error) throw error
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, userId, "inbox"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, userId, 'inbox'] }),
+  })
 }
 
 export function useDocumentosTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "documentos"],
+    queryKey: ['tareas', firmId, taskId, 'documentos'],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data: links, error: linksError } = await client
-        .from("crm_document_task_links")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("task_id", taskId);
-      if (linksError) throw linksError;
-      const documentIds = (links as DocumentTaskLinkRow[]).map((link) => link.document_logical_id);
-      if (!documentIds.length) return [];
+        .from('crm_document_task_links')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('task_id', taskId)
+      if (linksError) throw linksError
+      const documentIds = (links as DocumentTaskLinkRow[]).map((link) => link.document_logical_id)
+      if (!documentIds.length) return []
       const { data, error } = await client
-        .from("crm_case_documents")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("is_current", true)
-        .in("logical_document_id", documentIds);
-      if (error) throw error;
-      return (data ?? []) as CaseDocumentRow[];
+        .from('crm_case_documents')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('is_current', true)
+        .in('logical_document_id', documentIds)
+      if (error) throw error
+      return (data ?? []) as CaseDocumentRow[]
     },
-  });
+  })
 }
 
 export function useDocumentosExpedienteTarea(
@@ -995,169 +995,169 @@ export function useDocumentosExpedienteTarea(
   caseId: string | null | undefined,
 ) {
   return useQuery({
-    queryKey: ["tareas", firmId, caseId, "documentos-disponibles"],
+    queryKey: ['tareas', firmId, caseId, 'documentos-disponibles'],
     enabled: Boolean(firmId && caseId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !caseId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !caseId) return []
       const { data, error } = await client
-        .from("crm_case_documents")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("case_id", caseId)
-        .eq("is_current", true)
-        .is("archived_at", null)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as CaseDocumentRow[];
+        .from('crm_case_documents')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('case_id', caseId)
+        .eq('is_current', true)
+        .is('archived_at', null)
+        .order('updated_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as CaseDocumentRow[]
     },
-  });
+  })
 }
 
 export function useVincularDocumentoTarea(firmId: string | undefined, taskId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (documentId: string) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { error } = await client.rpc("crm_link_document_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_link_document_task', {
         target_document_id: documentId,
         target_task_id: taskId,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, taskId, "documentos"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, taskId, 'documentos'] }),
+  })
 }
 
 export function useDesvincularDocumentoTarea(firmId: string | undefined, taskId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (documentId: string) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { error } = await client.rpc("crm_unlink_document_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { error } = await client.rpc('crm_unlink_document_task', {
         target_document_id: documentId,
         target_task_id: taskId,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, taskId, "documentos"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, taskId, 'documentos'] }),
+  })
 }
 
 export function useEventosTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "eventos"],
+    queryKey: ['tareas', firmId, taskId, 'eventos'],
     enabled: Boolean(firmId && taskId),
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data, error } = await client
-        .from("crm_task_events")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("task_id", taskId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as TaskEventRow[];
+        .from('crm_task_events')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as TaskEventRow[]
     },
-  });
+  })
 }
 
 export function useAnadirMensajeTarea(firmId: string | undefined, taskId: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (body: string) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!body.trim()) throw new Error("El mensaje no puede estar vacío.");
-      const { data, error } = await client.rpc("crm_add_task_message", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!body.trim()) throw new Error('El mensaje no puede estar vacío.')
+      const { data, error } = await client.rpc('crm_add_task_message', {
         target_task_id: taskId,
         message_body: body.trim(),
-      });
-      if (error) throw error;
-      return data;
+      })
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tareas", firmId, taskId, "mensajes"] }),
-  });
+      queryClient.invalidateQueries({ queryKey: ['tareas', firmId, taskId, 'mensajes'] }),
+  })
 }
 
 export type RegistrarComunicacionTareaInput = {
-  channel: "email" | "whatsapp" | "phone";
-  direction: "inbound" | "outbound";
-  subject: string;
-  content: string;
-  recipients: string;
-  cc: string;
-  occurredAt?: string;
-};
+  channel: 'email' | 'whatsapp' | 'phone'
+  direction: 'inbound' | 'outbound'
+  subject: string
+  content: string
+  recipients: string
+  cc: string
+  occurredAt?: string
+}
 
 export function useComunicacionesTarea(firmId: string | undefined, taskId: string | undefined) {
   return useQuery({
-    queryKey: ["tareas", firmId, taskId, "comunicaciones"],
+    queryKey: ['tareas', firmId, taskId, 'comunicaciones'],
     enabled: Boolean(firmId && taskId),
     queryFn: async (): Promise<CaseCommunicationRow[]> => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId || !taskId) return [];
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId || !taskId) return []
       const { data, error } = await client
-        .from("crm_case_communications")
-        .select("*")
-        .eq("firm_id", firmId)
-        .eq("details->>taskId", taskId)
-        .order("occurred_at", { ascending: false });
-      if (error) throw error;
-      return data;
+        .from('crm_case_communications')
+        .select('*')
+        .eq('firm_id', firmId)
+        .eq('details->>taskId', taskId)
+        .order('occurred_at', { ascending: false })
+      if (error) throw error
+      return data
     },
-  });
+  })
 }
 
 export function useRegistrarComunicacionTarea(firmId: string | undefined, task: TareaPersistida) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: RegistrarComunicacionTareaInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const content = input.content.trim();
-      if (!content) throw new Error("Escribe el contenido de la comunicación.");
-      const isCall = input.channel === "phone";
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const content = input.content.trim()
+      if (!content) throw new Error('Escribe el contenido de la comunicación.')
+      const isCall = input.channel === 'phone'
       const payload: CaseCommunicationInsert = {
         firm_id: firmId,
         case_id: task.expedienteId,
         direction: input.direction,
-        communication_type: isCall ? "call" : input.channel,
+        communication_type: isCall ? 'call' : input.channel,
         channel: input.channel,
         subject: input.subject.trim(),
         content,
         occurred_at: input.occurredAt || new Date().toISOString(),
-        sent_status: isCall ? "sent" : "draft",
+        sent_status: isCall ? 'sent' : 'draft',
         details: {
           taskId: task.id,
           recipients: input.recipients.trim(),
           cc: input.cc.trim(),
         },
-      };
+      }
       const { data, error } = await client
-        .from("crm_case_communications")
+        .from('crm_case_communications')
         .insert(payload)
         .select()
-        .single();
-      if (error) throw error;
-      return data;
+        .single()
+      if (error) throw error
+      return data
     },
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["tareas", firmId, task.id, "comunicaciones"] }),
-        queryClient.invalidateQueries({ queryKey: ["expedientes", firmId, "comunicaciones"] }),
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId, task.id, 'comunicaciones'] }),
+        queryClient.invalidateQueries({ queryKey: ['expedientes', firmId, 'comunicaciones'] }),
       ]).then(() => undefined),
-  });
+  })
 }
 
 export function useEditarTarea(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       task,
@@ -1169,19 +1169,19 @@ export function useEditarTarea(firmId: string | undefined) {
       recordarEn,
       asignadoId,
     }: {
-      task: TareaPersistida;
-      titulo: string;
-      descripcion: string;
-      estado: TareaPersistida["estado"];
-      prioridad: TareaPersistida["prioridad"];
-      venceEn: string | null;
-      recordarEn: string | null;
-      asignadoId: string | null;
+      task: TareaPersistida
+      titulo: string
+      descripcion: string
+      estado: TareaPersistida['estado']
+      prioridad: TareaPersistida['prioridad']
+      venceEn: string | null
+      recordarEn: string | null
+      asignadoId: string | null
     }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      if (!titulo.trim()) throw new Error("El título es obligatorio.");
-      const { data, error } = await client.rpc("crm_update_task", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      if (!titulo.trim()) throw new Error('El título es obligatorio.')
+      const { data, error } = await client.rpc('crm_update_task', {
         target_task_id: task.id,
         target_expected_version: task.version,
         new_title: titulo.trim(),
@@ -1191,70 +1191,70 @@ export function useEditarTarea(firmId: string | undefined) {
         new_due_at: venceEn,
         new_reminder_at: recordarEn,
         new_assigned_to: asignadoId,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó la tarea. Recarga antes de guardar.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó la tarea. Recarga antes de guardar.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useValidarPlazo(firmId: string | undefined) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: ValidarPlazoInput) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !firmId) throw new Error("No hay un despacho activo.");
-      const { data, error } = await client.rpc("crm_validate_deadline", {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_validate_deadline', {
         target_task_id: input.id,
         target_expected_version: input.versionEsperada,
-        decision: input.decision === "Validado" ? "validated" : "rejected",
+        decision: input.decision === 'Validado' ? 'validated' : 'rejected',
         confirmed_due_at: input.venceEn,
         source_reference: input.fuente,
         professional_note: input.nota,
-      });
-      if (error?.code === "40001")
-        throw new Error("Otro usuario modificó el plazo. Recarga antes de validarlo.");
-      if (error) throw error;
-      return fromRow(data);
+      })
+      if (error?.code === '40001')
+        throw new Error('Otro usuario modificó el plazo. Recarga antes de validarlo.')
+      if (error) throw error
+      return fromRow(data)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tareas", firmId] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+  })
 }
 
 export function useNotificacionesTareas(
   userId: string | undefined,
   onNueva?: (notificacion: NotificationRow) => void,
 ) {
-  const queryClient = useQueryClient();
-  const queryKey = ["notificaciones", userId, "recientes"];
+  const queryClient = useQueryClient()
+  const queryKey = ['notificaciones', userId, 'recientes']
 
   useEffect(() => {
-    const client = getSupabaseBrowserClient();
-    if (!client || !userId) return;
+    const client = getSupabaseBrowserClient()
+    if (!client || !userId) return
     const channel = client
       .channel(`notificaciones:${userId}`)
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "INSERT",
-          schema: "public",
-          table: "crm_notifications",
+          event: 'INSERT',
+          schema: 'public',
+          table: 'crm_notifications',
           filter: `recipient_id=eq.${userId}`,
         },
         (payload) => {
-          void queryClient.invalidateQueries({ queryKey: ["notificaciones", userId] });
-          void queryClient.invalidateQueries({ queryKey: ["tareas"] });
-          onNueva?.(payload.new as NotificationRow);
+          void queryClient.invalidateQueries({ queryKey: ['notificaciones', userId] })
+          void queryClient.invalidateQueries({ queryKey: ['tareas'] })
+          onNueva?.(payload.new as NotificationRow)
         },
       )
-      .subscribe();
+      .subscribe()
     return () => {
-      void client.removeChannel(channel);
-    };
-  }, [queryClient, userId, onNueva]);
+      void client.removeChannel(channel)
+    }
+  }, [queryClient, userId, onNueva])
 
   return useQuery({
     queryKey,
@@ -1262,78 +1262,78 @@ export function useNotificacionesTareas(
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !userId) throw new Error("No hay conexión con el servidor.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
       const { data, error } = await client
-        .from("crm_notifications")
-        .select("*")
-        .eq("recipient_id", userId)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      return (data ?? []) as NotificationRow[];
+        .from('crm_notifications')
+        .select('*')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return (data ?? []) as NotificationRow[]
     },
-  });
+  })
 }
 
 export function useNotificacionesSinLeer(userId: string | undefined) {
   return useQuery({
-    queryKey: ["notificaciones", userId, "sin-leer"],
+    queryKey: ['notificaciones', userId, 'sin-leer'],
     enabled: Boolean(userId),
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !userId) throw new Error("No hay conexión con el servidor.");
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
       const { count, error } = await client
-        .from("crm_notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("recipient_id", userId)
-        .is("read_at", null);
-      if (error) throw error;
-      return count ?? 0;
+        .from('crm_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .is('read_at', null)
+      if (error) throw error
+      return count ?? 0
     },
-  });
+  })
 }
 
-const NOTIFICATIONS_PAGE_SIZE = 30;
+const NOTIFICATIONS_PAGE_SIZE = 30
 
 export function useHistorialNotificaciones(userId: string | undefined, unreadOnly: boolean) {
   return useInfiniteQuery({
-    queryKey: ["notificaciones", userId, "historial", unreadOnly],
+    queryKey: ['notificaciones', userId, 'historial', unreadOnly],
     enabled: Boolean(userId),
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
-      const client = getSupabaseBrowserClient();
-      if (!client || !userId) throw new Error("No hay conexión con el servidor.");
-      let query = client.from("crm_notifications").select("*").eq("recipient_id", userId);
-      if (unreadOnly) query = query.is("read_at", null);
+      const client = getSupabaseBrowserClient()
+      if (!client || !userId) throw new Error('No hay conexión con el servidor.')
+      let query = client.from('crm_notifications').select('*').eq('recipient_id', userId)
+      if (unreadOnly) query = query.is('read_at', null)
       const { data, error } = await query
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(pageParam, pageParam + NOTIFICATIONS_PAGE_SIZE - 1);
-      if (error) throw error;
-      return (data ?? []) as NotificationRow[];
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(pageParam, pageParam + NOTIFICATIONS_PAGE_SIZE - 1)
+      if (error) throw error
+      return (data ?? []) as NotificationRow[]
     },
     getNextPageParam: (lastPage, pages) =>
       lastPage.length === NOTIFICATIONS_PAGE_SIZE
         ? pages.length * NOTIFICATIONS_PAGE_SIZE
         : undefined,
-  });
+  })
 }
 
 export function useMarcarNotificacionesLeidas() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (taskId?: string | null) => {
-      const client = getSupabaseBrowserClient();
-      if (!client) throw new Error("No hay conexión con el servidor.");
-      const { error } = await client.rpc("crm_mark_notifications_read", {
+      const client = getSupabaseBrowserClient()
+      if (!client) throw new Error('No hay conexión con el servidor.')
+      const { error } = await client.rpc('crm_mark_notifications_read', {
         target_task_id: taskId ?? null,
-      });
-      if (error) throw error;
+      })
+      if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notificaciones"] }),
-  });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notificaciones'] }),
+  })
 }

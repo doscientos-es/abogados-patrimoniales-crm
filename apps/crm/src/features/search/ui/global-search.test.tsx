@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -46,11 +48,25 @@ describe('GlobalSearch', () => {
     render(<SearchHarness />)
     fireEvent.click(screen.getByRole('button', { name: 'Buscar en LEX' }))
     const dialog = screen.getByRole('dialog', { name: 'Buscar en LEX' })
-    expect(dialog.className).toContain('w-screen')
+    expect(dialog.className).toContain('global-search-dialog')
     const input = within(dialog).getByRole('textbox', { name: 'Buscar en todo LEX' })
     await waitFor(() => expect(document.activeElement).toBe(input))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cerrar diálogo' }))
     expect(screen.queryByRole('dialog', { name: 'Buscar en LEX' })).toBeNull()
+  })
+
+  it('uses a content-sized desktop dialog and keeps results scrollable', () => {
+    const css = readFileSync('src/styles.css', 'utf8')
+    expect(css).toMatch(/\.global-search-dialog\s*\{[^}]*height:\s*100dvh/s)
+    expect(css).toMatch(
+      /@media\s*\(min-width:\s*48rem\)\s*\{\s*\.global-search-dialog\s*\{[^}]*height:\s*auto/s,
+    )
+    expect(css).toMatch(/\.global-search-results\s*\{\s*max-height:\s*min\(60dvh, 30rem\)/)
+    render(<SearchHarness />)
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(
+      screen.getByText('↑↓ para navegar · ↵ para abrir').closest('footer')?.className,
+    ).toContain('global-search-footer')
   })
 
   it('opens with Ctrl+K, focuses the field and saves a selected module as a recent item', async () => {

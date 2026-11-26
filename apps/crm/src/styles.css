@@ -599,3 +599,48 @@
     display: none;
   }
 }
+
+/* La búsqueda ocupa la pantalla en móvil y se adapta a su contenido en escritorio. */
+.global-search-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 0;
+  padding-top: env(safe-area-inset-top);
+}
+
+.global-search-dialog [data-slot='dialog-close'] {
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+}
+
+.global-search-footer {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .global-search-dialog {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: 40rem;
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+    border-radius: 1rem;
+    padding-top: 0;
+  }
+
+  .global-search-dialog [data-slot='dialog-close'] {
+    top: 0.75rem;
+  }
+
+  .global-search-results {
+    max-height: min(60dvh, 30rem);
+  }
+
+  .global-search-footer {
+    display: flex;
+  }
+}
