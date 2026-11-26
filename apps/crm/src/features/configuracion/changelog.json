@@ -1,6 +1,43 @@
 {
   "releases": [
     {
+      "date": "2026-11-26",
+      "title": "Novedades del despacho",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "La campana muestra los avisos recientes y permite consultar el historial completo, filtrar los no leídos y abrir la tarea relacionada.",
+            "Los presupuestos cuentan con seguimiento y aceptación mediante enlace, con verificación por correo cuando está activada.",
+            "Las citas pueden sincronizarse con Google Calendar cuando la integración está configurada y activada.",
+            "Se pueden crear contactos desde un lead sin salir de su ficha y detectar posibles duplicados.",
+            "Los documentos de expedientes admiten carpetas, nuevas versiones y seguimiento de originales físicos.",
+            "Los leads y expedientes incluyen gestión de participantes y borradores internos."
+          ]
+        },
+        {
+          "title": "Mejoras",
+          "items": [
+            "La búsqueda global encuentra resultados sin distinguir mayúsculas ni acentos y facilita el acceso a las secciones del despacho.",
+            "El panel de inicio reúne incidencias con filtros, paginación y acceso directo al registro correspondiente.",
+            "Al crear la siguiente tarea se pueden copiar las subtareas pendientes; también se avisa de ellas al completar una tarea.",
+            "Las reuniones incorporan mejoras en sus estados, documentos y tareas de seguimiento.",
+            "La tabla de contactos permite configurar columnas y copiar referencias.",
+            "La navegación y la barra lateral se han adaptado para facilitar su uso en móvil y escritorio."
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Se han mejorado las validaciones de documentos y correos al crear contactos.",
+            "Los presupuestos muestran la identidad del despacho y los importes y fechas con el formato adecuado.",
+            "La factura avisa cuando faltan datos fiscales y el expediente actualiza su contador económico.",
+            "Se han corregido la revisión mostrada en leads y la conservación del responsable durante el onboarding."
+          ]
+        }
+      ]
+    },
+    {
       "date": "2026-09-25",
       "title": "Mejoras recientes del CRM",
       "sections": [
