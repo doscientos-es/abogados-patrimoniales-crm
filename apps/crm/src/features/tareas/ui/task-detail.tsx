@@ -493,8 +493,15 @@ export function TaskDetail({
     if (toDateTimeLocal(next) === toDateTimeLocal(task[field])) return
     void saveFields({ [field]: next }, success)
   }
+  const isViabilityTask = ['review', 'notify', 'book'].some(
+    (kind) => task.reunion['leadViabilityAction'] === kind,
+  )
   const selectStatus = (estado: EstadoTarea) => {
     if (estado === task.estado) return
+    if (isViabilityTask && (estado === 'Completada' || estado === 'Cancelada')) {
+      toast.error('Gestiona esta acción de viabilidad desde la ficha del Lead.')
+      return
+    }
     if (estado === 'En espera') return setHoldOpen(true)
     if (estado === 'Completada') return setCompleteOpen(true)
     if (estado === 'Cancelada') return setCancelOpen(true)
@@ -670,6 +677,17 @@ export function TaskDetail({
           )}
         </div>
       </header>
+      {task.oportunidadId && isViabilityTask ? (
+        <div className="border-border bg-muted/30 mb-4 rounded-md border p-3 text-sm">
+          <Link
+            className="text-primary underline"
+            to="/oportunidades/$id"
+            params={{ id: task.oportunidadId }}
+          >
+            Gestionar viabilidad en la ficha del Lead
+          </Link>
+        </div>
+      ) : null}
       {task.oportunidadId && quoteReview ? <QuoteReviewPanel task={task} firmId={firmId} /> : null}
       {task.oportunidadId && quoteSend ? (
         <SendTaskLink leadId={quoteSend.leadId} version={quoteSend.version} />
@@ -694,7 +712,7 @@ export function TaskDetail({
                     Empezar
                   </Button>
                 ) : null}
-                {!appointment ? (
+                {!appointment && !isViabilityTask ? (
                   <Button
                     className="gap-1.5"
                     variant={task.estado === 'Pendiente' ? 'outline' : 'default'}
@@ -739,7 +757,7 @@ export function TaskDetail({
                     type="button"
                     variant="ghost"
                     className="text-muted-foreground gap-1.5"
-                    disabled={!canWork}
+                    disabled={!canWork || isViabilityTask}
                     onClick={() => setRejectOpen(true)}
                   >
                     <Undo2 className="h-4 w-4" aria-hidden="true" />
@@ -749,7 +767,7 @@ export function TaskDetail({
                     type="button"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5"
-                    disabled={!canManage || appointment}
+                    disabled={!canManage || appointment || isViabilityTask}
                     onClick={() => setCancelOpen(true)}
                   >
                     <Ban className="h-4 w-4" aria-hidden="true" />

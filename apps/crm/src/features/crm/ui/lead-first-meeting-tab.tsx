@@ -34,6 +34,7 @@ type AppointmentTabProps = {
   memberRole: string
   canEdit: boolean
   appointmentId?: string | undefined
+  allowScheduling?: boolean
 }
 
 /** Lead and case appointments share the workspace, but never inherit each other's meetings. */
@@ -48,6 +49,7 @@ export function AppointmentsTab({
   memberRole,
   canEdit,
   appointmentId,
+  allowScheduling = true,
 }: AppointmentTabProps & {
   scope: 'lead' | 'case'
   parent: { id: string; titulo: string; referencia: string }
@@ -73,7 +75,7 @@ export function AppointmentsTab({
     canEdit &&
     (task?.creadaPorId === currentUserId || ['owner', 'admin', 'lawyer'].includes(memberRole))
   const canHold = Boolean(task && canEdit && canHoldAppointment(task, currentUserId, memberRole))
-  const first = scope === 'lead' && meetings.length === 0
+  const first = scope === 'lead' && !meetings.some((meeting) => meeting.estado !== 'Cancelada')
   const showContactHistory = scope === 'lead' && Boolean(contactId)
 
   const schedule = async (input: CrearTareaInput) => {
@@ -136,7 +138,7 @@ export function AppointmentsTab({
           ) : (
             <p className="text-muted-foreground text-sm">Todavía no hay citas vinculadas.</p>
           )}
-          {canEdit ? (
+          {canEdit && allowScheduling ? (
             <Button
               type="button"
               disabled={createTask.isPending}
@@ -148,7 +150,7 @@ export function AppointmentsTab({
           ) : null}
         </CardContent>
       </Card>
-      {scheduleOpen ? (
+      {scheduleOpen && allowScheduling ? (
         <TaskCreateDialog
           firmId={firmId}
           oportunidadId={scope === 'lead' ? parent.id : null}

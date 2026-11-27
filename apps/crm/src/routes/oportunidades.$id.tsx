@@ -58,7 +58,7 @@ import {
   isFirstMeeting,
   pickFirstMeeting,
 } from '@/features/crm/application/first-meeting-cycle'
-import { permitePrimeraCita } from '@/features/crm/application/initial-viability'
+import { leerViabilidad, permitePrimeraCita } from '@/features/crm/application/initial-viability'
 import { subestadoVisible } from '@/features/crm/application/lead-milestones'
 import { usePracticeAreas } from '@/features/crm/infrastructure/practice-areas'
 import { FirstMeetingAssistant } from '@/features/crm/ui/first-meeting-assistant'
@@ -66,6 +66,7 @@ import { LeadChatgptAction } from '@/features/crm/ui/lead-chatgpt-action'
 import { LeadFirstMeetingTab } from '@/features/crm/ui/lead-first-meeting-tab'
 import { LeadParticipantsTree } from '@/features/crm/ui/lead-participants-tree'
 import { LeadQualificationDecision } from '@/features/crm/ui/lead-qualification-decision'
+import { LeadViabilityPanel } from '@/features/crm/ui/lead-viability-panel'
 import { LeadWorkspace } from '@/features/crm/ui/lead-workspace'
 import { NoNextActionWarning } from '@/features/crm/ui/no-next-action-warning'
 import { QuoteAcceptancePanel } from '@/features/crm/ui/quote-acceptance-panel'
@@ -220,14 +221,15 @@ function FichaOportunidadPage() {
     data.id,
   )
   const memberName = miembros.data?.find((member) => member.id === data.asignadoId)?.nombre
-  const initialViability = asRecord(asRecord(data.detalles)['viabilidadInicial'])['resultado']
-  const viabilityAllowsMeeting = permitePrimeraCita(
-    initialViability === 'apto' ||
-      initialViability === 'pendiente' ||
-      initialViability === 'no_apto'
-      ? initialViability
-      : undefined,
-  )
+  const viability = leerViabilidad(data.detalles)
+  const viabilityAllowsMeeting = permitePrimeraCita(viability.choice)
+  const viabilityTask = relatedTasks.find((task) => task.id === viability.taskId)
+  const viabilityActor =
+    !data.archivadoEn &&
+    (data.asignadoId === session.user.id ||
+      viabilityTask?.asignadoId === session.user.id ||
+      viabilityTask?.creadaPorId === session.user.id ||
+      ['owner', 'admin', 'lawyer'].includes(membership.data.role))
   const showFirstMeetingAssistant = Boolean(
     firstMeetingTask &&
     activeTab !== 'firstMeeting' &&
@@ -313,6 +315,20 @@ function FichaOportunidadPage() {
       ) ? (
         <NoNextActionWarning onDefine={() => setActiveTab('tasks')} />
       ) : null}
+      {viability.managed &&
+      (activeTab === 'summary' ||
+        activeTab === 'firstMeeting' ||
+        activeTab === 'communications') ? (
+        <LeadViabilityPanel
+          key={data.id}
+          opportunity={data}
+          firmId={membership.data.firmId}
+          tasks={relatedTasks}
+          tasksLoaded={tareas.isSuccess}
+          canAct={viabilityActor}
+          contact={{ email: contacto.data?.email ?? '', phone: contacto.data?.telefono ?? '' }}
+        />
+      ) : null}
       <LeadDetailTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       <section
         id={`lead-detail-panel-${activeTab}`}
@@ -395,6 +411,9 @@ function FichaOportunidadPage() {
             opportunity={data}
             firmId={membership.data.firmId}
             members={miembros.data ?? []}
+            allowScheduling={
+              viabilityAllowsMeeting && (!viability.managed || Boolean(viability.conflictAt))
+            }
             contactId={data.contactoId}
             contactName={contacto.data ? contactName(contacto.data) : 'Contacto principal'}
             currentUserId={session.user.id}

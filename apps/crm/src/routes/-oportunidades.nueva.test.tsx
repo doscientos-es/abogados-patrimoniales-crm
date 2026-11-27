@@ -12,11 +12,7 @@ const mocks = vi.hoisted(() => ({
   areasPending: false,
   areaRefetch: vi.fn(),
   createOpportunity: vi.fn(),
-  createTask: vi.fn(),
-  markNextAction: vi.fn(),
   contactRefetch: vi.fn().mockResolvedValue({ isError: false }),
-  advanceLead: vi.fn(),
-  transition: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
@@ -66,32 +62,20 @@ vi.mock('@/features/contactos/ui/nuevo-contacto-page', () => ({
   ),
 }))
 vi.mock('@/features/crm', () => ({
-  useAvanzarLeadPorHito: () => ({ isPending: false, mutateAsync: mocks.advanceLead }),
   useCrearOportunidad: () => ({ isPending: false, mutateAsync: mocks.createOpportunity }),
   useLeadRoles: () => ({ data: [] }),
   useMiembrosDespacho: () => ({
     data: [{ id: 'lawyer-jon', nombre: 'Jon' }],
     isError: mocks.membersError,
   }),
-  useTransicionarOportunidad: () => ({ isPending: false, mutateAsync: mocks.transition }),
 }))
-vi.mock('@/features/notas', () => ({ useCrearNotaOportunidad: () => ({ isPending: false }) }))
-vi.mock('@/features/tareas', () => ({
-  useCrearTarea: () => ({ isPending: false, mutateAsync: mocks.createTask }),
-  useMarcarSiguienteAccion: () => ({ isPending: false, mutateAsync: mocks.markNextAction }),
-}))
-
 import { NuevaOportunidadPage } from './oportunidades.nueva'
 
 afterEach(() => {
   cleanup()
   mocks.navigate.mockClear()
   mocks.createOpportunity.mockReset()
-  mocks.createTask.mockReset()
-  mocks.markNextAction.mockReset()
   mocks.contactRefetch.mockClear()
-  mocks.advanceLead.mockReset()
-  mocks.transition.mockReset()
   mocks.search = { contactId: 'contact-1' }
   mocks.contactOrigin = 'Recomendación'
   mocks.membersError = false
@@ -104,7 +88,6 @@ afterEach(() => {
 describe('NuevaOportunidadPage', () => {
   it('crea y selecciona un contacto en el diálogo sin perder el formulario del Lead', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({})
     const { container } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), {
       target: { value: 'Consulta inicial' },
@@ -118,6 +101,7 @@ describe('NuevaOportunidadPage', () => {
       'Koldo Arregi',
     )
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
@@ -176,10 +160,10 @@ describe('NuevaOportunidadPage', () => {
   it('allows creating a Lead when the contact origin exceeds the Lead limit', async () => {
     mocks.contactOrigin = 'A'.repeat(170)
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({})
     const { container } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
@@ -190,11 +174,11 @@ describe('NuevaOportunidadPage', () => {
 
   it('hereda el origen del contacto sin pedirlo de nuevo', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({})
     const { container } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     expect(screen.queryByLabelText('Origen del Lead')).toBeNull()
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
@@ -227,15 +211,15 @@ describe('NuevaOportunidadPage', () => {
     expect(mocks.areaRefetch).toHaveBeenCalledOnce()
   })
 
-  it('guarda el responsable elegido y por defecto deja el lead sin asignar', async () => {
+  it('guarda el responsable elegido y por defecto usa el usuario activo', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({})
     const { container, unmount } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     fireEvent.change(screen.getByLabelText('Responsable del Lead'), {
       target: { value: 'lawyer-jon' },
     })
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     const form = container.querySelector('form')
     if (!form) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(form)
@@ -250,25 +234,26 @@ describe('NuevaOportunidadPage', () => {
     const second = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     const secondForm = second.container.querySelector('form')
     if (!secondForm) throw new Error('No se encontró el formulario de alta.')
     fireEvent.submit(secondForm)
     await waitFor(() =>
       expect(mocks.createOpportunity).toHaveBeenCalledWith(
-        expect.objectContaining({ assignedTo: null }),
+        expect.objectContaining({ assignedTo: 'user-1' }),
       ),
     )
   })
 
   it('no pierde un responsable elegido si falla la consulta de miembros', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({})
     const { container, rerender } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     fireEvent.change(screen.getByLabelText('Responsable del Lead'), {
       target: { value: 'lawyer-jon' },
     })
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
+    chooseDate()
     mocks.membersError = true
     rerender(<NuevaOportunidadPage />)
     const form = container.querySelector('form')
@@ -280,16 +265,13 @@ describe('NuevaOportunidadPage', () => {
     fireEvent.submit(form)
     await waitFor(() =>
       expect(mocks.createOpportunity).toHaveBeenCalledWith(
-        expect.objectContaining({ assignedTo: null }),
+        expect.objectContaining({ assignedTo: 'user-1' }),
       ),
     )
   })
 
-  it('pregunta por la siguiente acción tras guardar y permite continuar a la ficha', async () => {
+  it('confirma APTO con un aviso persistente y dirige a la primera cita desde el modal común', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    const task = { id: 'task-1', oportunidadId: 'opportunity-1', version: 1 }
-    mocks.createTask.mockResolvedValue(task)
-    mocks.markNextAction.mockResolvedValue(task)
     const { container } = render(<NuevaOportunidadPage />)
     fireEvent.change(screen.getByLabelText('Título del Lead'), {
       target: { value: 'Consulta inicial' },
@@ -297,148 +279,92 @@ describe('NuevaOportunidadPage', () => {
     fireEvent.change(screen.getByLabelText('Materia'), {
       target: { value: 'SUCESIONES Y HERENCIAS' },
     })
-    fireEvent.change(screen.getByLabelText('Nuevo documento'), {
-      target: { value: 'Testamento' },
-    })
+    fireEvent.change(screen.getByLabelText('Nuevo documento'), { target: { value: 'Testamento' } })
     fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
     fireEvent.click(screen.getByLabelText('APTO PARA PRIMERA CITA'))
-    mocks.advanceLead.mockResolvedValue({ pasos: 2, fase: 'first_meeting', version: 3 })
-
-    const form = container.querySelector('form')
-    if (!form) throw new Error('No se encontró el formulario de alta.')
-    fireEvent.submit(form)
-
-    await waitFor(() =>
-      expect(mocks.createOpportunity).toHaveBeenCalledWith(
-        expect.objectContaining({ area: 'SUCESIONES Y HERENCIAS', source: 'Recomendación' }),
-      ),
-    )
-    const details = mocks.createOpportunity.mock.calls[0]?.[0].details
-    expect(details.informacionInicial).not.toHaveProperty('otrasPersonas')
-    expect(details.informacionInicial.documentacionManifestada).toBe('TESTAMENTO')
-    expect(details.documentosIniciales).toEqual([{ nombre: 'TESTAMENTO', estado: 'declarado' }])
-    expect(details.viabilidadInicial.resultado).toBe('apto')
-    await waitFor(() =>
-      expect(mocks.advanceLead).toHaveBeenCalledWith({
-        id: 'opportunity-1',
-        hito: 'viabilidad_apta',
-      }),
-    )
-    expect(await screen.findByText('Lead creado correctamente')).toBeTruthy()
-    expect(mocks.navigate).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Concertar primera cita' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Jon' }))
-    fireEvent.change(screen.getByLabelText('Fecha de la cita *'), {
-      target: { value: '2026-12-02' },
-    })
-    fireEvent.change(screen.getByLabelText('Hora *'), { target: { value: '10:37' } })
-    expect((screen.getByLabelText('Hora *') as HTMLInputElement).step).toBe('60')
-    fireEvent.change(screen.getByLabelText('Duración'), { target: { value: '45' } })
-    fireEvent.change(screen.getByLabelText('Modalidad / lugar'), { target: { value: 'phone' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Crear primera cita' }))
-
-    await waitFor(() => expect(mocks.createTask).toHaveBeenCalledOnce())
-    expect(mocks.createTask).toHaveBeenCalledWith(
+    chooseDate()
+    submit(container)
+    expect(await screen.findByText('Aviso activo para concertar la primera cita')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Hacerlo más tarde' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Ir a la ficha del Lead' })).toBeTruthy()
+    expect(mocks.createOpportunity).toHaveBeenCalledWith(
       expect.objectContaining({
-        oportunidadId: 'opportunity-1',
-        tipo: 'Evento',
-        titulo: 'Reunión: PRIMERA CITA',
-        asignadoId: 'lawyer-jon',
-        venceEn: expect.any(String),
-        detallesReunion: expect.objectContaining({
-          meetingType: 'Primera cita',
-          subject: 'PRIMERA CITA',
-          attendeeContactIds: ['contact-1'],
-          startsAt: expect.any(String),
-          endsAt: expect.any(String),
-          durationMinutes: 45,
-          mode: 'phone',
-          preferredDate: '2026-12-02',
-          abogadoPrimeraCita: 'Jon',
-          abogadoPrimeraCitaId: 'lawyer-jon',
-          primeraCita: expect.objectContaining({ estado: 'Programada' }),
+        area: 'SUCESIONES Y HERENCIAS',
+        source: 'Recomendación',
+        followup: expect.objectContaining({ date: '2099-12-02' }),
+        details: expect.objectContaining({
+          documentosIniciales: [{ nombre: 'TESTAMENTO', estado: 'declarado' }],
+          viabilidadInicial: expect.objectContaining({ resultado: 'apto' }),
         }),
       }),
     )
-    const meeting = mocks.createTask.mock.calls[0]?.[0].detallesReunion
-    expect(meeting.startsAt).toBe(new Date('2026-12-02T10:37').toISOString())
-    expect(Date.parse(meeting.endsAt) - Date.parse(meeting.startsAt)).toBe(45 * 60_000)
-    expect(mocks.markNextAction).toHaveBeenCalledWith({ task, enabled: true })
-
-    await waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({
-        to: '/oportunidades/$id',
-        params: { id: 'opportunity-1' },
-      }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Concertar primera cita' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/oportunidades/$id',
+      params: { id: 'opportunity-1' },
+      search: { tab: 'firstMeeting' },
+    })
   })
 
-  it('guarda la viabilidad pendiente y mueve el Lead a cualificación', async () => {
+  it('no guarda PENDIENTE sin fecha y no exige crear la tarea a mano', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.advanceLead.mockResolvedValue({ pasos: 1, fase: 'qualification', version: 2 })
     const { container } = render(<NuevaOportunidadPage />)
-    fireEvent.change(screen.getByLabelText('Título del Lead'), {
-      target: { value: 'Consulta inicial' },
-    })
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
     fireEvent.click(screen.getByLabelText('PENDIENTE DE REVISIÓN'))
-
-    const form = container.querySelector('form')
-    if (!form) throw new Error('No se encontró el formulario de alta.')
-    fireEvent.submit(form)
-
-    await waitFor(() => expect(mocks.advanceLead).toHaveBeenCalledOnce())
+    submit(container)
+    expect(mocks.createOpportunity).not.toHaveBeenCalled()
+    chooseDate()
+    submit(container)
+    expect(await screen.findByText('Tarea obligatoria: Revisar viabilidad')).toBeTruthy()
+    expect(mocks.createOpportunity).toHaveBeenCalledOnce()
     expect(mocks.createOpportunity.mock.calls[0]?.[0].details.viabilidadInicial.resultado).toBe(
       'pendiente',
     )
-    expect(mocks.advanceLead).toHaveBeenCalledWith({
-      id: 'opportunity-1',
-      hito: 'viabilidad_pendiente',
+    fireEvent.click(screen.getByRole('button', { name: 'Ir a la ficha del Lead' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/oportunidades/$id',
+      params: { id: 'opportunity-1' },
     })
-    expect((screen.getByLabelText('Título *') as HTMLInputElement).value).toBe('REVISAR VIABILIDAD')
   })
 
-  it('exige motivo para no apto y guarda el cierre del Lead con ese motivo', async () => {
+  it('exige motivo y confirmación de plazo para NO APTO, y deja la comunicación pendiente', async () => {
     mocks.createOpportunity.mockResolvedValue({ id: 'opportunity-1', referencia: 'LD-1' })
-    mocks.transition.mockResolvedValue({ id: 'opportunity-1' })
     const { container } = render(<NuevaOportunidadPage />)
-    fireEvent.change(screen.getByLabelText('Título del Lead'), {
-      target: { value: 'Consulta inicial' },
+    fireEvent.change(screen.getByLabelText('Título del Lead'), { target: { value: 'Consulta' } })
+    fireEvent.change(screen.getByLabelText('Urgencia'), {
+      target: { value: 'Sí, existe una fecha o plazo concreto' },
     })
     fireEvent.click(screen.getByLabelText('NO APTO / NO ATENDIBLE'))
-
-    const form = container.querySelector('form')
-    if (!form) throw new Error('No se encontró el formulario de alta.')
-    fireEvent.submit(form)
+    chooseDate()
+    submit(container)
     expect(mocks.createOpportunity).not.toHaveBeenCalled()
-
-    fireEvent.change(screen.getByLabelText('Motivo *'), {
-      target: { value: 'Fuera de nuestra especialidad' },
+    fireEvent.change(screen.getByLabelText('Motivo de no aceptación'), {
+      target: { value: 'Otro motivo' },
     })
-    fireEvent.submit(form)
-
-    await waitFor(() =>
-      expect(mocks.transition).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'opportunity-1',
-          fase: 'lost',
-          subestado: 'No apto / no atendible',
-          motivo: expect.stringContaining('Fuera de nuestra especialidad'),
-        }),
-      ),
-    )
-    expect(mocks.createOpportunity.mock.calls[0]?.[0].details.viabilidadInicial).toMatchObject({
-      resultado: 'no_apto',
-      motivo: 'Fuera de nuestra especialidad',
+    fireEvent.change(screen.getByLabelText('Detalla el motivo'), {
+      target: { value: 'No podemos asumirlo' },
     })
-    expect(await screen.findByText('Lead creado correctamente')).toBeTruthy()
-    expect(mocks.navigate).not.toHaveBeenCalled()
+    submit(container)
+    expect(mocks.createOpportunity).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('checkbox', { name: /He revisado el plazo/ }))
+    submit(container)
+    expect(await screen.findByText('Lead cerrado · Comunicación pendiente')).toBeTruthy()
+    expect(mocks.createOpportunity.mock.calls[0]?.[0]).toMatchObject({
+      followup: { acceptedDeadlineWarning: true },
+      details: { viabilidadInicial: { resultado: 'no_apto', motivo: 'No podemos asumirlo' } },
+    })
     expect(screen.queryByRole('button', { name: 'Concertar primera cita' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Ir a la ficha del Lead' }))
-    await waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({
-        to: '/oportunidades/$id',
-        params: { id: 'opportunity-1' },
-      }),
-    )
   })
 })
+
+function chooseDate() {
+  fireEvent.change(screen.getByLabelText('Fecha de la siguiente acción'), {
+    target: { value: '2099-12-02' },
+  })
+}
+
+function submit(container: HTMLElement) {
+  const form = container.querySelector('form')
+  if (!form) throw new Error('No se encontró el formulario de alta.')
+  fireEvent.submit(form)
+}

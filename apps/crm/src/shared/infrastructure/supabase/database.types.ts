@@ -605,6 +605,35 @@ export type Database = {
         }
         Returns: OpportunityRow
       }
+      crm_create_viable_lead: {
+        Args: {
+          p_request_id: string
+          p_firm: string
+          p_contact: string
+          p_title: string
+          p_area: string
+          p_source: string
+          p_description: string
+          p_owner: string
+          p_due: string
+          p_details: Json
+          p_accept_deadline_warning: boolean
+        }
+        Returns: OpportunityRow
+      }
+      crm_act_on_lead_viability: {
+        Args: {
+          p_lead: string
+          p_version: number
+          p_action: string
+          p_result?: string
+          p_due?: string
+          p_reason?: string
+          p_channel?: string
+          p_accept_deadline_warning?: boolean
+        }
+        Returns: OpportunityRow
+      }
       crm_save_opportunity_details: {
         Args: {
           target_opportunity_id: string

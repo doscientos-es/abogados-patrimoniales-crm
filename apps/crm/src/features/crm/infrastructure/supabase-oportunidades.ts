@@ -35,6 +35,13 @@ const createInputSchema = z.object({
   description: z.string().trim().max(20_000).optional(),
   assignedTo: z.string().uuid().nullable().optional(),
   details: z.unknown(),
+  followup: z
+    .object({
+      requestId: z.string().uuid(),
+      date: z.iso.date(),
+      acceptedDeadlineWarning: z.boolean(),
+    })
+    .optional(),
 })
 
 const updateInputSchema = z.object({
@@ -461,6 +468,24 @@ export function useCrearOportunidad(firmId: string | undefined) {
       const client = getSupabaseBrowserClient()
       if (!client || !firmId) throw new Error('No hay un despacho activo.')
       const input = createInputSchema.parse(rawInput)
+      if (input.followup) {
+        if (!input.assignedTo) throw new Error('Indica el responsable del Lead.')
+        const { data, error } = await client.rpc('crm_create_viable_lead', {
+          p_request_id: input.followup.requestId,
+          p_firm: firmId,
+          p_contact: input.contactId,
+          p_title: input.title,
+          p_area: input.area ?? '',
+          p_source: input.source ?? '',
+          p_description: input.description ?? '',
+          p_owner: input.assignedTo,
+          p_due: input.followup.date,
+          p_details: asJson(input.details),
+          p_accept_deadline_warning: input.followup.acceptedDeadlineWarning,
+        })
+        if (error) throw new Error(error.message)
+        return resumenFromRow(data)
+      }
       const { data, error } = await client
         .from('crm_opportunities')
         .insert(toInsert(firmId, input))
@@ -473,7 +498,50 @@ export function useCrearOportunidad(firmId: string | undefined) {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades', firmId] }),
         queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] }),
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
       ]).then(() => undefined),
+  })
+}
+
+export function useAccionViabilidad(firmId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      version: number
+      action: 'review' | 'confirm_notice' | 'confirm_conflict_check'
+      result?: 'apto' | 'pendiente' | 'no_apto'
+      date?: string
+      reason?: string
+      channel?: 'email' | 'whatsapp'
+      acceptedDeadlineWarning?: boolean
+    }) => {
+      const client = getSupabaseBrowserClient()
+      if (!client || !firmId) throw new Error('No hay un despacho activo.')
+      const { data, error } = await client.rpc('crm_act_on_lead_viability', {
+        p_lead: input.id,
+        p_version: input.version,
+        p_action: input.action,
+        ...(input.result ? { p_result: input.result } : {}),
+        ...(input.date ? { p_due: input.date } : {}),
+        ...(input.reason ? { p_reason: input.reason } : {}),
+        ...(input.channel ? { p_channel: input.channel } : {}),
+        ...(input.acceptedDeadlineWarning ? { p_accept_deadline_warning: true } : {}),
+      })
+      if (error) throw new Error(error.message)
+      return oportunidadFromRow(data)
+    },
+    onSuccess: (opportunity) => {
+      queryClient.setQueryData(['crm', 'oportunidades', firmId, opportunity.id], opportunity)
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades', firmId] }),
+        queryClient.invalidateQueries({ queryKey: ['crm', 'oportunidades-completas', firmId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['crm', 'opportunity-events', firmId, opportunity.id],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['tareas', firmId] }),
+      ])
+    },
   })
 }
 
