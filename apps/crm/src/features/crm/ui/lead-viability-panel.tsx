@@ -58,7 +58,14 @@ export function LeadViabilityPanel({
   const [error, setError] = useState('')
   if (!state.managed || !state.choice) return null
 
-  const target = tasks.find((task) => task.id === state.taskId && openTask(task))
+  const currentNextAction =
+    state.choice === 'apto'
+      ? tasks.find(
+          (task) => task.esSiguienteAccion && task.venceEn && task.asignadoId && openTask(task),
+        )
+      : undefined
+  const target =
+    currentNextAction ?? tasks.find((task) => task.id === state.taskId && openTask(task))
   const activeMeeting = tasks.find(
     (task) =>
       openTask(task) &&
@@ -66,7 +73,10 @@ export function LeadViabilityPanel({
       task.asignadoId &&
       task.venceEn &&
       task.reunion['specialType'] === 'meeting' &&
-      task.reunion['meetingType'] === 'Primera cita',
+      task.reunion['meetingType'] === 'Primera cita' &&
+      !['preparation', 'cancelled', 'not_held', 'finished'].some(
+        (status) => task.reunion['status'] === status,
+      ),
   )
   const datedTarget = target?.venceEn && target.asignadoId ? Date.parse(target.venceEn) : NaN
   const missing = state.choice === 'apto' && !activeMeeting && !Number.isFinite(datedTarget)
