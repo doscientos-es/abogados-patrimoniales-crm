@@ -114,6 +114,15 @@ begin
   assert task.status <> 'cancelled' and task.due_at is null, 'Special-meeting cancellation is a distinct lifecycle';
   assert exists(select 1 from public.crm_tasks where id=fallback and status='pending' and is_next_action), 'Cancelling sole appointment restores reminder';
 
+  task := public.crm_create_task(firm,null,apt.id,'event','Segunda convocatoria','','medium',now()+interval '1 day',null,actor,null,null,null,
+    meeting || jsonb_build_object('status','scheduled','startsAt',now()+interval '1 day','endsAt',now()+interval '1 day 1 hour','mode','phone','abogadoPrimeraCitaId',actor),null,false);
+  task := public.crm_update_special_meeting(task.id,task.version,task.meeting_details || jsonb_build_object(
+    'status','not_held','statusReason','Prueba de incomparecencia'));
+  assert exists(select 1 from public.crm_tasks where id=fallback and status='completed'), 'No-show does not reopen the booking fallback';
+  task := public.crm_create_task(firm,null,apt.id,'task','REVISAR / CERRAR LEAD POR FALTA DE RESPUESTA','','medium',now()+interval '15 days',null,actor,null,null,null,'{}',null,false);
+  perform public.crm_set_next_action(task.id,task.version,true);
+  assert (select count(*) from public.crm_tasks t where t.opportunity_id=apt.id and t.status='pending' and t.kind<>'event')=1, 'Existing no-show reminder stays the single open follow-up';
+
   perform set_config('request.jwt.claim.sub',outsider::text,true);
   begin
     perform public.crm_act_on_lead_viability(apt.id,apt.version,'confirm_conflict_check');

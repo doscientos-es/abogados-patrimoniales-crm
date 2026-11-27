@@ -58,7 +58,14 @@ export function LeadViabilityPanel({
   const [error, setError] = useState('')
   if (!state.managed || !state.choice) return null
 
-  const target = tasks.find((task) => task.id === state.taskId && openTask(task))
+  const currentNextAction =
+    state.choice === 'apto'
+      ? tasks.find(
+          (task) => task.esSiguienteAccion && task.venceEn && task.asignadoId && openTask(task),
+        )
+      : undefined
+  const target =
+    currentNextAction ?? tasks.find((task) => task.id === state.taskId && openTask(task))
   const activeMeeting = tasks.find(
     (task) =>
       openTask(task) &&
