@@ -1,9 +1,33 @@
-import { describe, expect, it } from 'vitest'
+import QRCode from 'qrcode'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { CopiaVersion } from '../application/quote-editor'
 import { documentoHtml } from './quote-document'
 
 describe('documentoHtml', () => {
+  it('muestra la web pública del despacho y genera el QR para la misma dirección', () => {
+    const createQr = vi.spyOn(QRCode, 'create')
+    try {
+      const version: CopiaVersion = {
+        version: 1,
+        referencia: 'PR-1',
+        fecha: '2026-10-13',
+        asunto: 'Asunto',
+        lineas: [],
+        bloques: [],
+        condiciones: '',
+      }
+      const html = documentoHtml(version, { nombre: 'Ana', email: '' }, 'Despacho', false)
+      expect(html).toContain('Despacho · www.abogadospatrimoniales.com')
+      expect(html).toContain('alt="Código QR de www.abogadospatrimoniales.com"')
+      expect(createQr).toHaveBeenCalledWith('https://www.abogadospatrimoniales.com', {
+        errorCorrectionLevel: 'M',
+      })
+    } finally {
+      createQr.mockRestore()
+    }
+  })
+
   it('usa los datos congelados del despacho y no reescribe documentos antiguos', () => {
     const datos = {
       legal_name: 'Despacho <Antiguo>',

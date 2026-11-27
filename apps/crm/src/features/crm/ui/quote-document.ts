@@ -12,7 +12,7 @@ import {
 
 export type Cliente = { nombre: string; email: string; nif?: string }
 
-const WEB = 'abogadospatrimoniales.es'
+const WEB = 'www.abogadospatrimoniales.com'
 
 /** QR of the firm website as an inline SVG data URI: synchronous, so previews render it at once. */
 let qrCache: string | null = null
