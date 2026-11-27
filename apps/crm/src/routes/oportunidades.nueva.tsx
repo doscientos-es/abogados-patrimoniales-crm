@@ -8,7 +8,7 @@ import {
 } from '@doscientos/ui'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Check, Plus, UserPlus } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { PendingPanel, SectionHeader } from '@/components/common'
@@ -21,19 +21,16 @@ import { Textarea } from '@/components/ui/textarea'
 import { useActiveMembership, useAuthSession } from '@/features/auth'
 import { useContactos, type ContactoPersistido } from '@/features/contactos'
 import { NuevoContactoPage } from '@/features/contactos/ui/nuevo-contacto-page'
-import {
-  useAvanzarLeadPorHito,
-  useCrearOportunidad,
-  useLeadRoles,
-  useMiembrosDespacho,
-  useTransicionarOportunidad,
-} from '@/features/crm'
+import { useCrearOportunidad, useLeadRoles, useMiembrosDespacho } from '@/features/crm'
 import {
   contactosParaAutocompletado,
   type ContactAutocompleteOption,
 } from '@/features/crm/application/contact-autocomplete'
 import {
   VIABILIDAD_OPCIONES,
+  MOTIVOS_NO_APTO,
+  PLAZO_CONCRETO,
+  fechaLocalMadrid,
   type ViabilidadInicial,
 } from '@/features/crm/application/initial-viability'
 import { DEFAULT_LEAD_ROLES } from '@/features/crm/application/lead-roles'
@@ -67,10 +64,12 @@ export function NuevaOportunidadPage() {
   const contacts = useContactos(firmId)
   const members = useMiembrosDespacho(firmId)
   const createOpportunity = useCrearOportunidad(firmId)
-  const transition = useTransicionarOportunidad(firmId)
-  const avanzarHito = useAvanzarLeadPorHito(firmId)
   const [viability, setViability] = useState<ViabilidadInicial | ''>('')
   const [viabilityReason, setViabilityReason] = useState('')
+  const [otherReason, setOtherReason] = useState('')
+  const [urgency, setUrgency] = useState('No consta')
+  const [warningAccepted, setWarningAccepted] = useState(false)
+  const requestId = useRef<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [assignedTo, setAssignedTo] = useState('')
   const [documents, setDocuments] = useState<string[]>([])
@@ -83,11 +82,10 @@ export function NuevaOportunidadPage() {
   const [createdOpportunity, setCreatedOpportunity] = useState<{
     id: string
     reference: string
-    contactId: string
     contactName: string
     viability: ViabilidadInicial
-    closeSucceeded?: boolean | undefined
-    closeError?: string | undefined
+    date: string
+    owner: string
   } | null>(null)
   const preselectedContact = useMemo(
     () => (contacts.data ?? []).find((item) => item.id === search.contactId),
@@ -154,11 +152,23 @@ export function NuevaOportunidadPage() {
       toast.error('Indica la viabilidad inicial del Lead.')
       return
     }
-    const reason = viabilityReason.trim()
+    const reason = viabilityReason === 'Otro motivo' ? otherReason.trim() : viabilityReason
+    const owner = assignedTo || session.user?.id || ''
+    const date = formText(form, 'followupDate')
+    if (!owner || !date || date < fechaLocalMadrid()) {
+      toast.error('Indica un responsable y una fecha de seguimiento válida.')
+      return
+    }
+    if (viability === 'no_apto' && urgency === PLAZO_CONCRETO && !warningAccepted) {
+      toast.error('Confirma el aviso sobre el plazo antes de cerrar el Lead.')
+      return
+    }
     if (viability === 'no_apto' && !reason) {
       toast.error('Indica el motivo por el que el Lead no es apto o no es atendible.')
       return
     }
+    if (saving) return
+    requestId.current ??= crypto.randomUUID()
     setSaving(true)
     try {
       const opportunity = await createOpportunity.mutateAsync({
@@ -169,7 +179,8 @@ export function NuevaOportunidadPage() {
           allContacts.find((item) => item.id === selectedContactId)?.origen?.trim() ?? ''
         ).slice(0, 160),
         description: formText(form, 'description'),
-        assignedTo: assignedTo || null,
+        assignedTo: owner,
+        followup: { requestId: requestId.current, date, acceptedDeadlineWarning: warningAccepted },
         details: {
           rolContacto: { rol: formText(form, 'role') },
           urgencia: {
@@ -191,53 +202,14 @@ export function NuevaOportunidadPage() {
         },
       })
 
-      if (viability === 'no_apto') {
-        let closeError: string | undefined
-        try {
-          await transition.mutateAsync({
-            id: opportunity.id,
-            fase: 'lost',
-            subestado: 'No apto / no atendible',
-            motivo: `Viabilidad inicial: NO APTO / NO ATENDIBLE. Motivo: ${reason}`,
-          })
-          toast.success('Lead guardado y cerrado como no apto.')
-        } catch (error) {
-          closeError = error instanceof Error ? error.message : 'Error desconocido.'
-          toast.warning(`Lead creado, pero no se pudo cerrar: ${closeError}`)
-        }
-        setCreatedOpportunity({
-          id: opportunity.id,
-          reference: opportunity.referencia,
-          contactId: selectedContactId,
-          contactName: contactName(
-            (contacts.data ?? []).find((item) => item.id === selectedContactId),
-          ),
-          viability,
-          closeSucceeded: !closeError,
-          closeError,
-        })
-        return
-      }
-
-      try {
-        await avanzarHito.mutateAsync({
-          id: opportunity.id,
-          hito: viability === 'apto' ? 'viabilidad_apta' : 'viabilidad_pendiente',
-        })
-      } catch (error) {
-        toast.warning(
-          `Lead guardado, pero el tablero no avanzó: ${error instanceof Error ? error.message : ''}`,
-        )
-      }
-      toast.success('Lead guardado.')
+      toast.success('Lead guardado con su siguiente acción.')
       setCreatedOpportunity({
         id: opportunity.id,
         reference: opportunity.referencia,
-        contactId: selectedContactId,
-        contactName: contactName(
-          (contacts.data ?? []).find((item) => item.id === selectedContactId),
-        ),
+        contactName: contactName(allContacts.find((item) => item.id === selectedContactId)),
         viability,
+        date,
+        owner: members.data?.find((member) => member.id === owner)?.nombre ?? 'Tú',
       })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el Lead.')
@@ -364,7 +336,7 @@ export function NuevaOportunidadPage() {
                   onChange={(event) => setAssignedTo(event.target.value)}
                   disabled={members.isPending || members.isError}
                 >
-                  <option value="">Sin asignar</option>
+                  <option value="">Tú (usuario actual)</option>
                   {(members.data ?? []).map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.nombre}
@@ -373,8 +345,8 @@ export function NuevaOportunidadPage() {
                 </select>
                 <p className="text-muted-foreground text-xs">
                   {members.isError
-                    ? 'No se pudieron cargar los responsables. Puedes asignarlo después desde la ficha.'
-                    : 'Opcional. No se asigna automáticamente a quien dirige la cita.'}
+                    ? 'No se pudieron cargar los responsables. Puedes continuar como responsable.'
+                    : 'La siguiente acción se asigna al responsable del Lead.'}
                 </p>
                 {members.isError && assignedTo ? (
                   <Button type="button" variant="outline" onClick={() => setAssignedTo('')}>
@@ -476,12 +448,16 @@ export function NuevaOportunidadPage() {
                   id="lead-urgency"
                   name="urgency"
                   className={selectClassName}
-                  defaultValue="No consta"
+                  value={urgency}
+                  onChange={(event) => {
+                    setUrgency(event.target.value)
+                    setWarningAccepted(false)
+                  }}
                 >
                   <option>No consta</option>
                   <option>No se aprecia urgencia</option>
                   <option>Posible urgencia</option>
-                  <option>Sí, existe una fecha o plazo concreto</option>
+                  <option>{PLAZO_CONCRETO}</option>
                 </select>
               </div>
               <Field
@@ -520,18 +496,57 @@ export function NuevaOportunidadPage() {
                 </label>
               ))}
             </fieldset>
+            {viability ? (
+              <Field
+                type="date"
+                name="followupDate"
+                label="Fecha de la siguiente acción"
+                min={fechaLocalMadrid()}
+                required
+              />
+            ) : null}
             {viability === 'no_apto' ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="lead-viability-reason">Motivo *</Label>
-                <Textarea
-                  id="lead-viability-reason"
-                  value={viabilityReason}
-                  maxLength={1000}
-                  required
-                  rows={3}
-                  onChange={(event) => setViabilityReason(event.target.value)}
-                />
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lead-viability-reason">Motivo de no aceptación</Label>
+                  <select
+                    id="lead-viability-reason"
+                    className={selectClassName}
+                    value={viabilityReason}
+                    required
+                    onChange={(event) => setViabilityReason(event.target.value)}
+                  >
+                    <option value="">Selecciona un motivo…</option>
+                    {MOTIVOS_NO_APTO.map((reason) => (
+                      <option key={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </div>
+                {viabilityReason === 'Otro motivo' ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lead-viability-other">Detalla el motivo</Label>
+                    <Textarea
+                      id="lead-viability-other"
+                      value={otherReason}
+                      required
+                      maxLength={1000}
+                      onChange={(event) => setOtherReason(event.target.value)}
+                    />
+                  </div>
+                ) : null}
+                {urgency === PLAZO_CONCRETO ? (
+                  <label className="border-warning/40 bg-warning/10 flex items-start gap-2 rounded-md border p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={warningAccepted}
+                      required
+                      onChange={(event) => setWarningAccepted(event.target.checked)}
+                    />
+                    He revisado el plazo indicado. Al cerrar el Lead quedará pendiente comunicar la
+                    no aceptación al contacto.
+                  </label>
+                ) : null}
+              </>
             ) : null}
           </CardContent>
         </Card>
@@ -568,18 +583,19 @@ export function NuevaOportunidadPage() {
       </Dialog>
       {createdOpportunity ? (
         <LeadCreatedDialog
-          firmId={firmId}
-          opportunityId={createdOpportunity.id}
           reference={createdOpportunity.reference}
-          contactId={createdOpportunity.contactId}
           contactName={createdOpportunity.contactName}
           viability={createdOpportunity.viability}
-          closeSucceeded={createdOpportunity.closeSucceeded}
-          closeError={createdOpportunity.closeError}
-          onFinish={() => {
+          date={createdOpportunity.date}
+          owner={createdOpportunity.owner}
+          onFinish={(tab) => {
             const { id } = createdOpportunity
             setCreatedOpportunity(null)
-            void navigate({ to: '/oportunidades/$id', params: { id } })
+            void navigate({
+              to: '/oportunidades/$id',
+              params: { id },
+              ...(tab ? { search: { tab } } : {}),
+            })
           }}
         />
       ) : null}
@@ -595,6 +611,7 @@ function Field({
   name: string
   label: string
   maxLength?: number
+  min?: string
   required?: boolean
   type?: string
   placeholder?: string
