@@ -98,7 +98,20 @@ begin
   task := public.crm_create_task(firm,null,apt.id,'event','Primera cita','','medium',now()+interval '1 day',null,actor,null,null,null,meeting,null,false);
   assert task.is_next_action and task.assigned_to=actor and task.due_at is not null, 'Booking replaces the reminder as next action';
   assert exists(select 1 from public.crm_tasks where id=fallback and status='completed'), 'Booking closes the fallback';
-  perform public.crm_set_task_status(task.id,task.version,'cancelled',null,'Cita cancelada');
+  task := public.crm_update_special_meeting(task.id,task.version,meeting || jsonb_build_object(
+    'status','scheduled','startsAt', now()+interval '1 day','endsAt',now()+interval '1 day 1 hour',
+    'mode','phone','abogadoPrimeraCitaId',actor));
+  task := public.crm_update_special_meeting(task.id,task.version,task.meeting_details || jsonb_build_object(
+    'status','preparation','rescheduleHistory',jsonb_build_array(jsonb_build_object('reason','Cambio de prueba'))));
+  assert task.due_at is null, 'Rescheduling clears the old calendar date';
+  assert exists(select 1 from public.crm_tasks where id=fallback and status='pending' and is_next_action), 'Rescheduling restores the fallback';
+  task := public.crm_update_special_meeting(task.id,task.version,task.meeting_details || jsonb_build_object(
+    'status','scheduled','startsAt',now()+interval '2 days','endsAt',now()+interval '2 days 1 hour'));
+  assert task.is_next_action, 'Rescheduled dated appointment resumes next action';
+  assert exists(select 1 from public.crm_tasks where id=fallback and status='completed'), 'New slot closes fallback';
+  task := public.crm_update_special_meeting(task.id,task.version,task.meeting_details || jsonb_build_object(
+    'status','cancelled','statusReason','Prueba de cancelación'));
+  assert task.status <> 'cancelled' and task.due_at is null, 'Special-meeting cancellation is a distinct lifecycle';
   assert exists(select 1 from public.crm_tasks where id=fallback and status='pending' and is_next_action), 'Cancelling sole appointment restores reminder';
 
   perform set_config('request.jwt.claim.sub',outsider::text,true);

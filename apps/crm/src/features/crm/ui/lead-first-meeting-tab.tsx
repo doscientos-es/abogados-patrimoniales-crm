@@ -75,7 +75,13 @@ export function AppointmentsTab({
     canEdit &&
     (task?.creadaPorId === currentUserId || ['owner', 'admin', 'lawyer'].includes(memberRole))
   const canHold = Boolean(task && canEdit && canHoldAppointment(task, currentUserId, memberRole))
-  const first = scope === 'lead' && !meetings.some((meeting) => meeting.estado !== 'Cancelada')
+  const first =
+    scope === 'lead' &&
+    !meetings.some(
+      (meeting) =>
+        meeting.estado !== 'Cancelada' &&
+        !['cancelada', 'no_asistencia'].includes(estadoAsistente(meeting.reunion)),
+    )
   const showContactHistory = scope === 'lead' && Boolean(contactId)
 
   const schedule = async (input: CrearTareaInput) => {

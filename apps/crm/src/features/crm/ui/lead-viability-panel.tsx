@@ -66,7 +66,10 @@ export function LeadViabilityPanel({
       task.asignadoId &&
       task.venceEn &&
       task.reunion['specialType'] === 'meeting' &&
-      task.reunion['meetingType'] === 'Primera cita',
+      task.reunion['meetingType'] === 'Primera cita' &&
+      !['preparation', 'cancelled', 'not_held', 'finished'].some(
+        (status) => task.reunion['status'] === status,
+      ),
   )
   const datedTarget = target?.venceEn && target.asignadoId ? Date.parse(target.venceEn) : NaN
   const missing = state.choice === 'apto' && !activeMeeting && !Number.isFinite(datedTarget)
